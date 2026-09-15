@@ -1,22 +1,49 @@
 {
   "name": "islamic-planner-app",
   "version": "1.0.0",
-  "main": "index.ts",
-  "dependencies": {
-    "expo": "~57.0.22",
-    "expo-status-bar": "~57.0.1",
-    "react": "19.2.3",
-    "react-native": "0.86.3"
-  },
-  "devDependencies": {
-    "@types/react": "~19.2.2",
-    "typescript": "~6.0.3"
-  },
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "jest --passWithNoTests",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@tabby_ai/hijri-converter": "^1.0.5",
+    "adhan": "^4.4.6",
+    "drizzle-orm": "^0.45.2",
+    "expo": "~57.0.22",
+    "expo-font": "~57.0.4",
+    "expo-location": "~57.0.17",
+    "expo-notifications": "~57.0.18",
+    "expo-router": "~57.0.21",
+    "expo-secure-store": "~57.0.4",
+    "expo-sqlite": "~57.0.3",
+    "expo-status-bar": "~57.0.1",
+    "luxon": "^3.7.2",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "rrule": "^2.8.1",
+    "uuid": "^14.0.2",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@react-native/jest-preset": "^0.87.1",
+    "@types/jest": "^30.0.0",
+    "@types/luxon": "^3.7.5",
+    "@types/react": "~19.2.2",
+    "@types/uuid": "^10.0.0",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "^57.0.2",
+    "jest": "^30.5.1",
+    "jest-expo": "^57.0.5",
+    "prettier": "^3.9.6",
+    "typescript": "~6.0.3"
   },
   "private": true
 }
