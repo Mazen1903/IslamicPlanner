@@ -852,17 +852,22 @@ function determinePlanningDayForTime(
 
 ### 11.4 Preservation Rules During Rematerialization
 
-| Field | Behavior |
-|---|---|
-| `calculatedStartTime` | **Overwritten** — always recomputed |
-| `calculatedPrayerSection` | **Overwritten** — always recomputed |
-| `eligiblePrayerSections` | **Overwritten** — always recomputed |
-| `planningDayKey` | **Overwritten** — derived from resolved time, may change if config changed |
-| `wallClockResolution` | **Overwritten** — recomputed |
-| `status` | **Preserved** if COMPLETED or CANCELLED |
-| `completedAt` | **Preserved** |
-| `missedAt` | **Preserved** |
-| `overrideData` | **Preserved** |
+Rematerialization recalculates placement **only for `PENDING` occurrences**. 
+
+**Non-negotiable history invariant:** Terminal occurrences (`COMPLETED`, `MISSED`, `CANCELLED`) are frozen historical records. Their placement (`calculatedStartTime`, `calculatedPrayerSection`, `eligiblePrayerSections`, `planningDayKey`, `wallClockResolution`, `localDate`) is **permanently preserved** and never modified by later recalculation.
+
+| Field | For `PENDING` Occurrences | For Terminal Occurrences (`COMPLETED` / `MISSED` / `CANCELLED`) |
+|---|---|---|
+| `calculatedStartTime` | **Overwritten** — recomputed from current prayer times | **Frozen / Preserved** — retains original placement |
+| `calculatedPrayerSection` | **Overwritten** — recomputed from current prayer times | **Frozen / Preserved** — retains original placement |
+| `eligiblePrayerSections` | **Overwritten** — recomputed from current prayer times | **Frozen / Preserved** — retains original placement |
+| `planningDayKey` | **Overwritten** — derived from resolved time | **Frozen / Preserved** — retains original placement |
+| `wallClockResolution` | **Overwritten** — recomputed | **Frozen / Preserved** — retains original placement |
+| `localDate` | **Preserved** (seed date) | **Preserved** (seed date) |
+| `status` | **Preserved** (or transitioned to MISSED by engine) | **Preserved** (immutable) |
+| `completedAt` | **Preserved** (null) | **Preserved** (timestamp) |
+| `missedAt` | **Preserved** (null) | **Preserved** (timestamp) |
+| `overrideData` | **Preserved** | **Preserved** |
 
 ---
 

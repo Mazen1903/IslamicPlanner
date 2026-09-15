@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Current Milestone:** M2 — Prayer-Time Engine + PrayerTimeline (Completed, pending Opus review)  
+**Current Milestone:** M4 — Task Domain + SQLite Schema (Completed, pending Opus review)  
 **Last Updated:** 2026-09-14 (Rev 3 — architecture revision 3)  
 **Project:** Islamic Prayer-Centered Planner  
 
@@ -14,7 +14,7 @@
 | **M1** | Design system and theme tokens | **Completed** | 2026-09-14 | Theme tokens, light/dark themes, ThemeProvider, Button, Card, Toggle, Icon, SafeArea, demo screen, 17 unit tests |
 | **M2** | Prayer-time engine + PrayerTimeline | **Completed** | 2026-09-14 | All 71 domain tests pass, 100% exact boundaries, ±1 min published verification, Opus review required |
 | **M3** | Planning-day engine + clipping | **Completed** | 2026-09-14 | All 32 domain tests pass, Fajr/Midnight/Custom boundaries, explicit DST resolution, non-mutating clipping, Opus review required |
-| **M4** | Task domain model + schema (includes series) | Not Started | — | Prerequisites: M0. Opus review required. Includes seriesId/effectiveFromDate/effectiveToDate (ADR-024) |
+| **M4** | Task domain model + schema (includes series) | **Completed** | 2026-09-14 | All 80 M4 tests pass (200 total project tests), Drizzle schema, 0001_initial migration, runtime JSON boundaries, transactional series split & rollback, subtask isolation, Opus review required |
 | **M5** | Scheduling engine + WallClockResolver | Not Started | — | Prerequisites: M2, M3, M4. Opus review required |
 | **M6** | Local persistence + materialization | Not Started | — | Prerequisites: M4, M5 |
 | **M7** | Today screen | Not Started | — | Prerequisites: M1, M2, M3, M5, M6 |
@@ -173,5 +173,46 @@
   - `npm run typecheck`: Passed (0 errors)
   - `npm run lint`: Passed (0 errors, 0 warnings)
   - `npm test`: Passed (10 test suites, 120 tests passed, 0 failures)
+
+---
+
+## M4 Completion Record
+
+- **Date:** 2026-09-14
+- **Scope:** Task Domain Model + SQLite/Drizzle Schema + Repositories + Series Operations ONLY (pure domain & data layer, no SchedulingEngine/materialization)
+- **Domain & Data Modules Implemented:**
+  - `src/constants/scheduleTypes.ts`: Canonical schedule types (`EXACT_TIME`, `PRAYER_RELATIVE`, `PRAYER_WINDOW`, `ANYTIME_TODAY`).
+  - `src/domain/task/types.ts`: Comprehensive domain types (`TaskDefinition`, `TaskOccurrence`, `SubtaskTemplate`, `OccurrenceSubtask`, `OccurrenceOverrideData`, `ScheduleDataMap`, `TaskDefinitionUpdatePatch`, `OccurrencePlacementUpdate`, `DerivedPlacement`).
+  - `src/domain/task/errors.ts`: Specialized domain errors (`DataIntegrityError`, `TaskValidationError`).
+  - `src/domain/task/scheduleDataParser.ts`: Centralized runtime boundary parser for schedule data (SD-01 through SD-06, strict 24h format, offset bounds, extraneous property tolerance).
+  - `src/domain/task/jsonBoundary.ts`: Centralized runtime boundary validation and serialization for all JSON columns (`tags`, `subtasks`, `reminderRule`, `hijriRecurrence`, `eligiblePrayerSections`, `overrideData`).
+  - `src/data/schema.ts`: Complete Drizzle schema for all 7 application tables with foreign keys, indexes, unique constraints (`UNIQUE(seriesId, seriesVersion)`, `UNIQUE(taskDefinitionId, localDate)`, `UNIQUE(seriesId, localDate)`), and SQLite CHECK constraints (`schedule_type`, `source`, `priority`, `status`, `series_version >= 1`). Includes `manualTimezone` in `user_settings`.
+  - `src/data/migrations/0001_initial.sql`: Deterministic initial migration with all tables, indexes, constraints, and statement breakpoints.
+  - `src/data/db.ts`: Database connection manager enforcing `PRAGMA foreign_keys = ON;`, `setDatabase`/`resetDatabase` test hooks, and `runInTransaction` with SQLite `SAVEPOINT` nesting and async rollback support.
+  - `src/data/repositories/TaskDefinitionRepository.ts`: Full CRUD, active series query (`findActiveBySeriesId` enforcing `is_active = 1 AND effective_to_date IS NULL`), guarded update (rejecting immutable identity/series version mutation), guarded delete (rejecting hard delete when terminal history exists), and database constraint translation to `DataIntegrityError`.
+  - `src/data/repositories/TaskOccurrenceRepository.ts`: Full CRUD, `createBatch` (atomic transaction), query methods (`findByPlanningDayKey`, `findByLocalDate`, `findBySeriesId`), auto-derivation/validation of `seriesId`, guarded status transitions (`PENDING -> COMPLETED/MISSED/CANCELLED`, idempotent terminal updates, timestamp consistency), guarded placement updates (rejecting terminal row mutations), `deletePendingFutureOccurrences` (for splits), `cancelAllPendingOccurrences` (for delete series), and guarded delete.
+  - `src/domain/task/TaskEngine.ts`: High-level domain service:
+    - `createTask`: Sets canonical `startDate`, non-recurring `seriesId = id`, recurring new series UUID, validates unique subtask IDs.
+    - `updateOccurrenceOverride` (RS-01): Overrides written to occurrence `overrideData`, definition untouched.
+    - `splitSeriesAndFuture` (RS-02, TX-01): Atomic transaction closing predecessor at `splitDate - 1`, creating successor with `startDate = splitDate`, `effectiveFromDate = splitDate`, `seriesVersion + 1`, and deleting pending future occurrences.
+    - `updateEntireSeries` (RS-03): In-place active version update, preserving historical occurrences.
+    - `cancelTask` (RS-06): Transitions to `CANCELLED` tombstone row.
+    - `deleteEntireSeries` (RS-07): Atomic transaction deactivating all definitions for series and cancelling all remaining pending occurrences (past and future), preserving history.
+    - `toggleSubtaskCompletion`: Validates `subtaskId` in definition template, updates occurrence `overrideData.completedSubtaskIds` idempotently with no duplicates, leaving definition template unchanged.
+  - `src/utils/uuid.ts`: RFC4122 v4 UUID generator using `globalThis.crypto.randomUUID()` with secure fallback.
+- **Unit Tests Added (80 M4 tests across 6 test suites, 200 total project tests):**
+  - `src/domain/task/__tests__/scheduleDataParser.test.ts` (28 tests): SD-01 through SD-06, 24h formats, prayer enums, positive offsets, non-overlapping windows, extraneous properties, corruption handling.
+  - `src/data/__tests__/db.test.ts` (9 tests): Table creation, foreign key enforcement, CHECK constraints (`priority`, `schedule_type`, `status`), UNIQUE constraints, cascade deletion.
+  - `src/data/repositories/__tests__/TaskDefinitionRepository.test.ts` (13 tests): CRUD, 4 schedule types round-trip, immutable field protection (IM-01), active version lookup (SV-01), guarded delete (HD-01, HD-01b), JSON corruption error handling.
+  - `src/data/repositories/__tests__/TaskOccurrenceRepository.test.ts` (18 tests): CRUD, seriesId derivation/validation (OC-01), guarded status transitions (PENDING to COMPLETED/MISSED/CANCELLED, terminal reject, timestamp invariants), terminal placement freezing, guarded delete (HD-02), delete/cancel pending, JSON corruption error handling.
+  - `src/domain/task/__tests__/TaskEngine.series.test.ts` (7 tests): RS-01 single-occurrence override, RS-02 & SV-01 series split, RS-03 entire series edit, RS-04 uniqueness enforcement, RS-06 single occurrence cancellation tombstone, RS-07 delete entire series with past/future pending cancellation and history preservation, TX-01 transactional rollback on mid-operation failure.
+  - `src/domain/task/__tests__/TaskEngine.subtasks.test.ts` (5 tests): Subtask template preservation, duplicate ID rejection in template, occurrence isolation (Occurrence 1 completion does not affect Occurrence 2 or template), invalid subtask ID rejection, idempotent toggle without duplicate IDs.
+- **Verification:**
+  - `npx expo-doctor`: Passed (21/21 checks passed, 0 issues)
+  - `npx expo install --check`: Passed (Dependencies are up to date)
+  - `npm run typecheck`: Passed (0 errors)
+  - `npm run lint`: Passed (0 errors, 0 warnings)
+  - `npm test`: Passed (16 test suites, 200 tests passed, 0 failures)
+
 
 

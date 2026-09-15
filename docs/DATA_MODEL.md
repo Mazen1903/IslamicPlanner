@@ -24,6 +24,7 @@ export const taskDefinitions = sqliteTable('task_definitions', {
   id:                text('id').primaryKey(),                          // UUID v4
   title:             text('title').notNull(),
   description:       text('description'),
+  startDate:         text('start_date').notNull(),                     // 'YYYY-MM-DD' — civil schedule / recurrence seed date
   source:            text('source').notNull().default('USER'),         // 'USER' | 'WORSHIP' | 'ROUTINE'
   worshipItemKey:    text('worship_item_key'),                         // FK to worship catalog key, null for user tasks
   scheduleType:      text('schedule_type').notNull(),                  // 'EXACT_TIME' | 'PRAYER_RELATIVE' | 'PRAYER_WINDOW' | 'ANYTIME_TODAY'
@@ -46,42 +47,50 @@ export const taskDefinitions = sqliteTable('task_definitions', {
   estimatedMinutes:  integer('estimated_minutes'),
   notes:             text('notes'),
   tags:              text('tags'),                                      // JSON string[]
-  subtasks:          text('subtasks'),                                  // JSON SubtaskData[]
+  subtasks:          text('subtasks'),                                  // JSON SubtaskTemplate[]
   isActive:          integer('is_active', { mode: 'boolean' }).notNull().default(true),
-  createdAt:         text('created_at').notNull(),                      // ISO 8601
-  updatedAt:         text('updated_at').notNull(),
+  createdAt:         text('created_at').notNull(),                      // ISO 8601 UTC
+  updatedAt:         text('updated_at').notNull(),                      // ISO 8601 UTC
 }, (table) => ({
-  idxSeriesId: index('idx_series_id').on(table.seriesId),
+  idxSeriesId: index('idx_task_definitions_series_id').on(table.seriesId),
+  uniqueSeriesVersion: unique('unique_series_version').on(table.seriesId, table.seriesVersion),
+  checkScheduleType: check('check_task_definitions_schedule_type', sql`schedule_type IN ('EXACT_TIME', 'PRAYER_RELATIVE', 'PRAYER_WINDOW', 'ANYTIME_TODAY')`),
+  checkSource: check('check_task_definitions_source', sql`source IN ('USER', 'WORSHIP', 'ROUTINE')`),
+  checkPriority: check('check_task_definitions_priority', sql`priority IN ('NORMAL', 'IMPORTANT')`),
+  checkSeriesVersion: check('check_task_definitions_series_version', sql`series_version >= 1`),
 }));
 ```
 
 ### 2.2 task_occurrences
 
-Stores one row per task per date. Derived fields are always recomputed; user-state fields are preserved across rematerialization.
+Stores one row per task per date. Derived fields are recomputed on rematerialization for PENDING occurrences; user-state fields and historical placement for terminal occurrences (COMPLETED, MISSED, CANCELLED) are permanently frozen.
 
 ```typescript
 export const taskOccurrences = sqliteTable('task_occurrences', {
   id:                      text('id').primaryKey(),                    // UUID v4
   taskDefinitionId:        text('task_definition_id').notNull()
                              .references(() => taskDefinitions.id, { onDelete: 'cascade' }),
-  seriesId:                text('series_id').notNull(),                 // Mirrors definition's seriesId for efficient series queries
-  localDate:               text('local_date').notNull(),               // 'YYYY-MM-DD'
+  seriesId:                text('series_id').notNull(),                 // Derived strictly from definition's seriesId
+  localDate:               text('local_date').notNull(),               // 'YYYY-MM-DD' — recurrence/occurrence seed date
   planningDayKey:          text('planning_day_key').notNull(),          // 'YYYY-MM-DD'
   timezone:                text('timezone').notNull(),                  // IANA
-  // --- Derived fields (overwritten on every rematerialization) ---
+  // --- Derived placement fields (overwritten on rematerialization ONLY for PENDING; frozen for terminal) ---
   calculatedStartTime:     text('calculated_start_time'),              // ISO 8601 or null
   calculatedPrayerSection: text('calculated_prayer_section'),          // Prayer label or null
   eligiblePrayerSections:  text('eligible_prayer_sections'),           // JSON Prayer[] for window tasks
   wallClockResolution:     text('wall_clock_resolution'),              // 'NORMAL' | 'SPRING_FORWARD_SHIFTED' | 'FALL_BACK_FIRST' | null
   // --- User-state fields (preserved across rematerialization) ---
   status:                  text('status').notNull().default('PENDING'),// 'PENDING' | 'COMPLETED' | 'MISSED' | 'CANCELLED'
-  completedAt:             text('completed_at'),
-  missedAt:                text('missed_at'),
-  overrideData:            text('override_data'),                      // JSON — per-occurrence user overrides
+  completedAt:             text('completed_at'),                       // ISO 8601 UTC or null
+  missedAt:                text('missed_at'),                          // ISO 8601 UTC or null
+  overrideData:            text('override_data'),                      // JSON OccurrenceOverrideData — per-occurrence overrides (e.g. completedSubtaskIds)
 }, (table) => ({
-  uniqueDefDate: unique().on(table.taskDefinitionId, table.localDate),
-  idxPlanningDay: index('idx_planning_day').on(table.planningDayKey),
-  idxDate: index('idx_date').on(table.localDate),
+  uniqueDefDate: unique('unique_def_date').on(table.taskDefinitionId, table.localDate),
+  uniqueSeriesDate: unique('unique_series_date').on(table.seriesId, table.localDate),
+  idxPlanningDay: index('idx_task_occurrences_planning_day').on(table.planningDayKey),
+  idxDate: index('idx_task_occurrences_date').on(table.localDate),
+  idxSeries: index('idx_task_occurrences_series_id').on(table.seriesId),
+  checkStatus: check('check_task_occurrences_status', sql`status IN ('PENDING', 'COMPLETED', 'MISSED', 'CANCELLED')`),
 }));
 ```
 
@@ -95,7 +104,8 @@ export const userSettings = sqliteTable('user_settings', {
   manualLatitude:              real('manual_latitude'),
   manualLongitude:             real('manual_longitude'),
   manualLocationName:          text('manual_location_name'),
-  lastKnownTimezone:           text('last_known_timezone'),
+  manualTimezone:              text('manual_timezone'),                            // Explicit IANA timezone for manual location
+  lastKnownTimezone:           text('last_known_timezone'),                        // Device/auto detected timezone
   // --- Prayer Calculation ---
   calculationMethod:           text('calculation_method').notNull().default('MWL'),
   asrMethod:                   text('asr_method').notNull().default('SHAFI'),
@@ -270,20 +280,23 @@ A recurring series is identified by a stable `seriesId` (UUID) shared across all
 | Operation | Behavior | Data Changes |
 |---|---|---|
 | **A. Edit this occurrence** | Write override data to `overrideData` JSON on the existing `TaskOccurrence`. Definition unchanged. | `occurrence.overrideData = { ...changes }` |
-| **B. Edit this and future** | Close the current definition version at `splitDate - 1`. Create a new definition with the same `seriesId`, incremented `seriesVersion`, `effectiveFromDate = splitDate`, `effectiveToDate = null`. Rematerialize from `splitDate` onward. | `oldDef.effectiveToDate = splitDate - 1`; new `TaskDefinition` with same `seriesId` |
-| **C. Edit entire series** | Update the active definition(s) in place. Rematerialize all non-completed, non-cancelled occurrences. Completed/missed occurrences retain their status but may have their derived fields (prayer section, time) updated. | `definition.{field} = newValue`; rematerialize |
-| **D. Delete/cancel one occurrence** | Set `occurrence.status = 'CANCELLED'`. Definition unchanged. The cancelled occurrence persists as an exception record. | `occurrence.status = 'CANCELLED'` |
+| **B. Edit this and future** | Close the current definition version at `splitDate - 1`. Create a new definition version with the same `seriesId`, incremented `seriesVersion`, `startDate = splitDate`, `effectiveFromDate = splitDate`, `effectiveToDate = null`. Physically delete only PENDING derived future occurrences from `splitDate` onward via `deletePendingFutureOccurrences(seriesId, splitDate)`. Retain COMPLETED / MISSED / CANCELLED historical occurrences. All three mutation steps execute inside a single atomic SQLite transaction. M5 later rematerializes eligible future occurrences from the successor. | `oldDef.effectiveToDate = splitDate - 1`; new `TaskDefinition` with same `seriesId`, `seriesVersion + 1`, `startDate = splitDate`; delete pending future occurrences; rematerialize |
+| **C. Edit entire series** | Update the active definition(s) in place. Rematerialize non-completed, non-cancelled occurrences. Completed/missed/cancelled occurrences are frozen historical records: their placement (prayer section, calculated time, planning day) is never repositioned or updated. | `definition.{field} = newValue`; rematerialize pending occurrences |
+| **D. Delete/cancel one occurrence** | Set `occurrence.status = 'CANCELLED'`. Definition unchanged. The cancelled occurrence persists as an immutable tombstone/exception record, preventing duplicate regeneration for that date. | `occurrence.status = 'CANCELLED'` |
 | **E. Delete future occurrences** | Set the active definition's `recurrenceEnd = today` (or `effectiveToDate = today`). Cancel all future materialized occurrences. | `definition.recurrenceEnd = today`; cancel future occurrences |
-| **F. Delete entire series** | Deactivate all definitions with matching `seriesId` (`isActive = false`). Historical occurrences (completed/missed) are **retained** for data integrity. Pending/future occurrences are cancelled. | `definition.isActive = false` for all versions; cancel pending occurrences |
+| **F. Delete entire series** | Deactivate all definitions with matching `seriesId` (`isActive = false`) and cancel pending future occurrences atomically in one transaction. Historical occurrences (completed/missed/cancelled) are **retained** for data integrity. | `definition.isActive = false` for all versions; cancel pending occurrences (atomic transaction) |
 
 ### 4A.3 Uniqueness After Split
 
-The composite key `(taskDefinitionId, localDate)` remains unique after a "this and future" split because:
-- The split creates a **new** `taskDefinitionId` (UUID)
-- The predecessor definition's `effectiveToDate` is set to `splitDate - 1`
-- The new definition's `effectiveFromDate` is set to `splitDate`
-- `recurrenceEngine.occursOn()` checks `effectiveFromDate`/`effectiveToDate` bounds
-- No two definitions with overlapping date ranges can produce occurrences for the same `localDate`
+The composite keys `(taskDefinitionId, localDate)` and `(seriesId, localDate)` remain unique after a "this and future" split because:
+- `localDate` is explicitly defined as the recurrence/occurrence **seed date**.
+- The split creates a **new** `taskDefinitionId` (UUID) with incremented `seriesVersion`.
+- The predecessor definition's `effectiveToDate` is set to `splitDate - 1`.
+- The new definition's `effectiveFromDate` is set to `splitDate`.
+- `deletePendingFutureOccurrences(seriesId, splitDate)` physically deletes any uncompleted pending rows from the split boundary, avoiding conflict with `UNIQUE(seriesId, localDate)`.
+- Any user-cancelled, completed, or missed rows from the predecessor remain as frozen history records; their presence prevents recreation for that specific seed date.
+- `recurrenceEngine.occursOn()` checks `effectiveFromDate`/`effectiveToDate` bounds, guaranteeing no two definitions with overlapping date ranges produce occurrences for the same seed `localDate`.
+- `UNIQUE(seriesId, seriesVersion)` on `task_definitions` enforces that series version numbers are strictly monotonic and never duplicated within a logical series.
 
 ### 4A.4 Cloud Sync Compatibility
 
@@ -419,7 +432,28 @@ interface WallClockResolution {
 }
 ```
 
-### 6.6 Resolved Occurrence (View Model)
+### 6.6 Subtask & Override Types
+
+```typescript
+export interface SubtaskTemplate {
+  id: string;      // UUID v4
+  title: string;
+}
+
+export interface OccurrenceSubtask {
+  id: string;      // Matches SubtaskTemplate.id
+  title: string;
+  isCompleted: boolean;
+}
+
+export interface OccurrenceOverrideData {
+  completedSubtaskIds?: string[];
+  title?: string;
+  notes?: string;
+}
+```
+
+### 6.7 Resolved Occurrence (View Model)
 
 ```typescript
 interface ResolvedOccurrence {
@@ -427,10 +461,11 @@ interface ResolvedOccurrence {
   taskDefinitionId: string;
   title: string;
   description: string | null;
+  startDate: string;                // Definition's seed date
   source: 'USER' | 'WORSHIP' | 'ROUTINE';
   scheduleType: ScheduleType;
   parsedScheduleData: ScheduleDataFor<ScheduleType>;
-  localDate: string;
+  localDate: string;                // Occurrence seed date ('YYYY-MM-DD')
   planningDayKey: string;
   timezone: string;
   calculatedTime: DateTime | null;
@@ -446,12 +481,12 @@ interface ResolvedOccurrence {
   estimatedMinutes: number | null;
   reminderRule: ReminderRule | null;
   tags: string[];
-  subtasks: SubtaskData[];
+  subtasks: OccurrenceSubtask[];
   notes: string | null;
 }
 ```
 
-### 6.7 PrayerPeriodInstance and PrayerTimeline
+### 6.8 PrayerPeriodInstance and PrayerTimeline
 
 ```typescript
 interface PrayerPeriodInstance {
@@ -469,7 +504,7 @@ interface PrayerTimeline {
 }
 ```
 
-### 6.8 PlanningDay
+### 6.9 PlanningDay
 
 ```typescript
 interface PlanningDay {
@@ -485,15 +520,19 @@ interface PlanningDay {
 ## 7. Data Invariants
 
 1. Every `TaskDefinition` has exactly one `scheduleType` and a `scheduleData` JSON whose shape conforms to `ScheduleDataMap[scheduleType]`. There is no independent `type` field inside `scheduleData`.
-2. Every `TaskOccurrence` references a valid `TaskDefinition`.
-3. `(taskDefinitionId, localDate)` is unique — no duplicate occurrences per task per date.
-4. `status` transitions: PENDING → COMPLETED, PENDING → MISSED, PENDING → CANCELLED. No reverse transitions.
-5. `calculatedStartTime`, `calculatedPrayerSection`, `eligiblePrayerSections`, `wallClockResolution` are always recomputed on rematerialization — they are never authoritative.
-6. `status`, `completedAt`, `missedAt`, `overrideData` are user state — they are never overwritten by rematerialization (except PENDING status may become MISSED by the missed-task engine).
-7. `prayerCache.fingerprint` is deterministic: same inputs → same fingerprint. Different inputs → different fingerprint. Stale cache entries are never returned.
-8. `hijri_month_overrides` are keyed by (hijriYear, hijriMonth). Only one override per year+month. Historical overrides are never auto-deleted.
-9. UUIDs v4 used for all `id` columns.
-10. `seriesId` is stable across all `TaskDefinition` versions of the same recurring series. Non-recurring tasks have `seriesId === id`.
-11. `effectiveFromDate`/`effectiveToDate` ranges are non-overlapping across definitions sharing the same `seriesId`. No two active definitions with the same `seriesId` may produce occurrences for the same `localDate`.
-12. `planningDayKey` is derived from the task's resolved temporal placement (see SCHEDULING_ENGINE.md §11.3), never from the recurrence date directly (except for ANYTIME_TODAY where the recurrence date equals the planning day key by definition).
-13. Deleting an entire series deactivates definitions (`isActive = false`) and cancels pending occurrences but **never deletes** completed or missed historical occurrences.
+2. Every `TaskDefinition` has a canonical `startDate` ('YYYY-MM-DD') representing its civil schedule / recurrence seed date.
+3. Every `TaskOccurrence` references a valid `TaskDefinition`.
+4. `(taskDefinitionId, localDate)` is unique. Furthermore, `(seriesId, localDate)` is unique at the database level — `localDate` is the recurrence/occurrence seed date, guaranteeing at most one logical occurrence per series per seed date.
+5. `(seriesId, seriesVersion)` is unique on `task_definitions`, ensuring version numbers are strictly monotonic.
+6. `status` transitions: PENDING → COMPLETED, PENDING → MISSED, PENDING → CANCELLED. Terminal statuses are immutable.
+7. For PENDING occurrences, derived placement fields (`calculatedStartTime`, `calculatedPrayerSection`, `eligiblePrayerSections`, `wallClockResolution`, `planningDayKey`) are recomputed on rematerialization.
+8. For terminal occurrences (`COMPLETED`, `MISSED`, `CANCELLED`), historical placement and identity fields are **permanently frozen**: `calculatedStartTime`, `calculatedPrayerSection`, `eligiblePrayerSections`, `wallClockResolution`, `planningDayKey`, `localDate`, `timezone`, `seriesId`, and `taskDefinitionId` are NEVER modified by later recalculation, rematerialization, or repository updates.
+9. `overrideData` stores per-occurrence state (including `completedSubtaskIds`). Occurrence-level subtask completion does not mutate the `TaskDefinition.subtasks` template.
+10. `prayerCache.fingerprint` is deterministic: same inputs → same fingerprint. Different inputs → different fingerprint. Stale cache entries are never returned.
+11. `hijri_month_overrides` are keyed by (hijriYear, hijriMonth). Only one override per year+month. Historical overrides are never auto-deleted.
+12. UUIDs v4 used for all `id` columns.
+13. `seriesId` is stable across all `TaskDefinition` versions of the same recurring series. Non-recurring tasks have `seriesId === id`.
+14. `effectiveFromDate`/`effectiveToDate` ranges are non-overlapping across definitions sharing the same `seriesId`.
+15. `planningDayKey` is derived from the task's resolved temporal placement (see SCHEDULING_ENGINE.md §11.3), never from the recurrence date directly (except for ANYTIME_TODAY where the recurrence date equals the planning day key by definition).
+16. Deleting an entire series deactivates definitions (`isActive = false`) and cancels pending occurrences but **never deletes** completed, missed, or user-cancelled historical occurrences.
+17. Series split (`THIS_AND_FUTURE`) physically deletes only PENDING derived future occurrences from `splitDate` onward via `deletePendingFutureOccurrences()`, preserving all historical and cancelled rows.
