@@ -1,7 +1,7 @@
 # Scheduling Engine
 
 **Status:** Source of truth for scheduling logic  
-**Updated:** 2026-09-14 (Rev 2 — architecture review)  
+**Updated:** 2026-09-14 (Rev 3 — architecture revision 3)  
 **Implements:** MASTER_PRODUCT_SPEC §8, §9, §10, §11, §20, §21, §40, §41, §42, §44, §58
 
 ---
@@ -286,90 +286,171 @@ function resolvePrayerRelative(
 
 ### 4.3 PRAYER_WINDOW
 
+Prayer windows must be anchored to **concrete prayer instances** identified by both prayer label AND `sourceDate`. This prevents windows from accidentally spanning ~24 hours when custom planning-day boundaries create duplicate prayer labels.
+
 ```typescript
 function resolvePrayerWindow(
   scheduleData: PrayerWindowData,     // { startPrayer, endPrayer }
-  planningDay: PlanningDay
-): { windowStart: DateTime; windowEnd: DateTime; eligibleSections: Prayer[] } {
+  occurrenceDate: string,             // the recurrence date (YYYY-MM-DD)
+  planningDay: PlanningDay,
+  timeline: PrayerTimeline
+): { windowStart: DateTime; windowEnd: DateTime; eligibleSections: Prayer[]; planningDayKey: string } {
 
-  // 1. Find all planning-day periods that fall within the window
-  const eligiblePeriods = planningDay.periods.filter(p => {
-    const prayerOrder = PRAYER_ORDER.indexOf(p.prayer);
-    const startOrder = PRAYER_ORDER.indexOf(scheduleData.startPrayer);
-    const endOrder = PRAYER_ORDER.indexOf(scheduleData.endPrayer);
-    return prayerOrder >= startOrder && prayerOrder < endOrder;
+  // 1. Anchor startPrayer to the instance whose sourceDate matches the occurrence date.
+  //    This is the concrete prayer instance the user's recurrence rule intended.
+  const anchorPeriod = planningDay.periods.find(
+    p => p.prayer === scheduleData.startPrayer && p.sourceDate === occurrenceDate
+  );
+
+  if (!anchorPeriod) {
+    // Occurrence date's prayer instance may not appear in this planning day
+    // (e.g., pre-Fajr scenario). Fall back to the first matching instance.
+    const fallback = planningDay.periods.find(
+      p => p.prayer === scheduleData.startPrayer
+    );
+    if (!fallback) throw new SchedulingError(
+      `No ${scheduleData.startPrayer} instance found in planning day`
+    );
+    // Use fallback — this handles edge cases where sourceDate differs
+    return resolveWindowFromAnchor(fallback, scheduleData, planningDay);
+  }
+
+  return resolveWindowFromAnchor(anchorPeriod, scheduleData, planningDay);
+}
+
+function resolveWindowFromAnchor(
+  anchorPeriod: PrayerPeriodInstance,
+  scheduleData: PrayerWindowData,
+  planningDay: PlanningDay
+): { windowStart: DateTime; windowEnd: DateTime; eligibleSections: Prayer[]; planningDayKey: string } {
+
+  const anchorSourceDate = anchorPeriod.sourceDate;
+
+  // 2. Collect all contiguous periods from startPrayer to endPrayer
+  //    that share the same sourceDate as the anchor (or are chronologically
+  //    contiguous within the same astronomical day sequence).
+  const eligiblePeriods: PrayerPeriodInstance[] = [];
+  let collecting = false;
+
+  for (const period of planningDay.periods) {
+    // Start collecting when we hit the anchor period
+    if (period === anchorPeriod) {
+      collecting = true;
+    }
+
+    if (collecting) {
+      eligiblePeriods.push(period);
+
+      // Stop collecting when we reach the endPrayer boundary.
+      // endPrayer is exclusive: Fajr→Asr means Fajr, Dhuhr are eligible (not Asr).
+      // So we stop BEFORE adding the endPrayer period.
+      // Actually: we collect up to (but not including) endPrayer.
+      // Re-check: we started adding, so check if the NEXT period would be endPrayer.
+    }
+
+    // Stop when we've passed the last eligible period
+    if (collecting && period.prayer === getPrayerBefore(scheduleData.endPrayer)) {
+      break;
+    }
+  }
+
+  // Alternative simpler approach: collect from anchor using prayer order
+  const startOrder = PRAYER_ORDER.indexOf(scheduleData.startPrayer);
+  const endOrder = PRAYER_ORDER.indexOf(scheduleData.endPrayer);
+
+  // Filter to periods that are:
+  // a) chronologically at or after the anchor period's start
+  // b) have prayer order >= startOrder AND < endOrder
+  // c) share sourceDate with anchor OR are the next chronological day's periods
+  const filtered = planningDay.periods.filter(p => {
+    const order = PRAYER_ORDER.indexOf(p.prayer);
+    return p.start >= anchorPeriod.start
+      && order >= startOrder
+      && order < endOrder
+      && p.sourceDate === anchorSourceDate;
   });
 
-  // 2. Get unique prayer labels
-  const eligibleSections = [...new Set(eligiblePeriods.map(p => p.prayer))];
+  const eligibleSections = [...new Set(filtered.map(p => p.prayer))];
+  const windowStart = filtered[0]?.start ?? anchorPeriod.start;
+  const windowEnd = filtered[filtered.length - 1]?.end ?? anchorPeriod.end;
 
-  // 3. Window boundaries from prayer times
-  const windowStart = eligiblePeriods[0]?.start ?? null;
-  const windowEnd = eligiblePeriods[eligiblePeriods.length - 1]?.end ?? null;
-
-  return { windowStart, windowEnd, eligibleSections };
+  return {
+    windowStart,
+    windowEnd,
+    eligibleSections,
+    planningDayKey: planningDay.key,
+  };
 }
 ```
 
 **Key behaviors:**
 - One occurrence row in the database per date (§10.3)
+- `startPrayer` instance selected by matching `sourceDate` to the occurrence's recurrence date
+- If duplicate prayer labels exist (custom planning-day clipping), the correct instance is chosen — the window never spans ~24 hours across unrelated prayer instances
 - Appears in ALL eligible prayer tabs simultaneously
 - Completing from any tab completes the single occurrence
+- `planningDayKey` is the planning day that contains the anchored window start
 
 ### 4.4 ANYTIME_TODAY
 
 No time calculation. No prayer section. Appears in collapsible "Anytime Today" in every tab.
 
+**Planning day semantics:** The `planningDayKey` for an ANYTIME_TODAY task equals the recurrence date directly. The recurrence date **is** the intended planning day — no clock-time derivation is needed. The materialization engine matches recurrence dates to planning days by identity.
+
 ---
 
 ## 5. PrayerTimeline Construction
 
+The timeline must span enough prayer data to resolve any time within any possible planning day centered on the target date. It calculates prayer times for **4 consecutive calendar dates** (D-1, D, D+1, D+2) and produces **15 contiguous `PrayerPeriodInstance` records** spanning 3 full days (D-1 through D+1). D+2's Fajr is used solely to close D+1's Isha period.
+
+**Invariant:** Every `PrayerPeriodInstance` has an exact calculated `end`. No boundary is ever approximated.
+
 ```typescript
 function buildPrayerTimeline(
-  dates: [string, string, string],   // [prevDate, centerDate, nextDate]
+  centerDate: string,
   coordinates: Coordinates,
   params: PrayerCalculationParams
 ): PrayerTimeline {
 
-  const [prevDate, centerDate, nextDate] = dates;
-  const prevTimes = prayerEngine.calculate(prevDate, coordinates, params);
-  const currTimes = prayerEngine.calculate(centerDate, coordinates, params);
-  const nextTimes = prayerEngine.calculate(nextDate, coordinates, params);
+  const prevDate = subtractDay(centerDate);
+  const nextDate = addDay(centerDate);
+  const dayAfterNext = addDay(nextDate);
+
+  // Calculate prayer times for 4 dates to ensure exact boundaries
+  const prevTimes  = prayerEngine.calculate(prevDate, coordinates, params);
+  const currTimes  = prayerEngine.calculate(centerDate, coordinates, params);
+  const nextTimes  = prayerEngine.calculate(nextDate, coordinates, params);
+  const dayAfterNextTimes = prayerEngine.calculate(dayAfterNext, coordinates, params);
 
   const periods: PrayerPeriodInstance[] = [];
 
-  // Previous day's prayers (we need at least Isha for before-Fajr resolution)
+  // Previous day — all 5 periods (Isha end = center day's Fajr)
   appendDayPeriods(periods, prevTimes, prevDate, currTimes.fajr);
 
-  // Center day's prayers
+  // Center day — all 5 periods (Isha end = next day's Fajr)
   appendDayPeriods(periods, currTimes, centerDate, nextTimes.fajr);
 
-  // Next day's prayers (needed for planning days that extend past center midnight)
-  // For next day's Isha end, we would need day+2's Fajr.
-  // For scheduling purposes, approximate next-day Isha end or compute it.
-  appendDayPeriodsPartial(periods, nextTimes, nextDate);
+  // Next day — all 5 periods (Isha end = day+2's Fajr — EXACT, not approximate)
+  appendDayPeriods(periods, nextTimes, nextDate, dayAfterNextTimes.fajr);
 
-  return { periods, findPeriod: (time) => findPeriodInTimeline(periods, time) };
+  return {
+    periods,
+    findPeriod: (time: DateTime) => findPeriodInTimeline(periods, time),
+  };
 }
 
 function appendDayPeriods(
-  periods: PrayerPeriodInstance[],
+  out: PrayerPeriodInstance[],
   times: PrayerTimesResult,
   sourceDate: string,
   nextDayFajr: DateTime
 ): void {
-  const fajrEnd = times.dhuhr;
-  const dhuhrEnd = times.asr;
-  const asrEnd = times.maghrib;
-  const maghribEnd = times.isha;
-  const ishaEnd = nextDayFajr;
-
-  periods.push(
-    makePeriod('FAJR',    times.fajr,    fajrEnd,    sourceDate),
-    makePeriod('DHUHR',   times.dhuhr,   dhuhrEnd,   sourceDate),
-    makePeriod('ASR',     times.asr,     asrEnd,     sourceDate),
-    makePeriod('MAGHRIB', times.maghrib, maghribEnd, sourceDate),
-    makePeriod('ISHA',    times.isha,    ishaEnd,    sourceDate),
+  out.push(
+    makePeriod('FAJR',    times.fajr,    times.dhuhr,   sourceDate),
+    makePeriod('DHUHR',   times.dhuhr,   times.asr,     sourceDate),
+    makePeriod('ASR',     times.asr,     times.maghrib, sourceDate),
+    makePeriod('MAGHRIB', times.maghrib, times.isha,    sourceDate),
+    makePeriod('ISHA',    times.isha,    nextDayFajr,   sourceDate),
   );
 }
 
@@ -386,6 +467,7 @@ function findPeriodInTimeline(
     `Time ${time.toISO()} does not fall within any prayer period in the timeline`
   );
 }
+
 ```
 
 ---
@@ -623,7 +705,12 @@ async function markMissedTasks(
 
 Materialize occurrences for today ± 7 days. Calendar month view materializes on demand.
 
-### 11.2 Materialization Process
+### 11.2 Materialization Process — Two-Phase Pipeline
+
+**Phase 1 — Temporal Resolution:** Resolve each task's concrete time or window using the PrayerTimeline.
+**Phase 2 — Planning Day Placement:** Determine which PlanningDay the resolved time belongs to and derive `planningDayKey`.
+
+The key insight: `planningDayKey` is **never** derived from the recurrence date or noon of that date. It is always derived from the task's **actual resolved temporal placement**.
 
 ```typescript
 async function materializeOccurrences(
@@ -633,16 +720,15 @@ async function materializeOccurrences(
 ): Promise<void> {
 
   for (const date of eachDayInRange(dateRange)) {
-    // Build a PrayerTimeline spanning [date-1, date, date+1]
+    // Build a PrayerTimeline centered on this date (spans D-1, D, D+1 with exact D+2 Fajr)
     const timeline = buildPrayerTimeline(
-      [subtractDay(date), date, addDay(date)],
+      date,
       context.coordinates,
       context.calcParams
     );
 
-    const planningDay = buildPlanningDay(context.planningDayConfig, timeline, dateTimeForNoon(date));
-
     for (const definition of definitions) {
+      // Check recurrence applicability (including effectiveFromDate/effectiveToDate for series)
       if (!recurrenceEngine.occursOn(definition, date)) continue;
 
       const existing = await occurrenceRepo.findByDefAndDate(definition.id, date);
@@ -650,18 +736,49 @@ async function materializeOccurrences(
       // Preserve completed/cancelled user state
       if (existing && (existing.status === 'COMPLETED' || existing.status === 'CANCELLED')) continue;
 
-      // Resolve placement using the timeline
-      const resolved = resolveTask(definition, date, timeline, planningDay, context);
+      // --- PHASE 1: Temporal Resolution ---
+      // Resolve the task's concrete time/window using the timeline
+      const resolved = resolveTask(definition, date, timeline, context);
+
+      // --- PHASE 2: Planning Day Placement ---
+      // Derive planningDayKey from the resolved temporal placement
+      const planningDayKey = determinePlanningDayKey(
+        definition.scheduleType,
+        resolved,
+        date,
+        context.planningDayConfig,
+        timeline
+      );
+
+      // Build the PlanningDay for this key to get clipped periods
+      const planningDay = determinePlanningDayForTime(
+        resolved.anchorTime,
+        context.planningDayConfig,
+        timeline
+      );
+
+      // For PRAYER_WINDOW: resolve eligible sections within the correct planning day
+      const windowData = definition.scheduleType === 'PRAYER_WINDOW'
+        ? resolvePrayerWindow(
+            definition.parsedScheduleData as PrayerWindowData,
+            date,
+            planningDay,
+            timeline
+          )
+        : null;
 
       await occurrenceRepo.upsert({
         id: existing?.id ?? generateUUID(),
         taskDefinitionId: definition.id,
+        seriesId: definition.seriesId,
         localDate: date,
-        planningDayKey: planningDay.key,
+        planningDayKey,
         timezone: context.timezone,
         calculatedStartTime: resolved.calculatedTime?.toISO() ?? null,
         calculatedPrayerSection: resolved.prayerSection,
-        eligiblePrayerSections: JSON.stringify(resolved.eligibleSections),
+        eligiblePrayerSections: JSON.stringify(
+          windowData?.eligibleSections ?? resolved.eligibleSections
+        ),
         wallClockResolution: resolved.wallClockResolution ?? null,
         // Preserve existing user state
         status: existing?.status ?? 'PENDING',
@@ -673,14 +790,74 @@ async function materializeOccurrences(
 }
 ```
 
-### 11.3 Preservation Rules During Rematerialization
+### 11.3 planningDayKey Derivation Per Schedule Type
+
+```typescript
+function determinePlanningDayKey(
+  scheduleType: ScheduleType,
+  resolved: ResolvedTaskData,
+  recurrenceDate: string,
+  config: PlanningDayConfig,
+  timeline: PrayerTimeline
+): string {
+  switch (scheduleType) {
+    case 'EXACT_TIME':
+    case 'PRAYER_RELATIVE': {
+      // planningDayKey = the planning day that contains the resolved absolute time
+      const pd = determinePlanningDayForTime(resolved.calculatedTime!, config, timeline);
+      return pd.key;
+    }
+    case 'PRAYER_WINDOW': {
+      // planningDayKey = the planning day that contains the window's startPrayer instance
+      const pd = determinePlanningDayForTime(resolved.anchorTime!, config, timeline);
+      return pd.key;
+    }
+    case 'ANYTIME_TODAY': {
+      // planningDayKey = the recurrence date directly
+      // The recurrence date IS the intended planning day — no clock-time derivation needed
+      return recurrenceDate;
+    }
+    default:
+      throw new SchedulingError(`Unknown schedule type: ${scheduleType}`);
+  }
+}
+
+/**
+ * Given an absolute time, determine which PlanningDay interval contains it.
+ * Constructs and returns that PlanningDay with clipped prayer periods.
+ */
+function determinePlanningDayForTime(
+  time: DateTime,
+  config: PlanningDayConfig,
+  timeline: PrayerTimeline
+): PlanningDay {
+  // Find the planning day boundaries that contain 'time'
+  // This works by checking sequential planning day intervals
+  // until we find the one where dayStart <= time < dayEnd
+  return buildPlanningDayContaining(config, timeline, time);
+}
+```
+
+**Before-Fajr example:**
+- Task: exact time 02:00, Tuesday
+- Tuesday Fajr: 05:30, Planning day start = Fajr
+- `resolveWallClock("02:00", "2026-09-15", "America/Chicago")` → 02:00 CDT Tuesday
+- `determinePlanningDayForTime(02:00 CDT Tue, FAJR config, timeline)` → Monday's planning day (Monday Fajr → Tuesday Fajr)
+- `planningDayKey = "2026-09-14"` (Monday)
+
+**Custom boundary example:**
+- Planning day starts at 19:00
+- Task A: exact time 18:00 Tuesday → `planningDayKey = Monday` (Mon 19:00 → Tue 19:00)
+- Task B: exact time 20:00 Tuesday → `planningDayKey = Tuesday` (Tue 19:00 → Wed 19:00)
+
+### 11.4 Preservation Rules During Rematerialization
 
 | Field | Behavior |
 |---|---|
 | `calculatedStartTime` | **Overwritten** — always recomputed |
 | `calculatedPrayerSection` | **Overwritten** — always recomputed |
 | `eligiblePrayerSections` | **Overwritten** — always recomputed |
-| `planningDayKey` | **Overwritten** — may change if config changed |
+| `planningDayKey` | **Overwritten** — derived from resolved time, may change if config changed |
 | `wallClockResolution` | **Overwritten** — recomputed |
 | `status` | **Preserved** if COMPLETED or CANCELLED |
 | `completedAt` | **Preserved** |

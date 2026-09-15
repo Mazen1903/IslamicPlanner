@@ -1,7 +1,7 @@
 # Implementation Plan
 
 **Status:** Source of truth for milestone execution  
-**Updated:** 2026-09-14 (Rev 2 — architecture review)  
+**Updated:** 2026-09-14 (Rev 3 — architecture revision 3)  
 **Implements:** MASTER_PRODUCT_SPEC §57
 
 ---
@@ -9,36 +9,37 @@
 ## Milestone Overview
 
 ```text
-M0   Repository and project foundation
-M1   Design system and theme tokens
-M2   Prayer-time engine + PrayerTimeline      ← Opus review required
-M3   Planning-day engine + clipping           ← Opus review required
-M4   Task domain model + schema               ← Opus review required
-M5   Scheduling engine + WallClockResolver    ← Opus review required
+M0   Repository and project foundation           ✅ Completed
+M1   Design system and theme tokens               ✅ Completed
+M2   Prayer-time engine + PrayerTimeline          ← Opus review required
+M3   Planning-day engine + clipping               ← Opus review required
+M4   Task domain model + schema (includes series) ← Opus review required
+M5   Scheduling engine + WallClockResolver        ← Opus review required
 M6   Local persistence + materialization
 M7   Today screen
-M8   Recurrence engine                        ← Opus review required (moved before Add Task)
-M9   Add Task flows (uses RecurrenceEngine)
-M10  Missed/completed/overdue behavior
-M11  Location and travel                      ← Opus review required
-M12  Notifications                            ← Opus review required
-M13  Hijri calendar + HijriService            ← Opus review required (moved before Calendar)
-M14  Calendar month (uses HijriService)
-M15  Worship Suggestions engine               ← Opus review required
+M8   Hijri Calendar Core / HijriService           ← MOVED from M13 (dependency fix)
+M9   Recurrence engine (needs HijriService)       ← Opus review required
+M10  Add Task flows
+M11  Missed/completed/overdue behavior
+M12  Location and travel                          ← Opus review required
+M13  Notifications                                ← Opus review required
+M14  Calendar month (needs M8 HijriService)
+M15  Worship Suggestions engine                   ← Opus review required
 M16  Worship UI
 M17  Settings
 M18  Widgets (dev build required)
-M19  Premium entitlement scaffolding          ← Opus review required
+M19  Premium entitlement scaffolding              ← Opus review required
 M20  Onboarding
 M21  Dark mode polish
 M22  Accessibility/RTL
-M23  QA + edge cases                          ← Opus review required
+M23  QA + edge cases                              ← Opus review required
 M24  Release preparation
 ```
 
-**Dependency corrections from architecture review:**
-- M8 (RecurrenceEngine) moved before M9 (Add Task) — task creation needs recurrence
-- M13 (Hijri/HijriService) moved before M14 (Calendar Month) — calendar needs Hijri dates
+**Dependency corrections from architecture revisions:**
+- M8 (Hijri Calendar Core) moved up from M13 — HijriService must exist before HijriRecurrenceEngine (M9), Calendar Month (M14), and Worship date generation (M15)
+- M9 (RecurrenceEngine) depends on M4 + M8 — task creation needs recurrence and Hijri
+- M4 now includes recurring series model (seriesId, effectiveFromDate/effectiveToDate) per ADR-024
 - M18 (Widgets) deferred; widget-specific native deps installed only at M18, not M0
 
 ---
@@ -55,7 +56,7 @@ M24  Release preparation
    - `adhan` (prayer calculation)
    - `luxon` + `@types/luxon` (date/time)
    - `rrule` (recurrence)
-   - `@tabby.ai/hijri-converter` (Hijri conversion)
+   - `@tabby_ai/hijri-converter` (Hijri conversion)
    - `drizzle-orm` + `expo-sqlite` (database)
    - `zustand` (state management)
    - `expo-router` (navigation)
@@ -233,8 +234,10 @@ M24  Release preparation
 
 **Definition of done:**
 - Schema created. `scheduleData` JSON has NO type field. `scheduleType` column is sole discriminator.
+- Recurring series fields: `seriesId`, `effectiveFromDate`, `effectiveToDate` on `task_definitions`; `seriesId` on `task_occurrences`. Non-recurring tasks: `seriesId === id`.
 - Runtime validation at repository boundary catches malformed JSON.
 - All CRUD operations work. Status transitions enforced. UUIDs everywhere.
+- Series operations (edit this/this+future/all, delete one/future/all) implemented per DATA_MODEL.md §4A.
 
 **Review requirement:** ⚠️ Opus review required
 
@@ -342,121 +345,9 @@ M24  Release preparation
 
 ---
 
-## M8: Recurrence Engine
+## M8: Hijri Calendar Core / HijriService
 
-**Goal:** Implement Gregorian and Hijri recurrence. Moved before Add Task so the task creation UI can use it.
-
-**Prerequisites:** M4
-
-**Files/modules:**
-- `src/domain/recurrence/RecurrenceEngine.ts`
-- `src/domain/recurrence/HijriRecurrenceEngine.ts`
-- `src/domain/recurrence/types.ts`
-- Tests
-
-**Implementation tasks:**
-1. Implement `RecurrenceEngine` wrapping `rrule`
-2. Implement `occursOn(definition, date)` and `generateOccurrences(definition, dateRange)`
-3. Implement `HijriRecurrenceEngine` using `@tabby.ai/hijri-converter` + `HijriService`
-4. All Hijri recurrence uses the effective calendar (base + global adj + per-month override)
-5. Series editing data model (this / this-and-future / all)
-6. Write tests RE-01–RE-08, HR-01–HR-09
-
-**Tests required:** RE-01–RE-08, HR-01–HR-09
-
-**Definition of done:**
-- Gregorian recurrence correct. Hijri recurrence uses effective calendar.
-- Per-month override replaces global for that month. No duplicate occurrences.
-
-**Review requirement:** ⚠️ Opus review required
-
----
-
-## M9: Add Task Flows
-
-**Goal:** Build the task creation UI supporting all 4 schedule modes and recurrence.
-
-**Prerequisites:** M7, M8
-
-**Files/modules:**
-- `app/task/add.tsx`, `app/task/[id].tsx`
-- `src/components/form/ScheduleModePicker.tsx`, `ExactTimePicker.tsx`, `PrayerRelativePicker.tsx`, `PrayerWindowPicker.tsx`, `RecurrencePicker.tsx`, `ReminderPicker.tsx`
-- `src/stores/useTaskFormStore.ts`
-
-**Implementation tasks:**
-1. Add Task screen layout
-2. Schedule mode picker (4 modes)
-3. Time/prayer pickers for each mode
-4. RecurrencePicker (uses RecurrenceEngine from M8)
-5. More Options (reminder, priority, duration, notes, subtasks, tags)
-6. Save flow → TaskEngine.createTask()
-7. Task detail/edit screen
-8. "Add to [Prayer]" shortcut
-
-**Tests required:** CT-11–CT-14
-
-**Definition of done:** All 4 schedule modes + recurrence functional.
-
-**Review requirement:** None
-
----
-
-## M10: Missed/Completed/Overdue Behavior
-
-**Goal:** Task lifecycle state machine and visual states.
-
-**Prerequisites:** M5, M7
-
-**Implementation tasks:**
-1. Missed detection on PrayerPeriodInstance end
-2. Missed detection on app foreground
-3. Periodic check (60s interval)
-4. Overdue display, completed visual state
-5. Tests MC-01–MC-07
-
-**Tests required:** MC-01–MC-07
-
-**Definition of done:** Overdue derived, missed at correct boundaries, no auto-rollforward.
-
----
-
-## M11: Location and Travel
-
-**Goal:** Automatic and manual location with prayer recalculation.
-
-**Prerequisites:** M2, M6
-
-**Implementation tasks:**
-1. `LocationService` (auto/manual)
-2. `expo-location` foreground permission
-3. Significant-change detection (10 km)
-4. Manual location selector (bundled city dataset)
-5. Wire location change → prayer recalculation + rematerialization
-6. Handle permission denial gracefully
-
-**Tests required:** IT-02
-
-**Definition of done:** Auto + manual location work. Location change triggers full recalculation.
-
-**Review requirement:** ⚠️ Opus review required
-
----
-
-## M12: Notifications
-
-**Goal:** Local notification scheduling and rescheduling.
-
-**Prerequisites:** M2, M5, M11
-
-**Implementation tasks per NOTIFICATIONS.md.**
-
-**Review requirement:** ⚠️ Opus review required
-
----
-
-## M13: Hijri Calendar + HijriService
-
-**Goal:** Full Hijri calendar support including per-month overrides, Islamic events, and HijriService. Moved BEFORE Calendar Month.
+**Goal:** Foundational Hijri calendar service with per-month overrides and Islamic events. Moved UP from M13 to satisfy dependency requirements of RecurrenceEngine (M9), Calendar Month (M14), and Worship (M15).
 
 **Prerequisites:** M4
 
@@ -467,7 +358,7 @@ M24  Release preparation
 - `src/data/repositories/HijriMonthOverrideRepository.ts`
 
 **Implementation tasks:**
-1. Implement `HijriService` using `@tabby.ai/hijri-converter`
+1. Implement `HijriService` using `@tabby_ai/hijri-converter`
 2. Implement `getEffectiveDate(gregorianDate)` — applies base method + global adj + per-month override
 3. Implement Hijri adjustment (global -2 to +2)
 4. Implement per-month override CRUD (keyed by hijriYear + hijriMonth)
@@ -489,17 +380,131 @@ M24  Release preparation
 
 ---
 
+## M9: Recurrence Engine
+
+**Goal:** Implement Gregorian and Hijri recurrence. Depends on M8 (HijriService) for Hijri calendar operations.
+
+**Prerequisites:** M4, **M8** (HijriService)
+
+**Files/modules:**
+- `src/domain/recurrence/RecurrenceEngine.ts`
+- `src/domain/recurrence/HijriRecurrenceEngine.ts`
+- `src/domain/recurrence/types.ts`
+- Tests
+
+**Implementation tasks:**
+1. Implement `RecurrenceEngine` wrapping `rrule`
+2. Implement `occursOn(definition, date)` and `generateOccurrences(definition, dateRange)`
+3. `occursOn()` must check `effectiveFromDate`/`effectiveToDate` bounds per ADR-024
+4. Implement `HijriRecurrenceEngine` using `@tabby_ai/hijri-converter` + `HijriService` (from M8)
+5. All Hijri recurrence uses the effective calendar (base + global adj + per-month override)
+6. Write tests RE-01–RE-08, HR-01–HR-09, RS-01–RS-05
+
+**Tests required:** RE-01–RE-08, HR-01–HR-09, RS-01–RS-05
+
+**Definition of done:**
+- Gregorian recurrence correct. Hijri recurrence uses effective calendar.
+- `occursOn()` respects `effectiveFromDate`/`effectiveToDate` for series splits.
+- Per-month override replaces global for that month. No duplicate occurrences.
+
+**Review requirement:** ⚠️ Opus review required
+
+---
+
+## M10: Add Task Flows
+
+**Goal:** Build the task creation UI supporting all 4 schedule modes and recurrence.
+
+**Prerequisites:** M7, M9
+
+**Files/modules:**
+- `app/task/add.tsx`, `app/task/[id].tsx`
+- `src/components/form/ScheduleModePicker.tsx`, `ExactTimePicker.tsx`, `PrayerRelativePicker.tsx`, `PrayerWindowPicker.tsx`, `RecurrencePicker.tsx`, `ReminderPicker.tsx`
+- `src/stores/useTaskFormStore.ts`
+
+**Implementation tasks:**
+1. Add Task screen layout
+2. Schedule mode picker (4 modes)
+3. Time/prayer pickers for each mode
+4. RecurrencePicker (uses RecurrenceEngine from M9)
+5. More Options (reminder, priority, duration, notes, subtasks, tags)
+6. Save flow → TaskEngine.createTask()
+7. Task detail/edit screen
+8. "Add to [Prayer]" shortcut
+9. Series edit UI (this / this-and-future / all) per DATA_MODEL.md §4A
+
+**Tests required:** CT-11–CT-14
+
+**Definition of done:** All 4 schedule modes + recurrence functional. Series edit/delete dialogs work.
+
+**Review requirement:** None
+
+---
+
+## M11: Missed/Completed/Overdue Behavior
+
+**Goal:** Task lifecycle state machine and visual states.
+
+**Prerequisites:** M5, M7
+
+**Implementation tasks:**
+1. Missed detection on PrayerPeriodInstance end
+2. Missed detection on app foreground
+3. Periodic check (60s interval)
+4. Overdue display, completed visual state
+5. Tests MC-01–MC-07
+
+**Tests required:** MC-01–MC-07
+
+**Definition of done:** Overdue derived, missed at correct boundaries, no auto-rollforward.
+
+---
+
+## M12: Location and Travel
+
+**Goal:** Automatic and manual location with prayer recalculation.
+
+**Prerequisites:** M2, M6
+
+**Implementation tasks:**
+1. `LocationService` (auto/manual)
+2. `expo-location` foreground permission
+3. Significant-change detection (10 km)
+4. Manual location selector (bundled city dataset)
+5. Wire location change → prayer recalculation + rematerialization
+6. Handle permission denial gracefully
+
+**Tests required:** IT-02
+
+**Definition of done:** Auto + manual location work. Location change triggers full recalculation.
+
+**Review requirement:** ⚠️ Opus review required
+
+---
+
+## M13: Notifications
+
+**Goal:** Local notification scheduling and rescheduling.
+
+**Prerequisites:** M2, M5, M12
+
+**Implementation tasks per NOTIFICATIONS.md.**
+
+**Review requirement:** ⚠️ Opus review required
+
+---
+
 ## M14: Calendar Month
 
 **Goal:** Month calendar with Gregorian/Hijri dates, task indicators, and Islamic events.
 
-**Prerequisites:** M6, M7, **M13** (HijriService + Islamic events)
+**Prerequisites:** M6, M7, **M8** (HijriService + Islamic events)
 
 **Implementation tasks:**
 1. MonthGrid layout with month navigation
 2. Render Gregorian dates
-3. Render Hijri dates using `HijriService.getEffectiveDate()` (from M13)
-4. Show Islamic event indicators using `IslamicEventsService` (from M13)
+3. Render Hijri dates using `HijriService.getEffectiveDate()` (from M8)
+4. Show Islamic event indicators using `IslamicEventsService` (from M8)
 5. Task count indicators per day
 6. Date selection → load prayer-tab view for that date
 7. Build Upcoming section
@@ -516,12 +521,12 @@ M24  Release preparation
 
 | Milestone | Goal | Prerequisites | Review |
 |---|---|---|---|
-| M15 | Worship Suggestions engine (uses HijriService effective calendar) | M8, M13 | ⚠️ Opus |
+| M15 | Worship Suggestions engine (uses HijriService effective calendar) | M9, M8 | ⚠️ Opus |
 | M16 | Worship UI | M7, M15 | No |
-| M17 | Settings (depends on PlanningDayEngine, HijriService, NotificationEngine) | M1, M3, M11, M12, M13 | No |
+| M17 | Settings (depends on PlanningDayEngine, HijriService, NotificationEngine) | M1, M3, M12, M13, M8 | No |
 | M18 | Widgets — install `expo-widgets` (iOS, requires dev build) + Android widget lib. iOS requires `npx expo prebuild`. | M2, M5, M6 | No |
 | M19 | Premium entitlement scaffolding | M4 | ⚠️ Opus |
-| M20 | Onboarding | M1, M11, M2 | No |
+| M20 | Onboarding | M1, M12, M2 | No |
 | M21 | Dark mode polish | M1, all screens | No |
 | M22 | Accessibility/RTL | All screens | No |
 | M23 | QA + edge cases (all §58 tests + DST + travel + high-lat) | All | ⚠️ Opus |
@@ -548,15 +553,18 @@ No blocking contradictions found in the MASTER_PRODUCT_SPEC.
 The **Islamic Prayer-Centered Planner** uses:
 
 - **`adhan`** for offline prayer time calculation
-- **`PrayerTimeline`** (3-day, 15-period) for placement resolution across day boundaries
+- **`PrayerTimeline`** (4-date calculation, 15 contiguous periods, exact boundaries — no approximation) for placement resolution across day boundaries
 - **`WallClockResolver`** for deterministic DST handling
 - **`PlanningDayEngine`** with period clipping for custom day boundaries
+- **`planningDayKey` derivation** from the task's resolved temporal placement, never from the recurrence date (ADR-022)
+- **PrayerWindow instance anchoring** via `sourceDate` matching to prevent duplicate-label spanning (ADR-023)
 - **`luxon`** for timezone-aware date/time
-- **`rrule`** + custom `HijriRecurrenceEngine` for recurrence (Hijri uses effective calendar with per-month overrides)
+- **`rrule`** + custom `HijriRecurrenceEngine` for recurrence (Hijri uses effective calendar with per-month overrides; HijriService implemented in M8 before RecurrenceEngine in M9)
+- **Recurring series model**: `seriesId` + `effectiveFromDate`/`effectiveToDate` for split-series support; soft-delete preserves history (ADR-024)
 - **`drizzle-orm`** + `expo-sqlite` for local persistence (OS-protected, not app-encrypted)
 - **`zustand`** for UI state
 - **Unified schedule data model**: `scheduleType` column is sole discriminator; `scheduleData` JSON has no redundant type field
 - **Cache fingerprint**: deterministic key including all calculation inputs; stale data impossible
 - **Layered architecture**: Presentation → Domain → Data → Platform with strict separation
 
-The first milestone ready for implementation is **M0: Repository and Project Foundation**.
+The next milestone ready for implementation is **M2: Prayer-Time Engine + PrayerTimeline**.

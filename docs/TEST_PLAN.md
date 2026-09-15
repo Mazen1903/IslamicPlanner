@@ -1,7 +1,7 @@
 # Test Plan
 
 **Status:** Source of truth for testing strategy  
-**Updated:** 2026-09-14 (Rev 2 — architecture review)  
+**Updated:** 2026-09-14 (Rev 3 — architecture revision 3)  
 **Implements:** MASTER_PRODUCT_SPEC §54, §58  
 **Framework:** Jest + React Native Testing Library
 
@@ -203,6 +203,45 @@ E2E tests are deferred to post-MVP (Detox or Maestro).
 | SD-05 | Invalid JSON shape | scheduleType='EXACT_TIME', data='{"anchorPrayer":"FAJR"}' | Throws DataIntegrityError |
 | SD-06 | No type field in data | data='{"type":"EXACT_TIME","localTime":"18:00"}' | Validation does not break but type field ignored |
 
+### 3.9 planningDayKey Resolution
+
+| # | Test | Input | Expected |
+|---|---|---|---|
+| PK-01 | Exact task 02:00 Tue, Fajr-start day (Fajr 05:30) | EXACT_TIME 02:00, recurrence date=Tuesday | planningDayKey=Monday, prayerSection=ISHA |
+| PK-02 | Exact task 20:00 Tue, custom start 19:00 | EXACT_TIME 20:00, recurrence date=Tuesday | planningDayKey=Tuesday (new planning day started at 19:00) |
+| PK-03 | Exact task 18:00 Tue, custom start 19:00 | EXACT_TIME 18:00, recurrence date=Tuesday | planningDayKey=Monday (19:00 boundary not yet reached) |
+| PK-04 | Anytime Today, Fajr-start day | ANYTIME_TODAY, recurrence date=Tuesday | planningDayKey=Tuesday (recurrence date = planning day by definition) |
+| PK-05 | Prayer-relative Maghrib+30, before-Fajr result | PRAYER_RELATIVE Fajr-120, Fajr 05:30 | planningDayKey derived from 03:30 AM placement |
+| PK-06 | Prayer window FAJR→ASR, Fajr-start day | PRAYER_WINDOW, recurrence date=Tuesday | planningDayKey=Tuesday (anchored to Tuesday Fajr instance) |
+
+### 3.10 PrayerWindow Instance Anchoring
+
+| # | Test | Input | Expected |
+|---|---|---|---|
+| PW-01 | MAGHRIB→ISHA with duplicate Maghrib (custom 19:00) | PlanningDay has 2 MAGHRIB instances (Mon sourceDate + Tue sourceDate) | Window anchored to occurrence’s sourceDate instance; does NOT span ~24h |
+| PW-02 | FAJR→ASR window with Fajr-start day | Standard Fajr-start planning day | Anchored to correct sourceDate Fajr instance; window = Fajr start → Asr start |
+| PW-03 | DHUHR→MAGHRIB with no duplicates | Standard planning day | Window = Dhuhr start → Maghrib start, eligible = [DHUHR, ASR] |
+
+### 3.11 PrayerTimeline Exactness
+
+| # | Test | Input | Expected |
+|---|---|---|---|
+| TX-01 | Final Isha has exact end | Build timeline for any date | D+1 Isha.end === D+2 Fajr (calculated, not approximated) |
+| TX-02 | Timeline has 15 contiguous periods | Build timeline for any date | Exactly 15 periods, no gaps, no overlaps |
+| TX-03 | Timeline covers 3 full days | Build timeline for D | Covers D-1 Fajr through D+1 Isha (which ends at D+2 Fajr) |
+
+### 3.12 Recurring Series
+
+| # | Test | Input | Expected |
+|---|---|---|---|
+| RS-01 | "This occurrence" edit | Edit one occurrence of daily task | overrideData set on occurrence, definition unchanged, no duplicate occurrences |
+| RS-02 | "This and future" split | Split daily task at date D | predecessor.effectiveToDate=D-1, new definition with same seriesId, seriesVersion+1, effectiveFromDate=D |
+| RS-03 | Entire series edit | Edit title of recurring task | Definition updated in-place, all non-completed occurrences rematerialized with new title |
+| RS-04 | Split does not create duplicate TaskOccurrences | "This and future" at D | No two occurrences share (taskDefinitionId, localDate) |
+| RS-05 | Hijri recurrence uses HijriService from M8 | Daily Hijri recurrence | HijriService.getEffectiveDate() called, dependency satisfied |
+| RS-06 | Delete one occurrence | Cancel occurrence at date D | occurrence.status=CANCELLED, definition unchanged |
+| RS-07 | Delete entire series | Delete series | All definitions isActive=false, completed/missed history retained, pending cancelled |
+
 ---
 
 ## 4. Integration Tests
@@ -250,7 +289,7 @@ E2E tests are deferred to post-MVP (Detox or Maestro).
 
 ## 6. Critical Path Tests (§58 Definition of Done)
 
-These 21 tests MUST pass before the scheduler is considered complete:
+These 28 tests MUST pass before the scheduler is considered complete:
 
 | # | Assertion | Test IDs |
 |---|---|---|
@@ -275,6 +314,13 @@ These 21 tests MUST pass before the scheduler is considered complete:
 | 19 | WallClockResolver spring-forward shifts forward | WC-02, WC-04 |
 | 20 | WallClockResolver fall-back chooses first occurrence | WC-03, WC-05 |
 | 21 | DST tests cover ≥2 timezones | WC-02+WC-04, WC-03+WC-05 |
+| 22 | planningDayKey derived from resolved time, not recurrence date | PK-01, PK-02, PK-03 |
+| 23 | PrayerWindow with duplicate labels anchored correctly via sourceDate | PW-01 |
+| 24 | PrayerTimeline has no approximate boundaries (D+1 Isha = exact D+2 Fajr) | TX-01 |
+| 25 | "This and future" split preserves historical occurrences | RS-02, RS-04 |
+| 26 | Hijri recurrence depends on HijriService (M8, not a stub) | RS-05 |
+| 27 | ANYTIME_TODAY planningDayKey = recurrence date directly | PK-04 |
+| 28 | Delete entire series retains completed/missed history | RS-07 |
 
 ---
 

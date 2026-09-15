@@ -1,7 +1,7 @@
 # Technical Architecture
 
 **Status:** Source of truth for implementation agents  
-**Updated:** 2026-09-14 (Rev 2 — architecture review)  
+**Updated:** 2026-09-14 (Rev 3 — architecture revision 3)  
 **Companion documents:** DECISIONS.md, DATA_MODEL.md, SCHEDULING_ENGINE.md, PRAYER_ENGINE.md, WORSHIP_ENGINE.md, NOTIFICATIONS.md, UI_SYSTEM.md, TEST_PLAN.md, IMPLEMENTATION_PLAN.md
 
 ---
@@ -28,7 +28,7 @@
 │                   PLATFORM / INFRA LAYER                     │
 │  expo-location · expo-notifications · expo-font              │
 │  expo-task-manager · expo-widgets · expo-secure-store        │
-│  adhan · rrule · luxon · @tabby.ai/hijri-converter          │
+│  adhan · rrule · luxon · @tabby_ai/hijri-converter          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -227,7 +227,7 @@
 | Local database | `expo-sqlite` + `drizzle-orm` | SDK-matched / latest | ADR-002 |
 | Date/time | `luxon` + `WallClockResolver` | latest | ADR-003, ADR-017 |
 | Recurrence | `rrule` | latest | ADR-004 |
-| Hijri calendar | `@tabby.ai/hijri-converter` + `Intl` + per-month overrides | latest | ADR-005, ADR-018 |
+| Hijri calendar | `@tabby_ai/hijri-converter` + `Intl` + per-month overrides | latest | ADR-005, ADR-018 |
 | State management | `zustand` | latest | ADR-006 |
 | Notifications | `expo-notifications` | SDK-matched | ADR-007 |
 | Location | `expo-location` | SDK-matched | ADR-008 |
@@ -304,7 +304,7 @@
 - **Prayer times:** Computed locally via `adhan` — never needs network
 - **Tasks and occurrences:** Stored in local SQLite — fully offline
 - **Location:** Falls back to last-known or manual location
-- **Hijri dates:** Computed locally via `@tabby.ai/hijri-converter` — never needs network
+- **Hijri dates:** Computed locally via `@tabby_ai/hijri-converter` — never needs network
 - **Notifications:** Scheduled locally via `expo-notifications` — no server
 - **Widgets:** Read from local shared storage — no server
 

@@ -1,7 +1,7 @@
 # Architecture Decision Log
 
 **Status:** Living document  
-**Updated:** 2026-09-14 (Rev 2 — architecture review)  
+**Updated:** 2026-09-14 (Rev 3 — architecture revision 3)  
 **Purpose:** Record every major architectural decision, the alternatives considered, and the rationale.
 
 ---
@@ -119,7 +119,7 @@ See SCHEDULING_ENGINE.md §2.4 for implementation.
 **Custom extension for Hijri:**
 `rrule` does not support Hijri calendars natively. We will build a `HijriRecurrenceEngine` that:
 1. Accepts Hijri recurrence rules (e.g., "13th of every Hijri month")
-2. Uses `@tabby.ai/hijri-converter` + `HijriService` to convert Hijri target dates to Gregorian, applying the effective calendar (base method + global adjustment + per-month overrides)
+2. Uses `@tabby_ai/hijri-converter` + `HijriService` to convert Hijri target dates to Gregorian, applying the effective calendar (base method + global adjustment + per-month overrides)
 3. Returns Gregorian dates for the scheduling pipeline
 4. Handles Hijri month length variations (29 vs 30 days)
 
@@ -130,12 +130,12 @@ See SCHEDULING_ENGINE.md §2.4 for implementation.
 
 ---
 
-## ADR-005: Hijri Calendar → `@tabby.ai/hijri-converter` + Per-Month Overrides
+## ADR-005: Hijri Calendar → `@tabby_ai/hijri-converter` + Per-Month Overrides
 
-**Decision:** Use `@tabby.ai/hijri-converter` for programmatic Gregorian↔Hijri conversion with a multi-layer adjustment model.
+**Decision:** Use `@tabby_ai/hijri-converter` for programmatic Gregorian↔Hijri conversion with a multi-layer adjustment model.
 
 **Why:**
-- `@tabby.ai/hijri-converter`: TypeScript-first, zero-dependency, accurate Umm al-Qura-based conversion, bidirectional
+- `@tabby_ai/hijri-converter`: TypeScript-first, zero-dependency, accurate Umm al-Qura-based conversion, bidirectional
 - `Intl.DateTimeFormat` with `islamic-umalqura` for locale-aware display formatting (zero bundle cost)
 - Clean separation: converter for business logic, Intl for presentation
 
@@ -163,7 +163,7 @@ A single permanent `hijriAdjustmentDays` value is insufficient because:
 ```
 
 **Risks:**
-- `@tabby.ai/hijri-converter` is a relatively small library — validate conversion accuracy against known references
+- `@tabby_ai/hijri-converter` is a relatively small library — validate conversion accuracy against known references
 - Per-month override UX must be intuitive — present as "Adjust this month's start date" not as raw number offsets
 - Umm al-Qura is administrative (Saudi); the per-month override system handles regional variation
 
@@ -464,3 +464,68 @@ See DATA_MODEL.md §3 and §6.1 for implementation.
 - `npx expo install <package>` automatically resolves the correct version for the installed SDK
 - Widget-specific native dependencies (`expo-widgets`, `react-native-android-widget`) are installed in M18 (widgets milestone), not M0, to avoid unnecessary native build requirements in early milestones
 - iOS widgets require a development build (`npx expo prebuild`); this is documented in M18
+
+---
+
+## ADR-022: planningDayKey Derivation From Resolved Time
+
+**Decision:** `planningDayKey` is always derived from the task's actual resolved temporal placement. It is never derived from the recurrence calendar date, noon of the recurrence date, or any other arbitrary time.
+
+**Problem:** The original materialization pseudocode built a `PlanningDay` from `dateTimeForNoon(date)` and then used `planningDay.key` for all tasks on that date. This is incorrect when a task's resolved time falls outside that planning day's boundaries.
+
+**Examples:**
+| Schedule | Recurrence date | Resolved time | Planning day start | Correct planningDayKey |
+|---|---|---|---|---|
+| EXACT_TIME 02:00 | Tuesday | Tue 02:00 | Fajr (Tue 05:30) | **Monday** (02:00 < Fajr) |
+| EXACT_TIME 18:00 | Tuesday | Tue 18:00 | Custom 19:00 | **Monday** (18:00 < 19:00) |
+| EXACT_TIME 20:00 | Tuesday | Tue 20:00 | Custom 19:00 | **Tuesday** (20:00 ≥ 19:00) |
+| ANYTIME_TODAY | Tuesday | — | Any | **Tuesday** (by definition) |
+
+**Per schedule type:**
+- **EXACT_TIME / PRAYER_RELATIVE:** `planningDayKey` = the planning day containing the resolved absolute time
+- **PRAYER_WINDOW:** `planningDayKey` = the planning day containing the window's concrete `startPrayer` instance
+- **ANYTIME_TODAY:** `planningDayKey` = the recurrence date directly (no clock-time derivation)
+
+See SCHEDULING_ENGINE.md §11.3 for implementation.
+
+---
+
+## ADR-023: PrayerWindow Instance Anchoring via sourceDate
+
+**Decision:** PrayerWindow resolution anchors `startPrayer`/`endPrayer` to the concrete `PrayerPeriodInstance` whose `sourceDate` matches the occurrence's recurrence date. Windows never span across unrelated prayer instances.
+
+**Problem:** Custom planning-day boundaries can create duplicate prayer labels within one planning day. For example, with a 19:00 planning-day start:
+- MAGHRIB (Mon 19:00 → Mon 20:00, sourceDate=Monday)
+- MAGHRIB (Tue 18:30 → Tue 19:00, sourceDate=Tuesday)
+
+A `MAGHRIB→ISHA` window resolved by prayer label alone would find the first MAGHRIB (Mon 19:00) and the last ISHA, potentially spanning ~24 hours across unrelated prayer days.
+
+**Solution:** The `startPrayer` instance is selected by matching both `prayer` label AND `sourceDate` to the occurrence's recurrence date. The `endPrayer` boundary is derived from the same astronomical day's periods. This guarantees the window represents a single, coherent prayer-time span from the intended date.
+
+See SCHEDULING_ENGINE.md §4.3 for implementation.
+
+---
+
+## ADR-024: Recurring Series Split Model
+
+**Decision:** Use `seriesId` + `effectiveFromDate`/`effectiveToDate` for recurring series versioning. Series deletion deactivates (soft-deletes) definitions while retaining historical occurrences.
+
+**Problem:** The original `seriesVersion` integer on `TaskDefinition` could not represent split series with non-overlapping date ranges. "This and future" edits need to close the current version at a date boundary and create a new version starting at the split date.
+
+**Solution:**
+- `seriesId` (UUID): Stable logical series identity shared across all versions. Non-recurring tasks: `seriesId === id`.
+- `seriesVersion` (integer): Monotonically increasing within a series. Bumped on each "this and future" split.
+- `effectiveFromDate` (ISO date): First date this definition version applies to (inclusive).
+- `effectiveToDate` (ISO date | null): Last date this definition version applies to (inclusive). `null` = until `recurrenceEnd` or forever.
+
+**Series operations:**
+- **Edit this occurrence:** Write to `overrideData` on the occurrence. No definition change.
+- **Edit this and future:** Close predecessor at `splitDate - 1`, create new definition with same `seriesId`.
+- **Edit entire series:** Update definition in-place. Rematerialize non-completed/non-cancelled occurrences.
+- **Delete one occurrence:** Set status to CANCELLED (exception record).
+- **Delete future:** Set `recurrenceEnd` = today, cancel future occurrences.
+- **Delete entire series:** Set `isActive = false` on all versions. Cancel pending. **Retain** completed/missed history.
+
+**Sync compatibility:** UUIDs, monotonic versions, non-overlapping date ranges, and soft-delete support eventual CRDT-friendly cloud sync.
+
+See DATA_MODEL.md §4A for full schema and operation details.

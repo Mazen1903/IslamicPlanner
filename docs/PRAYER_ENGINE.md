@@ -1,7 +1,7 @@
 # Prayer Engine
 
 **Status:** Source of truth for prayer time computation  
-**Updated:** 2026-09-14 (Rev 2 — architecture review)  
+**Updated:** 2026-09-14 (Rev 3 — architecture revision 3)  
 **Implements:** MASTER_PRODUCT_SPEC §21, §22, §45  
 **Library:** `adhan` (adhan-js)
 
