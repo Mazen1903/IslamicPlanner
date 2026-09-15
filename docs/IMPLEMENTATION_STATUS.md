@@ -13,7 +13,7 @@
 | **M0** | Repository and project foundation | **Completed** | 2026-09-14 | Expo SDK 57, TypeScript strict, Jest, ESLint, Prettier, Drizzle, directory structure & placeholders |
 | **M1** | Design system and theme tokens | **Completed** | 2026-09-14 | Theme tokens, light/dark themes, ThemeProvider, Button, Card, Toggle, Icon, SafeArea, demo screen, 17 unit tests |
 | **M2** | Prayer-time engine + PrayerTimeline | **Completed** | 2026-09-14 | All 71 domain tests pass, 100% exact boundaries, ±1 min published verification, Opus review required |
-| **M3** | Planning-day engine + clipping | Not Started | — | Prerequisites: M2. Opus review required |
+| **M3** | Planning-day engine + clipping | **Completed** | 2026-09-14 | All 32 domain tests pass, Fajr/Midnight/Custom boundaries, explicit DST resolution, non-mutating clipping, Opus review required |
 | **M4** | Task domain model + schema (includes series) | Not Started | — | Prerequisites: M0. Opus review required. Includes seriesId/effectiveFromDate/effectiveToDate (ADR-024) |
 | **M5** | Scheduling engine + WallClockResolver | Not Started | — | Prerequisites: M2, M3, M4. Opus review required |
 | **M6** | Local persistence + materialization | Not Started | — | Prerequisites: M4, M5 |
@@ -134,4 +134,44 @@
   - `npm run typecheck`: Passed (0 errors)
   - `npm run lint`: Passed (0 errors, 0 warnings)
   - `npm test`: Passed (9 test suites, 88 tests passed, 0 failures)
+
+---
+
+## M3 Completion Record
+
+- **Date:** 2026-09-14
+- **Scope:** Planning-Day Engine + PrayerPeriodInstance Clipping ONLY (pure domain module)
+- **Domain Modules Implemented:**
+  - `src/domain/planning-day/types.ts`: `PlanningDayConfig` canonical discriminated union (`FAJR`, `MIDNIGHT`, `CUSTOM`), `PlanningDayBoundaries`, `PlanningDay`, `WallClockResolution`, `PlanningDayEngineAPI`, `PLANNER_TAB_ORDER`.
+  - `src/domain/planning-day/PlanningDayEngine.ts`: Core planning-day engine:
+    - Transition-aware DST wall-clock resolver (`resolveWallClock`) handling spring-forward gap (first valid instant after gap) and fall-back overlap (earlier absolute occurrence).
+    - Boundary resolution (`resolvePlanningDayBoundaries`) for all modes and key semantics (`key D = (D-1)@HH:mm -> D@HH:mm` for custom).
+    - Period clipping (`clipPeriodsToInterval`) preserving `fullPeriodStart`, `fullPeriodEnd`, `sourceDate`, and `prayer`.
+    - Full timeline coverage enforcement (`assertTimelineCoverage`) preventing partial planning days.
+    - Reference time normalization to effective planning timezone.
+    - Multi-instance prayer label support without deduplication or merging.
+    - Pure prayer tab helper (`getPeriodsForPrayer`).
+    - Dedicated key builder `buildPlanningDayForKey`, lookup `resolvePlanningDayForTime`, unified `buildPlanningDay`, and `PlanningDayEngine` facade.
+  - `src/domain/planning-day/index.ts`: Module exports.
+- **Unit Tests Added (32 domain tests, 120 total project tests):**
+  - `src/domain/planning-day/PlanningDayEngine.test.ts`:
+    - **PD-01 to PD-04**: Fajr-based tests (midday $\rightarrow$ today, 2:00 AM $\rightarrow$ yesterday, 11:00 PM $\rightarrow$ today, exact Fajr boundary 1ms before/at).
+    - **PD-05**: Midnight-based tests (12:30 AM $\rightarrow$ today, midnight boundary invariant, Isha clipping across midnight).
+    - **PD-06 to PD-07b**: Custom 19:00 boundary tests (Tue 18:59:59.999 $\rightarrow$ Tue key, Tue 19:00 $\rightarrow$ Wed key, Tue 20:00 $\rightarrow$ Wed key).
+    - **PD-08**: Tab order invariance (`PLANNER_TAB_ORDER` strictly Fajr$\rightarrow$Isha).
+    - **PD-09**: `planningDayKey` format validation (`YYYY-MM-DD`).
+    - **PD-10 & PD-10b**: DST spring-forward (02:00 gap shifts to 03:00 EDT) and fall-back (01:30 selects earlier EDT offset) with timestamp assertions.
+    - **PD-11 to PD-13**: Seasonal clipping tests with real astronomical fixtures (London summer & winter).
+    - **PD-14**: Multi-instance tab with real Mecca fixture (19:00 cuts Maghrib, Mon+Tue sourceDates preserved, no merge/dedup).
+    - **PD-15**: Provenance preservation (`fullPeriodStart`/`fullPeriodEnd`/`sourceDate` preserved).
+    - **Invariants & Safety**: `start <= time < end`, zero gaps, zero overlaps, timeline immutability, reference normalization across timezones, timeline coverage validation, error handling.
+    - **Date Transitions**: Month-end (Jan 31 $\rightarrow$ Feb 1), leap year (Feb 28 $\rightarrow$ Feb 29 $\rightarrow$ Mar 1 in 2028), year-end (Dec 31 $\rightarrow$ Jan 1).
+    - **Facade API**: Verified all `PlanningDayEngine` methods.
+- **Verification:**
+  - `npx expo-doctor`: Passed (21/21 checks passed, 0 issues)
+  - `npx expo install --check`: Passed (Dependencies are up to date)
+  - `npm run typecheck`: Passed (0 errors)
+  - `npm run lint`: Passed (0 errors, 0 warnings)
+  - `npm test`: Passed (10 test suites, 120 tests passed, 0 failures)
+
 
