@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Current Milestone:** M0 — Repository and Project Foundation  
+**Current Milestone:** M1 — Design System and Theme Tokens  
 **Last Updated:** 2026-09-14  
 **Project:** Islamic Prayer-Centered Planner  
 
@@ -11,7 +11,7 @@
 | Milestone | Description | Status | Completed Date | Notes |
 |---|---|---|---|---|
 | **M0** | Repository and project foundation | **Completed** | 2026-09-14 | Expo SDK 57, TypeScript strict, Jest, ESLint, Prettier, Drizzle, directory structure & placeholders |
-| **M1** | Design system and theme tokens | Not Started | — | Prerequisites: M0 |
+| **M1** | Design system and theme tokens | **Completed** | 2026-09-14 | Theme tokens, light/dark themes, ThemeProvider, Button, Card, Toggle, Icon, SafeArea, demo screen, 17 unit tests |
 | **M2** | Prayer-time engine + PrayerTimeline | Not Started | — | Prerequisites: M0, M1. Opus review required |
 | **M3** | Planning-day engine + clipping | Not Started | — | Prerequisites: M2. Opus review required |
 | **M4** | Task domain model + schema | Not Started | — | Prerequisites: M3. Opus review required |
@@ -76,3 +76,32 @@
   - Linting (`npm run lint`): Passed (0 errors, 0 warnings)
   - Testing (`npm test`): Passed (0 tests, 0 failures)
   - Expo dev server: Verified starting Metro bundler and responding to status queries.
+
+---
+
+## M1 Completion Record
+
+- **Date:** 2026-09-14
+- **Scope:** Design System and Theme Tokens ONLY
+- **Theme Architecture:**
+  - Token definitions in `src/theme/tokens.ts` (colors, spacing, radii, shadows, touch targets, icon sizes)
+  - Semantic color mappings in `src/theme/lightTheme.ts` and `src/theme/darkTheme.ts`
+  - Modes supported: `LIGHT`, `DARK`, `SYSTEM` (with live dynamic switching and system color scheme observation)
+  - Typography scale in `src/theme/typography.ts` with graceful system font fallbacks
+  - Context and hooks in `src/theme/ThemeProvider.tsx` and `src/theme/useTheme.ts`
+- **Reusable UI Components:**
+  - `Button`: Primary, secondary, ghost, destructive variants; sm/md/lg sizes; loading & disabled states; icons; minimum 44dp touch target
+  - `Card`: Default, elevated, outlined variants; none/sm/md/lg padding; pressable interaction
+  - `Toggle`: Controlled accessible switch with label and description support, WCAG touch target
+  - `Icon`: Decoupled project-level icon abstraction mapping semantic icon names to vector icons
+  - `SafeArea`: Reusable layout wrapper using `react-native-safe-area-context`
+- **Visual Demo:**
+  - `app/demo.tsx`: Development screen demonstrating theme switching, palette swatches, typography scale, buttons, cards, toggles, and icon gallery
+- **Verification:**
+  - `npx expo-doctor`: Passed (21/21 checks passed, 0 issues)
+  - `npx expo install --check`: Passed (Dependencies are up to date)
+  - `npm run typecheck`: Passed (0 errors)
+  - `npm run lint`: Passed (0 errors, 0 warnings)
+  - `npm test`: Passed (5 test suites, 17 tests passed, 0 failures)
+  - Expo dev server: Bundled and running cleanly
+
