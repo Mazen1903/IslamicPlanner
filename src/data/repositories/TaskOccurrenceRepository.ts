@@ -1,6 +1,6 @@
 import { eq, and, gte } from 'drizzle-orm';
 import { taskOccurrences, taskDefinitions } from '@/data/schema';
-import { getDatabase, type AppDatabase } from '@/data/db';
+import { getDatabase, runInTransaction, type AppDatabase } from '@/data/db';
 import type {
   TaskOccurrence,
   NewTaskOccurrenceInput,
@@ -17,6 +17,12 @@ import {
 } from '@/domain/task/jsonBoundary';
 import { DataIntegrityError, TaskValidationError } from '@/domain/task/errors';
 import { generateUuid } from '@/utils/uuid';
+import {
+  assertValidCivilDate,
+  assertValidIsoInstant,
+  canonicalizeIsoInstant,
+  assertValidIanaTimezone,
+} from '@/utils/dateValidation';
 
 function getDb(tx?: any): AppDatabase {
   return tx ?? getDatabase();
@@ -45,12 +51,84 @@ function mapRowToDomain(row: typeof taskOccurrences.$inferSelect): TaskOccurrenc
       overrideData: parseOverrideData(row.overrideData),
     };
   } catch (err) {
-    if (err instanceof DataIntegrityError) throw err;
     throw new DataIntegrityError(
       `Failed to map task_occurrence row ${row.id} to domain model: ${(err as Error).message}`,
       { cause: err }
     );
   }
+}
+
+function validateOccurrenceInvariants(input: NewTaskOccurrenceInput): {
+  localDate: string;
+  planningDayKey: string;
+  timezone: string;
+  status: OccurrenceStatus;
+  completedAt: string | null;
+  missedAt: string | null;
+  calculatedStartTime: string | null;
+} {
+  if (!input.taskDefinitionId) {
+    throw new TaskValidationError('taskDefinitionId is required');
+  }
+
+  assertValidCivilDate(input.localDate, 'localDate');
+  assertValidCivilDate(input.planningDayKey, 'planningDayKey');
+  assertValidIanaTimezone(input.timezone, 'timezone');
+
+  const status = input.status ?? 'PENDING';
+  let completedAt = input.completedAt ?? null;
+  let missedAt = input.missedAt ?? null;
+  let calculatedStartTime = input.calculatedStartTime ?? null;
+
+  if (completedAt != null) {
+    assertValidIsoInstant(completedAt, 'completedAt');
+    completedAt = canonicalizeIsoInstant(completedAt);
+  }
+  if (missedAt != null) {
+    assertValidIsoInstant(missedAt, 'missedAt');
+    missedAt = canonicalizeIsoInstant(missedAt);
+  }
+  if (calculatedStartTime != null) {
+    assertValidIsoInstant(calculatedStartTime, 'calculatedStartTime');
+    calculatedStartTime = canonicalizeIsoInstant(calculatedStartTime);
+  }
+
+  // Terminal status timestamp invariants
+  if (status === 'PENDING') {
+    if (completedAt != null || missedAt != null) {
+      throw new TaskValidationError(
+        `PENDING occurrence cannot have completedAt (${completedAt}) or missedAt (${missedAt}). Both must be null.`
+      );
+    }
+  } else if (status === 'COMPLETED') {
+    if (completedAt == null || missedAt != null) {
+      throw new TaskValidationError(
+        `COMPLETED occurrence must have completedAt populated and missedAt null. Got completedAt: ${completedAt}, missedAt: ${missedAt}.`
+      );
+    }
+  } else if (status === 'MISSED') {
+    if (missedAt == null || completedAt != null) {
+      throw new TaskValidationError(
+        `MISSED occurrence must have missedAt populated and completedAt null. Got completedAt: ${completedAt}, missedAt: ${missedAt}.`
+      );
+    }
+  } else if (status === 'CANCELLED') {
+    if (completedAt != null || missedAt != null) {
+      throw new TaskValidationError(
+        `CANCELLED occurrence cannot have completedAt (${completedAt}) or missedAt (${missedAt}). Both must be null.`
+      );
+    }
+  }
+
+  return {
+    localDate: input.localDate,
+    planningDayKey: input.planningDayKey,
+    timezone: input.timezone,
+    status,
+    completedAt,
+    missedAt,
+    calculatedStartTime,
+  };
 }
 
 export class TaskOccurrenceRepository {
@@ -60,19 +138,7 @@ export class TaskOccurrenceRepository {
    */
   async create(input: NewTaskOccurrenceInput, tx?: any): Promise<TaskOccurrence> {
     const client = getDb(tx);
-
-    if (!input.taskDefinitionId) {
-      throw new TaskValidationError('taskDefinitionId is required');
-    }
-    if (!input.localDate || !/^\d{4}-\d{2}-\d{2}$/.test(input.localDate)) {
-      throw new TaskValidationError(`Invalid localDate: expected 'YYYY-MM-DD', got ${input.localDate}`);
-    }
-    if (!input.planningDayKey || !/^\d{4}-\d{2}-\d{2}$/.test(input.planningDayKey)) {
-      throw new TaskValidationError(`Invalid planningDayKey: expected 'YYYY-MM-DD', got ${input.planningDayKey}`);
-    }
-    if (!input.timezone) {
-      throw new TaskValidationError('timezone is required');
-    }
+    const validated = validateOccurrenceInvariants(input);
 
     // Look up referenced TaskDefinition to verify existence and derive seriesId
     const defRows = client
@@ -107,16 +173,16 @@ export class TaskOccurrenceRepository {
           id,
           taskDefinitionId: input.taskDefinitionId,
           seriesId,
-          localDate: input.localDate,
-          planningDayKey: input.planningDayKey,
-          timezone: input.timezone,
-          calculatedStartTime: input.calculatedStartTime ?? null,
+          localDate: validated.localDate,
+          planningDayKey: validated.planningDayKey,
+          timezone: validated.timezone,
+          calculatedStartTime: validated.calculatedStartTime,
           calculatedPrayerSection: input.calculatedPrayerSection ?? null,
           eligiblePrayerSections: serializedEligible,
           wallClockResolution: input.wallClockResolution ?? null,
-          status: input.status ?? 'PENDING',
-          completedAt: input.completedAt ?? null,
-          missedAt: input.missedAt ?? null,
+          status: validated.status,
+          completedAt: validated.completedAt,
+          missedAt: validated.missedAt,
           overrideData: serializedOverride,
         })
         .run();
@@ -145,11 +211,12 @@ export class TaskOccurrenceRepository {
 
   /**
    * Atomically creates a batch of TaskOccurrences within a single transaction.
+   * When tx is supplied, executes directly inside tx.
+   * When tx is not supplied, uses canonical runInTransaction.
    */
   async createBatch(occurrences: NewTaskOccurrenceInput[], tx?: any): Promise<TaskOccurrence[]> {
     if (occurrences.length === 0) return [];
 
-    const client = getDb(tx);
     const execute = async (activeTx: any) => {
       const results: TaskOccurrence[] = [];
       for (const occ of occurrences) {
@@ -161,11 +228,11 @@ export class TaskOccurrenceRepository {
 
     if (tx) {
       return await execute(tx);
-    } else {
-      return (client as any).transaction(async (newTx: any) => {
-        return await execute(newTx);
-      });
     }
+
+    return await runInTransaction(async (innerTx) => {
+      return await execute(innerTx);
+    });
   }
 
   /**
@@ -191,6 +258,7 @@ export class TaskOccurrenceRepository {
     localDate: string,
     tx?: any
   ): Promise<TaskOccurrence | null> {
+    assertValidCivilDate(localDate, 'localDate');
     const client = getDb(tx);
     const rows = client
       .select()
@@ -211,6 +279,7 @@ export class TaskOccurrenceRepository {
    * Queries occurrences belonging to a planning day.
    */
   async findByPlanningDay(planningDayKey: string, tx?: any): Promise<TaskOccurrence[]> {
+    assertValidCivilDate(planningDayKey, 'planningDayKey');
     const client = getDb(tx);
     const rows = client
       .select()
@@ -229,6 +298,7 @@ export class TaskOccurrenceRepository {
     prayer: Prayer,
     tx?: any
   ): Promise<TaskOccurrence[]> {
+    assertValidCivilDate(planningDayKey, 'planningDayKey');
     const client = getDb(tx);
     const rows = client
       .select()
@@ -291,7 +361,14 @@ export class TaskOccurrenceRepository {
       );
     }
 
-    const effectiveTime = timestamp ?? new Date().toISOString();
+    let effectiveTime: string;
+    if (timestamp != null) {
+      assertValidIsoInstant(timestamp, 'timestamp');
+      effectiveTime = canonicalizeIsoInstant(timestamp);
+    } else {
+      effectiveTime = new Date().toISOString();
+    }
+
     const patch: Partial<typeof taskOccurrences.$inferInsert> = {
       status: newStatus,
     };
@@ -367,9 +444,21 @@ export class TaskOccurrenceRepository {
       );
     }
 
+    if (placement.planningDayKey) {
+      assertValidCivilDate(placement.planningDayKey, 'planningDayKey');
+    }
+    if (placement.timezone) {
+      assertValidIanaTimezone(placement.timezone, 'timezone');
+    }
+    let calculatedStartTime = placement.calculatedStartTime;
+    if (calculatedStartTime != null) {
+      assertValidIsoInstant(calculatedStartTime, 'calculatedStartTime');
+      calculatedStartTime = canonicalizeIsoInstant(calculatedStartTime);
+    }
+
     const serializedEligible = serializeEligiblePrayerSections(placement.eligiblePrayerSections);
     const patch: Partial<typeof taskOccurrences.$inferInsert> = {
-      calculatedStartTime: placement.calculatedStartTime,
+      calculatedStartTime,
       calculatedPrayerSection: placement.calculatedPrayerSection,
       eligiblePrayerSections: serializedEligible,
       wallClockResolution: placement.wallClockResolution,
@@ -399,6 +488,7 @@ export class TaskOccurrenceRepository {
     fromDate: string,
     tx?: any
   ): Promise<number> {
+    assertValidCivilDate(fromDate, 'fromDate');
     const client = getDb(tx);
     const pendingRows = client
       .select({ id: taskOccurrences.id })
@@ -457,6 +547,7 @@ export class TaskOccurrenceRepository {
     fromDate: string,
     tx?: any
   ): Promise<number> {
+    assertValidCivilDate(fromDate, 'fromDate');
     const client = getDb(tx);
     const pendingRows = client
       .select({ id: taskOccurrences.id })

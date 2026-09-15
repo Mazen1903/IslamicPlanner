@@ -17,16 +17,7 @@ import type {
   SubtaskTemplate,
 } from '@/domain/task/types';
 import { TaskValidationError } from '@/domain/task/errors';
-
-/**
- * Helper to compute splitDate - 1 day (e.g. 2026-09-15 -> 2026-09-14)
- */
-function getPreviousDayDateString(dateStr: string): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const date = new Date(Date.UTC(y, m - 1, d));
-  date.setUTCDate(date.getUTCDate() - 1);
-  return date.toISOString().slice(0, 10);
-}
+import { assertValidCivilDate, subtractCivilDay } from '@/utils/dateValidation';
 
 export class TaskEngine {
   constructor(
@@ -43,8 +34,9 @@ export class TaskEngine {
     if (!params.title || params.title.trim() === '') {
       throw new TaskValidationError('Task title cannot be empty');
     }
-    if (!params.startDate || !/^\d{4}-\d{2}-\d{2}$/.test(params.startDate)) {
-      throw new TaskValidationError(`Invalid startDate: expected 'YYYY-MM-DD', got ${params.startDate}`);
+    assertValidCivilDate(params.startDate, 'startDate');
+    if (params.recurrenceEnd) {
+      assertValidCivilDate(params.recurrenceEnd, 'recurrenceEnd');
     }
 
     const id = params.id ?? generateUuid();
@@ -124,9 +116,7 @@ export class TaskEngine {
     changes: Partial<TaskDefinition>,
     tx?: any
   ): Promise<{ predecessor: TaskDefinition; newVersion: TaskDefinition }> {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(splitDate)) {
-      throw new TaskValidationError(`Invalid splitDate: expected 'YYYY-MM-DD', got ${splitDate}`);
-    }
+    assertValidCivilDate(splitDate, 'splitDate');
 
     const execute = async (activeTx: any) => {
       // 1. Look up current active version inside the transaction
@@ -135,7 +125,19 @@ export class TaskEngine {
         throw new TaskValidationError(`Cannot split series ${seriesId}: no active version found`);
       }
 
-      const splitDateMinusOne = getPreviousDayDateString(splitDate);
+      // Validate splitDate falls strictly within active version's range
+      if (predecessor.effectiveFromDate && splitDate <= predecessor.effectiveFromDate) {
+        throw new TaskValidationError(
+          `splitDate ${splitDate} must be strictly after active version effectiveFromDate ${predecessor.effectiveFromDate}`
+        );
+      }
+      if (predecessor.effectiveToDate && splitDate > predecessor.effectiveToDate) {
+        throw new TaskValidationError(
+          `splitDate ${splitDate} exceeds active version effectiveToDate ${predecessor.effectiveToDate}`
+        );
+      }
+
+      const splitDateMinusOne = subtractCivilDay(splitDate);
 
       // 2. Close predecessor
       await this.defRepo.closeVersion(predecessor.id, splitDateMinusOne, activeTx);

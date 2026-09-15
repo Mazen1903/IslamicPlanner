@@ -31,64 +31,131 @@ export function setDatabase(db: AppDatabase, client?: any): void {
   rawClient = client ?? null;
 }
 
-let transactionDepth = 0;
+/**
+ * Symbol used to tag active transaction context on db/tx objects.
+ */
+export const TRANSACTION_CONTEXT = Symbol('TRANSACTION_CONTEXT');
+
+export interface TransactionContext {
+  id: number;
+  savepointCount: number;
+}
 
 /**
- * Resets the current database instance.
+ * Sequential transaction queue / mutex for root transactions on the SQLite connection.
+ * Ensures root transactions are strictly serialized and cannot interleave.
+ */
+class TransactionLock {
+  private queue: Promise<void> = Promise.resolve();
+
+  async acquire(): Promise<() => void> {
+    let release!: () => void;
+    const nextLock = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const currentQueue = this.queue;
+    this.queue = this.queue.then(() => nextLock);
+    await currentQueue;
+    return release;
+  }
+
+  reset(): void {
+    this.queue = Promise.resolve();
+  }
+}
+
+const rootLock = new TransactionLock();
+let txCounter = 0;
+
+/**
+ * Resets the current database instance and any pending transaction lock.
  */
 export function resetDatabase(): void {
   databaseInstance = null;
   rawClient = null;
-  transactionDepth = 0;
+  rootLock.reset();
 }
 
 /**
  * Executes a callback within an atomic database transaction.
- * Supports async operations and nested transactions via SQLite SAVEPOINTS.
+ *
+ * Concurrency & Invariants:
+ * - Root transactions on the single SQLite connection are strictly serialized.
+ * - Two concurrent root transactions will execute sequentially; the second waits for the first to complete.
+ * - Explicit nesting: Callers pass the explicit `tx` object. Nested calls create scoped SAVEPOINTS belonging
+ *   to that specific transaction context, avoiding global counter hazards.
+ * - Implicit nesting is avoided: an unrelated async operation calling runInTransaction without `tx` is treated
+ *   as an independent root transaction and will safely wait for connection availability.
  */
 export async function runInTransaction<T>(
   fn: (tx: any) => Promise<T>,
-  db?: AppDatabase
+  dbOrTx?: any
 ): Promise<T> {
-  const activeDb = db ?? getDatabase();
+  const existingContext: TransactionContext | undefined = dbOrTx?.[TRANSACTION_CONTEXT];
 
-  if (rawClient && typeof rawClient.execSync === 'function') {
-    const isRoot = transactionDepth === 0;
-    const savepoint = `sp_${transactionDepth}`;
-    transactionDepth++;
+  // 1. Explicit nested transaction context via SAVEPOINT
+  if (existingContext) {
+    const spId = ++existingContext.savepointCount;
+    const savepoint = `sp_${existingContext.id}_${spId}`;
 
-    if (isRoot) {
-      rawClient.execSync('BEGIN TRANSACTION;');
-    } else {
+    if (rawClient && typeof rawClient.execSync === 'function') {
       rawClient.execSync(`SAVEPOINT ${savepoint};`);
     }
 
     try {
-      const result = await fn(activeDb);
-      if (isRoot) {
-        rawClient.execSync('COMMIT;');
-      } else {
+      const result = await fn(dbOrTx);
+      if (rawClient && typeof rawClient.execSync === 'function') {
         rawClient.execSync(`RELEASE SAVEPOINT ${savepoint};`);
       }
       return result;
     } catch (err) {
-      try {
-        if (isRoot) {
-          rawClient.execSync('ROLLBACK;');
-        } else {
+      if (rawClient && typeof rawClient.execSync === 'function') {
+        try {
           rawClient.execSync(`ROLLBACK TO SAVEPOINT ${savepoint};`);
+        } catch {
+          // ignore rollback errors if already aborted
         }
-      } catch {
-        // ignore rollback errors if already aborted
       }
       throw err;
-    } finally {
-      transactionDepth--;
     }
   }
 
-  // Fallback to Drizzle transaction if rawClient is not available
-  return (activeDb.transaction(async tx => {
-    return await fn(tx);
-  }) as unknown) as Promise<T>;
+  // 2. Root transaction: strictly serialized via rootLock
+  const release = await rootLock.acquire();
+  const activeDb = dbOrTx ?? getDatabase();
+
+  const context: TransactionContext = {
+    id: ++txCounter,
+    savepointCount: 0,
+  };
+
+  const tx = Object.assign(Object.create(activeDb), {
+    [TRANSACTION_CONTEXT]: context,
+    $client: rawClient,
+  });
+
+  try {
+    if (rawClient && typeof rawClient.execSync === 'function') {
+      rawClient.execSync('BEGIN TRANSACTION;');
+    }
+
+    try {
+      const result = await fn(tx);
+      if (rawClient && typeof rawClient.execSync === 'function') {
+        rawClient.execSync('COMMIT;');
+      }
+      return result;
+    } catch (err) {
+      if (rawClient && typeof rawClient.execSync === 'function') {
+        try {
+          rawClient.execSync('ROLLBACK;');
+        } catch {
+          // ignore rollback errors
+        }
+      }
+      throw err;
+    }
+  } finally {
+    release();
+  }
 }

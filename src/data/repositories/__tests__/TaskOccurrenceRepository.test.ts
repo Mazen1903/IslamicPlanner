@@ -419,4 +419,321 @@ describe('TaskOccurrenceRepository', () => {
       );
     });
   });
+
+  describe('M4 Hardening: Civil Dates, Terminal Invariants, Timestamps & Timezones', () => {
+    describe('Civil Date Validation', () => {
+      it('accepts valid Gregorian civil dates for localDate and planningDayKey', async () => {
+        const validDates = ['2026-01-31', '2028-02-29', '2026-12-31'];
+        for (const d of validDates) {
+          const occ = await taskOccurrenceRepository.create({
+            id: `occ-valid-${d}`,
+            taskDefinitionId: testDefId,
+            localDate: d,
+            planningDayKey: d,
+            timezone: 'UTC',
+            status: 'PENDING',
+          });
+          expect(occ.localDate).toBe(d);
+          expect(occ.planningDayKey).toBe(d);
+        }
+      });
+
+      it('rejects impossible dates for localDate', async () => {
+        const invalidDates = [
+          '2026-02-29',
+          '2026-02-30',
+          '2026-02-31',
+          '2026-04-31',
+          '2026-00-10',
+          '2026-13-01',
+          '2026-01-00',
+          '2026-1-01',
+          'text',
+        ];
+
+        for (const d of invalidDates) {
+          await expect(
+            taskOccurrenceRepository.create({
+              taskDefinitionId: testDefId,
+              localDate: d,
+              planningDayKey: '2026-09-15',
+              timezone: 'UTC',
+              status: 'PENDING',
+            })
+          ).rejects.toThrow(TaskValidationError);
+        }
+      });
+
+      it('rejects impossible dates for planningDayKey', async () => {
+        await expect(
+          taskOccurrenceRepository.create({
+            taskDefinitionId: testDefId,
+            localDate: '2026-09-15',
+            planningDayKey: '2026-02-29',
+            timezone: 'UTC',
+            status: 'PENDING',
+          })
+        ).rejects.toThrow(TaskValidationError);
+      });
+
+      it('rejects impossible dates in query methods', async () => {
+        await expect(
+          taskOccurrenceRepository.findByDefinitionAndDate(testDefId, '2026-02-29')
+        ).rejects.toThrow(TaskValidationError);
+
+        await expect(
+          taskOccurrenceRepository.findByPlanningDay('2026-04-31')
+        ).rejects.toThrow(TaskValidationError);
+
+        await expect(
+          taskOccurrenceRepository.findByPrayerSection('2026-13-01', 'FAJR')
+        ).rejects.toThrow(TaskValidationError);
+
+        await expect(
+          taskOccurrenceRepository.deletePendingFutureOccurrences(testSeriesId, 'invalid-date')
+        ).rejects.toThrow(TaskValidationError);
+
+        await expect(
+          taskOccurrenceRepository.cancelFutureOccurrences(testSeriesId, '2026-02-30')
+        ).rejects.toThrow(TaskValidationError);
+      });
+    });
+
+    describe('Terminal Status Timestamp Invariants on create & createBatch', () => {
+      it('rejects PENDING with completedAt or missedAt', async () => {
+        await expect(
+          taskOccurrenceRepository.create({
+            taskDefinitionId: testDefId,
+            localDate: '2026-09-15',
+            planningDayKey: '2026-09-15',
+            timezone: 'UTC',
+            status: 'PENDING',
+            completedAt: '2026-09-15T10:00:00Z',
+          })
+        ).rejects.toThrow(TaskValidationError);
+
+        await expect(
+          taskOccurrenceRepository.create({
+            taskDefinitionId: testDefId,
+            localDate: '2026-09-15',
+            planningDayKey: '2026-09-15',
+            timezone: 'UTC',
+            status: 'PENDING',
+            missedAt: '2026-09-15T10:00:00Z',
+          })
+        ).rejects.toThrow(TaskValidationError);
+      });
+
+      it('enforces COMPLETED must have completedAt and missedAt null', async () => {
+        // Missing completedAt -> rejected
+        await expect(
+          taskOccurrenceRepository.create({
+            taskDefinitionId: testDefId,
+            localDate: '2026-09-15',
+            planningDayKey: '2026-09-15',
+            timezone: 'UTC',
+            status: 'COMPLETED',
+          })
+        ).rejects.toThrow(TaskValidationError);
+
+        // Has missedAt -> rejected
+        await expect(
+          taskOccurrenceRepository.create({
+            taskDefinitionId: testDefId,
+            localDate: '2026-09-15',
+            planningDayKey: '2026-09-15',
+            timezone: 'UTC',
+            status: 'COMPLETED',
+            completedAt: '2026-09-15T10:00:00Z',
+            missedAt: '2026-09-15T10:00:00Z',
+          })
+        ).rejects.toThrow(TaskValidationError);
+
+        // Valid COMPLETED -> accepted
+        const created = await taskOccurrenceRepository.create({
+          id: 'occ-valid-comp',
+          taskDefinitionId: testDefId,
+          localDate: '2026-09-15',
+          planningDayKey: '2026-09-15',
+          timezone: 'UTC',
+          status: 'COMPLETED',
+          completedAt: '2026-09-15T10:00:00Z',
+        });
+        expect(created.status).toBe('COMPLETED');
+        expect(created.completedAt).toBe('2026-09-15T10:00:00.000Z');
+        expect(created.missedAt).toBeNull();
+      });
+
+      it('enforces MISSED must have missedAt and completedAt null', async () => {
+        // Missing missedAt -> rejected
+        await expect(
+          taskOccurrenceRepository.create({
+            taskDefinitionId: testDefId,
+            localDate: '2026-09-15',
+            planningDayKey: '2026-09-15',
+            timezone: 'UTC',
+            status: 'MISSED',
+          })
+        ).rejects.toThrow(TaskValidationError);
+
+        // Has completedAt -> rejected
+        await expect(
+          taskOccurrenceRepository.create({
+            taskDefinitionId: testDefId,
+            localDate: '2026-09-15',
+            planningDayKey: '2026-09-15',
+            timezone: 'UTC',
+            status: 'MISSED',
+            missedAt: '2026-09-15T23:59:59Z',
+            completedAt: '2026-09-15T10:00:00Z',
+          })
+        ).rejects.toThrow(TaskValidationError);
+
+        // Valid MISSED -> accepted
+        const created = await taskOccurrenceRepository.create({
+          id: 'occ-valid-missed',
+          taskDefinitionId: testDefId,
+          localDate: '2026-09-15',
+          planningDayKey: '2026-09-15',
+          timezone: 'UTC',
+          status: 'MISSED',
+          missedAt: '2026-09-15T23:59:59Z',
+        });
+        expect(created.status).toBe('MISSED');
+        expect(created.missedAt).toBe('2026-09-15T23:59:59.000Z');
+        expect(created.completedAt).toBeNull();
+      });
+
+      it('enforces CANCELLED must have completedAt and missedAt null', async () => {
+        await expect(
+          taskOccurrenceRepository.create({
+            taskDefinitionId: testDefId,
+            localDate: '2026-09-15',
+            planningDayKey: '2026-09-15',
+            timezone: 'UTC',
+            status: 'CANCELLED',
+            completedAt: '2026-09-15T10:00:00Z',
+          })
+        ).rejects.toThrow(TaskValidationError);
+
+        // Valid CANCELLED -> accepted
+        const created = await taskOccurrenceRepository.create({
+          id: 'occ-valid-cancelled',
+          taskDefinitionId: testDefId,
+          localDate: '2026-09-15',
+          planningDayKey: '2026-09-15',
+          timezone: 'UTC',
+          status: 'CANCELLED',
+        });
+        expect(created.status).toBe('CANCELLED');
+        expect(created.completedAt).toBeNull();
+        expect(created.missedAt).toBeNull();
+      });
+
+      it('createBatch rejects invalid terminal status and rolls back atomically', async () => {
+        await expect(
+          taskOccurrenceRepository.createBatch([
+            {
+              id: 'batch-valid-1',
+              taskDefinitionId: testDefId,
+              localDate: '2026-09-15',
+              planningDayKey: '2026-09-15',
+              timezone: 'UTC',
+              status: 'PENDING',
+            },
+            {
+              id: 'batch-invalid-2',
+              taskDefinitionId: testDefId,
+              localDate: '2026-09-16',
+              planningDayKey: '2026-09-16',
+              timezone: 'UTC',
+              status: 'COMPLETED',
+              // Missing completedAt!
+            },
+          ])
+        ).rejects.toThrow(TaskValidationError);
+
+        // Assert atomic rollback: batch-valid-1 must NOT have been inserted
+        const row = await taskOccurrenceRepository.findById('batch-valid-1');
+        expect(row).toBeNull();
+      });
+    });
+
+    describe('Absolute Timestamp Validation', () => {
+      it('rejects bare local timestamps without UTC offset or Z', async () => {
+        await expect(
+          taskOccurrenceRepository.create({
+            taskDefinitionId: testDefId,
+            localDate: '2026-09-15',
+            planningDayKey: '2026-09-15',
+            timezone: 'UTC',
+            status: 'COMPLETED',
+            completedAt: '2026-09-15T18:00:00', // bare local!
+          })
+        ).rejects.toThrow(TaskValidationError);
+
+        await expect(
+          taskOccurrenceRepository.create({
+            taskDefinitionId: testDefId,
+            localDate: '2026-09-15',
+            planningDayKey: '2026-09-15',
+            timezone: 'UTC',
+            status: 'PENDING',
+            calculatedStartTime: '2026-09-15T18:00:00', // bare local!
+          })
+        ).rejects.toThrow(TaskValidationError);
+      });
+
+      it('canonicalizes valid absolute instants with offset to UTC ISO string', async () => {
+        const occ = await taskOccurrenceRepository.create({
+          id: 'occ-offset-test',
+          taskDefinitionId: testDefId,
+          localDate: '2026-09-15',
+          planningDayKey: '2026-09-15',
+          timezone: 'Asia/Riyadh',
+          status: 'COMPLETED',
+          completedAt: '2026-09-15T18:00:00+03:00',
+        });
+
+        // 18:00+03:00 is 15:00 UTC
+        expect(occ.completedAt).toBe('2026-09-15T15:00:00.000Z');
+      });
+    });
+
+    describe('IANA Timezone Validation', () => {
+      it('accepts valid IANA timezone strings', async () => {
+        const validZones = [
+          { tz: 'America/Chicago', date: '2026-09-15' },
+          { tz: 'Asia/Riyadh', date: '2026-09-16' },
+          { tz: 'Europe/London', date: '2026-09-17' },
+        ];
+        for (const { tz, date } of validZones) {
+          const occ = await taskOccurrenceRepository.create({
+            id: `occ-tz-${tz}`,
+            taskDefinitionId: testDefId,
+            localDate: date,
+            planningDayKey: date,
+            timezone: tz,
+            status: 'PENDING',
+          });
+          expect(occ.timezone).toBe(tz);
+        }
+      });
+
+      it('rejects arbitrary or invalid timezone strings', async () => {
+        const invalidZones = ['Texas', 'GMT-ish', 'not-a-zone', ''];
+        for (const tz of invalidZones) {
+          await expect(
+            taskOccurrenceRepository.create({
+              taskDefinitionId: testDefId,
+              localDate: '2026-09-15',
+              planningDayKey: '2026-09-15',
+              timezone: tz,
+              status: 'PENDING',
+            })
+          ).rejects.toThrow(TaskValidationError);
+        }
+      });
+    });
+  });
 });

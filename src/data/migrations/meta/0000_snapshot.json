@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "9de763e2-04ec-4829-9196-992c347ea797",
+  "id": "d45104dc-78c3-4307-80df-c72fc334fa63",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "hijri_month_overrides": {

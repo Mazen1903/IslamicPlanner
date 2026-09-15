@@ -2,7 +2,7 @@ import { createTestDatabase, cleanupTestDatabase } from '@/data/__tests__/testDb
 import { TaskEngine } from '../TaskEngine';
 import { TaskDefinitionRepository } from '@/data/repositories/TaskDefinitionRepository';
 import { TaskOccurrenceRepository } from '@/data/repositories/TaskOccurrenceRepository';
-import { DataIntegrityError } from '../errors';
+import { DataIntegrityError, TaskValidationError } from '../errors';
 
 describe('TaskEngine - Recurring Series Operations (RS-01 through RS-07, TX-01, SV-01)', () => {
   let defRepo: TaskDefinitionRepository;
@@ -260,11 +260,11 @@ describe('TaskEngine - Recurring Series Operations (RS-01 through RS-07, TX-01, 
     // COMPLETED and MISSED rows must be preserved
     const freshCompleted = await occRepo.findById(completedOcc.id);
     expect(freshCompleted?.status).toBe('COMPLETED');
-    expect(freshCompleted?.completedAt).toBe('2026-09-05T18:30:00Z');
+    expect(freshCompleted?.completedAt).toBe('2026-09-05T18:30:00.000Z');
 
     const freshMissed = await occRepo.findById(missedOcc.id);
     expect(freshMissed?.status).toBe('MISSED');
-    expect(freshMissed?.missedAt).toBe('2026-09-06T23:59:59Z');
+    expect(freshMissed?.missedAt).toBe('2026-09-06T23:59:59.000Z');
 
     // Past PENDING must be CANCELLED (not left alive overdue)
     const freshPastPending = await occRepo.findById(pastPendingOcc.id);
@@ -317,5 +317,103 @@ describe('TaskEngine - Recurring Series Operations (RS-01 through RS-07, TX-01, 
     // 3. Pending occurrence was NOT deleted
     const occs = await occRepo.findBySeriesId(def.seriesId);
     expect(occs.length).toBe(1);
+  });
+
+  describe('M4 Hardening: Series Split Date Validation & Timezone-Independent Arithmetic', () => {
+    it('handles month-end split in non-leap year (March 1 -> February 28)', async () => {
+      const def = await engine.createTask({
+        title: 'Spring Series',
+        startDate: '2026-01-01',
+        scheduleType: 'ANYTIME_TODAY',
+        scheduleData: {},
+        recurrenceRule: 'FREQ=DAILY',
+      });
+
+      const res = await engine.splitSeriesAndFuture(def.seriesId, '2026-03-01', {
+        title: 'Spring Series Updated',
+      });
+
+      expect(res.predecessor.effectiveToDate).toBe('2026-02-28');
+      expect(res.newVersion.startDate).toBe('2026-03-01');
+      expect(res.newVersion.effectiveFromDate).toBe('2026-03-01');
+    });
+
+    it('handles month-end split in leap year (March 1 -> February 29)', async () => {
+      const def = await engine.createTask({
+        title: 'Leap Year Series',
+        startDate: '2028-01-01',
+        scheduleType: 'ANYTIME_TODAY',
+        scheduleData: {},
+        recurrenceRule: 'FREQ=DAILY',
+      });
+
+      const res = await engine.splitSeriesAndFuture(def.seriesId, '2028-03-01', {
+        title: 'Leap Year Series Updated',
+      });
+
+      expect(res.predecessor.effectiveToDate).toBe('2028-02-29');
+      expect(res.newVersion.startDate).toBe('2028-03-01');
+      expect(res.newVersion.effectiveFromDate).toBe('2028-03-01');
+    });
+
+    it('handles year-end split (January 1 -> December 31)', async () => {
+      const def = await engine.createTask({
+        title: 'Multi-Year Series',
+        startDate: '2025-06-01',
+        scheduleType: 'ANYTIME_TODAY',
+        scheduleData: {},
+        recurrenceRule: 'FREQ=DAILY',
+      });
+
+      const res = await engine.splitSeriesAndFuture(def.seriesId, '2026-01-01', {
+        title: 'Multi-Year Series Updated',
+      });
+
+      expect(res.predecessor.effectiveToDate).toBe('2025-12-31');
+      expect(res.newVersion.startDate).toBe('2026-01-01');
+      expect(res.newVersion.effectiveFromDate).toBe('2026-01-01');
+    });
+
+    it('rejects impossible Gregorian splitDate', async () => {
+      const def = await engine.createTask({
+        title: 'Valid Series',
+        startDate: '2026-01-01',
+        scheduleType: 'ANYTIME_TODAY',
+        scheduleData: {},
+        recurrenceRule: 'FREQ=DAILY',
+      });
+
+      await expect(
+        engine.splitSeriesAndFuture(def.seriesId, '2026-02-29', {})
+      ).rejects.toThrow(TaskValidationError);
+
+      await expect(
+        engine.splitSeriesAndFuture(def.seriesId, '2026-04-31', {})
+      ).rejects.toThrow(TaskValidationError);
+
+      await expect(
+        engine.splitSeriesAndFuture(def.seriesId, 'text', {})
+      ).rejects.toThrow(TaskValidationError);
+    });
+
+    it('rejects splitDate preceding or equal to active version effectiveFromDate', async () => {
+      const def = await engine.createTask({
+        title: 'Bound Series',
+        startDate: '2026-05-15',
+        scheduleType: 'ANYTIME_TODAY',
+        scheduleData: {},
+        recurrenceRule: 'FREQ=DAILY',
+      });
+
+      // Split on same day as effectiveFromDate (would close predecessor on 2026-05-14 < 2026-05-15)
+      await expect(
+        engine.splitSeriesAndFuture(def.seriesId, '2026-05-15', {})
+      ).rejects.toThrow(TaskValidationError);
+
+      // Split before effectiveFromDate
+      await expect(
+        engine.splitSeriesAndFuture(def.seriesId, '2026-05-10', {})
+      ).rejects.toThrow(TaskValidationError);
+    });
   });
 });

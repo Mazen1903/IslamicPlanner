@@ -22,6 +22,11 @@ import {
   serializeHijriRecurrence,
 } from '@/domain/task/jsonBoundary';
 import { DataIntegrityError, TaskValidationError } from '@/domain/task/errors';
+import {
+  assertValidCivilDate,
+  assertValidIsoInstant,
+  canonicalizeIsoInstant,
+} from '@/utils/dateValidation';
 
 export interface NewTaskDefinition {
   id: string;
@@ -102,8 +107,20 @@ export class TaskDefinitionRepository {
     if (!def.title || typeof def.title !== 'string' || def.title.trim() === '') {
       throw new TaskValidationError('Task title cannot be empty');
     }
-    if (!def.startDate || typeof def.startDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(def.startDate)) {
-      throw new TaskValidationError(`Invalid startDate: expected 'YYYY-MM-DD', got ${def.startDate}`);
+    assertValidCivilDate(def.startDate, 'startDate');
+    if (def.effectiveFromDate) {
+      assertValidCivilDate(def.effectiveFromDate, 'effectiveFromDate');
+    }
+    if (def.effectiveToDate) {
+      assertValidCivilDate(def.effectiveToDate, 'effectiveToDate');
+    }
+    if (def.effectiveFromDate && def.effectiveToDate && def.effectiveFromDate > def.effectiveToDate) {
+      throw new TaskValidationError(
+        `effectiveFromDate (${def.effectiveFromDate}) must be <= effectiveToDate (${def.effectiveToDate})`
+      );
+    }
+    if (def.recurrenceEnd) {
+      assertValidCivilDate(def.recurrenceEnd, 'recurrenceEnd');
     }
     if (!def.seriesId || typeof def.seriesId !== 'string' || def.seriesId.trim() === '') {
       throw new TaskValidationError('TaskDefinition seriesId must be a non-empty string');
@@ -114,8 +131,16 @@ export class TaskDefinitionRepository {
     }
 
     const now = new Date().toISOString();
-    const createdAt = def.createdAt ?? now;
-    const updatedAt = def.updatedAt ?? now;
+    let createdAt = now;
+    if (def.createdAt != null) {
+      assertValidIsoInstant(def.createdAt, 'createdAt');
+      createdAt = canonicalizeIsoInstant(def.createdAt);
+    }
+    let updatedAt = now;
+    if (def.updatedAt != null) {
+      assertValidIsoInstant(def.updatedAt, 'updatedAt');
+      updatedAt = canonicalizeIsoInstant(def.updatedAt);
+    }
 
     const serializedScheduleData = serializeScheduleData(def.scheduleType, def.scheduleData);
     const serializedTags = serializeTags(def.tags ?? []);
@@ -251,8 +276,11 @@ export class TaskDefinitionRepository {
     if (patch.title !== undefined && patch.title.trim() === '') {
       throw new TaskValidationError('Task title cannot be empty');
     }
-    if (patch.startDate !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(patch.startDate)) {
-      throw new TaskValidationError(`Invalid startDate: expected 'YYYY-MM-DD', got ${patch.startDate}`);
+    if (patch.startDate !== undefined) {
+      assertValidCivilDate(patch.startDate, 'startDate');
+    }
+    if (patch.recurrenceEnd !== undefined && patch.recurrenceEnd !== null) {
+      assertValidCivilDate(patch.recurrenceEnd, 'recurrenceEnd');
     }
 
     const updateValues: Partial<typeof taskDefinitions.$inferInsert> = {
@@ -301,6 +329,15 @@ export class TaskDefinitionRepository {
    * Internal/series method to close an existing version's effective range.
    */
   async closeVersion(id: string, effectiveToDate: string, tx?: any): Promise<void> {
+    assertValidCivilDate(effectiveToDate, 'effectiveToDate');
+
+    const existing = await this.findById(id, tx);
+    if (existing && existing.effectiveFromDate && existing.effectiveFromDate > effectiveToDate) {
+      throw new TaskValidationError(
+        `effectiveToDate (${effectiveToDate}) cannot precede effectiveFromDate (${existing.effectiveFromDate})`
+      );
+    }
+
     const client = getDb(tx);
     client
       .update(taskDefinitions)

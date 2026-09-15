@@ -1,9 +1,8 @@
 import { drizzle, type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import * as schema from '../schema';
 import { DatabaseSync } from 'node:sqlite';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
 import { setDatabase, resetDatabase } from '../db';
+import { loadMigrationConfig } from '../migrator';
 
 export function createTestDatabase(): {
   db: ExpoSQLiteDatabase<typeof schema>;
@@ -13,13 +12,18 @@ export function createTestDatabase(): {
   const nodeDb = new DatabaseSync(':memory:');
   nodeDb.exec('PRAGMA foreign_keys = ON;');
 
-  const migrationPath = path.join(__dirname, '../migrations/0001_initial.sql');
-  const migrationSql = fs.readFileSync(migrationPath, 'utf8');
-  const statements = migrationSql.split('--> statement-breakpoint');
-  for (const statement of statements) {
-    const trimmed = statement.trim();
-    if (trimmed) {
-      nodeDb.exec(trimmed);
+  const config = loadMigrationConfig();
+  for (const entry of config.journal.entries) {
+    const key = `m${entry.idx.toString().padStart(4, '0')}`;
+    const migrationSql = config.migrations[key];
+    if (migrationSql) {
+      const statements = migrationSql.split('--> statement-breakpoint');
+      for (const statement of statements) {
+        const trimmed = statement.trim();
+        if (trimmed) {
+          nodeDb.exec(trimmed);
+        }
+      }
     }
   }
 

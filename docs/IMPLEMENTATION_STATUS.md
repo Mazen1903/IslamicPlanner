@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M4 — Task Domain + SQLite Schema (Completed, pending Opus review)  
-**Last Updated:** 2026-09-14 (Rev 3 — architecture revision 3)  
+**Current Milestone:** M4 — Task Domain + SQLite Schema (Completed & Hardened)  
+**Last Updated:** 2026-09-14 (Rev 3 — architecture revision 3 + M4 hardening)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -14,7 +14,7 @@
 | **M1** | Design system and theme tokens | **Completed** | 2026-09-14 | Theme tokens, light/dark themes, ThemeProvider, Button, Card, Toggle, Icon, SafeArea, demo screen, 17 unit tests |
 | **M2** | Prayer-time engine + PrayerTimeline | **Completed** | 2026-09-14 | All 71 domain tests pass, 100% exact boundaries, ±1 min published verification, Opus review required |
 | **M3** | Planning-day engine + clipping | **Completed** | 2026-09-14 | All 32 domain tests pass, Fajr/Midnight/Custom boundaries, explicit DST resolution, non-mutating clipping, Opus review required |
-| **M4** | Task domain model + schema (includes series) | **Completed** | 2026-09-14 | All 80 M4 tests pass (200 total project tests), Drizzle schema, 0001_initial migration, runtime JSON boundaries, transactional series split & rollback, subtask isolation, Opus review required |
+| **M4** | Task domain model + schema (includes series) | **Completed & Hardened** | 2026-09-14 | All 128 M4 tests pass (248 total project tests), clean 0000_initial migration, dynamic Drizzle discovery, canonical transactions, serialized concurrency, true civil-date validation, terminal status timestamp invariants, absolute ISO instants, IANA timezone validation |
 | **M5** | Scheduling engine + WallClockResolver | Not Started | — | Prerequisites: M2, M3, M4. Opus review required |
 | **M6** | Local persistence + materialization | Not Started | — | Prerequisites: M4, M5 |
 | **M7** | Today screen | Not Started | — | Prerequisites: M1, M2, M3, M5, M6 |
@@ -214,5 +214,63 @@
   - `npm run lint`: Passed (0 errors, 0 warnings)
   - `npm test`: Passed (16 test suites, 200 tests passed, 0 failures)
 
+---
 
+## M4 Hardening Completion Record
 
+- **Date:** 2026-09-14
+- **Scope:** Targeted M4 persistence, concurrency, and validation hardening prior to M5.
+- **Hardening Fixes Implemented:**
+  1. **Clean Drizzle Migration State & Dynamic Discovery:**
+     - Removed stale / conflicting migration artifacts (`0000_curvy_exiles.sql`, `0001_initial.sql`, outdated snapshot/journal).
+     - Cleanly regenerated initial migration using `drizzle-kit generate --name initial`:
+       - SQL: `src/data/migrations/0000_initial.sql`
+       - Journal entry: `meta/_journal.json` with tag `0000_initial` (idx: 0, version: 6)
+       - Helper: `src/data/migrations/migrations.js` importing `0000_initial.sql`
+     - Created `src/data/migrator.ts` (`loadMigrationConfig`, `migrateDatabase`): dynamically discovers migrations from `meta/_journal.json` and runs Drizzle's official `migrate()` runner.
+     - Updated `src/data/__tests__/testDbHelper.ts` to use `loadMigrationConfig()`.
+     - Added `src/data/__tests__/migrations.test.ts`: verifies discovery on fresh empty DB, table/constraint creation, and Drizzle idempotency on re-run.
+  2. **Canonical Transaction Path for `createBatch`:**
+     - Removed ad-hoc `client.transaction` fallback in `TaskOccurrenceRepository.createBatch()`.
+     - When `tx` is supplied: executes directly inside `tx` without attempting independent nested `BEGIN`.
+     - When no `tx` is supplied: uses canonical `runInTransaction()`.
+     - Added test in `db.test.ts` proving `createBatch` inside an existing transaction does not issue a nested `BEGIN`.
+  3. **Removed Global `transactionDepth` Concurrency Hazard:**
+     - Removed process-global depth counter in `src/data/db.ts`.
+     - Implemented sequential `TransactionLock` queue for root transactions on the SQLite connection.
+     - Nested transactions require explicit `tx` and allocate context-scoped `SAVEPOINT` identifiers (`sp_${context.id}_${count}`).
+     - Added concurrency regression test in `db.test.ts`: Tx B started while Tx A is paused does NOT become a SAVEPOINT and serializes as an independent root transaction after Tx A commits.
+     - Retained full root and savepoint rollback test coverage.
+  4. **True Civil-Date Validation:**
+     - Created `src/utils/dateValidation.ts` (`isValidCivilDate`, `assertValidCivilDate`, `subtractCivilDay`).
+     - Distinguishes formatting from Gregorian calendar validity (leap years, month days, century rules).
+     - Applied to: `startDate`, `localDate`, `planningDayKey`, `effectiveFromDate`, `effectiveToDate`, `recurrenceEnd`, `splitDate`, `fromDate`.
+     - Enforces `effectiveFromDate <= effectiveToDate` on definitions and version closing.
+     - Series split validates `splitDate` within active version's range and uses timezone-independent UTC arithmetic for `splitDate - 1`.
+  5. **Terminal Status Timestamp Invariants on Create:**
+     - Enforced in `TaskOccurrenceRepository.create` and `createBatch`:
+       - `PENDING`: `completedAt == null && missedAt == null`
+       - `COMPLETED`: `completedAt != null && missedAt == null`
+       - `MISSED`: `missedAt != null && completedAt == null`
+       - `CANCELLED`: `completedAt == null && missedAt == null`
+     - Added unit tests for direct-create and atomic batch rollback on violation.
+  6. **Absolute Timestamp Validation:**
+     - Created `isValidIsoInstant`, `assertValidIsoInstant`, `canonicalizeIsoInstant` in `src/utils/dateValidation.ts`.
+     - Requires `Z` or explicit UTC offset (rejects bare local timestamps like `2026-09-15T18:00:00`).
+     - Standardizes audit timestamps and `calculatedStartTime` to UTC ISO strings.
+  7. **IANA Timezone Validation:**
+     - Created `isValidIanaTimezone`, `assertValidIanaTimezone` in `src/utils/dateValidation.ts`.
+     - Validates `TaskOccurrence.timezone` in `create` and `createBatch`, rejecting invalid strings (`Texas`, `GMT-ish`).
+- **Unit Tests Added (48 new tests, 248 total project tests):**
+  - `src/utils/__tests__/dateValidation.test.ts` (16 tests)
+  - `src/data/__tests__/migrations.test.ts` (2 tests)
+  - `src/data/__tests__/db.test.ts` (4 new transaction concurrency & rollback tests)
+  - `src/data/repositories/__tests__/TaskOccurrenceRepository.test.ts` (13 new hardening tests)
+  - `src/data/repositories/__tests__/TaskDefinitionRepository.test.ts` (8 new hardening tests)
+  - `src/domain/task/__tests__/TaskEngine.series.test.ts` (5 new split date hardening tests)
+- **Verification:**
+  - `npx expo-doctor`: Passed (21/21 checks passed, 0 issues)
+  - `npx expo install --check`: Passed (Dependencies are up to date)
+  - `npm run typecheck`: Passed (0 errors)
+  - `npm run lint`: Passed (0 errors, 0 warnings)
+  - `npm test`: Passed (18 test suites, 248 tests passed, 0 failures)

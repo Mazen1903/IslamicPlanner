@@ -381,4 +381,159 @@ describe('TaskDefinitionRepository', () => {
       );
     });
   });
+
+  describe('M4 Hardening: Civil Dates, Date Ranges & Timestamps', () => {
+    describe('Civil Date Validation', () => {
+      it('accepts valid Gregorian civil dates for startDate', async () => {
+        const validDates = ['2026-01-31', '2028-02-29', '2026-12-31'];
+        for (const d of validDates) {
+          const def = await taskDefinitionRepository.create({
+            id: `def-valid-${d}`,
+            title: 'Valid Date Task',
+            startDate: d,
+            scheduleType: 'ANYTIME_TODAY',
+            scheduleData: {},
+            seriesId: `series-${d}`,
+          });
+          expect(def.startDate).toBe(d);
+        }
+      });
+
+      it('rejects impossible Gregorian dates for startDate', async () => {
+        const invalidDates = [
+          '2026-02-29',
+          '2026-02-30',
+          '2026-02-31',
+          '2026-04-31',
+          '2026-00-10',
+          '2026-13-01',
+          '2026-01-00',
+          '2026-1-01',
+          'text',
+        ];
+        for (const d of invalidDates) {
+          await expect(
+            taskDefinitionRepository.create({
+              id: `def-inv-${d}`,
+              title: 'Invalid Date Task',
+              startDate: d,
+              scheduleType: 'ANYTIME_TODAY',
+              scheduleData: {},
+              seriesId: 'series-inv',
+            })
+          ).rejects.toThrow(TaskValidationError);
+        }
+      });
+
+      it('rejects impossible dates in update(startDate)', async () => {
+        const def = await taskDefinitionRepository.create({
+          id: 'def-upd-date',
+          title: 'Update Date Task',
+          startDate: '2026-09-15',
+          scheduleType: 'ANYTIME_TODAY',
+          scheduleData: {},
+          seriesId: 'series-upd',
+        });
+
+        await expect(
+          taskDefinitionRepository.update(def.id, { startDate: '2026-02-29' })
+        ).rejects.toThrow(TaskValidationError);
+      });
+
+      it('rejects impossible recurrenceEnd', async () => {
+        await expect(
+          taskDefinitionRepository.create({
+            id: 'def-rec-end-inv',
+            title: 'Recurrence End Task',
+            startDate: '2026-09-15',
+            scheduleType: 'ANYTIME_TODAY',
+            scheduleData: {},
+            seriesId: 'series-rec-end',
+            recurrenceEnd: '2026-04-31',
+          })
+        ).rejects.toThrow(TaskValidationError);
+      });
+    });
+
+    describe('Date Range Constraints (effectiveFromDate <= effectiveToDate)', () => {
+      it('enforces effectiveFromDate <= effectiveToDate on create', async () => {
+        // Violating range: from 2026-09-20 to 2026-09-10
+        await expect(
+          taskDefinitionRepository.create({
+            id: 'def-invalid-range',
+            title: 'Invalid Range Task',
+            startDate: '2026-09-10',
+            scheduleType: 'ANYTIME_TODAY',
+            scheduleData: {},
+            seriesId: 'series-range',
+            effectiveFromDate: '2026-09-20',
+            effectiveToDate: '2026-09-10',
+          })
+        ).rejects.toThrow(TaskValidationError);
+
+        // Valid range: from 2026-09-10 to 2026-09-20
+        const valid = await taskDefinitionRepository.create({
+          id: 'def-valid-range',
+          title: 'Valid Range Task',
+          startDate: '2026-09-10',
+          scheduleType: 'ANYTIME_TODAY',
+          scheduleData: {},
+          seriesId: 'series-range-ok',
+          effectiveFromDate: '2026-09-10',
+          effectiveToDate: '2026-09-20',
+        });
+        expect(valid.effectiveFromDate).toBe('2026-09-10');
+        expect(valid.effectiveToDate).toBe('2026-09-20');
+      });
+
+      it('closeVersion rejects effectiveToDate preceding effectiveFromDate', async () => {
+        const def = await taskDefinitionRepository.create({
+          id: 'def-close-check',
+          title: 'Close Check Task',
+          startDate: '2026-09-15',
+          scheduleType: 'ANYTIME_TODAY',
+          scheduleData: {},
+          seriesId: 'series-close',
+          effectiveFromDate: '2026-09-15',
+        });
+
+        await expect(
+          taskDefinitionRepository.closeVersion(def.id, '2026-09-14')
+        ).rejects.toThrow(TaskValidationError);
+
+        await expect(
+          taskDefinitionRepository.closeVersion(def.id, 'invalid-date')
+        ).rejects.toThrow(TaskValidationError);
+      });
+    });
+
+    describe('Absolute Timestamp Validation', () => {
+      it('rejects bare local timestamps for createdAt and updatedAt', async () => {
+        await expect(
+          taskDefinitionRepository.create({
+            id: 'def-bare-ts',
+            title: 'Bare Timestamp Task',
+            startDate: '2026-09-15',
+            scheduleType: 'ANYTIME_TODAY',
+            scheduleData: {},
+            seriesId: 'series-bare',
+            createdAt: '2026-09-15T10:00:00', // bare local!
+          })
+        ).rejects.toThrow(TaskValidationError);
+      });
+
+      it('canonicalizes valid ISO instants with offset for createdAt and updatedAt', async () => {
+        const def = await taskDefinitionRepository.create({
+          id: 'def-offset-ts',
+          title: 'Offset Timestamp Task',
+          startDate: '2026-09-15',
+          scheduleType: 'ANYTIME_TODAY',
+          scheduleData: {},
+          seriesId: 'series-offset',
+          createdAt: '2026-09-15T18:00:00+03:00',
+        });
+        expect(def.createdAt).toBe('2026-09-15T15:00:00.000Z');
+      });
+    });
+  });
 });
