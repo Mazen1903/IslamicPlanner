@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M4 — Task Domain + SQLite Schema (Completed & Hardened)  
-**Last Updated:** 2026-09-14 (Rev 3 — architecture revision 3 + M4 hardening)  
+**Current Milestone:** M5 — Scheduling Engine (Completed)  
+**Last Updated:** 2026-09-14 (M5 completion)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -15,7 +15,7 @@
 | **M2** | Prayer-time engine + PrayerTimeline | **Completed** | 2026-09-14 | All 71 domain tests pass, 100% exact boundaries, ±1 min published verification, Opus review required |
 | **M3** | Planning-day engine + clipping | **Completed** | 2026-09-14 | All 32 domain tests pass, Fajr/Midnight/Custom boundaries, explicit DST resolution, non-mutating clipping, Opus review required |
 | **M4** | Task domain model + schema (includes series) | **Completed & Hardened** | 2026-09-14 | All 128 M4 tests pass (248 total project tests), clean 0000_initial migration, dynamic Drizzle discovery, canonical transactions, serialized concurrency, true civil-date validation, terminal status timestamp invariants, absolute ISO instants, IANA timezone validation |
-| **M5** | Scheduling engine + WallClockResolver | Not Started | — | Prerequisites: M2, M3, M4. Opus review required |
+| **M5** | Scheduling engine + WallClockResolver | **Completed** | 2026-09-14 | All 60 M5 tests pass (308 total project tests), extracted WallClockResolver to domain/temporal, DST gap/overlap resolution, 4 scheduling modes, pure domain logic, M6 contract note |
 | **M6** | Local persistence + materialization | Not Started | — | Prerequisites: M4, M5 |
 | **M7** | Today screen | Not Started | — | Prerequisites: M1, M2, M3, M5, M6 |
 | **M8** | Hijri Calendar Core / HijriService | Not Started | — | Prerequisites: M4. MOVED from M13. Opus review required |
@@ -274,3 +274,72 @@
   - `npm run typecheck`: Passed (0 errors)
   - `npm run lint`: Passed (0 errors, 0 warnings)
   - `npm test`: Passed (18 test suites, 248 tests passed, 0 failures)
+
+---
+
+## M5 Completion Record
+
+- **Date:** 2026-09-14
+- **Scope:** M5 — Scheduling Engine & Temporal Architecture
+- **Architecture & Directory Structure:**
+  - `src/domain/temporal/`:
+    - `types.ts`: `WallClockResolutionKind`, `WallClockResolution`.
+    - `errors.ts`: `TemporalResolutionError`, `TemporalErrorCode` (`INVALID_TIME_FORMAT`, `INVALID_DATE_FORMAT`, `INVALID_TIMEZONE`, `UNRESOLVABLE_DATETIME`). Strictly isolated from higher layers (`planning-day`, `scheduling`).
+    - `WallClockResolver.ts`: Extracted transition-aware DST wall-clock resolver (`resolveWallClock`).
+    - `timezoneUtils.ts`: Extracted IANA timezone helper (`getEffectiveTimezone`, `isValidTimezone`).
+    - `index.ts`: Module exports.
+  - `src/domain/planning-day/`:
+    - `PlanningDayEngine.ts`: Delegates wall-clock and timezone resolution to `temporal/`, mapping `TemporalResolutionError` -> `PlanningDayError` to preserve M3 externally observable behavior.
+    - `types.ts`: Re-exports `WallClockResolution` and `WallClockResolutionKind` from `temporal/`.
+  - `src/domain/scheduling/`:
+    - `types.ts`: `SchedulingContext`, `ResolvedPlacement`, `SchedulingEngineAPI`, `SchedulingErrorCode`, `SchedulingResolutionError`.
+    - `SchedulingEngine.ts`: Pure domain placement resolver (`resolvePlacement`) and recalculation wrapper (`recalculateOccurrencePlacement`).
+    - `WallClockResolver.test.ts`: 9 tests (WC-01 through WC-08 + error handling).
+    - `SchedulingEngine.test.ts`: 51 tests (ET, PR, PW, AT, SK, HS, ID, ER, TZ suites).
+    - `index.ts`: Module exports.
+- **Implemented Scheduling Modes & Behaviors:**
+  1. **EXACT_TIME:**
+     - Resolves `occurrenceSeedDate + localTime` in the effective IANA timezone.
+     - Handles DST spring-forward gaps (`SPRING_FORWARD_SHIFTED` to first valid instant after gap) and fall-back duplicates (`FALL_BACK_FIRST` to earlier occurrence).
+     - Derives `planningDayKey` via M3 `PlanningDayEngine.resolvePlanningDayForTime`.
+     - Reclassifies into actual prayer period; preserves local clock (18:00 remains 18:00 across travel).
+     - Invariant: `localDate === occurrenceSeedDate`.
+  2. **PRAYER_RELATIVE:**
+     - Resolves concrete anchor by `(anchorPrayer, occurrenceSeedDate)`.
+     - Anchor timestamp is exact prayer start instant; applies signed offset as elapsed absolute minutes.
+     - Reclassifies into actual containing prayer period (does not assume anchor prayer).
+     - Derives `planningDayKey` from resolved instant via M3.
+     - Invariant: `localDate === occurrenceSeedDate` even if resolved time crosses planning-day or civil-date boundaries.
+  3. **PRAYER_WINDOW:**
+     - Resolves concrete start and end instances for seed date.
+     - Sets `eligiblePrayerSections` (start inclusive, end exclusive); rejects equal prayers and wrapping windows in v1.
+     - Derives `planningDayKey` from window START via M3; preserves full unclipped `windowStart` and `windowEnd`.
+     - `calculatedStartTime` and `calculatedPrayerSection` remain null.
+  4. **ANYTIME_TODAY:**
+     - Sets `planningDayKey = occurrenceSeedDate`.
+     - All specific temporal placement fields (`calculatedStartTime`, `calculatedPrayerSection`, `eligiblePrayerSections`, `wallClockResolution`, `windowStart`, `windowEnd`) remain null.
+  5. **Recalculation Wrapper (`recalculateOccurrencePlacement`):**
+     - Enforces identity guards: rejects mismatched `taskDefinitionId` or `seriesId` with `OCCURRENCE_DEFINITION_MISMATCH`.
+     - Enforces terminal status guards: rejects `COMPLETED`, `MISSED`, `CANCELLED` with `TERMINAL_OCCURRENCE`.
+     - For `PENDING`, delegates to `resolvePlacement` strictly using `occurrence.localDate`.
+  6. **Defensive Error Handling:**
+     - Added `INVALID_SCHEDULE_DATA` for malformed schedule data (e.g. invalid HH:mm).
+     - Added `INVALID_TEMPORAL_CONTEXT` for corrupt/invalid timeline timezone.
+     - Preserves underlying causes as `cause` where applicable.
+- **M6 Downstream Contract Note:**
+  - `ResolvedPlacement.windowStart` and `ResolvedPlacement.windowEnd` are intentional downstream domain outputs.
+  - M6 must explicitly decide how concrete PrayerWindow boundaries are persisted or otherwise preserved for:
+    - Expiration evaluation
+    - Missed-state evaluation
+    - Notification scheduling
+    - Historical placement behavior
+  - They must NOT be silently discarded at the M5/M6 boundary.
+- **Unit Tests Added (60 new tests, 308 total project tests):**
+  - `src/domain/scheduling/WallClockResolver.test.ts` (9 tests: WC-01 to WC-08 + error handling)
+  - `src/domain/scheduling/SchedulingEngine.test.ts` (51 tests: ET-01 to ET-08, PR-01 to PR-06, PW-01 to PW-09, AT-01 to AT-04, SK-01 to SK-04, HS-01 to HS-07, ID-01 to ID-02, ER-01 to ER-08, TZ-01, facade test)
+- **Verification:**
+  - `npx expo-doctor`: Passed (21/21 checks passed, 0 issues)
+  - `npx expo install --check`: Passed (Dependencies are up to date)
+  - `npm run typecheck`: Passed (0 errors)
+  - `npm run lint`: Passed (0 errors, 0 warnings)
+  - `npm test`: Passed (20 test suites, 308 tests passed, 0 failures)

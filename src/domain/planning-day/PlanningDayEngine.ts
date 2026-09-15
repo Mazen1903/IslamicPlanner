@@ -1,4 +1,9 @@
 import { DateTime } from 'luxon';
+import {
+  getEffectiveTimezone as temporalGetEffectiveTimezone,
+  resolveWallClock as temporalResolveWallClock,
+  TemporalResolutionError,
+} from '@/domain/temporal';
 import type { Prayer } from '@/constants/prayers';
 import type {
   PlanningDay,
@@ -37,107 +42,35 @@ function addDays(isoDate: string, days: number): string {
  * Extracts the effective IANA timezone from the PrayerTimeline context.
  */
 function getEffectiveTimezone(timeline: PrayerTimeline): string {
-  if (!timeline.periods || timeline.periods.length === 0) {
-    throw new PlanningDayError('Cannot determine effective timezone from empty PrayerTimeline');
+  try {
+    return temporalGetEffectiveTimezone(timeline);
+  } catch (err) {
+    if (err instanceof TemporalResolutionError) {
+      throw new PlanningDayError(err.message);
+    }
+    throw err;
   }
-  const tz = timeline.periods[0].start.zoneName;
-  if (!tz) {
-    throw new PlanningDayError('PrayerTimeline periods do not contain a valid zoneName');
-  }
-  return tz;
 }
 
 /**
  * Resolves a local wall-clock time string (HH:mm) on a given calendar date in an IANA timezone
- * following the deterministic DST policy defined in SCHEDULING_ENGINE.md §2.4:
+ * following the deterministic DST policy defined in SCHEDULING_ENGINE.md §2.4.
  *
- * 1. NORMAL: Unambiguous local time exists.
- * 2. SPRING_FORWARD_SHIFTED: Nonexistent local time (falls in DST gap).
- *    Resolves to the first valid instant after the actual gap.
- * 3. FALL_BACK_FIRST: Duplicated local time (falls in DST overlap).
- *    Deterministically selects the earlier absolute occurrence.
+ * Catches lower-level TemporalResolutionError and maps to PlanningDayError for M3 compatibility.
  */
 export function resolveWallClock(
   dateStr: string,
   timeStr: string,
   timezone: string
 ): WallClockResolution {
-  const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-  if (!timeRegex.test(timeStr)) {
-    throw new PlanningDayError(
-      `Invalid time format "${timeStr}". Expected "HH:mm" (00:00 to 23:59).`
-    );
-  }
-
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!dateRegex.test(dateStr)) {
-    throw new PlanningDayError(`Invalid date format "${dateStr}". Expected "YYYY-MM-DD".`);
-  }
-
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const [hour, minute] = timeStr.split(':').map(Number);
-
-  const candidate = DateTime.fromObject(
-    { year, month, day, hour, minute, second: 0, millisecond: 0 },
-    { zone: timezone }
-  );
-
-  if (!candidate.isValid) {
-    throw new PlanningDayError(
-      `Invalid DateTime for date "${dateStr}", time "${timeStr}" in timezone "${timezone}": ${
-        candidate.invalidReason ?? 'Unknown error'
-      }`
-    );
-  }
-
-  // 1. Fall-back overlap check:
-  // getPossibleOffsets() returns all valid DateTime instances for this wall-clock time.
-  const possibleOffsets = candidate.getPossibleOffsets();
-  if (possibleOffsets.length > 1) {
-    // Sort deterministically by absolute timestamp to select the earlier occurrence.
-    possibleOffsets.sort((a, b) => a.toMillis() - b.toMillis());
-    return {
-      resolvedTime: possibleOffsets[0],
-      resolution: 'FALL_BACK_FIRST',
-    };
-  }
-
-  // 2. Spring-forward gap check:
-  // When the requested wall-clock time does not exist, candidate local hour/minute differs from requested.
-  if (candidate.hour !== hour || candidate.minute !== minute) {
-    // Binary-search between start of day and candidate to locate the exact millisecond
-    // of the transition, finding the first valid instant after the actual gap.
-    let low = DateTime.fromObject(
-      { year, month, day, hour: 0, minute: 0, second: 0, millisecond: 0 },
-      { zone: timezone }
-    ).toMillis();
-    let high = candidate.toMillis();
-
-    while (low + 1 < high) {
-      const mid = Math.floor((low + high) / 2);
-      const midDt = DateTime.fromMillis(mid, { zone: timezone });
-      if (
-        midDt.toISODate() === dateStr &&
-        (midDt.hour < hour || (midDt.hour === hour && midDt.minute < minute))
-      ) {
-        low = mid;
-      } else {
-        high = mid;
-      }
+  try {
+    return temporalResolveWallClock(dateStr, timeStr, timezone);
+  } catch (err) {
+    if (err instanceof TemporalResolutionError) {
+      throw new PlanningDayError(err.message);
     }
-
-    const firstValid = DateTime.fromMillis(high, { zone: timezone });
-    return {
-      resolvedTime: firstValid,
-      resolution: 'SPRING_FORWARD_SHIFTED',
-    };
+    throw err;
   }
-
-  // 3. Normal unambiguous local time
-  return {
-    resolvedTime: candidate,
-    resolution: 'NORMAL',
-  };
 }
 
 /**
