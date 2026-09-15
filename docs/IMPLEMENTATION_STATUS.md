@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M5 — Scheduling Engine (Completed)  
-**Last Updated:** 2026-09-14 (M5 completion)  
+**Current Milestone:** M5 — Scheduling Engine (CLOSED / OPUS APPROVED)  
+**Last Updated:** 2026-09-14 (M5 Opus approved)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -15,7 +15,7 @@
 | **M2** | Prayer-time engine + PrayerTimeline | **Completed** | 2026-09-14 | All 71 domain tests pass, 100% exact boundaries, ±1 min published verification, Opus review required |
 | **M3** | Planning-day engine + clipping | **Completed** | 2026-09-14 | All 32 domain tests pass, Fajr/Midnight/Custom boundaries, explicit DST resolution, non-mutating clipping, Opus review required |
 | **M4** | Task domain model + schema (includes series) | **Completed & Hardened** | 2026-09-14 | All 128 M4 tests pass (248 total project tests), clean 0000_initial migration, dynamic Drizzle discovery, canonical transactions, serialized concurrency, true civil-date validation, terminal status timestamp invariants, absolute ISO instants, IANA timezone validation |
-| **M5** | Scheduling engine + WallClockResolver | **Completed** | 2026-09-14 | All 60 M5 tests pass (308 total project tests), extracted WallClockResolver to domain/temporal, DST gap/overlap resolution, 4 scheduling modes, pure domain logic, M6 contract note |
+| **M5** | Scheduling engine + WallClockResolver | **CLOSED / OPUS APPROVED** | 2026-09-14 | All 60 M5 tests pass (308 total project tests), extracted WallClockResolver to domain/temporal, DST gap/overlap resolution, 4 scheduling modes, pure domain logic, M6 contract note, F-4 test hardening verified |
 | **M6** | Local persistence + materialization | Not Started | — | Prerequisites: M4, M5 |
 | **M7** | Today screen | Not Started | — | Prerequisites: M1, M2, M3, M5, M6 |
 | **M8** | Hijri Calendar Core / HijriService | Not Started | — | Prerequisites: M4. MOVED from M13. Opus review required |
@@ -343,3 +343,12 @@
   - `npm run typecheck`: Passed (0 errors)
   - `npm run lint`: Passed (0 errors, 0 warnings)
   - `npm test`: Passed (20 test suites, 308 tests passed, 0 failures)
+- **Independent Opus Review & Hardening:**
+  - **M5 independent Opus review:** Conditionally approved
+  - **Finding F-1 (resolvePlacement API naming):** Accepted as-is.
+  - **Finding F-2 (SchedulingResolutionError export):** Accepted as-is.
+  - **Finding F-3 (Error class location):** Accepted as-is.
+  - **Finding F-4 (Exception tests false-positive vulnerability):** Resolved — six exception tests (`HS-02`, `HS-03`, `HS-05`, `HS-06`, `ER-04`, `ER-06`) in `src/domain/scheduling/SchedulingEngine.test.ts` hardened with explicit `expect(() => fn()).toThrow(SchedulingResolutionError)` assertions before try/catch inspection.
+  - **Finding F-5 (TimelineWithPeriods structural interface):** Accepted as-is.
+  - **Status:** M5 is CLOSED / OPUS APPROVED.
+

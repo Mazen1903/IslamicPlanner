@@ -831,6 +831,13 @@ describe('SchedulingEngine', () => {
       const def = makeTaskDefinition();
       const occ = makeTaskOccurrence({ status: 'MISSED' });
 
+      expect(() =>
+        recalculateOccurrencePlacement(occ, def, {
+          timeline,
+          planningDayConfig: fajrConfig,
+        })
+      ).toThrow(SchedulingResolutionError);
+
       try {
         recalculateOccurrencePlacement(occ, def, {
           timeline,
@@ -845,6 +852,13 @@ describe('SchedulingEngine', () => {
       const timeline = buildPrayerTimeline('2026-09-15', LOCATIONS.newYork, nyParams);
       const def = makeTaskDefinition();
       const occ = makeTaskOccurrence({ status: 'CANCELLED' });
+
+      expect(() =>
+        recalculateOccurrencePlacement(occ, def, {
+          timeline,
+          planningDayConfig: fajrConfig,
+        })
+      ).toThrow(SchedulingResolutionError);
 
       try {
         recalculateOccurrencePlacement(occ, def, {
@@ -875,6 +889,13 @@ describe('SchedulingEngine', () => {
       const def = makeTaskDefinition({ id: 'def-correct' });
       const occ = makeTaskOccurrence({ taskDefinitionId: 'def-different' });
 
+      expect(() =>
+        recalculateOccurrencePlacement(occ, def, {
+          timeline,
+          planningDayConfig: fajrConfig,
+        })
+      ).toThrow(SchedulingResolutionError);
+
       try {
         recalculateOccurrencePlacement(occ, def, {
           timeline,
@@ -889,6 +910,13 @@ describe('SchedulingEngine', () => {
       const timeline = buildPrayerTimeline('2026-09-15', LOCATIONS.newYork, nyParams);
       const def = makeTaskDefinition({ seriesId: 'series-correct' });
       const occ = makeTaskOccurrence({ seriesId: 'series-different' });
+
+      expect(() =>
+        recalculateOccurrencePlacement(occ, def, {
+          timeline,
+          planningDayConfig: fajrConfig,
+        })
+      ).toThrow(SchedulingResolutionError);
 
       try {
         recalculateOccurrencePlacement(occ, def, {
@@ -1091,6 +1119,13 @@ describe('SchedulingEngine', () => {
         },
       });
 
+      expect(() =>
+        resolvePlacement(def, '2026-09-15', {
+          timeline,
+          planningDayConfig: fajrConfig,
+        })
+      ).toThrow(SchedulingResolutionError);
+
       try {
         resolvePlacement(def, '2026-09-15', {
           timeline,
@@ -1125,6 +1160,13 @@ describe('SchedulingEngine', () => {
     it('ER-06: Non-date seed string throws INVALID_SEED_DATE', () => {
       const timeline = buildPrayerTimeline('2026-09-15', LOCATIONS.newYork, nyParams);
       const def = makeTaskDefinition();
+
+      expect(() =>
+        resolvePlacement(def, 'not-a-date', {
+          timeline,
+          planningDayConfig: fajrConfig,
+        })
+      ).toThrow(SchedulingResolutionError);
 
       try {
         resolvePlacement(def, 'not-a-date', {
