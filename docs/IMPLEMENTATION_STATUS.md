@@ -44,12 +44,13 @@
 - **Scope:** Repository and Project Foundation only
 - **Tooling:**
   - Expo SDK 57 (Current Stable)
-  - React 19.2.3, React Native 0.86.3
+  - React 19.2.3, React Native 0.86.3, React DOM 19.2.3 (deduplicated, 0 peer conflicts)
   - TypeScript 6.0.3 (Strict mode, `@/*` path aliases to `src/*`)
-  - Jest 30.5.1 + `jest-expo` + `@react-native/jest-preset` (Configured, 0 tests, 0 failures)
-  - ESLint 9.20.0 + `eslint-config-expo/flat` (0 errors, 0 warnings)
+  - Jest 29.7.0 + `jest-expo` (57.0.5) + `@react-native/jest-preset` (0.86.3) + `ts-node` (0 tests, 0 failures)
+  - ESLint 9.39.5 + `eslint-config-expo/flat` (0 errors, 0 warnings)
   - Prettier 3.9.6 (Formatted)
   - Drizzle Kit + Drizzle ORM configured for `expo-sqlite`
+  - `.npmrc` (`legacy-peer-deps=true`): Removed; clean peer resolution achieved natively
 - **Core Dependencies:**
   - `adhan` (^4.4.6)
   - `luxon` (^3.7.2) + `@types/luxon` (^3.7.5)
@@ -57,17 +58,20 @@
   - `@tabby_ai/hijri-converter` (^1.0.5)
   - `drizzle-orm` (^0.45.2) + `expo-sqlite` (~57.0.3)
   - `zustand` (^5.0.15)
-  - `expo-router` (~57.0.21)
+  - `expo-router` (~57.0.21) + peer deps (`expo-constants` ~57.0.18, `expo-linking` ~57.0.10, `react-native-safe-area-context` ~5.7.0)
   - `expo-location` (~57.0.17)
   - `expo-notifications` (~57.0.18)
   - `expo-font` (~57.0.4)
   - `expo-secure-store` (~57.0.4)
   - `uuid` (^14.0.2) + `@types/uuid` (^10.0.0)
+  - `react-dom` (19.2.3)
 - **Deferred Dependencies:**
   - `expo-widgets` (iOS) and `react-native-android-widget` (Android) deferred to M18 per ADR-009 / review.
 - **Directory Structure:**
   - Complete structure matching `TECHNICAL_ARCHITECTURE.md` §2 with domain, data, stores, hooks, components, theme, constants, and utils placeholder files.
 - **Verification:**
+  - `npx expo-doctor`: Passed (21/21 checks passed, 0 issues)
+  - `npx expo install --check`: Passed (Dependencies are up to date)
   - TypeScript check (`npm run typecheck`): Passed (0 errors)
   - Linting (`npm run lint`): Passed (0 errors, 0 warnings)
   - Testing (`npm test`): Passed (0 tests, 0 failures)
