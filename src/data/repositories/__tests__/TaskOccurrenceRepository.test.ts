@@ -248,7 +248,7 @@ describe('TaskOccurrenceRepository', () => {
         status: 'PENDING',
       });
 
-      const updated = await taskOccurrenceRepository.updateDerivedPlacement(occ.id, {
+      const result = await taskOccurrenceRepository.updateDerivedPlacement(occ.id, {
         calculatedStartTime: '2026-09-15T05:30:00.000Z',
         calculatedPrayerSection: 'FAJR',
         eligiblePrayerSections: ['FAJR'],
@@ -256,11 +256,14 @@ describe('TaskOccurrenceRepository', () => {
         planningDayKey: '2026-09-15',
       });
 
-      expect(updated.calculatedPrayerSection).toBe('FAJR');
-      expect(updated.calculatedStartTime).toBe('2026-09-15T05:30:00.000Z');
+      expect(result.outcome).toBe('UPDATED');
+      if (result.outcome === 'UPDATED') {
+        expect(result.occurrence.calculatedPrayerSection).toBe('FAJR');
+        expect(result.occurrence.calculatedStartTime).toBe('2026-09-15T05:30:00.000Z');
+      }
     });
 
-    it('strictly rejects placement update on COMPLETED, MISSED, or CANCELLED occurrences', async () => {
+    it('strictly preserves terminal placement and returns NOT_PENDING on COMPLETED, MISSED, or CANCELLED occurrences', async () => {
       const occ = await taskOccurrenceRepository.create({
         id: 'occ-frozen-place',
         taskDefinitionId: testDefId,
@@ -273,17 +276,21 @@ describe('TaskOccurrenceRepository', () => {
 
       await taskOccurrenceRepository.updateStatus(occ.id, 'COMPLETED');
 
-      await expect(
-        taskOccurrenceRepository.updateDerivedPlacement(occ.id, {
-          calculatedStartTime: '2026-09-15T12:00:00.000Z',
-          calculatedPrayerSection: 'DHUHR', // Attempting to move historical completed task!
-          eligiblePrayerSections: ['DHUHR'],
-          wallClockResolution: 'NORMAL',
-          planningDayKey: '2026-09-15',
-        })
-      ).rejects.toThrow(TaskValidationError);
+      const result = await taskOccurrenceRepository.updateDerivedPlacement(occ.id, {
+        calculatedStartTime: '2026-09-15T12:00:00.000Z',
+        calculatedPrayerSection: 'DHUHR', // Attempting to move historical completed task!
+        eligiblePrayerSections: ['DHUHR'],
+        wallClockResolution: 'NORMAL',
+        planningDayKey: '2026-09-15',
+      });
 
-      // Verify placement is still Fajr
+      expect(result.outcome).toBe('NOT_PENDING');
+      if (result.outcome === 'NOT_PENDING') {
+        expect(result.occurrence.status).toBe('COMPLETED');
+        expect(result.occurrence.calculatedPrayerSection).toBe('FAJR');
+      }
+
+      // Verify placement in database is still Fajr
       const fetched = await taskOccurrenceRepository.findById(occ.id);
       expect(fetched?.calculatedPrayerSection).toBe('FAJR');
     });
@@ -733,6 +740,223 @@ describe('TaskOccurrenceRepository', () => {
             })
           ).rejects.toThrow(TaskValidationError);
         }
+      });
+    });
+
+    describe('M6 PrayerWindow Validation & PlacementUpdateResult', () => {
+      let windowDefId: string;
+      const windowSeriesId = 'series-window-test';
+
+      beforeEach(async () => {
+        const winDef = await taskDefinitionRepository.create({
+          id: 'def-window-1',
+          title: 'Window Reading',
+          startDate: '2026-09-15',
+          scheduleType: 'PRAYER_WINDOW',
+          scheduleData: {
+            startPrayer: 'DHUHR',
+            endPrayer: 'ASR',
+          },
+          seriesId: windowSeriesId,
+          seriesVersion: 1,
+          isActive: true,
+        });
+        windowDefId = winDef.id;
+      });
+
+      it('PRAYER_WINDOW: succeeds when windowStart and windowEnd are valid and properly ordered', async () => {
+        const occ = await taskOccurrenceRepository.create({
+          id: 'occ-win-1',
+          taskDefinitionId: windowDefId,
+          localDate: '2026-09-15',
+          planningDayKey: '2026-09-15',
+          timezone: 'America/Chicago',
+          windowStart: '2026-09-15T12:30:00-05:00',
+          windowEnd: '2026-09-15T16:00:00-05:00',
+          status: 'PENDING',
+        });
+
+        // Converted to canonical UTC
+        expect(occ.windowStart).toBe('2026-09-15T17:30:00.000Z');
+        expect(occ.windowEnd).toBe('2026-09-15T21:00:00.000Z');
+      });
+
+      it('PRAYER_WINDOW: strictly rejects missing windowStart or windowEnd', async () => {
+        await expect(
+          taskOccurrenceRepository.create({
+            id: 'occ-win-fail-1',
+            taskDefinitionId: windowDefId,
+            localDate: '2026-09-15',
+            planningDayKey: '2026-09-15',
+            timezone: 'America/Chicago',
+            status: 'PENDING',
+          })
+        ).rejects.toThrow(TaskValidationError);
+
+        await expect(
+          taskOccurrenceRepository.create({
+            id: 'occ-win-fail-2',
+            taskDefinitionId: windowDefId,
+            localDate: '2026-09-15',
+            planningDayKey: '2026-09-15',
+            timezone: 'America/Chicago',
+            windowStart: '2026-09-15T17:30:00.000Z',
+            windowEnd: null,
+            status: 'PENDING',
+          })
+        ).rejects.toThrow(TaskValidationError);
+      });
+
+      it('PRAYER_WINDOW: strictly rejects windowStart >= windowEnd', async () => {
+        await expect(
+          taskOccurrenceRepository.create({
+            id: 'occ-win-fail-order',
+            taskDefinitionId: windowDefId,
+            localDate: '2026-09-15',
+            planningDayKey: '2026-09-15',
+            timezone: 'America/Chicago',
+            windowStart: '2026-09-15T18:00:00.000Z',
+            windowEnd: '2026-09-15T17:00:00.000Z',
+            status: 'PENDING',
+          })
+        ).rejects.toThrow(TaskValidationError);
+      });
+
+      it('Non-window scheduleType: strictly rejects non-null windowStart or windowEnd', async () => {
+        await expect(
+          taskOccurrenceRepository.create({
+            id: 'occ-rel-fail-win',
+            taskDefinitionId: testDefId, // PRAYER_RELATIVE
+            localDate: '2026-09-15',
+            planningDayKey: '2026-09-15',
+            timezone: 'America/Chicago',
+            windowStart: '2026-09-15T17:30:00.000Z',
+            windowEnd: '2026-09-15T21:00:00.000Z',
+            status: 'PENDING',
+          })
+        ).rejects.toThrow(TaskValidationError);
+      });
+
+      it('updateDerivedPlacement validates window fields against referenced scheduleType', async () => {
+        const occ = await taskOccurrenceRepository.create({
+          id: 'occ-win-update',
+          taskDefinitionId: windowDefId,
+          localDate: '2026-09-15',
+          planningDayKey: '2026-09-15',
+          timezone: 'America/Chicago',
+          windowStart: '2026-09-15T17:30:00.000Z',
+          windowEnd: '2026-09-15T21:00:00.000Z',
+          status: 'PENDING',
+        });
+
+        // Valid update
+        const updated = await taskOccurrenceRepository.updateDerivedPlacement(occ.id, {
+          planningDayKey: '2026-09-15',
+          calculatedStartTime: null,
+          calculatedPrayerSection: null,
+          eligiblePrayerSections: ['DHUHR', 'ASR'],
+          wallClockResolution: null,
+          windowStart: '2026-09-15T18:00:00.000Z',
+          windowEnd: '2026-09-15T21:30:00.000Z',
+        });
+        expect(updated.outcome).toBe('UPDATED');
+        if (updated.outcome === 'UPDATED') {
+          expect(updated.occurrence.windowStart).toBe('2026-09-15T18:00:00.000Z');
+          expect(updated.occurrence.windowEnd).toBe('2026-09-15T21:30:00.000Z');
+        }
+
+        // Invalid update: missing window
+        await expect(
+          taskOccurrenceRepository.updateDerivedPlacement(occ.id, {
+            planningDayKey: '2026-09-15',
+            calculatedStartTime: null,
+            calculatedPrayerSection: null,
+            eligiblePrayerSections: null,
+            wallClockResolution: null,
+            windowStart: null,
+            windowEnd: null,
+          })
+        ).rejects.toThrow(TaskValidationError);
+      });
+
+      it('PlacementUpdateResult: returns NOT_FOUND for non-existent occurrence id', async () => {
+        const res = await taskOccurrenceRepository.updateDerivedPlacement('non-existent-id', {
+          planningDayKey: '2026-09-15',
+          calculatedStartTime: null,
+          calculatedPrayerSection: null,
+          eligiblePrayerSections: null,
+          wallClockResolution: null,
+        });
+        expect(res.outcome).toBe('NOT_FOUND');
+      });
+
+      it('findBySeriesAndDate: finds by seriesId and localDate, or returns null', async () => {
+        const created = await taskOccurrenceRepository.create({
+          id: 'occ-natural-key',
+          taskDefinitionId: testDefId,
+          localDate: '2026-09-15',
+          planningDayKey: '2026-09-15',
+          timezone: 'America/Chicago',
+          status: 'PENDING',
+        });
+
+        const found = await taskOccurrenceRepository.findBySeriesAndDate(testSeriesId, '2026-09-15');
+        expect(found).not.toBeNull();
+        expect(found!.id).toBe(created.id);
+
+        const notFound = await taskOccurrenceRepository.findBySeriesAndDate(testSeriesId, '2026-09-16');
+        expect(notFound).toBeNull();
+      });
+
+      it('findPendingByLocalDateRange: filters by date range and status PENDING', async () => {
+        // Pending in range
+        const p1 = await taskOccurrenceRepository.create({
+          id: 'occ-range-p1',
+          taskDefinitionId: testDefId,
+          localDate: '2026-09-15',
+          planningDayKey: '2026-09-15',
+          timezone: 'UTC',
+          status: 'PENDING',
+        });
+        const p2 = await taskOccurrenceRepository.create({
+          id: 'occ-range-p2',
+          taskDefinitionId: testDefId,
+          localDate: '2026-09-16',
+          planningDayKey: '2026-09-16',
+          timezone: 'UTC',
+          status: 'PENDING',
+        });
+        // Completed in range (different series to respect UNIQUE(seriesId, localDate))
+        const c1 = await taskOccurrenceRepository.create({
+          id: 'occ-range-c1',
+          taskDefinitionId: windowDefId,
+          localDate: '2026-09-15',
+          planningDayKey: '2026-09-15',
+          timezone: 'UTC',
+          windowStart: '2026-09-15T12:00:00.000Z',
+          windowEnd: '2026-09-15T15:00:00.000Z',
+          status: 'PENDING',
+        });
+        await taskOccurrenceRepository.updateStatus(c1.id, 'COMPLETED');
+        // Pending out of range
+        await taskOccurrenceRepository.create({
+          id: 'occ-range-out',
+          taskDefinitionId: testDefId,
+          localDate: '2026-09-20',
+          planningDayKey: '2026-09-20',
+          timezone: 'UTC',
+          status: 'PENDING',
+        });
+
+        const results = await taskOccurrenceRepository.findPendingByLocalDateRange(
+          '2026-09-15',
+          '2026-09-17'
+        );
+        const resultIds = results.map(r => r.id);
+        expect(resultIds).toContain(p1.id);
+        expect(resultIds).toContain(p2.id);
+        expect(resultIds).not.toContain(c1.id);
+        expect(resultIds).not.toContain('occ-range-out');
       });
     });
   });

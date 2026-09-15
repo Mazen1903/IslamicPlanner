@@ -131,6 +131,8 @@ export interface TaskOccurrence {
   calculatedPrayerSection: Prayer | null;
   eligiblePrayerSections: Prayer[] | null;
   wallClockResolution: WallClockResolutionType | null;
+  windowStart: string | null; // ISO 8601 UTC (populated only for PRAYER_WINDOW)
+  windowEnd: string | null; // ISO 8601 UTC (populated only for PRAYER_WINDOW)
   status: OccurrenceStatus;
   completedAt: string | null; // ISO 8601 UTC
   missedAt: string | null; // ISO 8601 UTC
@@ -142,6 +144,8 @@ export interface DerivedPlacement {
   calculatedPrayerSection: Prayer | null;
   eligiblePrayerSections: Prayer[] | null;
   wallClockResolution: WallClockResolutionType | null;
+  windowStart?: string | null;
+  windowEnd?: string | null;
   planningDayKey: string;
   timezone?: string;
 }
@@ -180,6 +184,8 @@ export interface NewTaskOccurrenceInput {
   calculatedPrayerSection?: Prayer | null;
   eligiblePrayerSections?: Prayer[] | null;
   wallClockResolution?: WallClockResolutionType | null;
+  windowStart?: string | null;
+  windowEnd?: string | null;
   status?: OccurrenceStatus;
   completedAt?: string | null;
   missedAt?: string | null;

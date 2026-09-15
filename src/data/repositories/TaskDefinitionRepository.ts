@@ -1,4 +1,4 @@
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, gte, lte } from 'drizzle-orm';
 import { taskDefinitions, taskOccurrences } from '@/data/schema';
 import { getDatabase, type AppDatabase } from '@/data/db';
 import type {
@@ -21,7 +21,11 @@ import {
   parseHijriRecurrence,
   serializeHijriRecurrence,
 } from '@/domain/task/jsonBoundary';
-import { DataIntegrityError, TaskValidationError } from '@/domain/task/errors';
+import {
+  DataIntegrityError,
+  TaskValidationError,
+  DefinitionVersionConflictError,
+} from '@/domain/task/errors';
 import {
   assertValidCivilDate,
   assertValidIsoInstant,
@@ -252,6 +256,87 @@ export class TaskDefinitionRepository {
 
     if (rows.length === 0) return null;
     return mapRowToDomain(rows[0]);
+  }
+
+  /**
+   * Finds the governing TaskDefinition version for a series on a specific seed date.
+   *
+   * Invariants (M4 semantics):
+   * - Recurring definitions (recurrenceRule != null || hijriRecurrence != null):
+   *   isActive === true
+   *   effectiveFromDate <= seedDate
+   *   startDate <= seedDate
+   *   (effectiveToDate == null || seedDate <= effectiveToDate)
+   * - Non-recurring definitions (recurrenceRule == null && hijriRecurrence == null):
+   *   isActive === true
+   *   seedDate === startDate
+   *
+   * Outcomes:
+   * - 0 candidates: returns null
+   * - 1 candidate: returns definition
+   * - >1 candidates: throws DefinitionVersionConflictError (typed, never brittle string parsing)
+   */
+  async findVersionForSeedDate(
+    seriesId: string,
+    seedDate: string,
+    tx?: any
+  ): Promise<TaskDefinition | null> {
+    assertValidCivilDate(seedDate, 'seedDate');
+    const versions = await this.findBySeriesId(seriesId, tx);
+
+    const candidates = versions.filter(def => {
+      if (!def.isActive) return false;
+
+      const isRecurring = def.recurrenceRule != null || def.hijriRecurrence != null;
+      if (isRecurring) {
+        const effectiveFrom = def.effectiveFromDate ?? def.startDate;
+        const matchesFrom = effectiveFrom <= seedDate;
+        const matchesStart = def.startDate <= seedDate;
+        const matchesTo = def.effectiveToDate == null || seedDate <= def.effectiveToDate;
+        return matchesFrom && matchesStart && matchesTo;
+      } else {
+        return seedDate === def.startDate;
+      }
+    });
+
+    if (candidates.length === 0) return null;
+    if (candidates.length === 1) return candidates[0];
+
+    throw new DefinitionVersionConflictError(seriesId, seedDate, candidates.length);
+  }
+
+  /**
+   * Finds active non-recurring TaskDefinitions whose startDate falls within [startDate, endDate].
+   */
+  async findActiveNonRecurringByStartDateRange(
+    startDate: string,
+    endDate: string,
+    tx?: any
+  ): Promise<TaskDefinition[]> {
+    assertValidCivilDate(startDate, 'startDate');
+    assertValidCivilDate(endDate, 'endDate');
+    if (startDate > endDate) {
+      throw new TaskValidationError(
+        `startDate (${startDate}) must be <= endDate (${endDate})`
+      );
+    }
+
+    const client = getDb(tx);
+    const rows = client
+      .select()
+      .from(taskDefinitions)
+      .where(
+        and(
+          eq(taskDefinitions.isActive, true),
+          isNull(taskDefinitions.recurrenceRule),
+          isNull(taskDefinitions.hijriRecurrence),
+          gte(taskDefinitions.startDate, startDate),
+          lte(taskDefinitions.startDate, endDate)
+        )
+      )
+      .all();
+
+    return rows.map(mapRowToDomain);
   }
 
   /**

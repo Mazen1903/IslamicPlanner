@@ -1,6 +1,10 @@
 import { taskDefinitionRepository } from '../TaskDefinitionRepository';
 import { createTestDatabase, cleanupTestDatabase } from '@/data/__tests__/testDbHelper';
-import { TaskValidationError, DataIntegrityError } from '@/domain/task/errors';
+import {
+  TaskValidationError,
+  DataIntegrityError,
+  DefinitionVersionConflictError,
+} from '@/domain/task/errors';
 
 describe('TaskDefinitionRepository', () => {
   let nodeDb: ReturnType<typeof createTestDatabase>['nodeDb'];
@@ -533,6 +537,182 @@ describe('TaskDefinitionRepository', () => {
           createdAt: '2026-09-15T18:00:00+03:00',
         });
         expect(def.createdAt).toBe('2026-09-15T15:00:00.000Z');
+      });
+    });
+
+    describe('M6 Governing Version Selection & Non-Recurring Range Query', () => {
+      const recurringSeries = 'series-rec-versions';
+      const nonRecSeries = 'series-nonrec';
+
+      beforeEach(async () => {
+        // v1: initial recurring version, effective 2026-09-01 to 2026-09-14
+        await taskDefinitionRepository.create({
+          id: 'def-rec-v1',
+          title: 'Weekly Quran Study v1',
+          startDate: '2026-09-01',
+          scheduleType: 'EXACT_TIME',
+          scheduleData: { localTime: '18:00' },
+          recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
+          seriesId: recurringSeries,
+          seriesVersion: 1,
+          effectiveFromDate: '2026-09-01',
+          effectiveToDate: '2026-09-14',
+          isActive: true,
+        });
+
+        // v2: split successor recurring version, effective 2026-09-15 onward
+        await taskDefinitionRepository.create({
+          id: 'def-rec-v2',
+          title: 'Weekly Quran Study v2',
+          startDate: '2026-09-15',
+          scheduleType: 'EXACT_TIME',
+          scheduleData: { localTime: '19:00' },
+          recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
+          seriesId: recurringSeries,
+          seriesVersion: 2,
+          effectiveFromDate: '2026-09-15',
+          effectiveToDate: null,
+          isActive: true,
+        });
+
+        // Non-recurring definition
+        await taskDefinitionRepository.create({
+          id: 'def-nonrec-1',
+          title: 'Doctor Appointment',
+          startDate: '2026-09-20',
+          scheduleType: 'EXACT_TIME',
+          scheduleData: { localTime: '10:00' },
+          seriesId: nonRecSeries,
+          seriesVersion: 1,
+          isActive: true,
+        });
+      });
+
+      it('selects predecessor version for seed date before split date', async () => {
+        const version = await taskDefinitionRepository.findVersionForSeedDate(
+          recurringSeries,
+          '2026-09-05'
+        );
+        expect(version).not.toBeNull();
+        expect(version!.id).toBe('def-rec-v1');
+      });
+
+      it('selects successor version for seed date on split date', async () => {
+        const version = await taskDefinitionRepository.findVersionForSeedDate(
+          recurringSeries,
+          '2026-09-15'
+        );
+        expect(version).not.toBeNull();
+        expect(version!.id).toBe('def-rec-v2');
+      });
+
+      it('selects successor version for seed date after split date', async () => {
+        const version = await taskDefinitionRepository.findVersionForSeedDate(
+          recurringSeries,
+          '2026-09-22'
+        );
+        expect(version).not.toBeNull();
+        expect(version!.id).toBe('def-rec-v2');
+      });
+
+      it('returns null when seed date is before initial version startDate', async () => {
+        const version = await taskDefinitionRepository.findVersionForSeedDate(
+          recurringSeries,
+          '2026-08-31'
+        );
+        expect(version).toBeNull();
+      });
+
+      it('non-recurring: selects version only when seedDate === startDate', async () => {
+        const version = await taskDefinitionRepository.findVersionForSeedDate(
+          nonRecSeries,
+          '2026-09-20'
+        );
+        expect(version).not.toBeNull();
+        expect(version!.id).toBe('def-nonrec-1');
+
+        const mismatch = await taskDefinitionRepository.findVersionForSeedDate(
+          nonRecSeries,
+          '2026-09-21'
+        );
+        expect(mismatch).toBeNull();
+      });
+
+      it('returns null when entire series is deactivated (isActive = false)', async () => {
+        await taskDefinitionRepository.deactivateSeries(recurringSeries);
+
+        const version = await taskDefinitionRepository.findVersionForSeedDate(
+          recurringSeries,
+          '2026-09-15'
+        );
+        expect(version).toBeNull();
+      });
+
+      it('strictly throws DefinitionVersionConflictError when multiple versions overlap', async () => {
+        // Corrupt series: create overlapping version v3 covering same date as v2
+        await taskDefinitionRepository.create({
+          id: 'def-rec-v3-overlap',
+          title: 'Overlapping Version',
+          startDate: '2026-09-15',
+          scheduleType: 'EXACT_TIME',
+          scheduleData: { localTime: '20:00' },
+          recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
+          seriesId: recurringSeries,
+          seriesVersion: 3,
+          effectiveFromDate: '2026-09-15',
+          effectiveToDate: null,
+          isActive: true,
+        });
+
+        await expect(
+          taskDefinitionRepository.findVersionForSeedDate(recurringSeries, '2026-09-15')
+        ).rejects.toThrow(DefinitionVersionConflictError);
+      });
+
+      it('findActiveNonRecurringByStartDateRange: filters active non-recurring definitions in range', async () => {
+        // Create another non-recurring in range
+        await taskDefinitionRepository.create({
+          id: 'def-nonrec-2',
+          title: 'Dentist Visit',
+          startDate: '2026-09-22',
+          scheduleType: 'ANYTIME_TODAY',
+          scheduleData: {},
+          seriesId: 'series-dentist',
+          isActive: true,
+        });
+
+        // Non-recurring out of range
+        await taskDefinitionRepository.create({
+          id: 'def-nonrec-out',
+          title: 'Far Future Task',
+          startDate: '2026-10-15',
+          scheduleType: 'ANYTIME_TODAY',
+          scheduleData: {},
+          seriesId: 'series-far',
+          isActive: true,
+        });
+
+        const list = await taskDefinitionRepository.findActiveNonRecurringByStartDateRange(
+          '2026-09-15',
+          '2026-09-25'
+        );
+
+        const ids = list.map(d => d.id);
+        expect(ids).toContain('def-nonrec-1'); // 2026-09-20
+        expect(ids).toContain('def-nonrec-2'); // 2026-09-22
+        expect(ids).not.toContain('def-nonrec-out'); // 2026-10-15
+        expect(ids).not.toContain('def-rec-v1'); // recurring
+        expect(ids).not.toContain('def-rec-v2'); // recurring
+      });
+
+      it('findActiveNonRecurringByStartDateRange: rejects startDate > endDate or invalid dates', async () => {
+        await expect(
+          taskDefinitionRepository.findActiveNonRecurringByStartDateRange('2026-09-25', '2026-09-15')
+        ).rejects.toThrow(TaskValidationError);
+
+        await expect(
+          taskDefinitionRepository.findActiveNonRecurringByStartDateRange('invalid', '2026-09-15')
+        ).rejects.toThrow(TaskValidationError);
       });
     });
   });

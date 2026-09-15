@@ -1,4 +1,4 @@
-import { eq, and, gte } from 'drizzle-orm';
+import { eq, and, gte, lte } from 'drizzle-orm';
 import { taskOccurrences, taskDefinitions } from '@/data/schema';
 import { getDatabase, runInTransaction, type AppDatabase } from '@/data/db';
 import type {
@@ -24,6 +24,11 @@ import {
   assertValidIanaTimezone,
 } from '@/utils/dateValidation';
 
+export type PlacementUpdateResult =
+  | { outcome: 'UPDATED'; occurrence: TaskOccurrence }
+  | { outcome: 'NOT_PENDING'; occurrence: TaskOccurrence }
+  | { outcome: 'NOT_FOUND' };
+
 function getDb(tx?: any): AppDatabase {
   return tx ?? getDatabase();
 }
@@ -45,6 +50,8 @@ function mapRowToDomain(row: typeof taskOccurrences.$inferSelect): TaskOccurrenc
       calculatedPrayerSection: row.calculatedPrayerSection as Prayer | null,
       eligiblePrayerSections: parseEligiblePrayerSections(row.eligiblePrayerSections),
       wallClockResolution: row.wallClockResolution as TaskOccurrence['wallClockResolution'],
+      windowStart: row.windowStart ?? null,
+      windowEnd: row.windowEnd ?? null,
       status: row.status as OccurrenceStatus,
       completedAt: row.completedAt,
       missedAt: row.missedAt,
@@ -140,9 +147,13 @@ export class TaskOccurrenceRepository {
     const client = getDb(tx);
     const validated = validateOccurrenceInvariants(input);
 
-    // Look up referenced TaskDefinition to verify existence and derive seriesId
+    // Look up referenced TaskDefinition to verify existence, derive seriesId, and check scheduleType
     const defRows = client
-      .select({ id: taskDefinitions.id, seriesId: taskDefinitions.seriesId })
+      .select({
+        id: taskDefinitions.id,
+        seriesId: taskDefinitions.seriesId,
+        scheduleType: taskDefinitions.scheduleType,
+      })
       .from(taskDefinitions)
       .where(eq(taskDefinitions.id, input.taskDefinitionId))
       .all();
@@ -162,6 +173,32 @@ export class TaskOccurrenceRepository {
     }
     const seriesId = def.seriesId;
 
+    let windowStart: string | null = null;
+    let windowEnd: string | null = null;
+
+    if (def.scheduleType === 'PRAYER_WINDOW') {
+      if (input.windowStart == null || input.windowEnd == null) {
+        throw new TaskValidationError(
+          `PRAYER_WINDOW occurrence must have non-null windowStart and windowEnd. Got windowStart: ${input.windowStart}, windowEnd: ${input.windowEnd}`
+        );
+      }
+      assertValidIsoInstant(input.windowStart, 'windowStart');
+      assertValidIsoInstant(input.windowEnd, 'windowEnd');
+      windowStart = canonicalizeIsoInstant(input.windowStart);
+      windowEnd = canonicalizeIsoInstant(input.windowEnd);
+      if (windowStart >= windowEnd) {
+        throw new TaskValidationError(
+          `windowStart (${windowStart}) must be strictly before windowEnd (${windowEnd})`
+        );
+      }
+    } else {
+      if (input.windowStart != null || input.windowEnd != null) {
+        throw new TaskValidationError(
+          `Non-PRAYER_WINDOW occurrence (${def.scheduleType}) must have null windowStart and windowEnd. Got windowStart: ${input.windowStart}, windowEnd: ${input.windowEnd}`
+        );
+      }
+    }
+
     const id = input.id ?? generateId();
     const serializedEligible = serializeEligiblePrayerSections(input.eligiblePrayerSections);
     const serializedOverride = serializeOverrideData(input.overrideData);
@@ -180,6 +217,8 @@ export class TaskOccurrenceRepository {
           calculatedPrayerSection: input.calculatedPrayerSection ?? null,
           eligiblePrayerSections: serializedEligible,
           wallClockResolution: input.wallClockResolution ?? null,
+          windowStart,
+          windowEnd,
           status: validated.status,
           completedAt: validated.completedAt,
           missedAt: validated.missedAt,
@@ -273,6 +312,63 @@ export class TaskOccurrenceRepository {
 
     if (rows.length === 0) return null;
     return mapRowToDomain(rows[0]);
+  }
+
+  /**
+   * Finds a TaskOccurrence by series id and localDate (sole natural occurrence identity).
+   */
+  async findBySeriesAndDate(
+    seriesId: string,
+    localDate: string,
+    tx?: any
+  ): Promise<TaskOccurrence | null> {
+    assertValidCivilDate(localDate, 'localDate');
+    const client = getDb(tx);
+    const rows = client
+      .select()
+      .from(taskOccurrences)
+      .where(
+        and(
+          eq(taskOccurrences.seriesId, seriesId),
+          eq(taskOccurrences.localDate, localDate)
+        )
+      )
+      .all();
+
+    if (rows.length === 0) return null;
+    return mapRowToDomain(rows[0]);
+  }
+
+  /**
+   * Finds all PENDING TaskOccurrences whose localDate falls within [startDate, endDate].
+   */
+  async findPendingByLocalDateRange(
+    startDate: string,
+    endDate: string,
+    tx?: any
+  ): Promise<TaskOccurrence[]> {
+    assertValidCivilDate(startDate, 'startDate');
+    assertValidCivilDate(endDate, 'endDate');
+    if (startDate > endDate) {
+      throw new TaskValidationError(
+        `startDate (${startDate}) must be <= endDate (${endDate})`
+      );
+    }
+
+    const client = getDb(tx);
+    const rows = client
+      .select()
+      .from(taskOccurrences)
+      .where(
+        and(
+          eq(taskOccurrences.status, 'PENDING'),
+          gte(taskOccurrences.localDate, startDate),
+          lte(taskOccurrences.localDate, endDate)
+        )
+      )
+      .all();
+
+    return rows.map(mapRowToDomain);
   }
 
   /**
@@ -421,62 +517,148 @@ export class TaskOccurrenceRepository {
   }
 
   /**
-   * Guarded placement update: updates derived placement fields ONLY for PENDING occurrences.
-   * Strictly throws TaskValidationError if the occurrence is COMPLETED, MISSED, or CANCELLED.
+   * Guarded placement update: atomically updates derived placement fields ONLY for PENDING occurrences.
+   *
+   * Invariants:
+   * - Validates windowStart and windowEnd according to referenced TaskDefinition.scheduleType
+   * - Uses atomic SQL condition: WHERE id = ? AND status = 'PENDING'
+   * - Returns typed PlacementUpdateResult:
+   *   - { outcome: 'UPDATED', occurrence: updatedOccurrence }
+   *   - { outcome: 'NOT_PENDING', occurrence: terminalOccurrence }
+   *   - { outcome: 'NOT_FOUND' }
    */
   async updateDerivedPlacement(
     id: string,
     placement: DerivedPlacement,
     tx?: any
-  ): Promise<TaskOccurrence> {
-    const existing = await this.findById(id, tx);
-    if (!existing) {
-      throw new TaskValidationError(`Cannot update placement for non-existent occurrence ${id}`);
+  ): Promise<PlacementUpdateResult> {
+    const client = getDb(tx);
+
+    // Look up occurrence to verify existence and get taskDefinitionId / status
+    const occRows = client
+      .select({
+        id: taskOccurrences.id,
+        taskDefinitionId: taskOccurrences.taskDefinitionId,
+        status: taskOccurrences.status,
+      })
+      .from(taskOccurrences)
+      .where(eq(taskOccurrences.id, id))
+      .all();
+
+    if (occRows.length === 0) {
+      return { outcome: 'NOT_FOUND' };
     }
 
-    if (
-      existing.status === 'COMPLETED' ||
-      existing.status === 'MISSED' ||
-      existing.status === 'CANCELLED'
-    ) {
-      throw new TaskValidationError(
-        `Cannot update derived placement for terminal occurrence ${id} (${existing.status}). Historical placement is permanently frozen.`
+    const existingRow = occRows[0];
+    if (existingRow.status !== 'PENDING') {
+      const existingOcc = await this.findById(id, tx);
+      return { outcome: 'NOT_PENDING', occurrence: existingOcc! };
+    }
+
+    // Load referenced definition for scheduleType window validation
+    const defRows = client
+      .select({
+        id: taskDefinitions.id,
+        scheduleType: taskDefinitions.scheduleType,
+      })
+      .from(taskDefinitions)
+      .where(eq(taskDefinitions.id, existingRow.taskDefinitionId))
+      .all();
+
+    if (defRows.length === 0) {
+      throw new DataIntegrityError(
+        `TaskOccurrence ${id} references non-existent TaskDefinition ${existingRow.taskDefinitionId}`
       );
     }
+    const def = defRows[0];
 
+    // Validate placement fields
     if (placement.planningDayKey) {
       assertValidCivilDate(placement.planningDayKey, 'planningDayKey');
     }
     if (placement.timezone) {
       assertValidIanaTimezone(placement.timezone, 'timezone');
     }
-    let calculatedStartTime = placement.calculatedStartTime;
+    let calculatedStartTime = placement.calculatedStartTime ?? null;
     if (calculatedStartTime != null) {
       assertValidIsoInstant(calculatedStartTime, 'calculatedStartTime');
       calculatedStartTime = canonicalizeIsoInstant(calculatedStartTime);
     }
 
+    let windowStart: string | null = null;
+    let windowEnd: string | null = null;
+
+    if (def.scheduleType === 'PRAYER_WINDOW') {
+      if (placement.windowStart == null || placement.windowEnd == null) {
+        throw new TaskValidationError(
+          `PRAYER_WINDOW occurrence must have non-null windowStart and windowEnd. Got windowStart: ${placement.windowStart}, windowEnd: ${placement.windowEnd}`
+        );
+      }
+      assertValidIsoInstant(placement.windowStart, 'windowStart');
+      assertValidIsoInstant(placement.windowEnd, 'windowEnd');
+      windowStart = canonicalizeIsoInstant(placement.windowStart);
+      windowEnd = canonicalizeIsoInstant(placement.windowEnd);
+      if (windowStart >= windowEnd) {
+        throw new TaskValidationError(
+          `windowStart (${windowStart}) must be strictly before windowEnd (${windowEnd})`
+        );
+      }
+    } else {
+      if (placement.windowStart != null || placement.windowEnd != null) {
+        throw new TaskValidationError(
+          `Non-PRAYER_WINDOW occurrence (${def.scheduleType}) must have null windowStart and windowEnd`
+        );
+      }
+    }
+
     const serializedEligible = serializeEligiblePrayerSections(placement.eligiblePrayerSections);
     const patch: Partial<typeof taskOccurrences.$inferInsert> = {
       calculatedStartTime,
-      calculatedPrayerSection: placement.calculatedPrayerSection,
+      calculatedPrayerSection: placement.calculatedPrayerSection ?? null,
       eligiblePrayerSections: serializedEligible,
-      wallClockResolution: placement.wallClockResolution,
+      wallClockResolution: placement.wallClockResolution ?? null,
+      windowStart,
+      windowEnd,
       planningDayKey: placement.planningDayKey,
     };
     if (placement.timezone) {
       patch.timezone = placement.timezone;
     }
 
-    const client = getDb(tx);
-    client
+    // Atomic update with status guard
+    const updateResult = client
       .update(taskOccurrences)
       .set(patch)
-      .where(eq(taskOccurrences.id, id))
-      .run();
+      .where(
+        and(
+          eq(taskOccurrences.id, id),
+          eq(taskOccurrences.status, 'PENDING')
+        )
+      )
+      .run() as { changes?: number };
 
-    const updated = await this.findById(id, tx);
-    return updated!;
+    const changes = updateResult?.changes ?? 0;
+    if (changes > 0) {
+      const updated = await this.findById(id, tx);
+      if (!updated) {
+        return { outcome: 'NOT_FOUND' };
+      }
+      return { outcome: 'UPDATED', occurrence: updated };
+    }
+
+    // Atomic update affected 0 rows (concurrent terminal transition or deletion)
+    const reread = await this.findById(id, tx);
+    if (!reread) {
+      return { outcome: 'NOT_FOUND' };
+    }
+    if (reread.status !== 'PENDING') {
+      return { outcome: 'NOT_PENDING', occurrence: reread };
+    }
+
+    // If UPDATE affects zero rows but reread occurrence somehow remains PENDING
+    throw new DataIntegrityError(
+      `Atomic placement update affected 0 rows for PENDING occurrence ${id}`
+    );
   }
 
   /**

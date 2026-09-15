@@ -100,6 +100,8 @@ describe('SchedulingEngine', () => {
       calculatedPrayerSection: null,
       eligiblePrayerSections: null,
       wallClockResolution: null,
+      windowStart: null,
+      windowEnd: null,
       status: 'PENDING',
       completedAt: null,
       missedAt: null,

@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M5 — Scheduling Engine (CLOSED / OPUS APPROVED)  
-**Last Updated:** 2026-09-14 (M5 Opus approved)  
+**Current Milestone:** M6 — Local persistence + materialization (IMPLEMENTED — AWAITING INDEPENDENT OPUS REVIEW)  
+**Last Updated:** 2026-09-15 (M6 Implemented)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -16,7 +16,7 @@
 | **M3** | Planning-day engine + clipping | **Completed** | 2026-09-14 | All 32 domain tests pass, Fajr/Midnight/Custom boundaries, explicit DST resolution, non-mutating clipping, Opus review required |
 | **M4** | Task domain model + schema (includes series) | **Completed & Hardened** | 2026-09-14 | All 128 M4 tests pass (248 total project tests), clean 0000_initial migration, dynamic Drizzle discovery, canonical transactions, serialized concurrency, true civil-date validation, terminal status timestamp invariants, absolute ISO instants, IANA timezone validation |
 | **M5** | Scheduling engine + WallClockResolver | **CLOSED / OPUS APPROVED** | 2026-09-14 | All 60 M5 tests pass (308 total project tests), extracted WallClockResolver to domain/temporal, DST gap/overlap resolution, 4 scheduling modes, pure domain logic, M6 contract note, F-4 test hardening verified |
-| **M6** | Local persistence + materialization | Not Started | — | Prerequisites: M4, M5 |
+| **M6** | Local persistence + materialization | **IMPLEMENTED — AWAITING INDEPENDENT OPUS REVIEW** | 2026-09-15 | All 66 M6 tests pass (372 total project tests). Forward migration 0001_lazy_the_order.sql (window_start/window_end), MaterializationEngine pipeline, M6/M9 boundary preserved, atomic guarded update, terminal short-circuit before temporal context. |
 | **M7** | Today screen | Not Started | — | Prerequisites: M1, M2, M3, M5, M6 |
 | **M8** | Hijri Calendar Core / HijriService | Not Started | — | Prerequisites: M4. MOVED from M13. Opus review required |
 | **M9** | Recurrence engine | Not Started | — | Prerequisites: M4, **M8**. Opus review required |
@@ -351,4 +351,78 @@
   - **Finding F-4 (Exception tests false-positive vulnerability):** Resolved — six exception tests (`HS-02`, `HS-03`, `HS-05`, `HS-06`, `ER-04`, `ER-06`) in `src/domain/scheduling/SchedulingEngine.test.ts` hardened with explicit `expect(() => fn()).toThrow(SchedulingResolutionError)` assertions before try/catch inspection.
   - **Finding F-5 (TimelineWithPeriods structural interface):** Accepted as-is.
   - **Status:** M5 is CLOSED / OPUS APPROVED.
+
+---
+
+## M6 Completion Record
+
+- **Date:** 2026-09-15
+- **Status:** **M6 IMPLEMENTED — AWAITING INDEPENDENT OPUS REVIEW**
+- **Core Purpose:** Bridge governing task definitions and M5 scheduling engine with SQLite database persistence, managing occurrence materialization, guarded updates, terminal history preservation, and migration safety.
+- **Migration & Schema:**
+  - **Migration Name:** `0001_lazy_the_order.sql` (generated via `npx drizzle-kit generate`; `0000_initial.sql` kept untouched).
+  - **Schema Modifications:** Added nullable columns `window_start TEXT` and `window_end TEXT` to `task_occurrences` table in `src/data/schema.ts`.
+  - **Journal & Runtime Loader:** Updated `src/data/migrations/meta/_journal.json` and registered `0001_lazy_the_order.sql` in `src/data/migrations/migrations.js` (hash and SQL loaded synchronously).
+  - **Migration Test Suite (`src/data/__tests__/migrations.test.ts`):** 4 tests covering fresh DB migration, upgrade from M4 with existing occurrences, migration idempotency, and journal/snapshot/loader consistency.
+- **PrayerWindow Persistence & Invariants:**
+  - `DerivedPlacement`, `TaskOccurrence`, and `NewTaskOccurrenceInput` extended with `windowStart: string | null` and `windowEnd: string | null`.
+  - Stored as canonical UTC ISO strings: `canonicalizeIsoInstant(dateTime.toUTC().toISO())`.
+  - Repository-level validation enforces:
+    - For `PRAYER_WINDOW`: `windowStart !== null`, `windowEnd !== null`, both are valid UTC ISO instants, and `windowStart < windowEnd`.
+    - For all other schedule types: `windowStart === null` and `windowEnd === null`.
+  - Legacy rows read `null`/`null` without read-time corruption errors.
+  - Terminal rows freeze both window values upon completion/miss/cancellation.
+- **M6 / M9 Boundary & Recurrence Ownership:**
+  - M6 handles: explicit `(seriesId, seedDate)` -> governing `TaskDefinition` version -> M5 placement -> `TaskOccurrence` persistence/guarded update.
+  - M6 strictly does NOT evaluate RRULE syntax, frequencies, BYDAY, intervals, count, or Hijri recurrence membership (all owned by M9).
+  - M6 inspects only `startDate`, `effectiveFromDate`, `effectiveToDate`, `isActive`, and `recurrenceRule`/`hijriRecurrence` presence (only to distinguish recurring vs non-recurring definitions).
+- **Logical Identity & Version Selection:**
+  - Sole logical occurrence identity is `seriesId + localDate`. Database backstop is `UNIQUE(series_id, local_date)`.
+  - Occurrence lookup uses `findBySeriesAndDate(seriesId, seedDate)` (never `taskDefinitionId + seedDate`).
+  - Version Selection (`TaskDefinitionRepository.findVersionForSeedDate`):
+    - Recurring candidate: `isActive === true`, `effectiveFromDate <= seedDate`, `startDate <= seedDate`, and `(effectiveToDate === null || seedDate <= effectiveToDate)`.
+    - Non-recurring candidate: `isActive === true`, `recurrenceRule === null`, `hijriRecurrence === null`, and `seedDate === startDate`.
+    - If 0 matches: returns `null` (mapped to `NO_GOVERNING_VERSION`).
+    - If 1 match: returns governing definition.
+    - If >1 match: throws typed `DefinitionVersionConflictError` (mapped to `DEFINITION_VERSION_CONFLICT`).
+  - Stale PENDING version conflict: If a PENDING occurrence has `existing.taskDefinitionId !== governing.id`, throws typed `OCCURRENCE_VERSION_CONFLICT`.
+- **Terminal Short-Circuit:**
+  - Terminal occurrences short-circuit immediately after logical lookup within `materializeOne`:
+    - `COMPLETED` -> returns `SKIPPED_COMPLETED`
+    - `MISSED` -> returns `SKIPPED_MISSED`
+    - `CANCELLED` -> returns `SKIPPED_CANCELLED` (acts as regeneration-blocking tombstone)
+  - Short-circuit occurs BEFORE governing definition lookup, `getEffectiveTimezone()`, M5 scheduling, or timeline access.
+  - History and tombstones remain detectable even if temporal context is corrupted or unavailable.
+- **MaterializationEngine API:**
+  - `materializeOne(request, context)`: Sole mutation pipeline. Validates input, starts canonical transaction, enforces terminal short-circuit, selects governing version, derives placement, maps canonical UTC, creates or atomically updates occurrence. Returns `MaterializationResult` with non-null `occurrenceId: string` and typed `action`. Throws typed `MaterializationError` on failure.
+  - `materializeBatch(requests, context)`: Deduplicates requests by `seriesId + seedDate` (preserving first-seen order), processes each item in an isolated transaction, aggregates results and per-item errors into `MaterializationSummary`.
+  - `materializeNonRecurring(dateRange, context)`: Queries active non-recurring definitions in range via `findActiveNonRecurringByStartDateRange`, constructs requests `{ seriesId, seedDate: startDate }`, routes through `materializeBatch`.
+  - `rematerializePending(dateRange, context)`: Queries PENDING occurrences in range via `findPendingByLocalDateRange`, constructs requests `{ seriesId, seedDate: localDate }`, routes through `materializeBatch`/`materializeOne`.
+- **Atomic Guarded Update & Concurrency:**
+  - Occurrence placement update uses atomic SQL: `WHERE id = ? AND status = 'PENDING'`, returning typed `PlacementUpdateResult` (`UPDATED`, `NOT_PENDING`, `NOT_FOUND`).
+  - Terminal race handling: If `NOT_PENDING`, re-reads occurrence and returns corresponding `SKIPPED_*` action. If not found or zero changes on still-pending, throws `DATA_INTEGRITY`.
+  - Serialization guaranteed via M4 `runInTransaction()` / `TransactionLock`. Secondary backstop: SQLite `UNIQUE(series_id, local_date)`.
+- **Failure Safety & Error Wrapping:**
+  - All operations rollback cleanly on error. If M5 scheduling fails, new occurrence leaves 0 rows; existing PENDING occurrence placement remains completely untouched.
+  - No raw SQLite errors leak; all errors mapped to typed `MaterializationError` codes (`INVALID_REQUEST`, `INVALID_SEED_DATE`, `NO_GOVERNING_VERSION`, `DEFINITION_VERSION_CONFLICT`, `OCCURRENCE_VERSION_CONFLICT`, `SCHEDULING_RESOLUTION_FAILED`, `DATA_INTEGRITY`, `PERSISTENCE_FAILED`).
+- **Deferred Scope (Preserved for Future Milestones):**
+  - M7: Today Screen UI
+  - M8: Hijri Calendar Core / HijriService
+  - M9: Recurrence rule evaluation & seed generation (RRULE & Hijri recurrence)
+  - M11: Missed/completed/overdue worker
+  - M12: Location & travel service
+  - M13: Notifications
+  - M17: PrayerCacheRepository & UserSettingsRepository
+- **Test Inventory (66 new M6 tests, 372 total project tests):**
+  - `src/data/__tests__/migrations.test.ts` (4 tests: MG-01..MG-04)
+  - `src/data/repositories/__tests__/TaskDefinitionRepository.test.ts` (9 new tests: version selection, ranges, conflicts)
+  - `src/data/repositories/__tests__/TaskOccurrenceRepository.test.ts` (8 new tests: window validation, UTC, PlacementUpdateResult, queries)
+  - `src/domain/materialization/MaterializationEngine.test.ts` (45 tests: IDM, SV, TS, NR, RC, PW-M, MT, CTX, FL, BT, RM, TX)
+- **Verification:**
+  - `npm test`: Passed (21 test suites, 372 tests passed, 0 failures, 308 M2–M5 tests green)
+  - `npm run typecheck`: Passed (0 errors)
+  - `npm run lint`: Passed (0 errors, 0 warnings)
+  - `npx expo-doctor`: Passed (21/21 checks passed, 0 issues)
+  - `npx expo install --check`: Passed (Dependencies are up to date)
+
 

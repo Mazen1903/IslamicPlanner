@@ -80,6 +80,8 @@ export const taskOccurrences = sqliteTable(
     calculatedPrayerSection: text('calculated_prayer_section'),
     eligiblePrayerSections: text('eligible_prayer_sections'),
     wallClockResolution: text('wall_clock_resolution'),
+    windowStart: text('window_start'),
+    windowEnd: text('window_end'),
     status: text('status').notNull().default('PENDING'),
     completedAt: text('completed_at'),
     missedAt: text('missed_at'),
