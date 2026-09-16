@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M10 — Add/Edit Task (IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW)  
-**Last Updated:** 2026-09-15 (M10 Implementation Complete)  
+**Current Milestone:** M11 — Missed / Completed / Overdue behavior (ARCHITECTURE NEXT)  
+**Last Updated:** 2026-09-16 (M10 Closed / Sonnet Approved; M11 Architecture Next)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -20,8 +20,8 @@
 | **M7** | Today screen | **CLOSED / OPUS APPROVED** | 2026-09-15 | All 76 M7 tests pass (448 total project tests). Prayer-centered adaptive planner, 5 fixed prayer tabs, single 1-second timer owner, request generation safety, TodayRuntimeContext, pure projection, light theme design system. |
 | **M8** | Hijri Calendar Core / HijriService | **CLOSED / OPUS APPROVED** | 2026-09-15 | Implementation commit: `1a0b18a`. Final tests: 545/545 (97 M8 tests). Independent Opus review: A — APPROVED. No regressions. Pure Hijri calendar core, canonical HijriDate, bidirectional conversion, Umm al-Qura adapter, public getDaysInMonth probe, global & override adjustments, ±2 candidate reverse resolution, typed errors, zero deep imports. |
 | **M9** | Recurrence engine | **CLOSED / OPUS APPROVED** | 2026-09-15 | Implementation commit: `5b713f2`. Final tests: 645/645 (100 M9 tests). Independent Claude Opus review: A — APPROVED. No regressions. Pure recurrence domain, strict RRULE allowlist, clamp-to-last-day monthly semantics, canonical Hijri membership, fail-fast range errors. No migration, no package changes. |
-| **M10** | Add/Edit Task | **IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW** | — | Candidate commit: `a932ab0`. 710/710 tests (65 new M10 tests). Single dependency `@react-native-community/datetimepicker`. 0 migrations. 4 modes, dual-date model, 2-phase save, plan-before-delete horizon sync, live preview, scope selection. |
-| **M11** | Missed/completed/overdue behavior | Not Started | — | Prerequisites: M5, M7 |
+| **M10** | Add/Edit Task | **CLOSED / SONNET APPROVED** | 2026-09-16 | Implementation commit: `a932ab0`. Review follow-up commit: `9b060e0`. Review result: A / APPROVED. Tests: 710/710 sequential. 1 dependency (`@react-native-community/datetimepicker`), 0 migrations. 4 modes, dual-date model, 2-phase save, plan-before-delete horizon sync, live preview, scope selection. Deferred debt recorded. |
+| **M11** | Missed / Completed / Overdue behavior | **ARCHITECTURE NEXT** | — | Background lifecycle transitions, terminal states. Prerequisites: M5, M7. |
 | **M12** | Location and travel | Not Started | — | Prerequisites: M2, M6. Opus review required |
 | **M13** | Notifications | Not Started | — | Prerequisites: M2, M5, M12. Opus review required |
 | **M14** | Calendar month | Not Started | — | Prerequisites: M6, M7, **M8** |
@@ -599,11 +599,14 @@
 
 ---
 
-## M10 Implementation Record
+## M10 Completion Record
 
-- **Date:** 2026-09-15
+- **Date:** 2026-09-16
+- **Status:** **M10 CLOSED / SONNET APPROVED**
+- **Candidate Implementation:** `a932ab0`
+- **Review Follow-up Commit:** `9b060e0`
+- **Review Result:** A / APPROVED (Independent Sonnet Review)
 - **Scope:** Add/Edit Task application feature layer, UI components, orchestration, and horizon synchronization.
-- **Candidate Commit:** `a932ab0`
 - **Architecture Reference:** Binding consolidated architecture in `docs/M10_ARCHITECTURE.md` (incorporating Rev 1 through Rev 6).
 - **Dependencies:** Exactly ONE new package added: `@react-native-community/datetimepicker` (v9.1.0, verified compatible with Expo SDK 57). Zero form/state libraries added.
 - **Database Migrations:** ZERO database migrations. Schema remains unchanged.
@@ -651,8 +654,12 @@
   - `TaskOccurrenceRepository.test.ts` (3 tests added): `findPendingBySeriesAndDateRange`.
   - `TaskFormUI.test.tsx` (14 tests): 4 modes, 5 anchors, preview banner, presets, custom modal, more options, edit scope sheet, success/partial success screens, prayer defaults, title validation, discard alert.
 - **Verification:**
-  - `npm test`: Passed (37 test suites, 710 tests passed, 0 failures)
+  - `npm test -- --runInBand`: Passed (37 test suites, 710 tests passed, 0 failures; 710/710 sequential)
+  - *Parallel Flake Note (Non-blocking):* One non-blocking parallel Jest worker timeout flake observed on `TaskFormUI.test.tsx:119` ("renders presets and handles specific days selection") due to worker resource contention; passes 14/14 in isolation and 710/710 cleanly in sequential execution.
   - `npm run typecheck`: Passed (0 errors)
   - `npm run lint`: Passed (0 errors, 0 warnings)
   - `npx expo-doctor`: 20/21 checks passed (known pre-existing baseline unchanged)
   - `npx expo install --check`: Dependencies verified (no unexpected drift)
+- **Deferred Technical Debt (LOW findings):**
+  - **a. Module-level defaultInputProvider:** `src/components/task-form/TaskFormScreen.tsx:51` instantiates `defaultInputProvider` at module load time outside React hook lifecycle (module-level singleton). Non-blocking; should be refactored into a hook or provider seam if input dynamic injection is needed.
+  - **b. Module-level TaskFormOrchestrator singleton:** `src/features/task-form/TaskFormOrchestrator.ts:261` exports a shared module-level singleton `taskFormOrchestrator` used as a default prop. Two concurrent form screens would share the same single-flight latch (`submitInFlight`). Safe under current single-screen navigation structure, but should be instantiated per-screen or via context when multi-window/modal concurrency is introduced.

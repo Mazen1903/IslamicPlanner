@@ -145,7 +145,7 @@
   - `src/features/task-form/__tests__/`
   - `src/services/__tests__/PlannerRefreshCoordinator.test.ts`
   - `src/components/task-form/__tests__/`
-- **Milestone Owner:** **M10 (IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW)**
+- **Milestone Owner:** **M10 (CLOSED / SONNET APPROVED)**
 
 ---
 

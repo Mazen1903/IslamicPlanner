@@ -1,323 +1,158 @@
-# Current Milestone: M10 — Add/Edit Task
+# Current Milestone: M11 — Missed / Completed / Overdue Behavior
 
-> **Current State:** M10 implementation complete; Independent Opus review next  
+> **Current State:** M10 closed and Sonnet-approved; M11 architecture and planning next  
 > **Current Test Suite:** 710 tests passing (37 test suites: 65 M10 tests, 645 baseline tests)  
-> **Milestone Status:** M10 — IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW  
-> **Architecture Status:** BINDING / FROZEN (Consolidated in `docs/M10_ARCHITECTURE.md`)  
-> **Implementation Status:** COMPLETE (Awaiting Opus Review)  
+> **Milestone Status:** M11 — ARCHITECTURE NEXT  
+> **Architecture Status:** NOT STARTED (Pending Architecture Phase)  
+> **Implementation Status:** NOT STARTED (Do NOT implement M11 yet)  
 
 ---
 
 ## 1. Milestone Goal
 
-Build the user-facing Add/Edit Task workflow that creates and edits `TaskDefinition` data using the already-approved scheduling and recurrence domain contracts.
+Implement the task lifecycle state machine, lifecycle transitions, terminal state invariants, and calm visual presentation states for **Missed**, **Completed**, and **Overdue** tasks.
 
-M10 is primarily an **application and UI orchestration milestone**. It bridges user interaction with existing domain logic:
+M11 bridges background time progression, prayer period boundaries, and user interactions with persistent task occurrence state:
 
 ```text
-User Input (Form State)
+Time / Prayer Boundary Progression (Timer, Foreground, Prayer Period End)
     ↓
-M10 UI Orchestration & Validation
+M11 Lifecycle Detection (Overdue derivation, Period expiration check)
     ↓
-Serialization to Domain Models (ScheduleData, bare RRULE, Options)
+TaskOccurrenceRepository Status Transitions (PENDING → COMPLETED | MISSED | CANCELLED)
     ↓
-M4 TaskEngine CRUD / Series Versioning
+Terminal State Invariants (Frozen historical placement & identity)
     ↓
-M6 Materialization Trigger (Occurrence Generation)
-    ↓
-Local SQLite Persistence & Today View Refresh
+Today View Model & Visual States (Subtle overdue indicator, completed styling, in-place missed tasks)
 ```
 
-M10 translates user choices into existing domain representations **without redefining scheduling semantics**.
+M11 strictly adheres to the core Islamic planner principle: **No auto-rollforward** — tasks remain anchored to the prayer period and planning day for which they were intended.
 
 ---
 
-## 2. Locked Product UX
+## 2. Locked Domain Invariants & Specifications
 
-### 2.1 Main Add Task Flow Layout
-The Add Task screen follows a cohesive, prayer-centered visual flow:
-1. **Mosque / Header Area**: Calm visual header with screen context (or prayer preselection banner).
-2. **Task Name**: Clean, prominent input field with validation.
-3. **Four Scheduling Mode Cards**:
-   - Exact Time
-   - Relative to Prayer
-   - Prayer Window
-   - Anytime Today
-4. **Repeat (Recurrence)**: Dropdown / selector for recurrence rules.
-5. **More Options**: Expandable drawer or accordion for secondary attributes.
-6. **Save Button**: Primary action button with loading and disable states.
+All behaviors in M11 are bound by `docs/MASTER_PRODUCT_SPEC.md` (§12), `docs/DATA_MODEL.md` (§527–529), and `docs/TEST_PLAN.md` (§3.11):
 
-### 2.2 Four Scheduling Modes
-1. **Exact Time**:
-   - Date selection (civil intended date).
-   - Local wall-clock time (`HH:mm`).
-   - Live computed prayer-section preview (e.g., `"6:00 PM — Asr"`).
-2. **Relative to Prayer**:
-   - Prayer selector (`FAJR`, `DHUHR`, `ASR`, `MAGHRIB`, `ISHA` — `SUNRISE` is NOT user-selectable).
-   - Direction toggle (`BEFORE` / `AFTER`).
-   - Offset input (minutes as a positive integer).
-   - Live computed local-time preview (e.g., `"90 min after Maghrib — 8:14 PM"`).
-3. **Prayer Window**:
-   - Start prayer selector.
-   - End prayer selector.
-   - Strict start-inclusive / end-exclusive semantics (e.g., `[Dhuhr, Asr)`).
-   - Preselection support: When launched from `"+ Add to Dhuhr"` in the Today screen, automatically preselect Dhuhr $\to$ Asr.
-4. **Anytime Today**:
-   - Planning-day based allocation.
-   - No fixed scheduled clock time.
+### 2.1 Overdue is Runtime-Derived (MC-01, MC-02)
+- An occurrence is overdue when:
+  $$\text{now} > \text{calculatedStartTime} \quad \text{AND} \quad \text{status} = \text{'PENDING'}$$
+- **Dynamic Derivation Only:** `isOverdue` is calculated on the fly during view projection.
+- **NEVER Stored in Database:** The SQLite column `task_occurrences.status` strictly allows `'PENDING'`, `'COMPLETED'`, `'MISSED'`, `'CANCELLED'`. It NEVER stores `'OVERDUE'`.
 
-### 2.3 Repeat Options
-Supported user-facing repeat presets:
-- **Doesn't repeat** (non-recurring single task)
-- **Daily** (every day or every $N$ days)
-- **Weekdays** (Monday through Friday)
-- **Weekly** (on specific days of week, with optional interval)
-- **Monthly** (on day of month, e.g., 15th)
-- **Specific days** (explicit weekday selection)
-- **Custom** (interval + frequency combinations)
+### 2.2 Completion Transitions (MC-03)
+- When marked complete by the user:
+  - `status` transitions from `PENDING` $\to$ `COMPLETED`.
+  - `completedAt` is recorded as an ISO 8601 UTC timestamp.
+  - Subtasks may be checked/updated.
+  - Once completed, the occurrence becomes a frozen historical record.
 
-### 2.4 More Options Drawer
-Secondary task attributes configured in the expandable section:
-- **Reminder**: Notification / reminder preferences.
-- **Priority**: `NORMAL` vs. `IMPORTANT`.
-- **Duration**: Estimated task duration in minutes.
-- **Notes**: Freeform descriptive text.
-- **Subtasks**: Ordered list of checklist items with unique template IDs.
-- **Attachment**: Attachment references or placeholders.
-- **Tags**: Categorization tag array.
+### 2.3 Missed on Period End (MC-04)
+- When a task's valid prayer period or scheduled window ends while the task is still `PENDING`:
+  - `status` transitions from `PENDING` $\to$ `MISSED`.
+  - `missedAt` is recorded as an ISO 8601 UTC timestamp.
+  - Evaluation occurs at prayer period boundaries, upon app foregrounding, and during periodic ticks.
 
-### 2.5 Confirmation & Feedback
-Upon successful creation:
-- Toast / banner confirmation: `"Task Added! May Allah make it easy for you"`
-- Task summary and seamless navigation back to Today or active view.
+### 2.4 Missed Tasks Stay in Place (MC-05)
+- A missed task remains permanently associated with its original prayer section and planning day date.
+- It is displayed within its original section in the UI (or in historical views) and is never silently removed.
+
+### 2.5 Absolute Prohibition on Auto-Rollforward (MC-06)
+- **Zero Silent Rollover:** Missed tasks do **NOT** automatically roll forward into the next prayer period or subsequent days.
+- In an Islamic prayer-centered lifestyle, prayer times are distinct spiritual intervals; a task assigned to Dhuhr that is missed belongs historically to Dhuhr.
+- If the user wants to perform the task later, they may manually reschedule or duplicate it.
+
+### 2.6 Cancellation Transitions (MC-07)
+- When a task occurrence is cancelled:
+  - `status` transitions from `PENDING` $\to$ `CANCELLED`.
+  - Stored as a tombstone record for auditability and recurring sync preservation.
+
+### 2.7 Terminal State Immutability
+- Occurrences in `COMPLETED`, `MISSED`, or `CANCELLED` status are **permanently frozen**:
+  - `calculatedStartTime`, `calculatedPrayerSection`, `eligiblePrayerSections`, `wallClockResolution`, `planningDayKey`, `localDate`, `timezone`, `seriesId`, and `taskDefinitionId` are NEVER modified by rematerialization, horizon sync, or background sweeps.
+  - Guaranteed by existing M4 repository guards and M6 materialization freeze logic.
 
 ---
 
-## 3. Locked Domain Boundaries
+## 3. Visual Direction & Calm Aesthetics
 
-M10 strictly orchestrates existing domain capabilities. M10 does **NOT** redefine:
-- **M5 Scheduling Semantics**: Wall-clock resolution, DST gap/overlap behavior, anchor relative math, and prayer window bounds remain owned by M5 `SchedulingEngine`.
-- **M6 Materialization Semantics**: Atomic occurrence generation, terminal status protection, and idempotency remain owned by M6 `MaterializationEngine`.
-- **M8 Hijri Conversion**: Calendar conversion and adjustment handling remain owned by M8 `HijriService`.
-- **M9 Recurrence Semantics**: Recurrence membership, date clamping, interval phase, and ambiguity resolution remain owned by M9 `RecurrenceEngine`.
-
-M10 serializes user choices into those approved domain contracts.
-
----
-
-## 4. Recurrence Serialization (Locked from M9)
-
-M9 requires explicit selectors and strictly enforces a bare RRULE allowlist. M10 owns serialization; M9 owns evaluation.
-
-### 4.1 Serialization Rules
-- Must emit **bare RRULE bodies** (NO `RRULE:` prefix).
-- Must NEVER emit unsupported RFC 5545 tokens: `COUNT`, `UNTIL`, `BYSETPOS`, ordinal `BYDAY` (e.g., `1MO`), negative `BYMONTHDAY`.
-- Must serialize simple options into explicit tokens:
-
-| User Choice | Serialized RRULE Body |
-|---|---|
-| Daily | `FREQ=DAILY` |
-| Weekly anchored on Tuesday | `FREQ=WEEKLY;BYDAY=TU` |
-| Monthly anchored on day 17 | `FREQ=MONTHLY;BYMONTHDAY=17` |
-| Weekdays | `FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR` |
-| Every 3 days | `FREQ=DAILY;INTERVAL=3` |
-| Every 2 weeks on Friday | `FREQ=WEEKLY;INTERVAL=2;BYDAY=FR` |
+- **Subtle Overdue Display:**
+  - If scheduled time has passed but the prayer period is still active: display subtle, calm overdue text (e.g., `"30 min overdue"`).
+  - **No Punitive Visuals:** Avoid glaring red text, aggressive exclamation marks, or guilt-inducing warnings. Maintain the calm, mosque-inspired aesthetic.
+- **Completed Visual State:**
+  - Clear visual affordance (checked checkbox, muted text, subtle strike-through).
+  - Tactile, satisfying tap interaction without arcade-like gamification or confetti.
+- **Missed Visual State:**
+  - Calm, neutral missed badge or text indicator indicating the task was not completed during its window.
 
 ---
 
-## 5. Scheduling Serialization
+## 4. Execution Triggers & Seams
 
-M10 serializes UI inputs into existing M4/M5 `scheduleData` domain representations without inventing alternate representations:
-
-- **Exact Time**: Fixed local wall-clock intent `{ localTime: "HH:mm" }`.
-- **Relative to Prayer**: Prayer + direction + offset `{ prayer: PrayerName, relation: "BEFORE" | "AFTER", offsetMinutes: number }`. Note: `SUNRISE` is NOT user-selectable.
-- **Prayer Window**: `{ startPrayer: PrayerName, endPrayer: PrayerName }`. Non-wrapping in v1; start is inclusive, end is exclusive.
-- **Anytime Today**: Null or empty schedule data representation; no scheduled clock time.
+M11 architecture must formalize three distinct execution triggers:
+1. **Prayer Period Boundary Crossing:** When active prayer changes (e.g., Dhuhr $\to$ Asr), all pending tasks belonging to the ended period transition to `MISSED`.
+2. **App Foreground Event:** When app returns to foreground, check for any prayer periods or windows that elapsed while the app was suspended/closed, and transition any overdue pending tasks to `MISSED`.
+3. **Periodic Check (60s tick):** Periodic sweep while app is in active use to update derived `isOverdue` presentation states and handle boundary transitions.
 
 ---
 
-## 6. Edit Task & Scope Selection
+## 5. Locked Domain Boundaries
 
-M10 supports editing existing task definitions as well as creating new ones.
-
-### 6.1 Edit Scope for Recurring Tasks
-When editing an occurrence of a recurring series, the UI must allow selecting the edit scope per M4 series operations:
-1. **This occurrence only**: `TaskEngine.updateOccurrenceOverride` (updates `overrideData` on the specific occurrence; definition remains unchanged).
-2. **This and future occurrences**: `TaskEngine.splitSeriesAndFuture` (atomic split at `splitDate`; predecessor closed, successor version created, pending future occurrences purged).
-3. **Entire series**: `TaskEngine.updateEntireSeries` (updates active definition in-place; preserves historical completed/missed/cancelled occurrences).
-
-### 6.2 Non-Recurring Edit
-Editing a non-recurring task updates the single governing `TaskDefinition` directly.
+M11 must strictly respect established subsystem ownership:
+- **M4 Task Domain & Repositories:** Use existing `TaskOccurrenceRepository` transition methods (`updateStatus`, guarded updates). Do not bypass repository invariants.
+- **M5 Scheduling & WallClockResolver:** Boundaries of prayer periods and windows are determined by M5 and `PrayerTimeline`.
+- **M6 Materialization:** M6 already protects terminal rows; M11 transitions `PENDING` rows to terminal statuses.
+- **M7 Today Orchestrator:** Coordinate lifecycle transitions with `TodayOrchestrator` refresh cycles to prevent race conditions or UI tearing.
+- **M10 Add/Edit:** M10 horizon sync already skips terminal rows; M11 transitions do not conflict with M10.
 
 ---
 
-## 7. Date & Planning Day Separation
+## 6. Out of Scope for M11
 
-- The user selects a civil intended date (`YYYY-MM-DD`).
-- Planning-day assignment and rollover semantics remain strictly the responsibility of M3 `PlanningDayEngine` and M5 `SchedulingEngine`.
-- React components must **never** perform planning-day calculations directly.
-
----
-
-## 8. Prayer Previews as Derived UI Data
-
-To provide immediate feedback, the UI displays dynamic derived previews:
-- For Exact Time: `"6:00 PM — Asr"`
-- For Relative to Prayer: `"90 min after Maghrib — 8:14 PM"`
-
-**Boundary Rule**:
-- Previews must be computed via existing approved domain engines (`PrayerTimeline`, Luxon, `WallClockResolver`).
-- Preview values are **strictly derived UI presentation data**. They are NOT authoritative schedule storage and must not be saved into the database schema.
-
----
-
-## 9. Form Validation & Error Translation
-
-M10 architecture must define comprehensive user-facing validation and map domain errors into clear UI feedback:
-
-### 9.1 Validation Rules
-- **Task Title**: Must not be empty or whitespace-only.
-- **Date**: Must be a valid civil date (`YYYY-MM-DD`).
-- **Exact Time**: Must be a valid 24-hour time format (`HH:mm`, `00:00`–`23:59`).
-- **Prayer Offset**: Must be a valid non-negative integer within reasonable bounds.
-- **Prayer Window**: `startPrayer` and `endPrayer` must not be identical; must not wrap around midnight in v1.
-- **Recurrence**: Valid interval ($N \ge 1$), valid day selections, supported combinations only.
-- **Context Availability**: Graceful handling when prayer calculation or location context is not yet configured.
-
-### 9.2 Error Translation
-Translate low-level domain exceptions (`TaskValidationError`, `TemporalResolutionError`, `RecurrenceError`, `DataIntegrityError`) into clear, localized, actionable inline form error messages.
-
----
-
-## 10. Form State Management
-
-The architecture must define:
-- **Add vs. Edit Mode**: Form initialization from empty defaults vs. existing `TaskDefinition` + `TaskOccurrence`.
-- **Scheduling-Mode Switching**: Clean handling of mode-specific fields when switching cards (preserving draft inputs where helpful, discarding incompatible state on submit).
-- **Validation Timing**: On-blur field validation and on-submit comprehensive validation.
-- **Loading & Submitting States**: Disabling duplicate submits (`isSubmitting`), handling network/disk delays.
-- **Unsaved Changes**: Guarding accidental back navigation when form is dirty.
-- **State Scope**: Prefer clean, localized React component/hook state; do not pollute global stores unnecessarily.
-
----
-
-## 11. Materialization After Save
-
-Saving a task requires triggering occurrence materialization so the Today view and schedules reflect changes immediately:
-- **Non-recurring create**: Materialize the single occurrence on `startDate`.
-- **Recurring create**: Materialize occurrences across the active planning window (e.g., today through forecast window).
-- **Edit this occurrence**: Re-materialize or update the specific occurrence placement.
-- **Edit this and future**: Re-materialize from `splitDate` forward.
-- **Edit entire series**: Re-materialize pending occurrences across the active window.
-
-**Orchestration Rule**: React UI components must NOT run direct M6 loops. A dedicated lightweight application service/orchestrator must coordinate TaskEngine mutation and MaterializationEngine synchronization.
-
----
-
-## 12. Visual Direction & Aesthetics
-
-- **Theme**: Light theme ONLY for MVP (using approved M1 design tokens).
-- **Palette**:
-  - Deep Islamic Green (primary brand, mosque headers, primary buttons)
-  - Pale Mint (accents, active card highlights, badges)
-  - Soft White & Off-White / Light Gray (card backgrounds, surfaces)
-- **Component Styling**:
-  - Rounded cards with subtle, calm drop shadows.
-  - Generous padding and minimum 44dp touch targets.
-  - Spiritual, peaceful aesthetic (calm mosque visual language).
-  - Modern typography: display heading paired with clean sans-serif body.
-  - No sterile enterprise form styling; no unnecessary noisy arrows.
-
----
-
-## 13. Out of Scope for M10
-
-The following items are strictly **OUT OF SCOPE** for M10:
-- Redesigning the Today screen (M7 is closed).
-- Calendar month screen implementation (M14).
-- Notification scheduling and delivery engine (M13).
-- Worship Suggestions engine and UI (M15 / M16).
-- Settings screen and preferences UI (M17).
+The following items are strictly **OUT OF SCOPE** for M11:
 - Location GPS and travel refresh engine (M12).
-- Cloud synchronization or remote backends.
-- Dark mode expansion (remains M21).
-- Prayer tracking and gamification.
-- Inbox or generic backlog features.
-- Modifying M9 recurrence engine semantics.
+- Notification triggering or background push delivery (M13).
+- Calendar month grid visualization (M14).
+- Worship Suggestions engine (M15 / M16).
+- User Settings UI (M17).
+- Automatic task rollforward (strictly prohibited).
+- Modifying M10 Add/Edit form components or serializers.
 
 ---
 
-## 14. Key Architectural Questions for Opus Design
+## 7. Key Architectural Questions for Planning Phase
 
-The M10 architecture phase must resolve the following questions. **They must NOT be answered in this milestone contract:**
-
-1. **Screen & Component Hierarchy**: What is the component structure for `AddTaskScreen`, scheduling subforms, repeat picker, and more options?
-2. **Add vs. Edit Reuse**: Should Add and Edit share a single unified form component or use specialized wrappers over shared subforms?
-3. **Form State Model**: Will form state use standard React state, a dedicated custom hook (`useTaskForm`), or a form library?
-4. **Scheduling Mode Subforms**: How are mode-specific fields structured, validated, and swapped dynamically?
-5. **Preview Calculation Orchestration**: How and when are prayer previews calculated as user modifies time/prayer/offset?
-6. **Save Orchestration Service**: What application service coordinates `TaskEngine` persistence and `MaterializationEngine` synchronization?
-7. **RRULE Serialization Helpers**: Where do the bare RRULE serializers live, and how are they unit tested against M9?
-8. **Edit-Scope Selection Flow**: What is the exact UI flow for prompting recurrence edit scopes (action sheet, modal, dialog)?
-9. **Materialization Trigger Pipeline**: Exactly which materialization methods are invoked for each create/edit scenario?
-10. **Error Translation Architecture**: How are domain errors cleanly mapped into field-level and form-level UI error messages?
-11. **Navigation Behavior**: What is the exact navigation flow after save (pop back to Today, navigate to specific tab)?
-12. **Confirmation Feedback**: Toast vs. banner confirmation presentation and auto-dismiss behavior.
-13. **More Options Mapping**: How are subtasks, duration, priority, notes, and tags serialized into `TaskDefinition` columns?
-14. **Test Strategy**: How will unit, hook, integration, and UI component tests be partitioned?
-15. **Application Services**: Does M10 require a new service (e.g., `TaskOrchestrator` / `TaskService`) to keep screens clean?
-16. **Schema / API Needs**: Are any minor schema or API adjustments needed, or are M4/M5/M6/M9 APIs 100% sufficient as-is?
+The M11 architecture phase must evaluate and resolve:
+1. **Worker Architecture:** Should the lifecycle checker be a dedicated service (`TaskLifecycleService` / `OverdueWorker`) coordinated by `TodayOrchestrator` or a standalone coordinator?
+2. **Foreground AppState Listener:** How should React Native `AppState` changes be hooked cleanly without leaking listeners or duplicating subscriptions?
+3. **Batch Transition Queries:** Does `TaskOccurrenceRepository` need an additive batch query (e.g., `markExpiredPendingAsMissed(boundaryTime, tx)`) to execute transitions atomically?
+4. **Derived vs. Stored Evaluation:** Exact rules for determining when an `EXACT_TIME`, `PRAYER_RELATIVE`, `PRAYER_WINDOW`, or `ANYTIME_TODAY` task's window has closed.
+5. **View Model Projection Updates:** Ensuring `TodayViewModelProjection` exposes `isOverdue` and elapsed overdue minutes without unnecessary re-renders.
+6. **Test Strategy:** How to test time advancement, period expiration, foreground events, and mock clock transitions deterministically.
 
 ---
 
-## 15. Test Strategy & Acceptance Expectations
+## 8. Test Strategy & Acceptance Expectations
 
-The proposed M10 test suite must cover at least:
-
-### 15.1 Scheduling Mode Workflows
-- Add non-recurring Exact Time task with date and time.
-- Add Relative-to-Prayer task with prayer, direction, and offset.
-- Add Prayer Window task with start and end prayers.
-- Add Anytime Today task with planning-day allocation.
-- Dynamic switching between scheduling modes without data corruption.
-
-### 15.2 Recurrence Serialization
-- Daily recurrence serialization to `FREQ=DAILY`.
-- Weekly recurrence with `BYDAY` (e.g., `BYDAY=TU`).
-- Monthly recurrence with `BYMONTHDAY` (e.g., `BYMONTHDAY=17`).
-- Weekday recurrence serialization (`FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR`).
-- Custom interval serialization (`INTERVAL=2`, `INTERVAL=3`).
-- Rejection / prevention of unsupported recurrence formats.
-
-### 15.3 Form Validation & Errors
-- Validation of empty title, missing dates, malformed times.
-- Validation of negative or invalid offsets.
-- Validation of identical or wrapping prayer windows.
-- Domain error translation to user-friendly UI errors.
-- Prevention of duplicate saves during in-flight submission.
-
-### 15.4 Edit & Series Scope Handling
-- Editing an existing non-recurring task.
-- Editing a recurring task with "This occurrence only" scope.
-- Editing a recurring task with "This and future" scope (series split).
-- Editing a recurring task with "Entire series" scope.
-
-### 15.5 Save Orchestration & Previews
-- Live prayer preview calculation accuracy.
-- Materialization trigger verification after save.
-- Clean navigation and confirmation feedback.
-
-### 15.6 Regression Invariant
-- **All 645 existing tests (M1–M9) must remain 100% green.**
+The proposed M11 test suite must cover:
+- **MC-01:** Runtime derivation of `isOverdue` (`now > calculatedStartTime && status === 'PENDING'`).
+- **MC-02:** Confirmation that `OVERDUE` is never written to SQLite `task_occurrences.status`.
+- **MC-03:** Completion transitions (`PENDING` $\to$ `COMPLETED`, `completedAt` timestamp set).
+- **MC-04:** Period expiration missed transitions (`PENDING` $\to$ `MISSED`, `missedAt` timestamp set on period end).
+- **MC-05:** Missed occurrences retain original `calculatedPrayerSection`, `localDate`, and `planningDayKey`.
+- **MC-06:** Zero auto-rollforward across periods or planning days.
+- **MC-07:** Cancellation transitions (`PENDING` $\to$ `CANCELLED`, `cancelledAt` timestamp set).
+- **Foreground & Sweep Tests:** Expiration catching up after simulated app suspension.
+- **Regression Invariant:** **All 710 existing tests (M1–M10) must remain 100% green.**
 
 ---
 
-## 16. Milestone Summary & Status
+## 9. Milestone Summary & Status
 
 | Attribute | Specification |
 |---|---|
-| **Milestone** | **M10 — Add/Edit Task** |
-| **Type** | Application & UI Orchestration |
-| **Current Phase** | **M10 implementation complete; Independent Opus review next** |
-| **Implementation** | **COMPLETE** |
-| **Verified Tests** | **710 / 710 passing (65 new M10 tests, 645 baseline tests)** |
+| **Milestone** | **M11 — Missed / Completed / Overdue Behavior** |
+| **Type** | Lifecycle State Machine & UI Visual States |
+| **Current Phase** | **ARCHITECTURE NEXT** |
+| **Implementation** | **NOT STARTED (Do NOT implement yet)** |
+| **Baseline Tests** | **710 / 710 passing (37 test suites)** |
