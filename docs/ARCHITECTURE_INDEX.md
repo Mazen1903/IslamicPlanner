@@ -122,11 +122,25 @@
   - `src/domain/recurrence/index.ts` (Public module exports)
 - **Relevant Tests:**
   - `src/domain/recurrence/__tests__/RecurrenceEngine.test.ts` (100 tests covering invariants, Gregorian, weekly phase, parser, Hijri, range errors, version splits, timezone independence)
-- **Milestone Owner:** **M9 (IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW)**
+- **Milestone Owner:** **M9 (CLOSED / OPUS APPROVED)**
 
 ---
 
-### 9. Database Schema & Migrations
+### 9. Add/Edit Task
+- **Authoritative Docs:** `docs/CURRENT_MILESTONE.md`, `docs/MASTER_PRODUCT_SPEC.md` (Section 4), `docs/TECHNICAL_ARCHITECTURE.md` (Section 6)
+- **Relevant Closed-Milestone Sources:**
+  - `src/domain/task/` (M4: TaskEngine, types, scheduleDataParser)
+  - `src/domain/scheduling/` (M5: SchedulingEngine, WallClockResolver)
+  - `src/domain/materialization/` (M6: MaterializationEngine)
+  - `src/domain/recurrence/` (M9: RecurrenceEngine, rruleAdapter)
+  - `src/theme/`, `src/components/common/` (M1: Light design system tokens and components)
+- **Implementation Source Paths:** TBD pending architecture
+- **Relevant Tests:** TBD pending architecture
+- **Milestone Owner:** **M10 (CURRENT / ARCHITECTURE NEXT)**
+
+---
+
+### 10. Database Schema & Migrations
 - **Authoritative Docs:** `docs/DATA_MODEL.md`, `docs/DECISIONS.md` (ADR-001, ADR-002, ADR-018, ADR-020)
 - **Source Paths:**
   - `src/data/schema.ts` (DDL for 7 tables: tasks, occurrences, exceptions, settings, etc.)
@@ -139,7 +153,7 @@
 
 ---
 
-### 10. Design System & Theme Foundation
+### 11. Design System & Theme Foundation
 - **Authoritative Docs:** `docs/UI_SYSTEM.md`, `docs/MASTER_PRODUCT_SPEC.md` (Section 9)
 - **Source Paths:**
   - `src/theme/` (Colors, typography, spacing, shadows, border radii)
@@ -154,7 +168,7 @@
 
 ---
 
-### 11. Navigation & App Shell
+### 12. Navigation & App Shell
 - **Authoritative Docs:** `docs/TECHNICAL_ARCHITECTURE.md` (Section 7), `docs/MASTER_PRODUCT_SPEC.md` (Section 2)
 - **Source Paths:**
   - `src/navigation/` (Root navigator, bottom tab bar: Today, Calendar, +, Worship, Settings)
@@ -163,7 +177,7 @@
 
 ---
 
-### 12. Location & Travel Detection
+### 13. Location & Travel Detection
 - **Authoritative Docs:** `docs/TECHNICAL_ARCHITECTURE.md` (Section 5), `docs/DECISIONS.md` (ADR-003)
 - **Source Paths:**
   - `src/domain/location/`
@@ -173,7 +187,7 @@
 
 ---
 
-### 13. Notifications & Reminders
+### 14. Notifications & Reminders
 - **Authoritative Docs:** `docs/NOTIFICATIONS.md`, `docs/MASTER_PRODUCT_SPEC.md` (Section 8)
 - **Source Paths:**
   - `src/domain/notification/`
@@ -182,7 +196,7 @@
 
 ---
 
-### 14. Calendar UI & Month Grid
+### 15. Calendar UI & Month Grid
 - **Authoritative Docs:** `docs/MASTER_PRODUCT_SPEC.md` (Section 6)
 - **Source Paths:**
   - `src/domain/calendar/CalendarEngine.ts`
@@ -193,7 +207,7 @@
 
 ---
 
-### 15. Worship Suggestions & Guidance
+### 16. Worship Suggestions & Guidance
 - **Authoritative Docs:** `docs/WORSHIP_ENGINE.md`, `docs/MASTER_PRODUCT_SPEC.md` (Section 7)
 - **Source Paths:**
   - `src/domain/worship/`
@@ -204,7 +218,7 @@
 
 ---
 
-### 16. User Settings & Preferences
+### 17. User Settings & Preferences
 - **Authoritative Docs:** `docs/DATA_MODEL.md` (Table `user_settings`), `docs/DECISIONS.md`
 - **Source Paths:**
   - `src/data/repositories/UserSettingsRepository.ts`

@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M9 — Recurrence Engine (IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW)  
-**Last Updated:** 2026-09-15 (M9 Implemented / Review Next)  
+**Current Milestone:** M10 — Add/Edit Task (ARCHITECTURE NEXT)  
+**Last Updated:** 2026-09-15 (M9 Closed / M10 Milestone Context)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -19,8 +19,8 @@
 | **M6** | Local persistence + materialization | **CLOSED / OPUS APPROVED** | 2026-09-15 | All 66 M6 tests pass (372 total project tests). Forward migration 0001_lazy_the_order.sql (window_start/window_end), MaterializationEngine pipeline, M6/M9 boundary preserved, atomic guarded update, terminal short-circuit before temporal context. |
 | **M7** | Today screen | **CLOSED / OPUS APPROVED** | 2026-09-15 | All 76 M7 tests pass (448 total project tests). Prayer-centered adaptive planner, 5 fixed prayer tabs, single 1-second timer owner, request generation safety, TodayRuntimeContext, pure projection, light theme design system. |
 | **M8** | Hijri Calendar Core / HijriService | **CLOSED / OPUS APPROVED** | 2026-09-15 | Implementation commit: `1a0b18a`. Final tests: 545/545 (97 M8 tests). Independent Opus review: A — APPROVED. No regressions. Pure Hijri calendar core, canonical HijriDate, bidirectional conversion, Umm al-Qura adapter, public getDaysInMonth probe, global & override adjustments, ±2 candidate reverse resolution, typed errors, zero deep imports. |
-| **M9** | Recurrence engine | **IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW** | — | 645/645 tests passing (100 M9 tests). Pure recurrence domain, strict RRULE allowlist, clamp-to-last-day monthly semantics, canonical Hijri membership, fail-fast range errors. No migration, no package changes. Independent Opus review next. |
-| **M10** | Add Task flows | Not Started | — | Prerequisites: M7, M9 |
+| **M9** | Recurrence engine | **CLOSED / OPUS APPROVED** | 2026-09-15 | Implementation commit: `5b713f2`. Final tests: 645/645 (100 M9 tests). Independent Claude Opus review: A — APPROVED. No regressions. Pure recurrence domain, strict RRULE allowlist, clamp-to-last-day monthly semantics, canonical Hijri membership, fail-fast range errors. No migration, no package changes. |
+| **M10** | Add/Edit Task | **ARCHITECTURE NEXT** | — | Prerequisites: M7, M9 |
 | **M11** | Missed/completed/overdue behavior | Not Started | — | Prerequisites: M5, M7 |
 | **M12** | Location and travel | Not Started | — | Prerequisites: M2, M6. Opus review required |
 | **M13** | Notifications | Not Started | — | Prerequisites: M2, M5, M12. Opus review required |
@@ -555,13 +555,14 @@
 
 ---
 
-## M9 Implementation Record
+## M9 Completion Record
 
 - **Date:** 2026-09-15
-- **Status:** **M9 IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW**
-- **Candidate Commit:** Pending
+- **Status:** **M9 CLOSED / OPUS APPROVED**
+- **Implementation Commit:** `5b713f2`
 - **Baseline Commit:** `f48d385`
 - **Final Tests:** 645/645 passing (100 M9 tests, all 545 M1–M8 baseline tests green)
+- **Independent Claude Opus Review:** A — APPROVED
 - **Regressions:** None (typecheck clean, lint clean, zero new dependencies, zero migrations, zero schema changes)
 - **Core Purpose & Invariants:**
   - Pure, deterministic, framework-agnostic Recurrence Engine in `src/domain/recurrence/`.

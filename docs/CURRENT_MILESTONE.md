@@ -1,260 +1,322 @@
-# Current Milestone: M9 — Recurrence Engine
+# Current Milestone: M10 — Add/Edit Task
 
-> **Current State:** IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW  
-> **Prior Milestones:** M1–M8 CLOSED / OPUS APPROVED (M8 commit: `1a0b18a`)  
-> **Current Test Baseline:** 645 tests passing (29 test suites: 100 M9 tests, 545 baseline tests)  
-> **Implementation Status:** COMPLETE / OPUS REVIEW NEXT  
+> **Current State:** M1–M9 CLOSED / OPUS APPROVED (M9 commit: `5b713f2`)  
+> **Current Test Baseline:** 645 tests passing (29 test suites: 100 M9 tests, 545 M1–M8 baseline tests)  
+> **Milestone Status:** ARCHITECTURE NEXT  
+> **Implementation Status:** NOT STARTED  
 
 ---
 
 ## 1. Milestone Goal
 
-Build the pure recurrence domain foundation that determines **WHICH civil dates** belong to a recurring task series.
+Build the user-facing Add/Edit Task workflow that creates and edits `TaskDefinition` data using the already-approved scheduling and recurrence domain contracts.
 
-M9 determines recurrence membership and civil seed dates. M9 does **NOT** own final scheduling placement.
-
-For each recurrence-generated civil seed date, the canonical system pipeline remains strictly:
+M10 is primarily an **application and UI orchestration milestone**. It bridges user interaction with existing domain logic:
 
 ```text
-M9 recurrence seed (civil date: YYYY-MM-DD)
+User Input (Form State)
     ↓
-M6 materialization (MaterializationEngine)
+M10 UI Orchestration & Validation
     ↓
-M5 scheduling resolution (SchedulingEngine)
+Serialization to Domain Models (ScheduleData, bare RRULE, Options)
     ↓
-TaskOccurrence (persisted row)
+M4 TaskEngine CRUD / Series Versioning
+    ↓
+M6 Materialization Trigger (Occurrence Generation)
+    ↓
+Local SQLite Persistence & Today View Refresh
 ```
 
-M9 must preserve this separation of concerns without leaking scheduling or persistence logic into recurrence calculations.
+M10 translates user choices into existing domain representations **without redefining scheduling semantics**.
 
 ---
 
-## 2. Locked Inputs from Closed Milestones
+## 2. Locked Product UX
 
-M9 builds on trusted, immutable foundations established in previously approved milestones:
+### 2.1 Main Add Task Flow Layout
+The Add Task screen follows a cohesive, prayer-centered visual flow:
+1. **Mosque / Header Area**: Calm visual header with screen context (or prayer preselection banner).
+2. **Task Name**: Clean, prominent input field with validation.
+3. **Four Scheduling Mode Cards**:
+   - Exact Time
+   - Relative to Prayer
+   - Prayer Window
+   - Anytime Today
+4. **Repeat (Recurrence)**: Dropdown / selector for recurrence rules.
+5. **More Options**: Expandable drawer or accordion for secondary attributes.
+6. **Save Button**: Primary action button with loading and disable states.
 
-### M4 — Task Domain Model & Series Architecture
-- **TaskDefinition & Series Versioning**: Recurring tasks belong to a series identified by `seriesId`.
-- **Start Boundary**: Each definition defines a canonical `startDate` (`YYYY-MM-DD`).
-- **Recurrence Fields**: Existing schema columns and domain properties:
-  - `recurrenceRule`: Text/JSON representation of Gregorian recurrence.
-  - `recurrenceEnd`: Optional terminal civil date boundary (`YYYY-MM-DD`).
-  - `hijriRecurrence`: JSON structure for Islamic calendar recurrence.
-- **Version Validity**: `effectiveFromDate` and `effectiveToDate` govern version applicability during series splits.
-- **Occurrence Identity**: The sole logical occurrence identity is `(seriesId, localDate)`.
+### 2.2 Four Scheduling Modes
+1. **Exact Time**:
+   - Date selection (civil intended date).
+   - Local wall-clock time (`HH:mm`).
+   - Live computed prayer-section preview (e.g., `"6:00 PM — Asr"`).
+2. **Relative to Prayer**:
+   - Prayer selector (`FAJR`, `DHUHR`, `ASR`, `MAGHRIB`, `ISHA` — `SUNRISE` is NOT user-selectable).
+   - Direction toggle (`BEFORE` / `AFTER`).
+   - Offset input (minutes as a positive integer).
+   - Live computed local-time preview (e.g., `"90 min after Maghrib — 8:14 PM"`).
+3. **Prayer Window**:
+   - Start prayer selector.
+   - End prayer selector.
+   - Strict start-inclusive / end-exclusive semantics (e.g., `[Dhuhr, Asr)`).
+   - Preselection support: When launched from `"+ Add to Dhuhr"` in the Today screen, automatically preselect Dhuhr $\to$ Asr.
+4. **Anytime Today**:
+   - Planning-day based allocation.
+   - No fixed scheduled clock time.
 
-### M5 — Scheduling Engine & WallClockResolver
-- **Separation of Scheduling**: Recurrence evaluates date-level membership; M5 evaluates within-day placement (`EXACT_TIME`, `PRAYER_RELATIVE`, `PRAYER_WINDOW`, `ANYTIME_TODAY`).
-- **No Prayer Math in M9**: M9 never calculates prayer times, solar angles, or timeline placements.
-
-### M6 — Local Persistence & Materialization Pipeline
-- **Materialization Input**: `MaterializationEngine.materializeOne` receives an explicit request `{ seriesId, seedDate }`.
-- **Recurrence Seam**: M6 explicitly does NOT determine recurrence membership. M9 is the authoritative owner deciding which seed dates are provided to M6.
-
-### M8 — Hijri Calendar Core & HijriService
-- **Civil Gregorian Dates**: Gregorian civil dates are canonical `YYYY-MM-DD` strings.
-- **Canonical Hijri Representation**: `HijriDate` is `{ readonly year: number; readonly month: number; readonly day: number; }` with strictly 1-based month indexing (`1 = Muharram .. 12 = Dhu al-Hijjah`).
-- **Bidirectional Conversion**: `HijriService` converts Gregorian civil dates to `HijriDate` (with global and per-month adjustments applied).
-- **Effective Reverse Resolution**: `HijriService.resolveGregorianFromEffectiveHijri` resolves an effective `HijriDate` to:
-  - `UNIQUE`: Exactly one matching Gregorian civil date.
-  - `AMBIGUOUS`: Multiple matching Gregorian civil dates (due to negative adjustments/shifts).
-  - `NO_MATCH`: No Gregorian date maps to this effective Hijri date (due to positive jumps/skips).
-- **M8 Policy Boundary**: M8 intentionally does not dictate recurrence behavior for `AMBIGUOUS` or `NO_MATCH`. M9 architecture must explicitly define this recurrence policy.
-
----
-
-## 3. Product Recurrence Requirements
-
-The product specification mandates support for the following user-facing recurrence patterns:
-
-- **Doesn't repeat** (non-recurring single tasks)
-- **Daily** (every $N$ days)
-- **Weekdays** (Monday through Friday, or configurable working week)
-- **Weekly** (every $N$ weeks on specified weekdays)
-- **Monthly** (every $N$ months on a specific day of the month)
-- **Specific days** (explicit days of week/month)
+### 2.3 Repeat Options
+Supported user-facing repeat presets:
+- **Doesn't repeat** (non-recurring single task)
+- **Daily** (every day or every $N$ days)
+- **Weekdays** (Monday through Friday)
+- **Weekly** (on specific days of week, with optional interval)
+- **Monthly** (on day of month, e.g., 15th)
+- **Specific days** (explicit weekday selection)
 - **Custom** (interval + frequency combinations)
 
-Additionally, the product requires recurrence to support **both Gregorian and Hijri calendar semantics**:
-- Tasks that recur according to the Gregorian calendar (e.g., "1st of every month", "every Friday").
-- Tasks that recur according to the Islamic Hijri calendar (e.g., "1st of Ramadan", "13th, 14th, 15th of every Hijri month [White Days]", "every Friday in the Islamic calendar").
+### 2.4 More Options Drawer
+Secondary task attributes configured in the expandable section:
+- **Reminder**: Notification / reminder preferences.
+- **Priority**: `NORMAL` vs. `IMPORTANT`.
+- **Duration**: Estimated task duration in minutes.
+- **Notes**: Freeform descriptive text.
+- **Subtasks**: Ordered list of checklist items with unique template IDs.
+- **Attachment**: Attachment references or placeholders.
+- **Tags**: Categorization tag array.
 
-> [!IMPORTANT]
-> Do not invent UI beyond these known requirements. The M9 architecture must inspect existing schema, types, and documentation to establish what is already modeled versus what requires extension.
-
----
-
-## 4. Core M9 Responsibilities
-
-The M9 architecture must specify and resolve:
-
-1. **Recurrence Rule Domain Model**: Canonical, strongly typed representation of recurrence rules covering all product frequencies, intervals, days, and calendar systems.
-2. **Gregorian Recurrence Evaluation**: Pure evaluation algorithms for Gregorian recurrence patterns.
-3. **Hijri Recurrence Evaluation**: Pure evaluation algorithms for Hijri recurrence patterns using `HijriService`.
-4. **Recurrence Membership Query**: Determining if a series $S$ occurs on a specific civil seed date $D$:
-   $$\text{occursOn}(S, D) \to \text{boolean}$$
-5. **Bounded Date Generation**: Generating all civil seed dates belonging to series $S$ within a bounded interval:
-   $$\text{generateSeedDates}(S, [\text{startDate}, \text{endDate}]) \to \text{ReadonlyArray}<\text{YYYY-MM-DD}>$$
-6. **Start and End Boundaries**: Strictly respecting series `startDate` and optional `recurrenceEnd` boundaries.
-7. **Series Version Interaction**: Correct interaction with `effectiveFromDate` and `effectiveToDate` across series splits, ensuring seed dates are generated only under the governing version.
-8. **Non-Recurring Behavior**: Consistent handling of non-recurring task definitions.
-9. **Monthly Gregorian Edge Semantics**: Explicit policy for month-end dates (e.g., 29th, 30th, 31st in shorter months).
-10. **Weekday Semantics**: ISO weekday handling (Monday = 1 .. Sunday = 7) and weekday recurrence sets.
-11. **Specific-Day & Custom Semantics**: Interval steps ($N > 1$) and day-set combinations.
-12. **Hijri Month-Length Behavior**: Handling variable 29-day and 30-day Hijri months (e.g., day 30 recurrence in a 29-day month).
-13. **Adjustment-Aware Hijri Recurrence**: Evaluating recurrence membership under active global adjustments and per-month overrides.
-14. **M8 Resolution Policy**: Explicit, documented recurrence policy when `HijriService` returns `UNIQUE`, `AMBIGUOUS`, or `NO_MATCH`.
-15. **Timezone & DST Independence**: Pure calendar date operations unaffected by local wall-clock shifts, UTC offsets, or daylight saving transitions.
-16. **Determinism & Idempotence**: Identical inputs must always produce identical, sorted, deduplicated date sequences.
-17. **Error Model**: Strongly typed domain errors for invalid rules, invalid dates, inverted ranges, and unsupported patterns.
-18. **Comprehensive Test Strategy**: Verification across edge cases in both calendar systems.
+### 2.5 Confirmation & Feedback
+Upon successful creation:
+- Toast / banner confirmation: `"Task Added! May Allah make it easy for you"`
+- Task summary and seamless navigation back to Today or active view.
 
 ---
 
-## 5. Important Architectural Questions for Opus Review
+## 3. Locked Domain Boundaries
 
-The following questions must be deliberately evaluated and resolved during the M9 architecture design phase. **They must NOT be answered in this contract.**
+M10 strictly orchestrates existing domain capabilities. M10 does **NOT** redefine:
+- **M5 Scheduling Semantics**: Wall-clock resolution, DST gap/overlap behavior, anchor relative math, and prayer window bounds remain owned by M5 `SchedulingEngine`.
+- **M6 Materialization Semantics**: Atomic occurrence generation, terminal status protection, and idempotency remain owned by M6 `MaterializationEngine`.
+- **M8 Hijri Conversion**: Calendar conversion and adjustment handling remain owned by M8 `HijriService`.
+- **M9 Recurrence Semantics**: Recurrence membership, date clamping, interval phase, and ambiguity resolution remain owned by M9 `RecurrenceEngine`.
 
-### A. Recurrence Representation
-- Inspect the existing `TaskDefinition` columns: `recurrenceRule: string | null` and `hijriRecurrence: string | null` (JSON stringified).
-- Determine whether the existing representation is sufficient or needs refined domain types.
-- Do not blindly introduce `rrule.js` merely because it is common. If an external library or RRULE string standard is proposed, it must be rigorously justified against product requirements, offline determinism, and domain simplicity (especially regarding Hijri calendar incompatibility with standard iCalendar RFC 5545).
-
-### B. Monthly Gregorian Edge Policy
-- If a task repeats monthly on day 31, how does it behave in February (28 or 29 days) and 30-day months (April, June, September, November)?
-- Candidate policies:
-  1. *Skip*: The task does not occur in months shorter than the target day.
-  2. *Clamp*: The task occurs on the last day of the shorter month (e.g., Feb 28/29).
-  3. *Other explicit policy*: (e.g., overflow to the 1st of the next month).
-- The architecture must choose and document a single, predictable policy aligned with user expectations.
-
-### C. Hijri Monthly Edge Policy
-- If a task repeats monthly on Hijri day 30 (e.g., day 30 of every Hijri month), some Hijri months only have 29 days.
-- Candidate policies:
-  1. *Skip*: Do not occur in 29-day months.
-  2. *Clamp*: Occur on day 29 when the month has 29 days.
-  3. *Other explicit policy*.
-- The architecture must define this unambiguously.
-
-### D. Hijri Effective-Date Ambiguity Policy
-- `HijriService.resolveGregorianFromEffectiveHijri` can return:
-  - `UNIQUE`: Exactly one Gregorian date matches.
-  - `AMBIGUOUS`: Multiple Gregorian dates map to the same effective Hijri date.
-  - `NO_MATCH`: No Gregorian date maps to this effective Hijri date.
-- What is M9's exact recurrence policy for each case?
-  - For `AMBIGUOUS`: Does M9 yield all candidate dates, only the earliest, or only the latest?
-  - For `NO_MATCH`: Does M9 skip the occurrence, fall back to base conversion, or clamp to an adjacent civil date?
-- M9 must own this policy explicitly without relying on silent fallback behavior.
-
-### E. Recurrence Calendar Basis
-- When a user creates a Hijri recurrence, what is the intended calendar basis?
-  - Base Umm al-Qura astronomical calendar?
-  - Effective user-adjusted calendar (incorporating global and per-month overrides)?
-- How do dynamic user adjustment changes affect already scheduled vs. future recurrence membership?
-
-### F. Series Versioning & Splitting Interaction
-- M4 supports three edit scopes: "This occurrence only", "This and future occurrences" (series split), and "Entire series".
-- When a series is split at `splitDate`, the predecessor version receives `effectiveToDate = splitDate - 1` and the successor receives `effectiveFromDate = splitDate`.
-- How does M9 bounded generation enforce that seed dates are generated strictly within each version's effective window without missing or duplicating dates at the boundary?
-
-### G. Materialization Boundary & Persistence Decoupling
-- M9 produces recurrence seed dates / membership decisions.
-- M9 must not create database transactions, insert `TaskOccurrence` records, or duplicate M6's responsibilities.
-- What is the clean interface between M9 date generation and M6 materialization orchestration?
+M10 serializes user choices into those approved domain contracts.
 
 ---
 
-## 6. Out of Scope for M9
+## 4. Recurrence Serialization (Locked from M9)
 
-The following concerns are strictly **OUT OF SCOPE** for M9:
+M9 requires explicit selectors and strictly enforces a bare RRULE allowlist. M10 owns serialization; M9 owns evaluation.
 
-- **Scheduling Placement**: M9 does not resolve `EXACT_TIME`, `PRAYER_RELATIVE`, `PRAYER_WINDOW`, or `ANYTIME_TODAY` placements (owned by M5).
-- **Prayer Engine**: M9 does not calculate prayer times or interact with `PrayerEngine` / `PrayerTimeline` (owned by M2).
-- **Planning Day Rollover**: M9 does not compute planning day keys, day boundaries, or clipping (owned by M3).
-- **Database Persistence**: M9 does not write to SQLite or update occurrence tables (owned by M4 / M6).
-- **Occurrence Status Updates**: M9 does not decide or mutate `PENDING`, `COMPLETED`, `MISSED`, or `CANCELLED` statuses (owned by M4 / M6 / M11).
-- **UI Components & Screens**: No screens, forms, or components for Add Task, Today, or Calendar (owned by M7, M10, M14).
-- **Notifications**: No local alert or notification scheduling (owned by M13).
-- **Worship Guidance**: No calculation of specific Islamic fasting rules or prayer recommendations (owned by M15).
-- **Settings UI**: No UI for configuring recurrence presets or calendar preferences (owned by M17).
+### 4.1 Serialization Rules
+- Must emit **bare RRULE bodies** (NO `RRULE:` prefix).
+- Must NEVER emit unsupported RFC 5545 tokens: `COUNT`, `UNTIL`, `BYSETPOS`, ordinal `BYDAY` (e.g., `1MO`), negative `BYMONTHDAY`.
+- Must serialize simple options into explicit tokens:
 
----
-
-## 7. Performance & Computational Boundaries
-
-Recurrence evaluation must be bounded and computationally safe:
-
-- **No Unbounded Iteration**: Never iterate day-by-day from an ancient series creation date to infinity.
-- **Bounded Range Generation**: Generation must accept explicit `[rangeStart, rangeEnd]` boundaries.
-- **Efficient Membership Checks**: Point-in-time membership queries (`occursOn(series, date)`) must evaluate in $O(1)$ or $O(\text{rule complexity})$ time without enumerating all preceding occurrences.
-- **Offline Determinism**: Recurrence evaluation must be pure, CPU-only, and free of external I/O or network dependencies.
+| User Choice | Serialized RRULE Body |
+|---|---|
+| Daily | `FREQ=DAILY` |
+| Weekly anchored on Tuesday | `FREQ=WEEKLY;BYDAY=TU` |
+| Monthly anchored on day 17 | `FREQ=MONTHLY;BYMONTHDAY=17` |
+| Weekdays | `FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR` |
+| Every 3 days | `FREQ=DAILY;INTERVAL=3` |
+| Every 2 weeks on Friday | `FREQ=WEEKLY;INTERVAL=2;BYDAY=FR` |
 
 ---
 
-## 8. Time Model & Calendar Independence
+## 5. Scheduling Serialization
 
-- **Civil Date Primacy**: Recurrence operates strictly on **civil calendar dates** (`YYYY-MM-DD`).
-- **Timezone & DST Independence**: Whether a civil date belongs to a recurrence series must not depend on local device time, UTC offsets, or daylight saving transitions. A task set for "every Monday" falls on Monday regardless of the user's timezone.
-- **Local Time Separation**: Concrete wall-clock times and prayer anchors are bound during M5 scheduling, not during M9 recurrence generation.
+M10 serializes UI inputs into existing M4/M5 `scheduleData` domain representations without inventing alternate representations:
 
----
-
-## 9. Test Strategy & Edge Case Matrix
-
-The M9 architecture must define a comprehensive test suite covering at least:
-
-1. **Non-recurring tasks**: Exactly one seed date on `startDate`.
-2. **Daily recurrence**: Step intervals ($N=1, 2, 3$).
-3. **Weekday recurrence**: Monday–Friday membership; weekend exclusion.
-4. **Weekly recurrence**: Single weekday, multiple weekdays, intervals ($N > 1$).
-5. **Monthly recurrence (Gregorian)**:
-   - Mid-month dates (e.g., 15th).
-   - Month-end dates (29th, 30th, 31st).
-   - Leap year handling (Feb 29 on leap years, policy on non-leap years).
-6. **Hijri recurrence**:
-   - Fixed Hijri days (e.g., 1st, 15th, 30th).
-   - 29-day vs. 30-day Hijri months.
-   - Hijri year rollover (12/29 or 12/30 $\to$ 1/1).
-   - Specific Hijri months (e.g., annual recurrence on 1 Ramadan or 10 Dhu al-Hijjah).
-   - Active global adjustments ($\pm 1, \pm 2$).
-   - Active per-month overrides.
-   - Handling of `UNIQUE`, `AMBIGUOUS`, and `NO_MATCH` reverse resolution outcomes.
-7. **Boundaries**:
-   - Start boundary enforcement (`date < startDate` never matches).
-   - End boundary enforcement (`date > recurrenceEnd` never matches).
-   - Series version boundaries (`effectiveFromDate` and `effectiveToDate`).
-8. **Range Generation**:
-   - Range completely before series start.
-   - Range overlapping start.
-   - Range completely within recurrence window.
-   - Range overlapping end.
-   - Range completely after series end.
-   - Single-day range.
-   - Empty range (`rangeStart > rangeEnd` rejection).
-9. **Invariants**:
-   - Zero duplicate seed dates in generated sequences.
-   - Strictly ascending chronological order.
-   - Timezone-independent evaluation.
-   - Rejection of invalid recurrence rules with typed errors.
-10. **Baseline Preservation**:
-    - All 545 existing M1–M8 tests must remain 100% green.
+- **Exact Time**: Fixed local wall-clock intent `{ localTime: "HH:mm" }`.
+- **Relative to Prayer**: Prayer + direction + offset `{ prayer: PrayerName, relation: "BEFORE" | "AFTER", offsetMinutes: number }`. Note: `SUNRISE` is NOT user-selectable.
+- **Prayer Window**: `{ startPrayer: PrayerName, endPrayer: PrayerName }`. Non-wrapping in v1; start is inclusive, end is exclusive.
+- **Anytime Today**: Null or empty schedule data representation; no scheduled clock time.
 
 ---
 
-## 10. Milestone Boundaries Summary
+## 6. Edit Task & Scope Selection
 
-| Subsystem | Milestone Owner | Core Responsibility |
-|---|---|---|
-| **Recurrence Engine** | **M9 (CURRENT)** | Recurrence rules, calendar math, civil seed dates, series membership |
-| **Persistence & Materialization** | **M6 (CLOSED)** | Occurrence rows, version assignment, atomic guarded updates, idempotency |
-| **Scheduling Engine** | **M5 (CLOSED)** | Intra-day placement (Exact, Relative, Window, Anytime), DST wall-clock |
-| **Hijri Calendar Core** | **M8 (CLOSED)** | Umm al-Qura conversion, canonical HijriDate, month lengths, adjustments |
-| **Task Domain & Series** | **M4 (CLOSED)** | Definition schema, series splitting, subtasks, validation |
+M10 supports editing existing task definitions as well as creating new ones.
+
+### 6.1 Edit Scope for Recurring Tasks
+When editing an occurrence of a recurring series, the UI must allow selecting the edit scope per M4 series operations:
+1. **This occurrence only**: `TaskEngine.updateOccurrenceOverride` (updates `overrideData` on the specific occurrence; definition remains unchanged).
+2. **This and future occurrences**: `TaskEngine.splitSeriesAndFuture` (atomic split at `splitDate`; predecessor closed, successor version created, pending future occurrences purged).
+3. **Entire series**: `TaskEngine.updateEntireSeries` (updates active definition in-place; preserves historical completed/missed/cancelled occurrences).
+
+### 6.2 Non-Recurring Edit
+Editing a non-recurring task updates the single governing `TaskDefinition` directly.
 
 ---
 
-## 11. Milestone Status
+## 7. Date & Planning Day Separation
 
-- **Milestone:** M9 — Recurrence Engine
-- **Phase:** ARCHITECTURE NEXT
-- **Implementation Status:** NOT STARTED
+- The user selects a civil intended date (`YYYY-MM-DD`).
+- Planning-day assignment and rollover semantics remain strictly the responsibility of M3 `PlanningDayEngine` and M5 `SchedulingEngine`.
+- React components must **never** perform planning-day calculations directly.
+
+---
+
+## 8. Prayer Previews as Derived UI Data
+
+To provide immediate feedback, the UI displays dynamic derived previews:
+- For Exact Time: `"6:00 PM — Asr"`
+- For Relative to Prayer: `"90 min after Maghrib — 8:14 PM"`
+
+**Boundary Rule**:
+- Previews must be computed via existing approved domain engines (`PrayerTimeline`, Luxon, `WallClockResolver`).
+- Preview values are **strictly derived UI presentation data**. They are NOT authoritative schedule storage and must not be saved into the database schema.
+
+---
+
+## 9. Form Validation & Error Translation
+
+M10 architecture must define comprehensive user-facing validation and map domain errors into clear UI feedback:
+
+### 9.1 Validation Rules
+- **Task Title**: Must not be empty or whitespace-only.
+- **Date**: Must be a valid civil date (`YYYY-MM-DD`).
+- **Exact Time**: Must be a valid 24-hour time format (`HH:mm`, `00:00`–`23:59`).
+- **Prayer Offset**: Must be a valid non-negative integer within reasonable bounds.
+- **Prayer Window**: `startPrayer` and `endPrayer` must not be identical; must not wrap around midnight in v1.
+- **Recurrence**: Valid interval ($N \ge 1$), valid day selections, supported combinations only.
+- **Context Availability**: Graceful handling when prayer calculation or location context is not yet configured.
+
+### 9.2 Error Translation
+Translate low-level domain exceptions (`TaskValidationError`, `TemporalResolutionError`, `RecurrenceError`, `DataIntegrityError`) into clear, localized, actionable inline form error messages.
+
+---
+
+## 10. Form State Management
+
+The architecture must define:
+- **Add vs. Edit Mode**: Form initialization from empty defaults vs. existing `TaskDefinition` + `TaskOccurrence`.
+- **Scheduling-Mode Switching**: Clean handling of mode-specific fields when switching cards (preserving draft inputs where helpful, discarding incompatible state on submit).
+- **Validation Timing**: On-blur field validation and on-submit comprehensive validation.
+- **Loading & Submitting States**: Disabling duplicate submits (`isSubmitting`), handling network/disk delays.
+- **Unsaved Changes**: Guarding accidental back navigation when form is dirty.
+- **State Scope**: Prefer clean, localized React component/hook state; do not pollute global stores unnecessarily.
+
+---
+
+## 11. Materialization After Save
+
+Saving a task requires triggering occurrence materialization so the Today view and schedules reflect changes immediately:
+- **Non-recurring create**: Materialize the single occurrence on `startDate`.
+- **Recurring create**: Materialize occurrences across the active planning window (e.g., today through forecast window).
+- **Edit this occurrence**: Re-materialize or update the specific occurrence placement.
+- **Edit this and future**: Re-materialize from `splitDate` forward.
+- **Edit entire series**: Re-materialize pending occurrences across the active window.
+
+**Orchestration Rule**: React UI components must NOT run direct M6 loops. A dedicated lightweight application service/orchestrator must coordinate TaskEngine mutation and MaterializationEngine synchronization.
+
+---
+
+## 12. Visual Direction & Aesthetics
+
+- **Theme**: Light theme ONLY for MVP (using approved M1 design tokens).
+- **Palette**:
+  - Deep Islamic Green (primary brand, mosque headers, primary buttons)
+  - Pale Mint (accents, active card highlights, badges)
+  - Soft White & Off-White / Light Gray (card backgrounds, surfaces)
+- **Component Styling**:
+  - Rounded cards with subtle, calm drop shadows.
+  - Generous padding and minimum 44dp touch targets.
+  - Spiritual, peaceful aesthetic (calm mosque visual language).
+  - Modern typography: display heading paired with clean sans-serif body.
+  - No sterile enterprise form styling; no unnecessary noisy arrows.
+
+---
+
+## 13. Out of Scope for M10
+
+The following items are strictly **OUT OF SCOPE** for M10:
+- Redesigning the Today screen (M7 is closed).
+- Calendar month screen implementation (M14).
+- Notification scheduling and delivery engine (M13).
+- Worship Suggestions engine and UI (M15 / M16).
+- Settings screen and preferences UI (M17).
+- Location GPS and travel refresh engine (M12).
+- Cloud synchronization or remote backends.
+- Dark mode expansion (remains M21).
+- Prayer tracking and gamification.
+- Inbox or generic backlog features.
+- Modifying M9 recurrence engine semantics.
+
+---
+
+## 14. Key Architectural Questions for Opus Design
+
+The M10 architecture phase must resolve the following questions. **They must NOT be answered in this milestone contract:**
+
+1. **Screen & Component Hierarchy**: What is the component structure for `AddTaskScreen`, scheduling subforms, repeat picker, and more options?
+2. **Add vs. Edit Reuse**: Should Add and Edit share a single unified form component or use specialized wrappers over shared subforms?
+3. **Form State Model**: Will form state use standard React state, a dedicated custom hook (`useTaskForm`), or a form library?
+4. **Scheduling Mode Subforms**: How are mode-specific fields structured, validated, and swapped dynamically?
+5. **Preview Calculation Orchestration**: How and when are prayer previews calculated as user modifies time/prayer/offset?
+6. **Save Orchestration Service**: What application service coordinates `TaskEngine` persistence and `MaterializationEngine` synchronization?
+7. **RRULE Serialization Helpers**: Where do the bare RRULE serializers live, and how are they unit tested against M9?
+8. **Edit-Scope Selection Flow**: What is the exact UI flow for prompting recurrence edit scopes (action sheet, modal, dialog)?
+9. **Materialization Trigger Pipeline**: Exactly which materialization methods are invoked for each create/edit scenario?
+10. **Error Translation Architecture**: How are domain errors cleanly mapped into field-level and form-level UI error messages?
+11. **Navigation Behavior**: What is the exact navigation flow after save (pop back to Today, navigate to specific tab)?
+12. **Confirmation Feedback**: Toast vs. banner confirmation presentation and auto-dismiss behavior.
+13. **More Options Mapping**: How are subtasks, duration, priority, notes, and tags serialized into `TaskDefinition` columns?
+14. **Test Strategy**: How will unit, hook, integration, and UI component tests be partitioned?
+15. **Application Services**: Does M10 require a new service (e.g., `TaskOrchestrator` / `TaskService`) to keep screens clean?
+16. **Schema / API Needs**: Are any minor schema or API adjustments needed, or are M4/M5/M6/M9 APIs 100% sufficient as-is?
+
+---
+
+## 15. Test Strategy & Acceptance Expectations
+
+The proposed M10 test suite must cover at least:
+
+### 15.1 Scheduling Mode Workflows
+- Add non-recurring Exact Time task with date and time.
+- Add Relative-to-Prayer task with prayer, direction, and offset.
+- Add Prayer Window task with start and end prayers.
+- Add Anytime Today task with planning-day allocation.
+- Dynamic switching between scheduling modes without data corruption.
+
+### 15.2 Recurrence Serialization
+- Daily recurrence serialization to `FREQ=DAILY`.
+- Weekly recurrence with `BYDAY` (e.g., `BYDAY=TU`).
+- Monthly recurrence with `BYMONTHDAY` (e.g., `BYMONTHDAY=17`).
+- Weekday recurrence serialization (`FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR`).
+- Custom interval serialization (`INTERVAL=2`, `INTERVAL=3`).
+- Rejection / prevention of unsupported recurrence formats.
+
+### 15.3 Form Validation & Errors
+- Validation of empty title, missing dates, malformed times.
+- Validation of negative or invalid offsets.
+- Validation of identical or wrapping prayer windows.
+- Domain error translation to user-friendly UI errors.
+- Prevention of duplicate saves during in-flight submission.
+
+### 15.4 Edit & Series Scope Handling
+- Editing an existing non-recurring task.
+- Editing a recurring task with "This occurrence only" scope.
+- Editing a recurring task with "This and future" scope (series split).
+- Editing a recurring task with "Entire series" scope.
+
+### 15.5 Save Orchestration & Previews
+- Live prayer preview calculation accuracy.
+- Materialization trigger verification after save.
+- Clean navigation and confirmation feedback.
+
+### 15.6 Regression Invariant
+- **All 645 existing tests (M1–M9) must remain 100% green.**
+
+---
+
+## 16. Milestone Summary & Status
+
+| Attribute | Specification |
+|---|---|
+| **Milestone** | **M10 — Add/Edit Task** |
+| **Type** | Application & UI Orchestration |
+| **Current Phase** | **ARCHITECTURE NEXT** |
+| **Implementation** | **NOT STARTED** |
+| **Baseline Tests** | **645 / 645 passing** |
