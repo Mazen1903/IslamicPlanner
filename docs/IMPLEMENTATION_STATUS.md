@@ -20,7 +20,7 @@
 | **M7** | Today screen | **CLOSED / OPUS APPROVED** | 2026-09-15 | All 76 M7 tests pass (448 total project tests). Prayer-centered adaptive planner, 5 fixed prayer tabs, single 1-second timer owner, request generation safety, TodayRuntimeContext, pure projection, light theme design system. |
 | **M8** | Hijri Calendar Core / HijriService | **CLOSED / OPUS APPROVED** | 2026-09-15 | Implementation commit: `1a0b18a`. Final tests: 545/545 (97 M8 tests). Independent Opus review: A — APPROVED. No regressions. Pure Hijri calendar core, canonical HijriDate, bidirectional conversion, Umm al-Qura adapter, public getDaysInMonth probe, global & override adjustments, ±2 candidate reverse resolution, typed errors, zero deep imports. |
 | **M9** | Recurrence engine | **CLOSED / OPUS APPROVED** | 2026-09-15 | Implementation commit: `5b713f2`. Final tests: 645/645 (100 M9 tests). Independent Claude Opus review: A — APPROVED. No regressions. Pure recurrence domain, strict RRULE allowlist, clamp-to-last-day monthly semantics, canonical Hijri membership, fail-fast range errors. No migration, no package changes. |
-| **M10** | Add/Edit Task | **IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW** | — | Implementation candidate. 710/710 tests (65 new M10 tests). Single dependency `@react-native-community/datetimepicker`. 0 migrations. 4 modes, dual-date model, 2-phase save, plan-before-delete horizon sync, live preview, scope selection. |
+| **M10** | Add/Edit Task | **IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW** | — | Candidate commit: `a932ab0`. 710/710 tests (65 new M10 tests). Single dependency `@react-native-community/datetimepicker`. 0 migrations. 4 modes, dual-date model, 2-phase save, plan-before-delete horizon sync, live preview, scope selection. |
 | **M11** | Missed/completed/overdue behavior | Not Started | — | Prerequisites: M5, M7 |
 | **M12** | Location and travel | Not Started | — | Prerequisites: M2, M6. Opus review required |
 | **M13** | Notifications | Not Started | — | Prerequisites: M2, M5, M12. Opus review required |
@@ -603,7 +603,7 @@
 
 - **Date:** 2026-09-15
 - **Scope:** Add/Edit Task application feature layer, UI components, orchestration, and horizon synchronization.
-- **Candidate Commit:** Pending
+- **Candidate Commit:** `a932ab0`
 - **Architecture Reference:** Binding consolidated architecture in `docs/M10_ARCHITECTURE.md` (incorporating Rev 1 through Rev 6).
 - **Dependencies:** Exactly ONE new package added: `@react-native-community/datetimepicker` (v9.1.0, verified compatible with Expo SDK 57). Zero form/state libraries added.
 - **Database Migrations:** ZERO database migrations. Schema remains unchanged.
