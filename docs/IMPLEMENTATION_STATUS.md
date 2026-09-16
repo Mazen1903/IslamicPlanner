@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M6 — Local persistence + materialization (IMPLEMENTED — AWAITING INDEPENDENT OPUS REVIEW)  
-**Last Updated:** 2026-09-15 (M6 Implemented)  
+**Current Milestone:** M7 — Today Screen & Timeline View (IMPLEMENTED — AWAITING INDEPENDENT OPUS REVIEW)  
+**Last Updated:** 2026-09-15 (M7 Implemented)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -16,8 +16,8 @@
 | **M3** | Planning-day engine + clipping | **Completed** | 2026-09-14 | All 32 domain tests pass, Fajr/Midnight/Custom boundaries, explicit DST resolution, non-mutating clipping, Opus review required |
 | **M4** | Task domain model + schema (includes series) | **Completed & Hardened** | 2026-09-14 | All 128 M4 tests pass (248 total project tests), clean 0000_initial migration, dynamic Drizzle discovery, canonical transactions, serialized concurrency, true civil-date validation, terminal status timestamp invariants, absolute ISO instants, IANA timezone validation |
 | **M5** | Scheduling engine + WallClockResolver | **CLOSED / OPUS APPROVED** | 2026-09-14 | All 60 M5 tests pass (308 total project tests), extracted WallClockResolver to domain/temporal, DST gap/overlap resolution, 4 scheduling modes, pure domain logic, M6 contract note, F-4 test hardening verified |
-| **M6** | Local persistence + materialization | **IMPLEMENTED — AWAITING INDEPENDENT OPUS REVIEW** | 2026-09-15 | All 66 M6 tests pass (372 total project tests). Forward migration 0001_lazy_the_order.sql (window_start/window_end), MaterializationEngine pipeline, M6/M9 boundary preserved, atomic guarded update, terminal short-circuit before temporal context. |
-| **M7** | Today screen | Not Started | — | Prerequisites: M1, M2, M3, M5, M6 |
+| **M6** | Local persistence + materialization | **CLOSED / OPUS APPROVED** | 2026-09-15 | All 66 M6 tests pass (372 total project tests). Forward migration 0001_lazy_the_order.sql (window_start/window_end), MaterializationEngine pipeline, M6/M9 boundary preserved, atomic guarded update, terminal short-circuit before temporal context. |
+| **M7** | Today screen | **IMPLEMENTED — AWAITING INDEPENDENT OPUS REVIEW** | 2026-09-15 | All 76 M7 tests pass (448 total project tests). Prayer-centered adaptive planner, 5 fixed prayer tabs, single 1-second timer owner, request generation safety, TodayRuntimeContext, pure projection, light theme design system. |
 | **M8** | Hijri Calendar Core / HijriService | Not Started | — | Prerequisites: M4. MOVED from M13. Opus review required |
 | **M9** | Recurrence engine | Not Started | — | Prerequisites: M4, **M8**. Opus review required |
 | **M10** | Add Task flows | Not Started | — | Prerequisites: M7, M9 |
@@ -424,5 +424,86 @@
   - `npm run lint`: Passed (0 errors, 0 warnings)
   - `npx expo-doctor`: Passed (21/21 checks passed, 0 issues)
   - `npx expo install --check`: Passed (Dependencies are up to date)
+
+---
+
+## M7 Completion Record
+
+- **Date:** 2026-09-15
+- **Status:** **M7 IMPLEMENTED — AWAITING INDEPENDENT OPUS REVIEW**
+- **Core Purpose & Invariants:**
+  - Prayer-centered adaptive planner Today view with exactly 5 fixed prayer tabs: `FAJR`, `DHUHR`, `ASR`, `MAGHRIB`, `ISHA`.
+  - Tabs are never reordered. No Sunrise tab. No 6th Anytime tab.
+  - Consumes persisted `TaskOccurrence` rows as placement source of truth (does not render directly from `TaskDefinition` recipes).
+  - Strictly preserves M6/M9 boundaries: M7 does NOT evaluate RRULE or Hijri recurrence, does not synthesize missing recurrences, and does not auto-roll tasks.
+  - Task completion is terminal (`TaskEngine.completeTask()`), no undo in M7.
+- **Repository Additions:**
+  - `TaskOccurrenceRepository.findTodayCandidates(activePlanningDayKey, nowUtc, tx?)`:
+    - Rule A: `planning_day_key == activePlanningDayKey`
+    - Rule B: `status == 'PENDING' AND window_start IS NOT NULL AND window_end IS NOT NULL AND planning_day_key != activePlanningDayKey AND window_start <= nowUtc AND nowUtc < window_end` (half-open, canonical UTC).
+  - `TaskDefinitionRepository.findByIds(ids, tx?)`:
+    - Single deduplicated batch SQL query (`IN (...)`).
+    - Exact ID lookup with NO `isActive` filter so historical terminal occurrences remain fully renderable even if definitions are deactivated.
+- **Temporal Input Provider & Setup-Required Safety:**
+  - `TodayTemporalInputProvider` contract: returns `READY(inputs)` or `SETUP_REQUIRED`.
+  - `M7BootstrapInputProvider`: Inspects `user_settings` table. Strictly returns `SETUP_REQUIRED` if location/parameters are missing. Never silently defaults to Mecca or Riyadh timezone.
+  - `StaticTodayTemporalInputProvider`: Explicit test fixtures.
+  - Setup safety: In `SETUP_REQUIRED` state, Today clears runtime and viewModel, displays `SetupRequiredState` ("Set your prayer location to begin"), and invalidates prior async requests to prevent stale data resurrection.
+- **TodayRuntimeContext & Store Architecture:**
+  - `TodayRuntimeContext`: Explicit container owning `timeline: PrayerTimeline`, `planningDay: PlanningDay`, `planningDayConfig: PlanningDayConfig`, `refreshedAt: string`.
+  - Store (`useTodayStore`): Owns `status`, `runtime`, `viewModel`, `selectedPrayer`, `prayerTransition`, `requestGeneration`, and `refreshInFlight`.
+  - `selectedPrayer` ownership: Belongs ONLY to `useTodayStore`. Initial load and foreground sync to `currentPrayer`. Mid-session prayer transitions, planning-day rollovers, and task mutations preserve `selectedPrayer`.
+  - Async request-generation protection: Incremental token tracking (`startRefresh()`, `startReproject()`) suppresses stale async commits (`ASYNC-01`).
+  - Single-flight rollover: `refreshInFlight` flag prevents duplicate full refreshes on 1-second ticks (`ASYNC-02`).
+  - Stale invalidation: `SETUP_REQUIRED` suppresses prior pending READY results (`ASYNC-03`).
+- **Single 1-Second Timer Architecture:**
+  - Exactly ONE 1-second interval installed in `usePrayerTimer`.
+  - Timer duties: updates countdown using `viewModel.nextPrayer`, checks planning-day end boundary and timeline period transitions cheaply using cached in-memory runtime (no SQLite queries, no `PlanningDayEngine` calls per tick).
+  - `useCountdown.ts`: Pure formatter `formatCountdown` and derived hook (zero intervals, `TIMER-01`).
+- **Projection Engine (`TodayViewModelProjection.ts`):**
+  - Pure deterministic projection functions without DB dependencies.
+  - Seed range: `deriveTimelineSeedRange(timeline)` extracts `[min(sourceDate), max(sourceDate)]` from `timeline.periods` (spanning D-1, D, D+1).
+  - PENDING `PRAYER_WINDOW` projection: Uses concrete persisted `[windowStart, windowEnd)` intersected with active `PlanningDay` fragments (`max(fragment.start, windowStart) < min(fragment.end, windowEnd)`). End prayer is strictly exclusive (`[Dhuhr, Isha)` projects to Dhuhr, Asr, Maghrib; never Isha).
+  - Terminal `PRAYER_WINDOW` projection: Uses frozen `occurrence.eligiblePrayerSections` (never recomputed).
+  - Presentation `sortInstant`: For `EXACT_TIME` / `PRAYER_RELATIVE`, uses `calculatedStartTime`. For `PRAYER_WINDOW` tab projections, uses the start of the concrete window × fragment intersection for that specific tab (`SORT-01`).
+  - Sorting:
+    - Scheduled PENDING: `sortInstant` ASC -> `priority` (IMPORTANT before NORMAL) -> `createdAt` ASC -> `id` ASC.
+    - MISSED: Segregated into `missedTasks` section with explicit badge, rendered above completed.
+    - COMPLETED: Segregated into collapsible `completedTasks` (`Completed (N)`).
+    - ANYTIME_TODAY: Evaluated by `definition.scheduleType === 'ANYTIME_TODAY'`, projected into bottom section of all 5 tabs, sorted by `priority` (IMPORTANT before NORMAL) then `createdAt`.
+  - Empty states: Context-sensitive messages distinguishing current prayer ("Nothing scheduled until Asr.") vs other tabs ("Nothing scheduled for Fajr."). Any MISSED occurrence prevents "All done" state.
+- **UI & Navigation:**
+  - Built strictly with M1 LIGHT theme tokens (no hardcoded component colors).
+  - Prominent Islamic header with deep green surface, prayer timings, and dynamic countdown.
+  - Navigation: Single Expo Router Tabs owner (`app/(tabs)/_layout.tsx`) using `BottomNavBar` with 5 destinations (Today, Calendar, +, Worship, Settings) and elevated central `+` button. Calendar/Worship/Settings/Add remain placeholders.
+- **Accessibility:**
+  - Prayer tabs: `role="tab"`, selected accessibility state follows `selectedPrayer`.
+  - Task completion: `role="checkbox"`, `checked` accessibility state, accessible task title labels.
+  - Prayer transition: Polite live region banner announcement.
+  - Touch targets: Minimum 44dp token enforced across tabs and checkboxes.
+  - Explicit badges: "Missed" and "Completed" visual + text states (not color alone).
+- **Test Inventory (76 new M7 tests, 448 total project tests):**
+  - `src/__tests__/data/findTodayCandidates.test.ts` (6 tests: CD-01..CD-05, HI-01)
+  - `src/__tests__/services/TodayTemporalInputProvider.test.ts` (4 tests: TI-01..TI-04)
+  - `src/__tests__/services/TodayViewModelProjection.test.ts` (36 tests: WP-01..WP-07, PF-01..PF-04, PT-01, PT-03..PT-05, ER-01..ER-03, AT-01..AT-04, ST-01..ST-05, SO-01..SO-04, SORT-01, ES-01..ES-05)
+  - `src/__tests__/services/TodayOrchestrator.test.ts` (25 tests: SD-01..SD-04, PD-01..PD-04, LP-01..LP-05, PT-02, UI-01..UI-03, CT-01, CT-02, TIMER-01, MB-01, MB-02, ASYNC-01..ASYNC-03)
+  - `src/__tests__/components/TodayAccessibility.test.tsx` (5 tests: AX-01..AX-05)
+- **Verification:**
+  - `npm test`: Passed (26 test suites, 448 tests passed, 0 failures, 372 M1–M6 tests green)
+  - `npm run typecheck`: Passed (0 errors)
+  - `npm run lint`: Passed (0 errors, 0 warnings)
+  - `npx expo-doctor`: Verified (no unexpected packages or native mismatches)
+  - `npx expo install --check`: Verified
+- **Deferred Scope (Preserved for Future Milestones):**
+  - M8: Hijri Calendar Core / HijriService
+  - M9: Recurrence engine (RRULE & Hijri recurrence)
+  - M10: Add Task flows
+  - M11: Overdue/missed worker & auto-roll
+  - M12: Location & GPS services
+  - M13: Notification scheduling
+  - M14: Calendar month view
+  - M16: Worship UI
+  - M17: Settings UI & custom calculation preferences
+
 
 

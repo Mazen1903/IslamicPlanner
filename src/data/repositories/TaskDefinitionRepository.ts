@@ -1,4 +1,4 @@
-import { eq, and, isNull, gte, lte } from 'drizzle-orm';
+import { eq, and, isNull, gte, lte, inArray } from 'drizzle-orm';
 import { taskDefinitions, taskOccurrences } from '@/data/schema';
 import { getDatabase, type AppDatabase } from '@/data/db';
 import type {
@@ -472,6 +472,31 @@ export class TaskDefinitionRepository {
       })
       .where(eq(taskDefinitions.seriesId, seriesId))
       .run();
+  }
+
+  /**
+   * Batch lookup of TaskDefinition rows by exact IDs.
+   * Deduplicates input IDs.
+   * Does NOT filter by isActive — historical occurrences must render even if series is deactivated.
+   */
+  async findByIds(ids: string[], tx?: any): Promise<TaskDefinition[]> {
+    if (!ids || ids.length === 0) {
+      return [];
+    }
+
+    const uniqueIds = Array.from(new Set(ids.filter(id => Boolean(id && id.trim()))));
+    if (uniqueIds.length === 0) {
+      return [];
+    }
+
+    const client = getDb(tx);
+    const rows = client
+      .select()
+      .from(taskDefinitions)
+      .where(inArray(taskDefinitions.id, uniqueIds))
+      .all();
+
+    return rows.map(mapRowToDomain);
   }
 }
 

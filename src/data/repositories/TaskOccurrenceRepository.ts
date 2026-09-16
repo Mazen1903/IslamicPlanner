@@ -1,4 +1,4 @@
-import { eq, and, gte, lte } from 'drizzle-orm';
+import { eq, and, gte, lte, or, ne, isNotNull, gt } from 'drizzle-orm';
 import { taskOccurrences, taskDefinitions } from '@/data/schema';
 import { getDatabase, runInTransaction, type AppDatabase } from '@/data/db';
 import type {
@@ -775,6 +775,46 @@ export class TaskOccurrenceRepository {
 
     const client = getDb(tx);
     client.delete(taskOccurrences).where(eq(taskOccurrences.id, id)).run();
+  }
+
+  /**
+   * Finds candidate TaskOccurrences for the Today screen.
+   *
+   * Rule A: All occurrences belonging to activePlanningDayKey (PENDING, COMPLETED, MISSED, CANCELLED).
+   * Rule B: Cross-day active PENDING prayer windows:
+   *         status == 'PENDING' AND window_start IS NOT NULL AND window_end IS NOT NULL
+   *         AND planning_day_key != activePlanningDayKey
+   *         AND window_start <= nowUtc AND nowUtc < window_end
+   */
+  async findTodayCandidates(
+    activePlanningDayKey: string,
+    nowUtc: string,
+    tx?: any
+  ): Promise<TaskOccurrence[]> {
+    assertValidCivilDate(activePlanningDayKey, 'activePlanningDayKey');
+    assertValidIsoInstant(nowUtc, 'nowUtc');
+    const canonicalNowUtc = canonicalizeIsoInstant(nowUtc);
+
+    const client = getDb(tx);
+    const rows = client
+      .select()
+      .from(taskOccurrences)
+      .where(
+        or(
+          eq(taskOccurrences.planningDayKey, activePlanningDayKey),
+          and(
+            eq(taskOccurrences.status, 'PENDING'),
+            isNotNull(taskOccurrences.windowStart),
+            isNotNull(taskOccurrences.windowEnd),
+            ne(taskOccurrences.planningDayKey, activePlanningDayKey),
+            lte(taskOccurrences.windowStart, canonicalNowUtc),
+            gt(taskOccurrences.windowEnd, canonicalNowUtc)
+          )
+        )
+      )
+      .all();
+
+    return rows.map(mapRowToDomain);
   }
 }
 

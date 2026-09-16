@@ -5,19 +5,17 @@ import type { TaskCardViewModel } from '@/services/types';
 import { TaskCard } from './TaskCard';
 import { Icon } from '@/components/common/Icon';
 
-export interface AnytimeTodaySectionProps {
+export interface CompletedSectionProps {
   tasks: TaskCardViewModel[];
   collapsed: boolean;
   onToggleCollapsed: () => void;
-  onComplete: (occurrenceId: string) => void;
 }
 
-export function AnytimeTodaySection({
+export function CompletedSection({
   tasks,
   collapsed,
   onToggleCollapsed,
-  onComplete,
-}: AnytimeTodaySectionProps) {
+}: CompletedSectionProps) {
   const { colors, spacing, typography, touchTargets } = useTheme();
 
   if (tasks.length === 0) {
@@ -25,7 +23,7 @@ export function AnytimeTodaySection({
   }
 
   return (
-    <View style={styles.container} testID="anytime-today-section">
+    <View style={styles.container} testID="completed-section">
       <Pressable
         onPress={onToggleCollapsed}
         style={[
@@ -34,20 +32,15 @@ export function AnytimeTodaySection({
             minHeight: touchTargets.min,
             paddingHorizontal: spacing.lg,
             paddingVertical: spacing.sm,
-            borderTopColor: colors.divider,
-            borderTopWidth: 1,
           },
         ]}
         accessibilityRole="button"
-        accessibilityLabel={`Anytime Today, ${tasks.length} items, ${collapsed ? 'collapsed' : 'expanded'}`}
-        testID="anytime-section-header"
+        accessibilityLabel={`Completed tasks, ${tasks.length} items, ${collapsed ? 'collapsed' : 'expanded'}`}
+        testID="completed-section-header"
       >
-        <View style={styles.headerLeft}>
-          <Icon name="sun" size={16} color={colors.primary} style={{ marginRight: 6 }} />
-          <Text style={[typography.labelMedium, { color: colors.textPrimary, fontWeight: '700' }]}>
-            Anytime Today ({tasks.length})
-          </Text>
-        </View>
+        <Text style={[typography.labelMedium, { color: colors.textSecondary, fontWeight: '700' }]}>
+          Completed ({tasks.length})
+        </Text>
         <Icon
           name={collapsed ? 'chevron-right' : 'chevron-down'}
           size={18}
@@ -58,7 +51,7 @@ export function AnytimeTodaySection({
       {!collapsed && (
         <View style={styles.list}>
           {tasks.map(task => (
-            <TaskCard key={task.occurrenceId} task={task} onComplete={onComplete} />
+            <TaskCard key={task.occurrenceId} task={task} />
           ))}
         </View>
       )}
@@ -68,17 +61,12 @@ export function AnytimeTodaySection({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 20,
-    marginBottom: 24,
+    marginTop: 12,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   list: {
     marginTop: 6,
