@@ -165,7 +165,7 @@
   - `src/components/task/__tests__/TaskCardVisualStates.test.tsx` (7 UI tests: calm overdue, live tick, expiry, missed, completed)
   - `src/services/__tests__/PlannerRefreshCoordinator.test.ts` (Full refresh order, conditional reprojection)
   - `src/__tests__/services/TodayViewModelProjection.test.ts`
-- **Milestone Owner:** **M11 (IMPLEMENTED / AWAITING SONNET REVIEW)**
+- **Milestone Owner:** **M11 (CLOSED / SONNET APPROVED)**
 
 ---
 
@@ -212,7 +212,7 @@
   - `src/domain/location/`
   - `src/data/repositories/LocationRepository.ts`
 - **Relevant Tests:** (To be created in M12)
-- **Milestone Owner:** **M12 (PENDING)**
+- **Milestone Owner:** **M12 (ARCHITECTURE NEXT)**
 
 ---
 

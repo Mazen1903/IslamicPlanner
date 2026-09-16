@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M11 — Missed / Completed / Overdue behavior (IMPLEMENTED / AWAITING SONNET REVIEW)  
-**Last Updated:** 2026-09-16 (M11 Implemented / Awaiting Sonnet Review)  
+**Current Milestone:** M12 — Location / Travel / Timezone Behavior (ARCHITECTURE NEXT)  
+**Last Updated:** 2026-09-16 (M11 Closed / Sonnet Approved)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -21,8 +21,8 @@
 | **M8** | Hijri Calendar Core / HijriService | **CLOSED / OPUS APPROVED** | 2026-09-15 | Implementation commit: `1a0b18a`. Final tests: 545/545 (97 M8 tests). Independent Opus review: A — APPROVED. No regressions. Pure Hijri calendar core, canonical HijriDate, bidirectional conversion, Umm al-Qura adapter, public getDaysInMonth probe, global & override adjustments, ±2 candidate reverse resolution, typed errors, zero deep imports. |
 | **M9** | Recurrence engine | **CLOSED / OPUS APPROVED** | 2026-09-15 | Implementation commit: `5b713f2`. Final tests: 645/645 (100 M9 tests). Independent Claude Opus review: A — APPROVED. No regressions. Pure recurrence domain, strict RRULE allowlist, clamp-to-last-day monthly semantics, canonical Hijri membership, fail-fast range errors. No migration, no package changes. |
 | **M10** | Add/Edit Task | **CLOSED / SONNET APPROVED** | 2026-09-16 | Implementation commit: `a932ab0`. Review follow-up commit: `9b060e0`. Review result: A / APPROVED. Tests: 710/710 sequential. 1 dependency (`@react-native-community/datetimepicker`), 0 migrations. 4 modes, dual-date model, 2-phase save, plan-before-delete horizon sync, live preview, scope selection. Deferred debt recorded. |
-| **M11** | Missed / Completed / Overdue behavior | **IMPLEMENTED / AWAITING SONNET REVIEW** | 2026-09-16 | Background lifecycle transitions, atomic PENDING->terminal updates, date-scoped timeline resolution, calm overdue/missed/completed UI presentation, live deriveOverdueState. 739/739 tests pass (39 suites). |
-| **M12** | Location and travel | Not Started | — | Prerequisites: M2, M6. Opus review required |
+| **M11** | Missed / Completed / Overdue behavior | **CLOSED / SONNET APPROVED** | 2026-09-16 | Baseline: `55ff3d2acc2b4e56ee4dcdb44535c0af5dee12fc`. Implementation: `a961d65`. Review: A / APPROVED. Tests: 739/739 (39 suites). Migrations: 0. Dependencies: 0. Regressions: 0. Background lifecycle transitions, atomic PENDING->terminal updates, date-scoped timeline resolution, calm overdue/missed/completed UI presentation, live deriveOverdueState. |
+| **M12** | Location / Travel / Timezone Behavior | **Architecture Next** | — | Implementation not started. Prerequisites: M2, M6. Opus review required |
 | **M13** | Notifications | Not Started | — | Prerequisites: M2, M5, M12. Opus review required |
 | **M14** | Calendar month | Not Started | — | Prerequisites: M6, M7, **M8** |
 | **M15** | Worship Suggestions engine | Not Started | — | Prerequisites: M9, M8. Opus review required |
@@ -666,10 +666,17 @@
 
 ---
 
-## M11 Implementation Record
+## M11 Completion Record
 
 - **Date:** 2026-09-16
-- **Status:** **IMPLEMENTED / AWAITING SONNET REVIEW**
+- **Status:** **M11 CLOSED / SONNET APPROVED**
+- **Baseline Commit:** `55ff3d2acc2b4e56ee4dcdb44535c0af5dee12fc`
+- **Implementation Commit:** `a961d65`
+- **Review:** A / APPROVED (Independent Sonnet Review)
+- **Tests:** 739 / 739 passing (39 suites: 29 M11 tests, 710 baseline tests)
+- **Schema Migrations:** 0 (No schema changes, no migration files added)
+- **Dependencies Added:** 0 (No npm or native packages added)
+- **Regressions:** 0 (Typecheck clean, lint clean, zero regressions across M1–M10)
 - **Scope:** Missed, Completed, Overdue behavior, Task Lifecycle state machine, atomic status updates, date-scoped timeline caching, calm UI presentation.
 - **Architectural Deliverables:**
   - `src/data/repositories/TaskOccurrenceRepository.ts`:
@@ -705,7 +712,7 @@
   - `npm run lint`: Passed (0 errors, 0 warnings)
   - `npx expo-doctor`: 20/21 checks passed (known pre-existing patch version baseline unchanged)
   - `npx expo install --check`: Confirmed 0 new dependencies added
-- **Database & Dependency Status:**
-  - Migrations: 0 (No schema changes, no migration files added)
-  - Dependencies: 0 (No npm or native packages added)
+- **Non-Blocking Observations & Deferred Technical Debt:**
+  1. `missedAt` implementation uses the actual missed boundary timestamp rather than sweep runtime `now`. This is intentional/correct and should supersede any implementation-report wording that implied `now.toUTC().toISO()`.
+  2. `cancelAllPendingOccurrences()` retains older read-then-write behavior without the new PENDING SQL guard. This is pre-existing closed code and was not introduced by M11. Recorded as deferred technical debt only (do NOT modify now).
 

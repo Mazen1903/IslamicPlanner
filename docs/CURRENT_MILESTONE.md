@@ -1,188 +1,140 @@
-# Current Milestone: M11 — Missed / Completed / Overdue Behavior
+# Current Milestone: M12 — Location / Travel / Timezone Behavior
 
-> **Current State:** M11 IMPLEMENTED / AWAITING SONNET REVIEW  
-> **Current Test Suite:** 739 tests passing (39 test suites: 29 M11 tests, 710 baseline tests)  
-> **Milestone Status:** M11 — IMPLEMENTED / AWAITING SONNET REVIEW  
-> **Architecture Status:** FROZEN & IMPLEMENTED  
-> **Implementation Status:** COMPLETE / AWAITING SONNET REVIEW  
+> **Current State:** M11 closed and Sonnet-approved; M12 architecture and planning next  
+> **Current Test Suite:** 739 tests passing (39 test suites)  
+> **Milestone Status:** M12 — ARCHITECTURE NEXT  
+> **Architecture Status:** NOT STARTED (Pending Architecture Phase)  
+> **Implementation Status:** NOT STARTED (Do NOT implement M12 yet)  
 
 ---
 
 ## 1. Milestone Goal
 
-Implement the task lifecycle state machine, lifecycle transitions, terminal state invariants, and calm visual presentation states for **Missed**, **Completed**, and **Overdue** tasks.
+Implement automatic and manual location detection, travel/Qasr status indications, and timezone transition behavior with coordinated prayer timetable recalculation and pending task rematerialization.
 
-M11 bridges background time progression, prayer period boundaries, and user interactions with persistent task occurrence state:
+M12 bridges device location capabilities (`expo-location`), stored user location preferences, civil timezone resolution, and downstream scheduling recalculations:
 
 ```text
-Time / Prayer Boundary Progression (Timer, Foreground, Prayer Period End)
+Device Location / Manual Selection (expo-location, City Dataset)
     ↓
-M11 Lifecycle Detection (Overdue derivation, Period expiration check)
+LocationService & Repository (Permission handling, 10 km significant change detection)
     ↓
-TaskOccurrenceRepository Status Transitions (PENDING → COMPLETED | MISSED | CANCELLED)
+User Settings & Coordinates (lat, lng, city, timezone, calculation method)
     ↓
-Terminal State Invariants (Frozen historical placement & identity)
+Prayer Recalculation & Cache Invalidation (PrayerEngine, PrayerTimeline)
     ↓
-Today View Model & Visual States (Subtle overdue indicator, completed styling, in-place missed tasks)
+Materialization Synchronization (rematerializePending for active horizon)
+    ↓
+Today Runtime Update (TodayTemporalInputProvider transitions SETUP_REQUIRED → READY)
 ```
 
-M11 strictly adheres to the core Islamic planner principle: **No auto-rollforward** — tasks remain anchored to the prayer period and planning day for which they were intended.
+M12 ensures that when a user travels or changes locations, prayer times update accurately, and pending tasks adapt to the new temporal schedule without corrupting terminal history.
 
 ---
 
 ## 2. Locked Domain Invariants & Specifications
 
-All behaviors in M11 are bound by `docs/MASTER_PRODUCT_SPEC.md` (§12), `docs/DATA_MODEL.md` (§527–529), and `docs/TEST_PLAN.md` (§3.11):
+All behaviors in M12 are bound by `docs/MASTER_PRODUCT_SPEC.md` (§2, §11), `docs/TECHNICAL_ARCHITECTURE.md` (§5), `docs/DATA_MODEL.md`, and `docs/DECISIONS.md` (ADR-003):
 
-### 2.1 Overdue is Runtime-Derived (MC-01, MC-02)
-- An occurrence is overdue when:
-  $$\text{now} > \text{calculatedStartTime} \quad \text{AND} \quad \text{status} = \text{'PENDING'}$$
-- **Dynamic Derivation Only:** `isOverdue` is calculated on the fly during view projection.
-- **NEVER Stored in Database:** The SQLite column `task_occurrences.status` strictly allows `'PENDING'`, `'COMPLETED'`, `'MISSED'`, `'CANCELLED'`. It NEVER stores `'OVERDUE'`.
+### 2.1 Dual Location Mode: Automatic & Manual
+- **Automatic Mode:**
+  - Uses `expo-location` with foreground permission (`requestForegroundPermissionsAsync`).
+  - Gracefully handles permission denial without crashes, falling back to manual selection prompt or default state.
+  - Periodic / foreground check for significant location changes.
+- **Manual Mode:**
+  - User selects a city from a bundled, offline-available city dataset.
+  - Overrides device GPS coordinates and timezone.
 
-### 2.2 Completion Transitions (MC-03)
-- When marked complete by the user:
-  - `status` transitions from `PENDING` $\to$ `COMPLETED`.
-  - `completedAt` is recorded as an ISO 8601 UTC timestamp.
-  - Subtasks may be checked/updated.
-  - Once completed, the occurrence becomes a frozen historical record.
+### 2.2 Significant Movement Detection (10 km Threshold)
+- Distance delta calculated via Haversine formula against last calculation coordinates.
+- Location changes $< 10\text{ km}$ do not trigger prayer recalculation or cache invalidation, preventing unnecessary jitter.
+- Location changes $\ge 10\text{ km}$ trigger cache fingerprint invalidation, timeline recalculation, and pending task rematerialization.
 
-### 2.3 Missed on Period End (MC-04)
-- When a task's valid prayer period or scheduled window ends while the task is still `PENDING`:
-  - `status` transitions from `PENDING` $\to$ `MISSED`.
-  - `missedAt` is recorded as an ISO 8601 UTC timestamp.
-  - Evaluation occurs at prayer period boundaries, upon app foregrounding, and during periodic ticks.
+### 2.3 Timezone Transition Invariants
+- Timezone changes resolve effective IANA timezone (e.g., via `Intl.DateTimeFormat` or `expo-localization`).
+- Scheduled tasks respect established M5 invariants:
+  - `EXACT_TIME` tasks preserve wall-clock time (18:00 remains 18:00 in the new local timezone).
+  - `PRAYER_RELATIVE` tasks follow the recalculated prayer start instant in the new location.
+  - `PRAYER_WINDOW` tasks shift to the recalculated prayer window in the new location.
+  - `ANYTIME_TODAY` tasks remain assigned to their planning day.
 
-### 2.4 Missed Tasks Stay in Place (MC-05)
-- A missed task remains permanently associated with its original prayer section and planning day date.
-- It is displayed within its original section in the UI (or in historical views) and is never silently removed.
+### 2.4 Terminal History Immutability
+- Completed, missed, and cancelled tasks are permanently frozen:
+  - `calculatedStartTime`, `windowStart`, `windowEnd`, `status`, and historical timestamps are NEVER modified by location or timezone recalculations.
+  - Preserved by M4/M6 repository guards.
 
-### 2.5 Absolute Prohibition on Auto-Rollforward (MC-06)
-- **Zero Silent Rollover:** Missed tasks do **NOT** automatically roll forward into the next prayer period or subsequent days.
-- In an Islamic prayer-centered lifestyle, prayer times are distinct spiritual intervals; a task assigned to Dhuhr that is missed belongs historically to Dhuhr.
-- If the user wants to perform the task later, they may manually reschedule or duplicate it.
-
-### 2.6 Cancellation Transitions (MC-07)
-- When a task occurrence is cancelled:
-  - `status` transitions from `PENDING` $\to$ `CANCELLED`.
-  - Stored as a tombstone record for auditability and recurring sync preservation.
-
-### 2.7 Terminal State Immutability
-- Occurrences in `COMPLETED`, `MISSED`, or `CANCELLED` status are **permanently frozen**:
-  - `calculatedStartTime`, `calculatedPrayerSection`, `eligiblePrayerSections`, `wallClockResolution`, `planningDayKey`, `localDate`, `timezone`, `seriesId`, and `taskDefinitionId` are NEVER modified by rematerialization, horizon sync, or background sweeps.
-  - Guaranteed by existing M4 repository guards and M6 materialization freeze logic.
+### 2.5 Seam Integration with Today View
+- `TodayTemporalInputProvider` currently returns `SETUP_REQUIRED` when location or settings are unconfigured.
+- M12 provides the persistent backing data and runtime service so that once a location is set, `TodayTemporalInputProvider` returns `READY` with valid `PrayerTimeline` and coordinates.
 
 ---
 
-## 3. Visual Direction & Calm Aesthetics
+## 3. Execution Triggers & Seams
 
-- **Subtle Overdue Display:**
-  - If scheduled time has passed but the prayer period is still active: display subtle, calm overdue text (e.g., `"30 min overdue"`).
-  - **No Punitive Visuals:** Avoid glaring red text, aggressive exclamation marks, or guilt-inducing warnings. Maintain the calm, mosque-inspired aesthetic.
-- **Completed Visual State:**
-  - Clear visual affordance (checked checkbox, muted text, subtle strike-through).
-  - Tactile, satisfying tap interaction without arcade-like gamification or confetti.
-- **Missed Visual State:**
-  - Calm, neutral missed badge or text indicator indicating the task was not completed during its window.
+M12 architecture must formalize:
+1. **App Foreground Trigger:** Check device location / system timezone on app foreground; evaluate distance delta against cached calculation coordinates.
+2. **Manual Location Selection Trigger:** Immediate recalculation and persistence when user picks a city or changes calculation method.
+3. **Permission Change Trigger:** Handling transitions from denied to granted (or vice-versa).
+4. **Rematerialization Pipeline:** Calling `MaterializationEngine.rematerializePending` across the active planning-day horizon upon significant location/timezone change.
 
 ---
 
-## 4. Execution Triggers & Seams
+## 4. Locked Domain Boundaries
 
-M11 architecture must formalize three distinct execution triggers:
-1. **Prayer Period Boundary Crossing:** When active prayer changes (e.g., Dhuhr $\to$ Asr), all pending tasks belonging to the ended period transition to `MISSED`.
-2. **App Foreground Event:** When app returns to foreground, check for any prayer periods or windows that elapsed while the app was suspended/closed, and transition any overdue pending tasks to `MISSED`.
-3. **Periodic Check (60s tick):** Periodic sweep while app is in active use to update derived `isOverdue` presentation states and handle boundary transitions.
-
----
-
-## 5. Locked Domain Boundaries
-
-M11 must strictly respect established subsystem ownership:
-- **M4 Task Domain & Repositories:** Use existing `TaskOccurrenceRepository` transition methods (`updateStatus`, guarded updates). Do not bypass repository invariants.
-- **M5 Scheduling & WallClockResolver:** Boundaries of prayer periods and windows are determined by M5 and `PrayerTimeline`.
-- **M6 Materialization:** M6 already protects terminal rows; M11 transitions `PENDING` rows to terminal statuses.
-- **M7 Today Orchestrator:** Coordinate lifecycle transitions with `TodayOrchestrator` refresh cycles to prevent race conditions or UI tearing.
-- **M10 Add/Edit:** M10 horizon sync already skips terminal rows; M11 transitions do not conflict with M10.
+M12 must strictly respect established subsystem ownership:
+- **M2 Prayer Engine:** Pure astronomical calculations and `PrayerTimeline` builder remain unmodified.
+- **M5 Scheduling Engine:** Pure placement resolvers and `WallClockResolver` remain untouched.
+- **M6 Materialization Engine:** Consumes existing `rematerializePending(dateRange, context)` without modifying M6 persistence internals.
+- **M7 Today Orchestrator:** Updates temporal context and refreshes projection; does not manage raw GPS hardware.
+- **M10 Add/Edit Task:** Uses active location/temporal provider for preview calculations; forms remain unmodified.
+- **M11 Lifecycle Service:** Preserves atomic status updates and missed-state evaluation under the new active temporal context.
 
 ---
 
-## 6. Out of Scope for M11
+## 5. Out of Scope for M12
 
-The following items are strictly **OUT OF SCOPE** for M11:
-- Location GPS and travel refresh engine (M12).
-- Notification triggering or background push delivery (M13).
+The following items are strictly **OUT OF SCOPE** for M12:
+- Notification scheduling and push delivery (M13).
 - Calendar month grid visualization (M14).
 - Worship Suggestions engine (M15 / M16).
-- User Settings UI (M17).
-- Automatic task rollforward (strictly prohibited).
-- Modifying M10 Add/Edit form components or serializers.
+- Full Settings UI (M17 — M12 implements the location domain/service layer and bundled city data, not the full settings screens).
+- Native Home Screen Widgets (M18).
+- Background location tracking (foreground-only per product spec).
+- Modifying closed M1–M11 application contracts.
 
 ---
 
-## 7. Key Architectural Questions for Planning Phase
+## 6. Key Architectural Questions for Planning Phase
 
-The M11 architecture phase must evaluate and resolve:
-1. **Worker Architecture:** Should the lifecycle checker be a dedicated service (`TaskLifecycleService` / `OverdueWorker`) coordinated by `TodayOrchestrator` or a standalone coordinator?
-2. **Foreground AppState Listener:** How should React Native `AppState` changes be hooked cleanly without leaking listeners or duplicating subscriptions?
-3. **Batch Transition Queries:** Does `TaskOccurrenceRepository` need an additive batch query (e.g., `markExpiredPendingAsMissed(boundaryTime, tx)`) to execute transitions atomically?
-4. **Derived vs. Stored Evaluation:** Exact rules for determining when an `EXACT_TIME`, `PRAYER_RELATIVE`, `PRAYER_WINDOW`, or `ANYTIME_TODAY` task's window has closed.
-5. **View Model Projection Updates:** Ensuring `TodayViewModelProjection` exposes `isOverdue` and elapsed overdue minutes without unnecessary re-renders.
-6. **Test Strategy:** How to test time advancement, period expiration, foreground events, and mock clock transitions deterministically.
-
----
-
-## 8. Test Strategy & Acceptance Expectations
-
-The proposed M11 test suite must cover:
-- **MC-01:** Runtime derivation of `isOverdue` (`now > calculatedStartTime && status === 'PENDING'`).
-- **MC-02:** Confirmation that `OVERDUE` is never written to SQLite `task_occurrences.status`.
-- **MC-03:** Completion transitions (`PENDING` $\to$ `COMPLETED`, `completedAt` timestamp set).
-- **MC-04:** Period expiration missed transitions (`PENDING` $\to$ `MISSED`, `missedAt` timestamp set on period end).
-- **MC-05:** Missed occurrences retain original `calculatedPrayerSection`, `localDate`, and `planningDayKey`.
-- **MC-06:** Zero auto-rollforward across periods or planning days.
-- **MC-07:** Cancellation transitions (`PENDING` $\to$ `CANCELLED`, `cancelledAt` timestamp set).
-- **Foreground & Sweep Tests:** Expiration catching up after simulated app suspension.
-- **Regression Invariant:** **All 710 existing tests (M1–M10) must remain 100% green.**
+The M12 architecture phase must evaluate and resolve:
+1. **LocationService Architecture:** Pure domain/service boundaries vs. React Native / Expo hardware abstraction.
+2. **City Dataset Storage & Lookup:** Format and indexing of bundled city data (JSON, SQLite, binary) for fast offline search.
+3. **Repository Persistence:** Exact schema and queries for persisting active location and user preferences in `user_settings` / SQLite.
+4. **Recalculation & Refresh Flow:** Coordinated sequence between location update $\to$ cache invalidation $\to$ `rematerializePending` $\to$ `TodayOrchestrator.refreshToday`.
+5. **Travel / Qasr Indication:** Criteria and data model for flagging travel distance (e.g., journey > 80 km / 48 miles) for Qasr prayer presentation.
+6. **Testing & Mocking Strategy:** Deterministic unit and integration test fixtures for GPS permissions, distance thresholds, timezone shifts, and offline fallback.
 
 ---
 
-## 9. Milestone Summary & Status
+## 7. Test Strategy & Acceptance Expectations
+
+The proposed M12 test suite must cover:
+- **Automatic Location:** Permission granted, permission denied fallback, coordinate acquisition.
+- **Manual Location:** City dataset lookup, custom coordinates, manual override persistence.
+- **Significant Movement Threshold:** Distance $< 10\text{ km}$ (no recalculation) vs $\ge 10\text{ km}$ (triggers recalculation).
+- **Timezone Transitions:** Cross-timezone shifts, pending occurrence rematerialization, terminal immutability.
+- **Integration with Today:** `TodayTemporalInputProvider` transitions cleanly from `SETUP_REQUIRED` to `READY`.
+- **Regression Invariant:** **All 739 existing tests (M1–M11) across 39 test suites must remain 100% green.**
+
+---
+
+## 8. Milestone Summary & Status
 
 | Attribute | Specification |
 |---|---|
-| **Milestone** | **M11 — Missed / Completed / Overdue Behavior** |
-| **Type** | Lifecycle State Machine & UI Visual States |
-| **Current Phase** | **IMPLEMENTED / AWAITING SONNET REVIEW** |
-| **Implementation** | **COMPLETE / AWAITING SONNET REVIEW** |
-| **Total Tests** | **739 / 739 passing (39 test suites, 29 M11 tests)** |
-
----
-
-## 10. Implementation Summary & Frozen Contracts
-
-1. **Lifecycle State Machine:**
-   - Persisted states strictly remain `PENDING`, `COMPLETED`, `MISSED`, `CANCELLED`.
-   - `OVERDUE` is presentation-only and is NEVER written to the database.
-   - Transitions: `PENDING` $\to$ `COMPLETED`, `PENDING` $\to$ `MISSED`, `PENDING` $\to$ `CANCELLED`. Terminal states are immutable.
-2. **Atomic Terminal Transitions:**
-   - Upgraded `TaskOccurrenceRepository.updateStatus` internal SQL to atomic `WHERE id = ? AND status = 'PENDING'`.
-   - If `changes === 0`, re-reads row. If current status matches requested terminal status, returns idempotently. If different terminal status won the race, throws `TaskValidationError`. Never overwrites a terminal winner.
-3. **OccurrenceLifecycleService (`sweepExpired`):**
-   - Queries all materialized `PENDING` occurrences via `findAllMaterializedPending(tx?)`.
-   - Resolves missed boundary for each occurrence:
-     - `EXACT_TIME` / `PRAYER_RELATIVE`: centered on local civil date of `calculatedStartTime` in configured timezone (Clarification A); missedBoundary = containing `PrayerPeriodInstance.end`.
-     - `PRAYER_WINDOW`: missedBoundary = `occurrence.windowEnd`.
-     - `ANYTIME_TODAY`: missedBoundary = `PlanningDayEngine.resolvePlanningDayBoundaries(config, timeline, key).end` under FAJR, MIDNIGHT, or CUSTOM rules.
-   - Caches `PrayerTimeline` per local civil date within each sweep.
-   - Atomically transitions expired tasks to `MISSED` with `missedAt = now.toUTC().toISO()`.
-4. **Full Refresh Coordination Order (PlannerRefreshCoordinator):**
-   - `inputs` $\to$ `RecurringHorizonSync` $\to$ `TodayOrchestrator.refreshToday` $\to$ `OccurrenceLifecycleService.sweepExpired` $\to$ conditional `TodayOrchestrator.queryAndProject` if `mutatedCount > 0`.
-5. **Prayer Transition Integration (useToday):**
-   - On prayer change: fresh temporal inputs $\to$ `sweepExpired` $\to$ `queryAndProject`. Does NOT run recurring horizon sync.
-6. **Live Overdue Derivation:**
-   - `TaskCardViewModel` exposes immutable `dueAt: string | null` and `expiresAt: string | null`.
-   - Pure selector `deriveOverdueState(card, now)` computes `{ isOverdue, overdueMinutes }` at runtime.
-   - `usePrayerTimer` 1-second tick updates store `nowMs` (single timer owner, no DB operations).
-   - Calm presentation: `"Overdue"` (<1 min) or `"${overdueMinutes} min overdue"` (>=1 min). Amber warning tint; disappears automatically at `expiresAt`.
-
+| **Milestone** | **M12 — Location / Travel / Timezone Behavior** |
+| **Type** | Location & Travel Domain Service / Recalculation Orchestration |
+| **Current Phase** | **M12 — ARCHITECTURE NEXT** |
+| **Architecture Status** | **NOT STARTED (Pending Architecture Phase)** |
+| **Implementation Status** | **NOT STARTED (Do NOT implement yet)** |
+| **Baseline Tests** | **739 / 739 passing (39 test suites)** |
