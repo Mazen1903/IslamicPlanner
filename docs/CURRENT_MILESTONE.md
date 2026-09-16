@@ -1,9 +1,9 @@
 # Current Milestone: M9 — Recurrence Engine
 
-> **Current State:** ARCHITECTURE NEXT  
+> **Current State:** IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW  
 > **Prior Milestones:** M1–M8 CLOSED / OPUS APPROVED (M8 commit: `1a0b18a`)  
-> **Current Test Baseline:** 545 tests passing (28 test suites)  
-> **Implementation Status:** NOT STARTED  
+> **Current Test Baseline:** 645 tests passing (29 test suites: 100 M9 tests, 545 baseline tests)  
+> **Implementation Status:** COMPLETE / OPUS REVIEW NEXT  
 
 ---
 

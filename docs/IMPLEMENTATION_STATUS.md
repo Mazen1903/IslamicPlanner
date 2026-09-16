@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M9 — Recurrence Engine (ARCHITECTURE NEXT)  
-**Last Updated:** 2026-09-15 (M8 Closed / Opus Approved)  
+**Current Milestone:** M9 — Recurrence Engine (IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW)  
+**Last Updated:** 2026-09-15 (M9 Implemented / Review Next)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -19,7 +19,7 @@
 | **M6** | Local persistence + materialization | **CLOSED / OPUS APPROVED** | 2026-09-15 | All 66 M6 tests pass (372 total project tests). Forward migration 0001_lazy_the_order.sql (window_start/window_end), MaterializationEngine pipeline, M6/M9 boundary preserved, atomic guarded update, terminal short-circuit before temporal context. |
 | **M7** | Today screen | **CLOSED / OPUS APPROVED** | 2026-09-15 | All 76 M7 tests pass (448 total project tests). Prayer-centered adaptive planner, 5 fixed prayer tabs, single 1-second timer owner, request generation safety, TodayRuntimeContext, pure projection, light theme design system. |
 | **M8** | Hijri Calendar Core / HijriService | **CLOSED / OPUS APPROVED** | 2026-09-15 | Implementation commit: `1a0b18a`. Final tests: 545/545 (97 M8 tests). Independent Opus review: A — APPROVED. No regressions. Pure Hijri calendar core, canonical HijriDate, bidirectional conversion, Umm al-Qura adapter, public getDaysInMonth probe, global & override adjustments, ±2 candidate reverse resolution, typed errors, zero deep imports. |
-| **M9** | Recurrence engine | ARCHITECTURE NEXT | — | Prerequisites: M4, M6, **M8**. Pure recurrence domain foundation, seed date generation, Gregorian & Hijri calendar recurrence rules. Opus review required. |
+| **M9** | Recurrence engine | **IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW** | — | 645/645 tests passing (100 M9 tests). Pure recurrence domain, strict RRULE allowlist, clamp-to-last-day monthly semantics, canonical Hijri membership, fail-fast range errors. No migration, no package changes. Independent Opus review next. |
 | **M10** | Add Task flows | Not Started | — | Prerequisites: M7, M9 |
 | **M11** | Missed/completed/overdue behavior | Not Started | — | Prerequisites: M5, M7 |
 | **M12** | Location and travel | Not Started | — | Prerequisites: M2, M6. Opus review required |
@@ -552,6 +552,50 @@
   - `npm run lint`: Passed (0 errors, 0 warnings)
   - `npx expo-doctor`: 20/21 checks passed (clean baseline)
   - `npx expo install --check`: Verified
+
+---
+
+## M9 Implementation Record
+
+- **Date:** 2026-09-15
+- **Status:** **M9 IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW**
+- **Candidate Commit:** Pending
+- **Baseline Commit:** `f48d385`
+- **Final Tests:** 645/645 passing (100 M9 tests, all 545 M1–M8 baseline tests green)
+- **Regressions:** None (typecheck clean, lint clean, zero new dependencies, zero migrations, zero schema changes)
+- **Core Purpose & Invariants:**
+  - Pure, deterministic, framework-agnostic Recurrence Engine in `src/domain/recurrence/`.
+  - Determines recurrence membership and bounded seed-date generation for recurring series.
+  - Canonical pipeline preserved: M9 RecurrenceEngine -> M6 Materialization -> M5 Scheduling.
+  - Authoritative generation owned by M9; `rrule` library used as parse/validation aid only.
+  - Strict RRULE allowlist: `FREQ` (DAILY, WEEKLY, MONTHLY), `INTERVAL` (positive integer), `BYDAY` (MO..SU), `BYMONTHDAY` (1..31).
+  - Explicit rejection of unsupported features (`COUNT`, `UNTIL`, `BYSETPOS`, ordinal `BYDAY`, negative `BYMONTHDAY`, `RRULE:` prefix) with typed `RecurrenceError`.
+  - Monthly Gregorian recurrence clamps to last valid day of month (e.g. day 31 in Feb -> 28/29, April -> 30) with per-month deduplication.
+  - Weekly recurrence interval phase uses absolute `civilDaysBetween(anchorMonday, candidateMonday) / 7` formula — resilient across Dec->Jan, week-53 transitions, and midweek anchors.
+  - Canonical Hijri recurrence membership evaluated on effective adjusted calendar using `HijriService.toEffectiveHijri` and `resolveGregorianFromEffectiveHijri`.
+  - Hijri ambiguity policy: `UNIQUE` -> single date, `AMBIGUOUS` -> earliest Gregorian candidate only, `NO_MATCH` -> skipped.
+  - Later ambiguous candidate remains false even if earlier candidate lies outside query range.
+  - Hijri range contract: Fail-fast with `RecurrenceError('OUT_OF_HIJRI_RANGE')` and cause preservation whenever an evaluated date falls outside supported converter range.
+  - Core invariant tested and verified: `occursOn(def, D, ctx) === generateSeedDates(def, { start: D, end: D }, ctx).includes(D)`.
+- **Test Inventory (100 new M9 tests, 645 total project tests):**
+  - Section A (Core Invariant): Parameterized across Non-recurring, Daily, Weekly, Monthly (clamped & multi-day), Hijri
+  - Section B (Gregorian Recurrence): Non-recurring, Daily, Weekly, Monthly clamping, leap year Feb, boundary crossovers
+  - Section C (Weekly Phase): Year boundary, week 53, midweek anchors, anchor week exclusion/inclusion
+  - Section D (RRULE Parser & Validation): Strict allowlist, unsupported tokens, invalid intervals, duplicate keys, prefix rejection
+  - Section E (Hijri Recurrence): All 3 selector shapes, invalid shapes, 29/30 clamp, adjustments, UNIQUE/AMBIGUOUS/NO_MATCH
+  - Section F (Hijri Range & Edge Errors): Out-of-range boundaries, global adjustment shifts, per-month override edges, missing context
+  - Section G (Recurrence Kind Discriminator): NON_RECURRING, GREGORIAN, HIJRI, dual-populated rejection
+  - Section H (Series Version Boundaries): effectiveFrom/effectiveTo, recurrenceEnd, split successor anchor restart
+  - Section I (Timezone Independence): DST shift dates, child process execution under UTC, America/Chicago, Asia/Riyadh
+  - Section J (Idempotency & Immutability): Repeated evaluation, zero input mutation
+  - Section K (Date & Range Validation): Invalid seed dates, inverted ranges, single-day ranges
+- **Verification:**
+  - `npm test`: Passed (29 test suites, 645 tests passed, 0 failures)
+  - `npm run typecheck`: Passed (0 errors)
+  - `npm run lint`: Passed (0 errors, 0 warnings)
+  - `npx expo-doctor`: 20/21 checks passed (known baseline warning unchanged)
+  - `npx expo install --check`: Dependencies verified
+
 
 
 

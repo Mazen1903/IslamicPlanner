@@ -112,11 +112,17 @@
 ### 8. Recurrence Engine
 - **Authoritative Docs:** `docs/CURRENT_MILESTONE.md`, `docs/MASTER_PRODUCT_SPEC.md` (Section 4), `docs/TECHNICAL_ARCHITECTURE.md` (Section 4), `docs/DATA_MODEL.md` (TaskDefinition recurrence fields)
 - **Source Paths:**
-  - `src/domain/recurrence/` (TBD pending architecture)
-  - Relevant current schema/types: `src/data/schema.ts` (`recurrence_rule`, `recurrence_end`, `hijri_recurrence`), `src/domain/task/types.ts`
+  - `src/domain/recurrence/RecurrenceEngine.ts` (Core engine: occursOn, generateSeedDates, classifyRecurrence)
+  - `src/domain/recurrence/rruleAdapter.ts` (Strict bare RRULE parser, token validator, allowlist enforcement)
+  - `src/domain/recurrence/gregorianRecurrence.ts` (DAILY, WEEKLY, and MONTHLY clamp algorithms)
+  - `src/domain/recurrence/hijriRecurrence.ts` (Canonical Hijri membership, 29/30 day clamp, ambiguity handling)
+  - `src/domain/recurrence/dateUtils.ts` (Pure civil date arithmetic: isoWeekday, civilDaysBetween, addCivilDays)
+  - `src/domain/recurrence/types.ts` (Domain types: RecurrenceContext, CivilDateRange, GregorianRecurrenceRule)
+  - `src/domain/recurrence/errors.ts` (RecurrenceError and RecurrenceErrorCode hierarchy)
+  - `src/domain/recurrence/index.ts` (Public module exports)
 - **Relevant Tests:**
-  - `src/domain/recurrence/__tests__/` (To be created in M9)
-- **Milestone Owner:** **M9 (CURRENT / ARCHITECTURE NEXT)**
+  - `src/domain/recurrence/__tests__/RecurrenceEngine.test.ts` (100 tests covering invariants, Gregorian, weekly phase, parser, Hijri, range errors, version splits, timezone independence)
+- **Milestone Owner:** **M9 (IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW)**
 
 ---
 
