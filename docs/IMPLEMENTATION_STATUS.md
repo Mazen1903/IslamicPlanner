@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M7 — Today Screen & Timeline View (IMPLEMENTED — AWAITING INDEPENDENT OPUS REVIEW)  
-**Last Updated:** 2026-09-15 (M7 Implemented)  
+**Current Milestone:** M8 — Hijri Calendar Core (IMPLEMENTED — AWAITING INDEPENDENT OPUS REVIEW)  
+**Last Updated:** 2026-09-15 (M8 Implemented)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -17,8 +17,8 @@
 | **M4** | Task domain model + schema (includes series) | **Completed & Hardened** | 2026-09-14 | All 128 M4 tests pass (248 total project tests), clean 0000_initial migration, dynamic Drizzle discovery, canonical transactions, serialized concurrency, true civil-date validation, terminal status timestamp invariants, absolute ISO instants, IANA timezone validation |
 | **M5** | Scheduling engine + WallClockResolver | **CLOSED / OPUS APPROVED** | 2026-09-14 | All 60 M5 tests pass (308 total project tests), extracted WallClockResolver to domain/temporal, DST gap/overlap resolution, 4 scheduling modes, pure domain logic, M6 contract note, F-4 test hardening verified |
 | **M6** | Local persistence + materialization | **CLOSED / OPUS APPROVED** | 2026-09-15 | All 66 M6 tests pass (372 total project tests). Forward migration 0001_lazy_the_order.sql (window_start/window_end), MaterializationEngine pipeline, M6/M9 boundary preserved, atomic guarded update, terminal short-circuit before temporal context. |
-| **M7** | Today screen | **IMPLEMENTED — AWAITING INDEPENDENT OPUS REVIEW** | 2026-09-15 | All 76 M7 tests pass (448 total project tests). Prayer-centered adaptive planner, 5 fixed prayer tabs, single 1-second timer owner, request generation safety, TodayRuntimeContext, pure projection, light theme design system. |
-| **M8** | Hijri Calendar Core / HijriService | Not Started | — | Prerequisites: M4. MOVED from M13. Opus review required |
+| **M7** | Today screen | **CLOSED / OPUS APPROVED** | 2026-09-15 | All 76 M7 tests pass (448 total project tests). Prayer-centered adaptive planner, 5 fixed prayer tabs, single 1-second timer owner, request generation safety, TodayRuntimeContext, pure projection, light theme design system. |
+| **M8** | Hijri Calendar Core / HijriService | **IMPLEMENTED — AWAITING INDEPENDENT OPUS REVIEW** | 2026-09-15 | All 97 M8 tests pass (545 total project tests). Pure Hijri calendar core, canonical HijriDate, bidirectional conversion, Umm al-Qura adapter, public getDaysInMonth probe, global & override adjustments, ±2 candidate reverse resolution, typed errors, zero deep imports. |
 | **M9** | Recurrence engine | Not Started | — | Prerequisites: M4, **M8**. Opus review required |
 | **M10** | Add Task flows | Not Started | — | Prerequisites: M7, M9 |
 | **M11** | Missed/completed/overdue behavior | Not Started | — | Prerequisites: M5, M7 |
@@ -495,7 +495,6 @@
   - `npx expo-doctor`: Verified (no unexpected packages or native mismatches)
   - `npx expo install --check`: Verified
 - **Deferred Scope (Preserved for Future Milestones):**
-  - M8: Hijri Calendar Core / HijriService
   - M9: Recurrence engine (RRULE & Hijri recurrence)
   - M10: Add Task flows
   - M11: Overdue/missed worker & auto-roll
@@ -504,6 +503,52 @@
   - M14: Calendar month view
   - M16: Worship UI
   - M17: Settings UI & custom calculation preferences
+
+---
+
+## M8 Completion Record
+
+- **Date:** 2026-09-15
+- **Status:** **M8 IMPLEMENTED — AWAITING INDEPENDENT OPUS REVIEW**
+- **Core Purpose & Invariants:**
+  - Pure, deterministic, framework-agnostic Hijri Calendar Core in `src/domain/calendar/`.
+  - Canonical `HijriDate` type (`{ readonly year: number; readonly month: number; readonly day: number; }`) with strictly 1-based month numbering (1 = Muharram .. 12 = Dhu al-Hijjah).
+  - Public Gregorian dates use canonical civil string format (`YYYY-MM-DD`). No public `{ year, month, day }` Gregorian domain type.
+  - Zero deep imports: Third-party converter (`@tabby_ai/hijri-converter`) isolated in `HijriCalendarAdapter` using strictly its two public exports (`gregorianToHijri`, `hijriToGregorian`).
+  - Month length determination via public API probe (day 30, then 31 for rare historical months, or 29/28), avoiding package internal imports.
+  - Pure Gregorian civil day arithmetic (`addGregorianDays`) with zero JavaScript `Date` timezone dependency.
+  - Adjustment semantics per ADR-005 / ADR-018:
+    - Binding formula: `effectiveHijri(G, adj) = baseHijri(G + adj)`. Positive adjustment advances the effective Hijri date.
+    - Global adjustment: integer `[-2, +2]`.
+    - Per-month override: `ReadonlyMap<string, number>` keyed by base Hijri `"${year}-${month}"`. Replaces global adjustment (does not stack).
+    - Range edges: `ADJUSTED_OUT_OF_RANGE` thrown when shifted lookup leaves supported range (`[1924-08-01, 2077-11-16]`).
+  - Reverse resolution (`resolveGregorianFromEffectiveHijri`):
+    - Exact 5 candidates evaluated: `[B-2, B-1, B, B+1, B+2]` around base Gregorian `B = toGregorian(targetHijri)`.
+    - Returns `UNIQUE`, `AMBIGUOUS` (candidates sorted ascending YYYY-MM-DD), or `NO_MATCH`.
+    - No M9 selection policy encoded in M8.
+  - `HijriBaseMethod`: `'UMM_AL_QURA' | 'CALCULATED'`. Constructor-level configuration with fail-fast guard throwing `HijriUnsupportedMethodError` for `CALCULATED`.
+  - Complete error hierarchy: `HijriDateError` (base), `HijriConversionError` (with codes), `HijriValidationError` (with codes), `HijriAdjustmentError` (with codes), `HijriUnsupportedMethodError`.
+- **Test Inventory (97 new M8 tests, 545 total project tests):**
+  - `src/domain/calendar/__tests__/HijriCalendarAdapter.test.ts` (8 tests: A1..A8)
+  - `src/domain/calendar/__tests__/HijriService.test.ts` (89 tests):
+    - Independent Correctness Fixtures (Tier A): 12 tests (B1..B5, B12, B13, B15..B19) cited to ummulqura.org.sa and moonsighting.com
+    - Regression / Cross-Check Fixtures (Tier B): 13 tests (B6..B11, B14, B20..B25)
+    - Category C (Inverse Conversion): 6 tests (C1..C6)
+    - Category D (Month Boundaries & Lengths): 8 tests (D1..D8)
+    - Category E (Broad Round-Trip Sampling): 3 tests (E1..E3)
+    - Category F (Global Adjustment): 8 tests (F1..F8)
+    - Category G (Per-Month Overrides & Reverse Resolution): 11 tests (G1..G5, G6-U, G6-A, G6-N, G7..G9)
+    - Category H (Validation Pipeline): 8 tests (H1..H8)
+    - Category I (Error Wrapping & Constructor Guards): 10 tests (I1..I10)
+    - Category J (Timezone Independence): 2 tests (J1, J2)
+    - Category L (Supported Range & Gregorian Arithmetic): 8 tests (L1..L8)
+- **Verification:**
+  - `npm test`: Passed (28 test suites, 545 tests passed, 0 failures, 448 M1–M7 tests green)
+  - `npm run typecheck`: Passed (0 errors)
+  - `npm run lint`: Passed (0 errors, 0 warnings)
+  - `npx expo-doctor`: 20/21 checks passed (clean baseline)
+  - `npx expo install --check`: Verified
+
 
 
 

@@ -1,9 +1,9 @@
 # Current Milestone: M8 — Hijri Calendar Core
 
-> **Current State:** Architecture & Specification Phase  
+> **Current State:** IMPLEMENTED — AWAITING INDEPENDENT OPUS REVIEW  
 > **Prior Milestone:** M7 — Today Screen & Timeline View is **CLOSED / OPUS APPROVED** (`dc46afc`)  
-> **Repository Baseline:** 448 tests passing across 26 test suites  
-> **Implementation Code Status:** NOT STARTED (Paused for architecture alignment)
+> **Repository Verification:** 545 tests passing across 28 test suites (97 new M8 tests)  
+> **Implementation Code Status:** COMPLETED (97 tests passing, 0 typecheck errors, 0 lint warnings)
 
 ---
 
@@ -111,11 +111,11 @@ Per **ADR-005**, **ADR-018** (`docs/DECISIONS.md`), and **DATA_MODEL.md §2.4**,
 
 Before M8 can be submitted for Opus review, the implementation must satisfy all points below:
 
-- [ ] **Package Verification Completed**: Installed package, actual API, calendar basis, range, indexing, and failure behavior verified via inspection and tests.
-- [ ] **Defensive Range Enforcement**: Out-of-range or invalid dates reject gracefully with typed domain errors.
-- [ ] **1-Based Indexing in Domain**: Domain `HijriDate` months are strictly 1-based (`1..12`).
-- [ ] **Timezone Free**: No conversions rely on system timezone or local `new Date()` methods; all date arithmetic is pure calendar math.
-- [ ] **Multi-Layer Adjustment Implemented**: Global adjustment and ADR-018 per-month overrides correctly handled.
-- [ ] **Independent Correctness Fixtures**: Unit tests verify conversion against known independent historical and astronomical Islamic dates.
-- [ ] **Bidirectional Round-Trip Tested**: Validated round-trip consistency across supported ranges.
-- [ ] **Domain Isolation Preserved**: Pure domain code in `src/domain/calendar/`; zero recurrence logic, zero database writes, zero UI components.
+- [x] **Package Verification Completed**: Installed package, actual API, calendar basis, range, indexing, and failure behavior verified via inspection and tests.
+- [x] **Defensive Range Enforcement**: Out-of-range or invalid dates reject gracefully with typed domain errors.
+- [x] **1-Based Indexing in Domain**: Domain `HijriDate` months are strictly 1-based (`1..12`).
+- [x] **Timezone Free**: No conversions rely on system timezone or local `new Date()` methods; all date arithmetic is pure calendar math.
+- [x] **Multi-Layer Adjustment Implemented**: Global adjustment and ADR-018 per-month overrides correctly handled.
+- [x] **Independent Correctness Fixtures**: Unit tests verify conversion against known independent historical and astronomical Islamic dates.
+- [x] **Bidirectional Round-Trip Tested**: Validated round-trip consistency across supported ranges.
+- [x] **Domain Isolation Preserved**: Pure domain code in `src/domain/calendar/`; zero recurrence logic, zero database writes, zero UI components.
