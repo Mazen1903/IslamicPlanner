@@ -42,3 +42,6 @@ yarn-error.*
 
 # test coverage
 coverage/
+
+# AI review context packets
+.ai/context/
