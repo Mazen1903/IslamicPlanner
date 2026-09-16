@@ -64,6 +64,86 @@ describe('PlannerRefreshCoordinator & M7 Store Generation Concurrency (M10 §41)
     }
   });
 
+  it('M11 §10: fullRefresh sweeps newly materialized expired occurrence and re-projects', async () => {
+    // 1. Create a task that was scheduled for 2026-09-14 (yesterday)
+    await taskEngine.createTask({
+      title: 'Yesterday Stale Task',
+      startDate: '2026-09-14',
+      scheduleType: 'ANYTIME_TODAY',
+      scheduleData: {},
+      recurrenceRule: 'FREQ=DAILY',
+    });
+
+    const mockProvider: TodayTemporalInputProvider = {
+      getInputs: jest.fn().mockResolvedValue({
+        status: 'READY',
+        inputs: validTemporalInputs,
+      }),
+    };
+
+    const coordinator = new PlannerRefreshCoordinator(mockProvider);
+    // Refresh Today on 2026-09-15 at 12:00
+    const result = await coordinator.fullRefresh(
+      DateTime.fromISO('2026-09-15T12:00:00', { zone: 'America/New_York' })
+    );
+
+    expect(result.status).toBe('READY');
+    if (result.status === 'READY') {
+      // Find the yesterday occurrence in DB: it was materialized by horizonSync / refreshToday
+      // and immediately swept to MISSED by OccurrenceLifecycleService in the same full refresh
+      const allOccurrences = await taskOccurrenceRepository.findByPlanningDay('2026-09-14');
+      expect(allOccurrences.length).toBeGreaterThan(0);
+      const yesterdayOcc = allOccurrences[0];
+      expect(yesterdayOcc.status).toBe('MISSED');
+    }
+  });
+
+  it('M11 §10: skips queryAndProject re-projection when lifecycle sweep mutates 0 rows', async () => {
+    const mockProvider: TodayTemporalInputProvider = {
+      getInputs: jest.fn().mockResolvedValue({
+        status: 'READY',
+        inputs: validTemporalInputs,
+      }),
+    };
+
+    const mockOrchestrator: any = {
+      refreshToday: jest.fn().mockResolvedValue({
+        viewModel: { currentPrayer: 'DHUHR', tabs: [] },
+        runtime: { refreshedAt: '2026-09-15T12:00:00Z' },
+      }),
+      queryAndProject: jest.fn(),
+    };
+
+    const mockLifecycleService: any = {
+      sweepExpired: jest.fn().mockResolvedValue({
+        evaluatedCount: 1,
+        expiredCount: 0,
+        mutatedCount: 0,
+        errors: [],
+      }),
+    };
+
+    const mockHorizonSync: any = {
+      sync: jest.fn().mockResolvedValue({ created: 0, deleted: 0, retained: 0 }),
+    };
+
+    const coordinator = new PlannerRefreshCoordinator(
+      mockProvider,
+      mockOrchestrator,
+      mockHorizonSync,
+      mockLifecycleService
+    );
+
+    const result = await coordinator.fullRefresh(
+      DateTime.fromISO('2026-09-15T12:00:00', { zone: 'America/New_York' })
+    );
+
+    expect(result.status).toBe('READY');
+    expect(mockLifecycleService.sweepExpired).toHaveBeenCalled();
+    // Invariant: queryAndProject is NOT called when mutatedCount === 0
+    expect(mockOrchestrator.queryAndProject).not.toHaveBeenCalled();
+  });
+
   it('returns SETUP_REQUIRED when temporal inputs are missing', async () => {
     const setupReqProvider: TodayTemporalInputProvider = {
       getInputs: jest.fn().mockResolvedValue({ status: 'SETUP_REQUIRED' }),

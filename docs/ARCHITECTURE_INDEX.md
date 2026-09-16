@@ -149,7 +149,27 @@
 
 ---
 
-### 10. Database Schema & Migrations
+### 10. Missed / Completed / Overdue Behavior & Task Lifecycle
+- **Authoritative Docs:** `docs/CURRENT_MILESTONE.md`, `docs/MASTER_PRODUCT_SPEC.md` (Section 12), `docs/DATA_MODEL.md` (Section 527–529)
+- **Source Paths:**
+  - `src/services/OccurrenceLifecycleService.ts` (Expired task detection, atomic transitions, date-scoped timeline caching)
+  - `src/services/TodayViewModelProjection.ts` (TaskCardViewModel `dueAt`/`expiresAt`, pure `deriveOverdueState` selector)
+  - `src/services/PlannerRefreshCoordinator.ts` (Full refresh coordination: inputs -> sync -> refreshToday -> sweepExpired -> conditional queryAndProject)
+  - `src/components/task/TaskCard.tsx` (Calm overdue indicator, completed styling, missed badge)
+  - `src/hooks/useToday.ts` (Prayer transition lifecycle sweep without horizon generation)
+  - `src/hooks/usePrayerTimer.ts` (Updates store `nowMs` on 1s tick, single timer owner)
+  - `src/stores/useTodayStore.ts` (Reactive `nowMs` for overdue UI derivation)
+  - `src/data/repositories/TaskOccurrenceRepository.ts` (`findAllMaterializedPending`, atomic `updateStatus` with `WHERE status = 'PENDING'`)
+- **Relevant Tests:**
+  - `src/services/__tests__/OccurrenceLifecycleService.test.ts` (20 tests: state machine, atomic races, boundaries, caching, catch-up)
+  - `src/components/task/__tests__/TaskCardVisualStates.test.tsx` (7 UI tests: calm overdue, live tick, expiry, missed, completed)
+  - `src/services/__tests__/PlannerRefreshCoordinator.test.ts` (Full refresh order, conditional reprojection)
+  - `src/__tests__/services/TodayViewModelProjection.test.ts`
+- **Milestone Owner:** **M11 (IMPLEMENTED / AWAITING SONNET REVIEW)**
+
+---
+
+### 11. Database Schema & Migrations
 - **Authoritative Docs:** `docs/DATA_MODEL.md`, `docs/DECISIONS.md` (ADR-001, ADR-002, ADR-018, ADR-020)
 - **Source Paths:**
   - `src/data/schema.ts` (DDL for 7 tables: tasks, occurrences, exceptions, settings, etc.)
@@ -162,7 +182,7 @@
 
 ---
 
-### 11. Design System & Theme Foundation
+### 12. Design System & Theme Foundation
 - **Authoritative Docs:** `docs/UI_SYSTEM.md`, `docs/MASTER_PRODUCT_SPEC.md` (Section 9)
 - **Source Paths:**
   - `src/theme/` (Colors, typography, spacing, shadows, border radii)
@@ -177,7 +197,7 @@
 
 ---
 
-### 12. Navigation & App Shell
+### 13. Navigation & App Shell
 - **Authoritative Docs:** `docs/TECHNICAL_ARCHITECTURE.md` (Section 7), `docs/MASTER_PRODUCT_SPEC.md` (Section 2)
 - **Source Paths:**
   - `src/navigation/` (Root navigator, bottom tab bar: Today, Calendar, +, Worship, Settings)
@@ -186,7 +206,7 @@
 
 ---
 
-### 13. Location & Travel Detection
+### 14. Location & Travel Detection
 - **Authoritative Docs:** `docs/TECHNICAL_ARCHITECTURE.md` (Section 5), `docs/DECISIONS.md` (ADR-003)
 - **Source Paths:**
   - `src/domain/location/`
@@ -196,7 +216,7 @@
 
 ---
 
-### 14. Notifications & Reminders
+### 15. Notifications & Reminders
 - **Authoritative Docs:** `docs/NOTIFICATIONS.md`, `docs/MASTER_PRODUCT_SPEC.md` (Section 8)
 - **Source Paths:**
   - `src/domain/notification/`
@@ -205,7 +225,7 @@
 
 ---
 
-### 15. Calendar UI & Month Grid
+### 16. Calendar UI & Month Grid
 - **Authoritative Docs:** `docs/MASTER_PRODUCT_SPEC.md` (Section 6)
 - **Source Paths:**
   - `src/domain/calendar/CalendarEngine.ts`
@@ -216,7 +236,7 @@
 
 ---
 
-### 16. Worship Suggestions & Guidance
+### 17. Worship Suggestions & Guidance
 - **Authoritative Docs:** `docs/WORSHIP_ENGINE.md`, `docs/MASTER_PRODUCT_SPEC.md` (Section 7)
 - **Source Paths:**
   - `src/domain/worship/`
@@ -227,7 +247,7 @@
 
 ---
 
-### 17. User Settings & Preferences
+### 18. User Settings & Preferences
 - **Authoritative Docs:** `docs/DATA_MODEL.md` (Table `user_settings`), `docs/DECISIONS.md`
 - **Source Paths:**
   - `src/data/repositories/UserSettingsRepository.ts`

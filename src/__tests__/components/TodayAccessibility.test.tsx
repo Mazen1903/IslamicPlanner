@@ -145,6 +145,8 @@ describe('Today Screen Accessibility (AX-01 to AX-05)', () => {
       createdAt: '2026-09-15T05:00:00.000Z',
       completedAt: null,
       missedAt: '2026-09-15T07:00:00.000Z',
+      dueAt: null,
+      expiresAt: null,
     };
 
     const completedTask: TaskCardViewModel = {
@@ -160,6 +162,8 @@ describe('Today Screen Accessibility (AX-01 to AX-05)', () => {
       createdAt: '2026-09-15T05:00:00.000Z',
       completedAt: '2026-09-15T06:00:00.000Z',
       missedAt: null,
+      dueAt: null,
+      expiresAt: null,
     };
 
     const { rerender } = await render(

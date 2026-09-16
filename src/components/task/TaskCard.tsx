@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { DateTime } from 'luxon';
 import { useTheme } from '@/theme';
 import type { TaskCardViewModel } from '@/services/types';
 import { TaskCheckbox } from './TaskCheckbox';
 import { Icon } from '@/components/common/Icon';
+import { useTodayStore } from '@/stores/useTodayStore';
+import { deriveOverdueState } from '@/services/TodayViewModelProjection';
 
 export interface TaskCardProps {
   task: TaskCardViewModel;
@@ -16,6 +19,10 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
   const isCompleted = task.status === 'COMPLETED';
   const isMissed = task.status === 'MISSED';
   const isPending = task.status === 'PENDING';
+
+  const nowMs = useTodayStore(s => s.nowMs);
+  const now = useMemo(() => DateTime.fromMillis(nowMs), [nowMs]);
+  const overdueState = deriveOverdueState(task, now);
 
   return (
     <View
@@ -101,6 +108,29 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
                 </Text>
               </View>
             ) : null}
+
+            {isPending && overdueState.isOverdue && (
+              <View
+                style={[
+                  styles.badge,
+                  {
+                    backgroundColor: colors.warning + '1A',
+                    borderColor: colors.warning,
+                    borderRadius: radii.pill,
+                    borderWidth: 1,
+                    paddingHorizontal: spacing.xs,
+                    marginLeft: 'auto',
+                  },
+                ]}
+                testID={`overdue-badge-${task.occurrenceId}`}
+              >
+                <Text style={[typography.caption, { color: colors.warning, fontWeight: '700' }]}>
+                  {overdueState.overdueMinutes >= 1
+                    ? `${overdueState.overdueMinutes} min overdue`
+                    : 'Overdue'}
+                </Text>
+              </View>
+            )}
 
             {isMissed && (
               <View

@@ -1,10 +1,10 @@
 # Current Milestone: M11 — Missed / Completed / Overdue Behavior
 
-> **Current State:** M10 closed and Sonnet-approved; M11 architecture and planning next  
-> **Current Test Suite:** 710 tests passing (37 test suites: 65 M10 tests, 645 baseline tests)  
-> **Milestone Status:** M11 — ARCHITECTURE NEXT  
-> **Architecture Status:** NOT STARTED (Pending Architecture Phase)  
-> **Implementation Status:** NOT STARTED (Do NOT implement M11 yet)  
+> **Current State:** M11 IMPLEMENTED / AWAITING SONNET REVIEW  
+> **Current Test Suite:** 739 tests passing (39 test suites: 29 M11 tests, 710 baseline tests)  
+> **Milestone Status:** M11 — IMPLEMENTED / AWAITING SONNET REVIEW  
+> **Architecture Status:** FROZEN & IMPLEMENTED  
+> **Implementation Status:** COMPLETE / AWAITING SONNET REVIEW  
 
 ---
 
@@ -153,6 +153,36 @@ The proposed M11 test suite must cover:
 |---|---|
 | **Milestone** | **M11 — Missed / Completed / Overdue Behavior** |
 | **Type** | Lifecycle State Machine & UI Visual States |
-| **Current Phase** | **ARCHITECTURE NEXT** |
-| **Implementation** | **NOT STARTED (Do NOT implement yet)** |
-| **Baseline Tests** | **710 / 710 passing (37 test suites)** |
+| **Current Phase** | **IMPLEMENTED / AWAITING SONNET REVIEW** |
+| **Implementation** | **COMPLETE / AWAITING SONNET REVIEW** |
+| **Total Tests** | **739 / 739 passing (39 test suites, 29 M11 tests)** |
+
+---
+
+## 10. Implementation Summary & Frozen Contracts
+
+1. **Lifecycle State Machine:**
+   - Persisted states strictly remain `PENDING`, `COMPLETED`, `MISSED`, `CANCELLED`.
+   - `OVERDUE` is presentation-only and is NEVER written to the database.
+   - Transitions: `PENDING` $\to$ `COMPLETED`, `PENDING` $\to$ `MISSED`, `PENDING` $\to$ `CANCELLED`. Terminal states are immutable.
+2. **Atomic Terminal Transitions:**
+   - Upgraded `TaskOccurrenceRepository.updateStatus` internal SQL to atomic `WHERE id = ? AND status = 'PENDING'`.
+   - If `changes === 0`, re-reads row. If current status matches requested terminal status, returns idempotently. If different terminal status won the race, throws `TaskValidationError`. Never overwrites a terminal winner.
+3. **OccurrenceLifecycleService (`sweepExpired`):**
+   - Queries all materialized `PENDING` occurrences via `findAllMaterializedPending(tx?)`.
+   - Resolves missed boundary for each occurrence:
+     - `EXACT_TIME` / `PRAYER_RELATIVE`: centered on local civil date of `calculatedStartTime` in configured timezone (Clarification A); missedBoundary = containing `PrayerPeriodInstance.end`.
+     - `PRAYER_WINDOW`: missedBoundary = `occurrence.windowEnd`.
+     - `ANYTIME_TODAY`: missedBoundary = `PlanningDayEngine.resolvePlanningDayBoundaries(config, timeline, key).end` under FAJR, MIDNIGHT, or CUSTOM rules.
+   - Caches `PrayerTimeline` per local civil date within each sweep.
+   - Atomically transitions expired tasks to `MISSED` with `missedAt = now.toUTC().toISO()`.
+4. **Full Refresh Coordination Order (PlannerRefreshCoordinator):**
+   - `inputs` $\to$ `RecurringHorizonSync` $\to$ `TodayOrchestrator.refreshToday` $\to$ `OccurrenceLifecycleService.sweepExpired` $\to$ conditional `TodayOrchestrator.queryAndProject` if `mutatedCount > 0`.
+5. **Prayer Transition Integration (useToday):**
+   - On prayer change: fresh temporal inputs $\to$ `sweepExpired` $\to$ `queryAndProject`. Does NOT run recurring horizon sync.
+6. **Live Overdue Derivation:**
+   - `TaskCardViewModel` exposes immutable `dueAt: string | null` and `expiresAt: string | null`.
+   - Pure selector `deriveOverdueState(card, now)` computes `{ isOverdue, overdueMinutes }` at runtime.
+   - `usePrayerTimer` 1-second tick updates store `nowMs` (single timer owner, no DB operations).
+   - Calm presentation: `"Overdue"` (<1 min) or `"${overdueMinutes} min overdue"` (>=1 min). Amber warning tint; disappears automatically at `expiresAt`.
+

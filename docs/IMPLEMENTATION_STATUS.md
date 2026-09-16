@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M11 — Missed / Completed / Overdue behavior (ARCHITECTURE NEXT)  
-**Last Updated:** 2026-09-16 (M10 Closed / Sonnet Approved; M11 Architecture Next)  
+**Current Milestone:** M11 — Missed / Completed / Overdue behavior (IMPLEMENTED / AWAITING SONNET REVIEW)  
+**Last Updated:** 2026-09-16 (M11 Implemented / Awaiting Sonnet Review)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -21,7 +21,7 @@
 | **M8** | Hijri Calendar Core / HijriService | **CLOSED / OPUS APPROVED** | 2026-09-15 | Implementation commit: `1a0b18a`. Final tests: 545/545 (97 M8 tests). Independent Opus review: A — APPROVED. No regressions. Pure Hijri calendar core, canonical HijriDate, bidirectional conversion, Umm al-Qura adapter, public getDaysInMonth probe, global & override adjustments, ±2 candidate reverse resolution, typed errors, zero deep imports. |
 | **M9** | Recurrence engine | **CLOSED / OPUS APPROVED** | 2026-09-15 | Implementation commit: `5b713f2`. Final tests: 645/645 (100 M9 tests). Independent Claude Opus review: A — APPROVED. No regressions. Pure recurrence domain, strict RRULE allowlist, clamp-to-last-day monthly semantics, canonical Hijri membership, fail-fast range errors. No migration, no package changes. |
 | **M10** | Add/Edit Task | **CLOSED / SONNET APPROVED** | 2026-09-16 | Implementation commit: `a932ab0`. Review follow-up commit: `9b060e0`. Review result: A / APPROVED. Tests: 710/710 sequential. 1 dependency (`@react-native-community/datetimepicker`), 0 migrations. 4 modes, dual-date model, 2-phase save, plan-before-delete horizon sync, live preview, scope selection. Deferred debt recorded. |
-| **M11** | Missed / Completed / Overdue behavior | **ARCHITECTURE NEXT** | — | Background lifecycle transitions, terminal states. Prerequisites: M5, M7. |
+| **M11** | Missed / Completed / Overdue behavior | **IMPLEMENTED / AWAITING SONNET REVIEW** | 2026-09-16 | Background lifecycle transitions, atomic PENDING->terminal updates, date-scoped timeline resolution, calm overdue/missed/completed UI presentation, live deriveOverdueState. 739/739 tests pass (39 suites). |
 | **M12** | Location and travel | Not Started | — | Prerequisites: M2, M6. Opus review required |
 | **M13** | Notifications | Not Started | — | Prerequisites: M2, M5, M12. Opus review required |
 | **M14** | Calendar month | Not Started | — | Prerequisites: M6, M7, **M8** |
@@ -663,3 +663,49 @@
 - **Deferred Technical Debt (LOW findings):**
   - **a. Module-level defaultInputProvider:** `src/components/task-form/TaskFormScreen.tsx:51` instantiates `defaultInputProvider` at module load time outside React hook lifecycle (module-level singleton). Non-blocking; should be refactored into a hook or provider seam if input dynamic injection is needed.
   - **b. Module-level TaskFormOrchestrator singleton:** `src/features/task-form/TaskFormOrchestrator.ts:261` exports a shared module-level singleton `taskFormOrchestrator` used as a default prop. Two concurrent form screens would share the same single-flight latch (`submitInFlight`). Safe under current single-screen navigation structure, but should be instantiated per-screen or via context when multi-window/modal concurrency is introduced.
+
+---
+
+## M11 Implementation Record
+
+- **Date:** 2026-09-16
+- **Status:** **IMPLEMENTED / AWAITING SONNET REVIEW**
+- **Scope:** Missed, Completed, Overdue behavior, Task Lifecycle state machine, atomic status updates, date-scoped timeline caching, calm UI presentation.
+- **Architectural Deliverables:**
+  - `src/data/repositories/TaskOccurrenceRepository.ts`:
+    - Added `findAllMaterializedPending(tx?)` to sweep all materialized pending tasks across any date/horizon without filtering.
+    - Hardened `updateStatus` with atomic SQL `WHERE id = ? AND status = 'PENDING'` across `COMPLETED`, `MISSED`, and `CANCELLED`.
+    - Preserved winner on race conditions; throws canonical `TaskValidationError` if a differing terminal status won; returns row idempotently if status already matches.
+  - `src/services/OccurrenceLifecycleService.ts`:
+    - Pure application service orchestrating `sweepExpired(now, inputs?)`.
+    - Center date resolution for `EXACT_TIME` and `PRAYER_RELATIVE`: converts `calculatedStartTime` UTC instant into configured temporal timezone, derives containing local civil date, and builds date-scoped `PrayerTimeline` (Clarification A).
+    - Caches `PrayerTimeline` per local civil date within each single sweep invocation.
+    - PlanningDayEngine boundary resolution for `ANYTIME_TODAY` under FAJR, MIDNIGHT, and CUSTOM modes.
+    - Stored `windowEnd` resolution for `PRAYER_WINDOW`.
+    - No background timers, no React/Zustand dependencies, pure domain coordination.
+  - `src/services/TodayViewModelProjection.ts` & `src/services/types.ts`:
+    - Added `dueAt: string | null` and `expiresAt: string | null` to `TaskCardViewModel`.
+    - Exported pure selector `deriveOverdueState(card, now)` computing `{ isOverdue, overdueMinutes }` at runtime without DB hits.
+    - `PRAYER_WINDOW` and `ANYTIME_TODAY` strictly never overdue (`isOverdue: false`).
+  - `src/stores/useTodayStore.ts` & `src/hooks/usePrayerTimer.ts`:
+    - Added `nowMs` state to store; updated every second by existing `usePrayerTimer` (single timer owner, 0 new timers, 0 periodic DB sweeps).
+  - `src/services/PlannerRefreshCoordinator.ts`:
+    - Locked full-refresh sequence: fresh temporal inputs $\to$ `RecurringHorizonSync` $\to$ `TodayOrchestrator.refreshToday` $\to$ `OccurrenceLifecycleService.sweepExpired` $\to$ conditional `TodayOrchestrator.queryAndProject` only if rows mutated.
+  - `src/hooks/useToday.ts`:
+    - Prayer period transition executes lifecycle sweep with fresh temporal inputs before reprojection (no recurring horizon generation).
+  - `src/components/task/TaskCard.tsx`:
+    - Subscribes to `nowMs` from `useTodayStore` for live overdue derivation.
+    - Calm overdue presentation: `"Overdue"` (<1 min) or `"${overdueMinutes} min overdue"` (>=1 min). Amber warning tint, no red alarm, no guilt language.
+    - Disappears at `expiresAt` without query/reprojection.
+    - Missed tasks remain in original prayer section with calm `"Missed"` indicator. Completed tasks show muted checkmark styling.
+- **Verification:**
+  - `npm test -- --runInBand`: Passed (39 test suites, 739 tests passed, 0 failures; 739/739 sequential)
+  - `npm test`: Passed (39 test suites, 739 tests passed, 0 failures; parallel execution clean)
+  - `npm run typecheck`: Passed (0 errors)
+  - `npm run lint`: Passed (0 errors, 0 warnings)
+  - `npx expo-doctor`: 20/21 checks passed (known pre-existing patch version baseline unchanged)
+  - `npx expo install --check`: Confirmed 0 new dependencies added
+- **Database & Dependency Status:**
+  - Migrations: 0 (No schema changes, no migration files added)
+  - Dependencies: 0 (No npm or native packages added)
+

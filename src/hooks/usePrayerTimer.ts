@@ -43,6 +43,9 @@ export function usePrayerTimer(options: UsePrayerTimerOptions): void {
       const store = useTodayStore.getState();
       const { viewModel, runtime, refreshInFlight } = store;
 
+      // Update live clock for component overdue derivation (no DB, pure integer write)
+      store.setNowMs(now.toMillis());
+
       // A. Update countdown arithmetic
       if (viewModel?.nextPrayer?.time) {
         const nextPrayerMs = DateTime.fromISO(viewModel.nextPrayer.time).toMillis();

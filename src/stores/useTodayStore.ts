@@ -30,7 +30,11 @@ export interface TodayStoreState {
   requestGeneration: number;
   refreshInFlight: boolean;
 
+  // Live clock state for overdue derivation (updated by 1-second timer)
+  nowMs: number;
+
   // Actions
+  setNowMs: (ms: number) => void;
   startRefresh: () => number;
   commitRefresh: (
     token: number,
@@ -68,6 +72,7 @@ const initialState = {
   completedCollapsed: { ...initialCompletedCollapsed },
   anytimeCollapsed: false,
   countdownDisplay: null,
+  nowMs: Date.now(),
   status: 'idle' as TodayStoreStatus,
   error: null,
   requestGeneration: 0,
@@ -76,6 +81,10 @@ const initialState = {
 
 export const useTodayStore = create<TodayStoreState>((set, get) => ({
   ...initialState,
+
+  setNowMs: (ms: number) => {
+    set({ nowMs: ms });
+  },
 
   startRefresh: () => {
     const nextGeneration = get().requestGeneration + 1;
@@ -198,6 +207,7 @@ export const useTodayStore = create<TodayStoreState>((set, get) => ({
   reset: () => {
     set({
       ...initialState,
+      nowMs: Date.now(),
       completedCollapsed: { ...initialCompletedCollapsed },
     });
   },

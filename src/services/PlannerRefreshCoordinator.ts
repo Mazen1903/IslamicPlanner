@@ -13,6 +13,10 @@ import {
 } from '@/features/task-form/recurringHorizonSync';
 import { computeSyncHorizon } from '@/features/task-form/syncService';
 import type { HorizonSyncResult } from '@/features/task-form/types';
+import {
+  OccurrenceLifecycleService,
+  occurrenceLifecycleService as defaultLifecycleService,
+} from './OccurrenceLifecycleService';
 
 export type PlannerRefreshCoordinatorResult =
   | {
@@ -26,8 +30,8 @@ export type PlannerRefreshCoordinatorResult =
     };
 
 /**
- * PlannerRefreshCoordinator coordinates durable recurring horizon synchronization
- * and Today screen view model generation.
+ * PlannerRefreshCoordinator coordinates durable recurring horizon synchronization,
+ * Today screen view model generation, and lifecycle sweeps for expired tasks.
  *
  * Runs on:
  * - initial Today load
@@ -35,9 +39,16 @@ export type PlannerRefreshCoordinatorResult =
  * - planning-day rollover
  * - after Add/Edit save
  *
- * Does NOT run for:
- * - ordinary prayer-only transitions (re-projection)
- * - task completion re-projection
+ * Refresh Order (M11 §10):
+ * 1. get fresh temporal inputs
+ * 2. RecurringHorizonSync
+ * 3. TodayOrchestrator.refreshToday
+ * 4. OccurrenceLifecycleService.sweepExpired using SAME fresh inputs
+ * 5. if sweep mutated rows:
+ *      TodayOrchestrator.queryAndProject
+ *    else:
+ *      reuse refreshToday viewModel
+ * 6. return final READY result
  *
  * Invariant: Must NOT import Zustand.
  */
@@ -45,7 +56,8 @@ export class PlannerRefreshCoordinator {
   constructor(
     private readonly inputProvider: TodayTemporalInputProvider = new M7BootstrapInputProvider(),
     private readonly todayOrchestrator: TodayOrchestrator = new TodayOrchestrator(),
-    private readonly recurringHorizonSync: RecurringHorizonSync = defaultRecurringHorizonSync
+    private readonly recurringHorizonSync: RecurringHorizonSync = defaultRecurringHorizonSync,
+    private readonly lifecycleService: OccurrenceLifecycleService = defaultLifecycleService
   ) {}
 
   async fullRefresh(now: DateTime = DateTime.now()): Promise<PlannerRefreshCoordinatorResult> {
@@ -69,9 +81,17 @@ export class PlannerRefreshCoordinator {
     // 5. Refresh Today screen via TodayOrchestrator
     const todayResult = await this.todayOrchestrator.refreshToday(now, inputs);
 
+    // 6. Sweep expired occurrences using SAME fresh inputs
+    const sweepResult = await this.lifecycleService.sweepExpired(now, inputs);
+
+    let finalViewModel = todayResult.viewModel;
+    if (sweepResult.mutatedCount > 0) {
+      finalViewModel = await this.todayOrchestrator.queryAndProject(todayResult.runtime, now);
+    }
+
     return {
       status: 'READY',
-      viewModel: todayResult.viewModel,
+      viewModel: finalViewModel,
       runtime: todayResult.runtime,
       horizonSync,
     };

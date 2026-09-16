@@ -15,13 +15,16 @@ import type {
 import { taskEngine, TaskEngine } from '@/domain/task/TaskEngine';
 import { useAppForeground } from './useAppForeground';
 import { usePrayerTimer } from './usePrayerTimer';
-
 import { PlannerRefreshCoordinator } from '@/services/PlannerRefreshCoordinator';
+import {
+  OccurrenceLifecycleService,
+} from '@/services/OccurrenceLifecycleService';
 
 export interface UseTodayOptions {
   inputProvider?: TodayTemporalInputProvider;
   orchestrator?: TodayOrchestrator;
   coordinator?: PlannerRefreshCoordinator;
+  lifecycleService?: OccurrenceLifecycleService;
   engine?: TaskEngine;
   enableTimer?: boolean;
 }
@@ -31,9 +34,11 @@ export function useToday(options: UseTodayOptions = {}) {
   const inputProvider = options.inputProvider ?? defaultProvider;
   const orchestrator = options.orchestrator ?? todayOrchestrator;
   const engine = options.engine ?? taskEngine;
+  const defaultLifecycle = useMemo(() => new OccurrenceLifecycleService(), []);
+  const lifecycleService = options.lifecycleService ?? defaultLifecycle;
   const defaultCoordinator = useMemo(
-    () => new PlannerRefreshCoordinator(inputProvider, orchestrator),
-    [inputProvider, orchestrator]
+    () => new PlannerRefreshCoordinator(inputProvider, orchestrator, undefined, lifecycleService),
+    [inputProvider, orchestrator, lifecycleService]
   );
   const coordinator = options.coordinator ?? defaultCoordinator;
 
@@ -41,14 +46,16 @@ export function useToday(options: UseTodayOptions = {}) {
   const inputProviderRef = useRef(inputProvider);
   const orchestratorRef = useRef(orchestrator);
   const coordinatorRef = useRef(coordinator);
+  const lifecycleServiceRef = useRef(lifecycleService);
   const engineRef = useRef(engine);
 
   useEffect(() => {
     inputProviderRef.current = inputProvider;
     orchestratorRef.current = orchestrator;
     coordinatorRef.current = coordinator;
+    lifecycleServiceRef.current = lifecycleService;
     engineRef.current = engine;
-  }, [inputProvider, orchestrator, coordinator, engine]);
+  }, [inputProvider, orchestrator, coordinator, lifecycleService, engine]);
 
   /**
    * Full refresh executor.
@@ -75,12 +82,20 @@ export function useToday(options: UseTodayOptions = {}) {
   }, []);
 
   /**
-   * Re-projection executor for prayer-only transitions.
+   * Re-projection executor for prayer-only transitions (M11 §11):
+   * 1. obtain/use current temporal inputs
+   * 2. lifecycle sweep
+   * 3. queryAndProject
+   * (No horizon generation)
    */
   const performPrayerTransition = useCallback(
     async (runtime: TodayRuntimeContext, now: DateTime) => {
       const token = useTodayStore.getState().startReproject();
       try {
+        const inputResult = await inputProviderRef.current.getInputs();
+        if (inputResult.status === 'READY') {
+          await lifecycleServiceRef.current.sweepExpired(now, inputResult.inputs);
+        }
         const vm = await orchestratorRef.current.queryAndProject(runtime, now);
         useTodayStore.getState().commitReproject(token, vm);
       } catch {

@@ -52,6 +52,8 @@ export interface TaskCardViewModel {
   createdAt: string;
   completedAt: string | null;
   missedAt: string | null;
+  dueAt: string | null;
+  expiresAt: string | null;
 }
 
 /**

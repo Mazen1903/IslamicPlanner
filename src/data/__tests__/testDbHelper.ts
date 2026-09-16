@@ -39,23 +39,27 @@ export function createTestDatabase(): {
       const stmt = nodeDb.prepare(sql);
       return {
         executeSync(params: any[] = []) {
-          try {
-            const rows = stmt.all(...params);
-            return {
-              getAllSync: () => rows,
-              getFirstSync: () => rows[0] ?? null,
-              changes: 1,
-              lastInsertRowId: 1,
-            };
-          } catch {
-            const info = stmt.run(...params);
-            return {
-              getAllSync: () => [],
-              getFirstSync: () => null,
-              changes: Number(info.changes),
-              lastInsertRowId: Number(info.lastInsertRowid),
-            };
+          const upper = sql.trim().toUpperCase();
+          if (upper.startsWith('SELECT') || upper.startsWith('PRAGMA') || upper.includes('RETURNING')) {
+            try {
+              const rows = stmt.all(...params);
+              return {
+                getAllSync: () => rows,
+                getFirstSync: () => rows[0] ?? null,
+                changes: 0,
+                lastInsertRowId: 0,
+              };
+            } catch {
+              // fallback to run if statement didn't return rows
+            }
           }
+          const info = stmt.run(...params);
+          return {
+            getAllSync: () => [],
+            getFirstSync: () => null,
+            changes: Number(info.changes),
+            lastInsertRowId: Number(info.lastInsertRowid),
+          };
         },
         executeForRawResultSync(params: any[] = []) {
           try {

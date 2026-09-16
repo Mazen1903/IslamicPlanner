@@ -172,15 +172,36 @@ export function buildTaskCardViewModel(
   def: TaskDefinition,
   tabPrayer: Prayer,
   planningDay: PlanningDay,
-  timezone: string
+  timezone: string,
+  timeline?: PrayerTimeline
 ): TaskCardViewModel {
   let sortInstant: string | null = null;
+  let dueAt: string | null = null;
+  let expiresAt: string | null = null;
+
   if (def.scheduleType === 'EXACT_TIME' || def.scheduleType === 'PRAYER_RELATIVE') {
     sortInstant = occ.calculatedStartTime ?? null;
+    dueAt = occ.calculatedStartTime ?? null;
+
+    if (dueAt && timeline) {
+      try {
+        const startDt = DateTime.fromISO(dueAt);
+        if (startDt.isValid) {
+          const period = timeline.findPeriod(startDt);
+          expiresAt = period.end.toISO();
+        }
+      } catch {
+        expiresAt = null;
+      }
+    }
   } else if (def.scheduleType === 'PRAYER_WINDOW') {
     sortInstant = getIntersectionStartForPrayer(occ, planningDay, tabPrayer);
+    dueAt = null;
+    expiresAt = null;
   } else if (def.scheduleType === 'ANYTIME_TODAY') {
     sortInstant = null;
+    dueAt = null;
+    expiresAt = null;
   }
 
   return {
@@ -196,7 +217,62 @@ export function buildTaskCardViewModel(
     createdAt: def.createdAt,
     completedAt: occ.completedAt ?? null,
     missedAt: occ.missedAt ?? null,
+    dueAt,
+    expiresAt,
   };
+}
+
+export interface OverdueState {
+  isOverdue: boolean;
+  overdueMinutes: number;
+}
+
+/**
+ * Pure selector that derives live overdue presentation state for a task card.
+ * Invariant:
+ * - Only EXACT_TIME and PRAYER_RELATIVE can be overdue.
+ * - Condition: status === 'PENDING' AND now > dueAt AND now < expiresAt.
+ * - At exactly dueAt: not overdue.
+ * - At now >= expiresAt: not overdue (lifecycle expiry applies).
+ * - PRAYER_WINDOW and ANYTIME_TODAY always return false.
+ * - No DB access.
+ */
+export function deriveOverdueState(
+  card: TaskCardViewModel,
+  now: DateTime
+): OverdueState {
+  if (card.status !== 'PENDING') {
+    return { isOverdue: false, overdueMinutes: 0 };
+  }
+
+  if (card.scheduleType !== 'EXACT_TIME' && card.scheduleType !== 'PRAYER_RELATIVE') {
+    return { isOverdue: false, overdueMinutes: 0 };
+  }
+
+  if (!card.dueAt || !card.expiresAt) {
+    return { isOverdue: false, overdueMinutes: 0 };
+  }
+
+  const dueDt = DateTime.fromISO(card.dueAt);
+  const expiresDt = DateTime.fromISO(card.expiresAt);
+
+  if (!dueDt.isValid || !expiresDt.isValid) {
+    return { isOverdue: false, overdueMinutes: 0 };
+  }
+
+  const nowMs = now.toMillis();
+  const dueMs = dueDt.toMillis();
+  const expiresMs = expiresDt.toMillis();
+
+  if (nowMs > dueMs && nowMs < expiresMs) {
+    const elapsedMinutes = Math.floor((nowMs - dueMs) / 60000);
+    return {
+      isOverdue: true,
+      overdueMinutes: Math.max(0, elapsedMinutes),
+    };
+  }
+
+  return { isOverdue: false, overdueMinutes: 0 };
 }
 
 /**
@@ -407,7 +483,7 @@ export function projectTodayViewModel(
 
     // A. ANYTIME_TODAY: project to anytime section of all 5 tabs
     if (def.scheduleType === 'ANYTIME_TODAY') {
-      const card = buildTaskCardViewModel(occ, def, 'FAJR', planningDay, timezone);
+      const card = buildTaskCardViewModel(occ, def, 'FAJR', planningDay, timezone, timeline);
       for (const prayer of PRAYER_ORDER) {
         tabBuilders.get(prayer)!.anytime.push(card);
       }
@@ -428,7 +504,7 @@ export function projectTodayViewModel(
         const builder = tabBuilders.get(prayer);
         if (!builder) continue;
 
-        const card = buildTaskCardViewModel(occ, def, prayer, planningDay, timezone);
+        const card = buildTaskCardViewModel(occ, def, prayer, planningDay, timezone, timeline);
         if (occ.status === 'PENDING') {
           builder.scheduled.push(card);
         } else if (occ.status === 'MISSED') {
@@ -444,7 +520,7 @@ export function projectTodayViewModel(
     const targetPrayer = occ.calculatedPrayerSection;
     if (targetPrayer && tabBuilders.has(targetPrayer)) {
       const builder = tabBuilders.get(targetPrayer)!;
-      const card = buildTaskCardViewModel(occ, def, targetPrayer, planningDay, timezone);
+      const card = buildTaskCardViewModel(occ, def, targetPrayer, planningDay, timezone, timeline);
       if (occ.status === 'PENDING') {
         builder.scheduled.push(card);
       } else if (occ.status === 'MISSED') {

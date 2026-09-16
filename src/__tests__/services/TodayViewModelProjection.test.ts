@@ -1263,6 +1263,8 @@ describe('TodayViewModelProjection Test Suite', () => {
             createdAt: '2026-09-15T04:00:00.000Z',
             completedAt: null,
             missedAt: '2026-09-15T06:00:00.000Z',
+            dueAt: null,
+            expiresAt: null,
           },
         ],
         completedTasks: [
@@ -1279,6 +1281,8 @@ describe('TodayViewModelProjection Test Suite', () => {
             createdAt: '2026-09-15T04:00:00.000Z',
             completedAt: '2026-09-15T05:35:00.000Z',
             missedAt: null,
+            dueAt: null,
+            expiresAt: null,
           },
         ],
         anytimeTasks: [],

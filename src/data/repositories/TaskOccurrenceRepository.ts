@@ -462,8 +462,24 @@ export class TaskOccurrenceRepository {
   }
 
   /**
+   * Queries all already-materialized PENDING occurrences across all planning days and series.
+   * Used by OccurrenceLifecycleService to sweep expired occurrences without planningDayKey or horizon filters.
+   */
+  async findAllMaterializedPending(tx?: any): Promise<TaskOccurrence[]> {
+    const client = getDb(tx);
+    const rows = client
+      .select()
+      .from(taskOccurrences)
+      .where(eq(taskOccurrences.status, 'PENDING'))
+      .all();
+
+    return rows.map(mapRowToDomain);
+  }
+
+  /**
    * Guarded status transition:
    * Only allows valid transitions: PENDING -> COMPLETED, PENDING -> MISSED, PENDING -> CANCELLED.
+   * Uses atomic SQL guard: WHERE id = ? AND status = 'PENDING'.
    * Terminal statuses cannot transition to other statuses.
    * Idempotent updates (e.g. COMPLETED -> COMPLETED) return the unchanged occurrence.
    */
@@ -473,27 +489,6 @@ export class TaskOccurrenceRepository {
     timestamp?: string,
     tx?: any
   ): Promise<TaskOccurrence> {
-    const existing = await this.findById(id, tx);
-    if (!existing) {
-      throw new TaskValidationError(`Cannot update status of non-existent TaskOccurrence ${id}`);
-    }
-
-    // Idempotent check
-    if (existing.status === newStatus) {
-      return existing;
-    }
-
-    // Terminal guard: once terminal, no further transitions are allowed
-    if (
-      existing.status === 'COMPLETED' ||
-      existing.status === 'MISSED' ||
-      existing.status === 'CANCELLED'
-    ) {
-      throw new TaskValidationError(
-        `Cannot transition terminal occurrence ${id} from ${existing.status} to ${newStatus}. Terminal states are immutable.`
-      );
-    }
-
     let effectiveTime: string;
     if (timestamp != null) {
       assertValidIsoInstant(timestamp, 'timestamp');
@@ -518,14 +513,37 @@ export class TaskOccurrenceRepository {
     }
 
     const client = getDb(tx);
-    client
+    const updateResult = client
       .update(taskOccurrences)
       .set(patch)
-      .where(eq(taskOccurrences.id, id))
-      .run();
+      .where(
+        and(
+          eq(taskOccurrences.id, id),
+          eq(taskOccurrences.status, 'PENDING')
+        )
+      )
+      .run() as { changes?: number };
 
-    const updated = await this.findById(id, tx);
-    return updated!;
+    if ((updateResult?.changes ?? 0) > 0) {
+      const updated = await this.findById(id, tx);
+      return updated!;
+    }
+
+    // Atomic update affected 0 rows: re-read row to determine reason
+    const existing = await this.findById(id, tx);
+    if (!existing) {
+      throw new TaskValidationError(`Cannot update status of non-existent TaskOccurrence ${id}`);
+    }
+
+    // Idempotent check
+    if (existing.status === newStatus) {
+      return existing;
+    }
+
+    // Terminal guard: once terminal, no further transitions are allowed
+    throw new TaskValidationError(
+      `Cannot transition terminal occurrence ${id} from ${existing.status} to ${newStatus}. Terminal states are immutable.`
+    );
   }
 
   /**
