@@ -1,4 +1,4 @@
-import { eq, and, isNull, gte, lte, inArray } from 'drizzle-orm';
+import { eq, and, isNull, isNotNull, or, gte, lte, inArray } from 'drizzle-orm';
 import { taskDefinitions, taskOccurrences } from '@/data/schema';
 import { getDatabase, type AppDatabase } from '@/data/db';
 import type {
@@ -332,6 +332,60 @@ export class TaskDefinitionRepository {
           isNull(taskDefinitions.hijriRecurrence),
           gte(taskDefinitions.startDate, startDate),
           lte(taskDefinitions.startDate, endDate)
+        )
+      )
+      .all();
+
+    return rows.map(mapRowToDomain);
+  }
+
+  /**
+   * Finds active recurring TaskDefinitions whose recurrence schedule intersects [rangeStart, rangeEnd].
+   * Canonical semantics:
+   * isActive = true
+   * AND (recurrenceRule IS NOT NULL OR hijriRecurrence IS NOT NULL)
+   * AND startDate <= rangeEnd
+   * AND (effectiveToDate IS NULL OR effectiveToDate >= rangeStart)
+   * AND (recurrenceEnd IS NULL OR recurrenceEnd >= rangeStart)
+   * AND (effectiveFromDate IS NULL OR effectiveFromDate <= rangeEnd)
+   */
+  async findActiveRecurringIntersectingRange(
+    rangeStart: string,
+    rangeEnd: string,
+    tx?: any
+  ): Promise<TaskDefinition[]> {
+    assertValidCivilDate(rangeStart, 'rangeStart');
+    assertValidCivilDate(rangeEnd, 'rangeEnd');
+    if (rangeStart > rangeEnd) {
+      throw new TaskValidationError(
+        `rangeStart (${rangeStart}) must be <= rangeEnd (${rangeEnd})`
+      );
+    }
+
+    const client = getDb(tx);
+    const rows = client
+      .select()
+      .from(taskDefinitions)
+      .where(
+        and(
+          eq(taskDefinitions.isActive, true),
+          or(
+            isNotNull(taskDefinitions.recurrenceRule),
+            isNotNull(taskDefinitions.hijriRecurrence)
+          ),
+          lte(taskDefinitions.startDate, rangeEnd),
+          or(
+            isNull(taskDefinitions.effectiveToDate),
+            gte(taskDefinitions.effectiveToDate, rangeStart)
+          ),
+          or(
+            isNull(taskDefinitions.recurrenceEnd),
+            gte(taskDefinitions.recurrenceEnd, rangeStart)
+          ),
+          or(
+            isNull(taskDefinitions.effectiveFromDate),
+            lte(taskDefinitions.effectiveFromDate, rangeEnd)
+          )
         )
       )
       .all();

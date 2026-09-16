@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M10 — Add/Edit Task (ARCHITECTURE NEXT)  
-**Last Updated:** 2026-09-15 (M9 Closed / M10 Milestone Context)  
+**Current Milestone:** M10 — Add/Edit Task (IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW)  
+**Last Updated:** 2026-09-15 (M10 Implementation Complete)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -20,7 +20,7 @@
 | **M7** | Today screen | **CLOSED / OPUS APPROVED** | 2026-09-15 | All 76 M7 tests pass (448 total project tests). Prayer-centered adaptive planner, 5 fixed prayer tabs, single 1-second timer owner, request generation safety, TodayRuntimeContext, pure projection, light theme design system. |
 | **M8** | Hijri Calendar Core / HijriService | **CLOSED / OPUS APPROVED** | 2026-09-15 | Implementation commit: `1a0b18a`. Final tests: 545/545 (97 M8 tests). Independent Opus review: A — APPROVED. No regressions. Pure Hijri calendar core, canonical HijriDate, bidirectional conversion, Umm al-Qura adapter, public getDaysInMonth probe, global & override adjustments, ±2 candidate reverse resolution, typed errors, zero deep imports. |
 | **M9** | Recurrence engine | **CLOSED / OPUS APPROVED** | 2026-09-15 | Implementation commit: `5b713f2`. Final tests: 645/645 (100 M9 tests). Independent Claude Opus review: A — APPROVED. No regressions. Pure recurrence domain, strict RRULE allowlist, clamp-to-last-day monthly semantics, canonical Hijri membership, fail-fast range errors. No migration, no package changes. |
-| **M10** | Add/Edit Task | **ARCHITECTURE NEXT** | — | Prerequisites: M7, M9 |
+| **M10** | Add/Edit Task | **IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW** | — | Implementation candidate. 710/710 tests (65 new M10 tests). Single dependency `@react-native-community/datetimepicker`. 0 migrations. 4 modes, dual-date model, 2-phase save, plan-before-delete horizon sync, live preview, scope selection. |
 | **M11** | Missed/completed/overdue behavior | Not Started | — | Prerequisites: M5, M7 |
 | **M12** | Location and travel | Not Started | — | Prerequisites: M2, M6. Opus review required |
 | **M13** | Notifications | Not Started | — | Prerequisites: M2, M5, M12. Opus review required |
@@ -597,7 +597,62 @@
   - `npx expo-doctor`: 20/21 checks passed (known baseline warning unchanged)
   - `npx expo install --check`: Dependencies verified
 
+---
 
+## M10 Implementation Record
 
-
-
+- **Date:** 2026-09-15
+- **Scope:** Add/Edit Task application feature layer, UI components, orchestration, and horizon synchronization.
+- **Candidate Commit:** Pending
+- **Architecture Reference:** Binding consolidated architecture in `docs/M10_ARCHITECTURE.md` (incorporating Rev 1 through Rev 6).
+- **Dependencies:** Exactly ONE new package added: `@react-native-community/datetimepicker` (v9.1.0, verified compatible with Expo SDK 57). Zero form/state libraries added.
+- **Database Migrations:** ZERO database migrations. Schema remains unchanged.
+- **Additive Repository Methods:**
+  - `TaskOccurrenceRepository.findPendingBySeriesAndDateRange(seriesId, startDate, endDate, tx?)`: Exact filtered query for PENDING occurrences by series and inclusive localDate range.
+  - `TaskDefinitionRepository.findActiveRecurringIntersectingRange(rangeStart, rangeEnd, tx?)`: Canonical active recurring query intersecting effective date bounds without artificial clipping.
+- **Feature Layer (`src/features/task-form/`):**
+  - `types.ts`: Comprehensive types for schedule modes, form state, draft mappers, sync results, and error codes.
+  - `formReducer.ts`: Clean local state management with dual date intent (`civilSeedDate` vs `planningDayDate`), preserving mode-specific drafts across mode switches.
+  - `formValidation.ts`: Pure client-side validation associating errors with field names and providing user-friendly copy.
+  - `rruleSerializer.ts`: Serializes Daily, Weekdays, Weekly, Monthly, and Specific Days into canonical bare RRULE strings with sorted ISO weekdays (`MO,TU,WE,TH,FR,SA,SU`), validated by M9 parser.
+  - `previewService.ts`: Pure application service evaluating live prayer previews (`6:00 PM · Asr`, `90 min after Maghrib · 8:14 PM`) using canonical M5 `WallClockResolver` and `PrayerTimeline`.
+  - `taskDraftMapper.ts`: Canonical mapping between form state and `TaskDraft` / `TaskDefinition`, serializing only the active schedule mode.
+  - `errorTranslator.ts`: Translates domain exceptions into actionable user copy.
+  - `recurringHorizonSync.ts`: Robust recurring horizon synchronization over $[-7, +7]$ days with dual candidate discovery (Source A active recurring + Source B existing PENDING), full version set loading, atomic plan-before-delete, and terminal occurrence immutability.
+  - `syncService.ts`: Implements the 2-phase save contract (Phase 1 definition mutation, Phase 2 occurrence synchronization) with dedicated NR $\to$ NR 2-point reconciliation and full horizon sync for recurring transitions.
+  - `TaskFormOrchestrator.ts`: Presentation-layer orchestrator coordinating creation, edits, retry sync, and result status mapping.
+- **Coordination & Hooks:**
+  - `PlannerRefreshCoordinator.ts`: Service-layer refresh coordinator executing recurring horizon sync + `refreshToday` without importing Zustand.
+  - `useToday.ts`: Integrated with `PlannerRefreshCoordinator` while strictly preserving M7 generation token acquisition prior to async operations and maintaining existing store signatures.
+- **Presentation Layer (`src/components/task-form/`):**
+  - Light mode only, calm mosque aesthetic using M1 design tokens (deep Islamic green `#1B7A4D`, pale mint `#E8F5EE`, soft white/gray `#F8F9FA`).
+  - `DateTimePickerInput.tsx`: Wrapped date and time pickers.
+  - `ScheduleModeCards.tsx`: 4 schedule modes (Exact Time, Relative to Prayer, Prayer Window, Anytime Today) with accessible radio role, 5 prayer anchors (Fajr, Dhuhr, Asr, Maghrib, Isha — NO Sunrise option).
+  - `CustomRecurrenceModal.tsx`: Gregorian custom (daily, weekly, monthly) and Hijri custom (days 1–30, months 1–12) with calendar toggle.
+  - `RecurrenceSection.tsx`: Recurrence presets and specific days weekday chips.
+  - `MoreOptionsSection.tsx`: Expandable drawer for Priority (Normal/Important), Reminders, Duration, Notes, Subtasks, Tags. Strictly excludes Attachment and Delete Task UI.
+  - `EditScopeSheet.tsx`: Modal sheet presenting "This occurrence", "This and future occurrences", and "All occurrences" (with "Applies to the current repeating schedule" helper, no internal jargon).
+  - `SuccessScreen.tsx`: "Task Added!", "May Allah make it easy for you." with summary card and Done button (no confetti/XP/gamification).
+  - `PartialSuccessView.tsx`: Accurate status banner, retry sync action, and clear recovery copy.
+  - `TaskFormScreen.tsx`: Master screen with synchronous presentation latch (`submitInFlightRef`) preventing duplicate submissions, prayer-tab launch defaults, and unsaved changes back-navigation guard.
+- **Routes:**
+  - `app/(tabs)/add.tsx`: Bottom tab "+" entry.
+  - `app/task/add.tsx`: Direct entry supporting `prayer` and `date` query params.
+  - `app/task/[id].tsx`: Edit entry supporting occurrence/definition loading and recurrence scope prompting.
+- **Test Inventory (65 new M10 tests, 710 total project tests across 37 test suites):**
+  - `TaskFormOrchestrator.test.ts` (14 tests): Create, edit scopes, single-flight latch, 2-phase save, partial success, retry sync, NR date move.
+  - `recurringHorizonSync.test.ts` (11 tests): Candidate discovery, mixed versions, plan-before-delete, terminal immutability, date-scoped scheduling contexts, Source-B recovery.
+  - `rruleSerializer.test.ts` (8 tests): Bare RRULE, sorted ISO weekdays, presets, custom patterns, roundtrip with M9 parser.
+  - `formValidation.test.ts` (7 tests): Title, schedule modes, custom recurrence bounds.
+  - `formReducer.test.ts` (5 tests): Dual date model, mode switching, dirty tracking.
+  - `taskDraftMapper.test.ts` (6 tests): Schedule serialization, Hijri/Gregorian mutual exclusion, reminder rules.
+  - `PlannerRefreshCoordinator.test.ts` (4 tests): Full refresh orchestration, setup required handling.
+  - `TaskDefinitionRepository.test.ts` (3 tests added): `findActiveRecurringIntersectingRange`.
+  - `TaskOccurrenceRepository.test.ts` (3 tests added): `findPendingBySeriesAndDateRange`.
+  - `TaskFormUI.test.tsx` (14 tests): 4 modes, 5 anchors, preview banner, presets, custom modal, more options, edit scope sheet, success/partial success screens, prayer defaults, title validation, discard alert.
+- **Verification:**
+  - `npm test`: Passed (37 test suites, 710 tests passed, 0 failures)
+  - `npm run typecheck`: Passed (0 errors)
+  - `npm run lint`: Passed (0 errors, 0 warnings)
+  - `npx expo-doctor`: 20/21 checks passed (known pre-existing baseline unchanged)
+  - `npx expo install --check`: Dependencies verified (no unexpected drift)

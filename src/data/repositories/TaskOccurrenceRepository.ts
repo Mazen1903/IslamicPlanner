@@ -372,6 +372,43 @@ export class TaskOccurrenceRepository {
   }
 
   /**
+   * Finds all PENDING TaskOccurrences for a specific seriesId whose localDate falls within [startDate, endDate].
+   */
+  async findPendingBySeriesAndDateRange(
+    seriesId: string,
+    startDate: string,
+    endDate: string,
+    tx?: any
+  ): Promise<TaskOccurrence[]> {
+    if (!seriesId) {
+      throw new TaskValidationError('seriesId must be provided');
+    }
+    assertValidCivilDate(startDate, 'startDate');
+    assertValidCivilDate(endDate, 'endDate');
+    if (startDate > endDate) {
+      throw new TaskValidationError(
+        `startDate (${startDate}) must be <= endDate (${endDate})`
+      );
+    }
+
+    const client = getDb(tx);
+    const rows = client
+      .select()
+      .from(taskOccurrences)
+      .where(
+        and(
+          eq(taskOccurrences.seriesId, seriesId),
+          eq(taskOccurrences.status, 'PENDING'),
+          gte(taskOccurrences.localDate, startDate),
+          lte(taskOccurrences.localDate, endDate)
+        )
+      )
+      .all();
+
+    return rows.map(mapRowToDomain);
+  }
+
+  /**
    * Queries occurrences belonging to a planning day.
    */
   async findByPlanningDay(planningDayKey: string, tx?: any): Promise<TaskOccurrence[]> {

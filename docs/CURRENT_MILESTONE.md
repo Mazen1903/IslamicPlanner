@@ -1,9 +1,10 @@
 # Current Milestone: M10 — Add/Edit Task
 
-> **Current State:** M1–M9 CLOSED / OPUS APPROVED (M9 commit: `5b713f2`)  
-> **Current Test Baseline:** 645 tests passing (29 test suites: 100 M9 tests, 545 M1–M8 baseline tests)  
-> **Milestone Status:** ARCHITECTURE NEXT  
-> **Implementation Status:** NOT STARTED  
+> **Current State:** M10 implementation complete; Independent Opus review next  
+> **Current Test Suite:** 710 tests passing (37 test suites: 65 M10 tests, 645 baseline tests)  
+> **Milestone Status:** M10 — IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW  
+> **Architecture Status:** BINDING / FROZEN (Consolidated in `docs/M10_ARCHITECTURE.md`)  
+> **Implementation Status:** COMPLETE (Awaiting Opus Review)  
 
 ---
 
@@ -317,6 +318,6 @@ The proposed M10 test suite must cover at least:
 |---|---|
 | **Milestone** | **M10 — Add/Edit Task** |
 | **Type** | Application & UI Orchestration |
-| **Current Phase** | **ARCHITECTURE NEXT** |
-| **Implementation** | **NOT STARTED** |
-| **Baseline Tests** | **645 / 645 passing** |
+| **Current Phase** | **M10 implementation complete; Independent Opus review next** |
+| **Implementation** | **COMPLETE** |
+| **Verified Tests** | **710 / 710 passing (65 new M10 tests, 645 baseline tests)** |

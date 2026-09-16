@@ -127,16 +127,25 @@
 ---
 
 ### 9. Add/Edit Task
-- **Authoritative Docs:** `docs/CURRENT_MILESTONE.md`, `docs/MASTER_PRODUCT_SPEC.md` (Section 4), `docs/TECHNICAL_ARCHITECTURE.md` (Section 6)
+- **Authoritative Docs:** `docs/M10_ARCHITECTURE.md`, `docs/CURRENT_MILESTONE.md`, `docs/MASTER_PRODUCT_SPEC.md` (Section 4), `docs/TECHNICAL_ARCHITECTURE.md` (Section 6)
 - **Relevant Closed-Milestone Sources:**
   - `src/domain/task/` (M4: TaskEngine, types, scheduleDataParser)
   - `src/domain/scheduling/` (M5: SchedulingEngine, WallClockResolver)
   - `src/domain/materialization/` (M6: MaterializationEngine)
   - `src/domain/recurrence/` (M9: RecurrenceEngine, rruleAdapter)
   - `src/theme/`, `src/components/common/` (M1: Light design system tokens and components)
-- **Implementation Source Paths:** TBD pending architecture
-- **Relevant Tests:** TBD pending architecture
-- **Milestone Owner:** **M10 (CURRENT / ARCHITECTURE NEXT)**
+- **Implementation Source Paths:**
+  - `src/features/task-form/` (types, formReducer, formValidation, taskDraftMapper, rruleSerializer, previewService, errorTranslator, syncService, recurringHorizonSync, TaskFormOrchestrator)
+  - `src/services/PlannerRefreshCoordinator.ts`
+  - `src/components/task-form/` (Form screen, schedule mode cards, pickers, success screens, scope sheet)
+  - `app/(tabs)/add.tsx` (Add tab route)
+  - `app/task/add.tsx` (Deep-linkable add route)
+  - `app/task/[id].tsx` (Edit task route)
+- **Relevant Tests:**
+  - `src/features/task-form/__tests__/`
+  - `src/services/__tests__/PlannerRefreshCoordinator.test.ts`
+  - `src/components/task-form/__tests__/`
+- **Milestone Owner:** **M10 (IMPLEMENTED / AWAITING INDEPENDENT OPUS REVIEW)**
 
 ---
 

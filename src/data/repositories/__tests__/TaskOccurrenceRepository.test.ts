@@ -959,5 +959,102 @@ describe('TaskOccurrenceRepository', () => {
         expect(resultIds).not.toContain('occ-range-out');
       });
     });
+
+    describe('findPendingBySeriesAndDateRange (M10)', () => {
+      it('returns only PENDING occurrences matching seriesId within inclusive range', async () => {
+        // Other series definition
+        const otherDef = await taskDefinitionRepository.create({
+          id: 'def-other-series',
+          title: 'Other Task',
+          startDate: '2026-09-15',
+          source: 'USER',
+          scheduleType: 'ANYTIME_TODAY',
+          scheduleData: {},
+          seriesId: 'series-other',
+          seriesVersion: 1,
+          priority: 'NORMAL',
+          isActive: true,
+        });
+
+        // 1. Target series, PENDING, in range
+        const p1 = await taskOccurrenceRepository.create({
+          id: 'occ-series-p1',
+          taskDefinitionId: testDefId,
+          localDate: '2026-09-15',
+          planningDayKey: '2026-09-15',
+          timezone: 'UTC',
+          status: 'PENDING',
+        });
+
+        // 2. Target series, PENDING, in range
+        const p2 = await taskOccurrenceRepository.create({
+          id: 'occ-series-p2',
+          taskDefinitionId: testDefId,
+          localDate: '2026-09-17',
+          planningDayKey: '2026-09-17',
+          timezone: 'UTC',
+          status: 'PENDING',
+        });
+
+        // 3. Target series, COMPLETED, in range (must be excluded)
+        const c1 = await taskOccurrenceRepository.create({
+          id: 'occ-series-c1',
+          taskDefinitionId: testDefId,
+          localDate: '2026-09-16',
+          planningDayKey: '2026-09-16',
+          timezone: 'UTC',
+          status: 'PENDING',
+        });
+        await taskOccurrenceRepository.updateStatus(c1.id, 'COMPLETED');
+
+        // 4. Target series, PENDING, out of range (must be excluded)
+        await taskOccurrenceRepository.create({
+          id: 'occ-series-out',
+          taskDefinitionId: testDefId,
+          localDate: '2026-09-20',
+          planningDayKey: '2026-09-20',
+          timezone: 'UTC',
+          status: 'PENDING',
+        });
+
+        // 5. Other series, PENDING, in range (must be excluded)
+        await taskOccurrenceRepository.create({
+          id: 'occ-other-p1',
+          taskDefinitionId: otherDef.id,
+          localDate: '2026-09-15',
+          planningDayKey: '2026-09-15',
+          timezone: 'UTC',
+          status: 'PENDING',
+        });
+
+        const results = await taskOccurrenceRepository.findPendingBySeriesAndDateRange(
+          testSeriesId,
+          '2026-09-15',
+          '2026-09-17'
+        );
+
+        const ids = results.map(r => r.id);
+        expect(ids).toHaveLength(2);
+        expect(ids).toContain(p1.id);
+        expect(ids).toContain(p2.id);
+        expect(ids).not.toContain(c1.id);
+        expect(ids).not.toContain('occ-series-out');
+        expect(ids).not.toContain('occ-other-p1');
+      });
+
+      it('validates dates and seriesId input', async () => {
+        await expect(
+          taskOccurrenceRepository.findPendingBySeriesAndDateRange('', '2026-09-15', '2026-09-16')
+        ).rejects.toThrow(TaskValidationError);
+
+        await expect(
+          taskOccurrenceRepository.findPendingBySeriesAndDateRange('s1', 'invalid', '2026-09-16')
+        ).rejects.toThrow();
+
+        await expect(
+          taskOccurrenceRepository.findPendingBySeriesAndDateRange('s1', '2026-09-17', '2026-09-15')
+        ).rejects.toThrow(TaskValidationError);
+      });
+    });
   });
 });

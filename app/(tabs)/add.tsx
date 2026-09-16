@@ -1,18 +1,33 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { DateTime } from 'luxon';
+import { TaskFormScreen } from '@/components/task-form/TaskFormScreen';
+import { useToday } from '@/hooks/useToday';
+import { useTodayStore } from '@/stores/useTodayStore';
 
-export default function AddPlaceholderScreen() {
+export default function TabAddScreen() {
+  const router = useRouter();
+  const { refresh } = useToday();
+  const viewModel = useTodayStore(s => s.viewModel);
+
+  const civilToday = DateTime.now().toFormat('yyyy-MM-dd');
+  const planningDayKey = viewModel?.planningDayKey ?? civilToday;
+
+  const handleSuccess = async () => {
+    await refresh();
+    router.replace('/(tabs)/today');
+  };
+
+  const handleCancel = () => {
+    router.replace('/(tabs)/today');
+  };
+
   return (
-    <View style={styles.container}>
-      <Text>Add Task Placeholder</Text>
-    </View>
+    <TaskFormScreen
+      initialCivilSeedDate={civilToday}
+      initialPlanningDayDate={planningDayKey}
+      onSuccess={handleSuccess}
+      onCancel={handleCancel}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

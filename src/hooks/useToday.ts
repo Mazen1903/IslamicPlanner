@@ -16,9 +16,12 @@ import { taskEngine, TaskEngine } from '@/domain/task/TaskEngine';
 import { useAppForeground } from './useAppForeground';
 import { usePrayerTimer } from './usePrayerTimer';
 
+import { PlannerRefreshCoordinator } from '@/services/PlannerRefreshCoordinator';
+
 export interface UseTodayOptions {
   inputProvider?: TodayTemporalInputProvider;
   orchestrator?: TodayOrchestrator;
+  coordinator?: PlannerRefreshCoordinator;
   engine?: TaskEngine;
   enableTimer?: boolean;
 }
@@ -28,17 +31,24 @@ export function useToday(options: UseTodayOptions = {}) {
   const inputProvider = options.inputProvider ?? defaultProvider;
   const orchestrator = options.orchestrator ?? todayOrchestrator;
   const engine = options.engine ?? taskEngine;
+  const defaultCoordinator = useMemo(
+    () => new PlannerRefreshCoordinator(inputProvider, orchestrator),
+    [inputProvider, orchestrator]
+  );
+  const coordinator = options.coordinator ?? defaultCoordinator;
 
   const store = useTodayStore();
   const inputProviderRef = useRef(inputProvider);
   const orchestratorRef = useRef(orchestrator);
+  const coordinatorRef = useRef(coordinator);
   const engineRef = useRef(engine);
 
   useEffect(() => {
     inputProviderRef.current = inputProvider;
     orchestratorRef.current = orchestrator;
+    coordinatorRef.current = coordinator;
     engineRef.current = engine;
-  }, [inputProvider, orchestrator, engine]);
+  }, [inputProvider, orchestrator, coordinator, engine]);
 
   /**
    * Full refresh executor.
@@ -47,15 +57,18 @@ export function useToday(options: UseTodayOptions = {}) {
   const performFullRefresh = useCallback(async (syncSelected: boolean = false) => {
     const token = useTodayStore.getState().startRefresh();
     try {
-      const inputResult = await inputProviderRef.current.getInputs();
-      if (inputResult.status === 'SETUP_REQUIRED') {
+      const now = DateTime.now();
+      const result = await coordinatorRef.current.fullRefresh(now);
+      if (result.status === 'SETUP_REQUIRED') {
         useTodayStore.getState().setSetupRequired(token);
         return;
       }
 
-      const now = DateTime.now();
-      const result = await orchestratorRef.current.refreshToday(now, inputResult.inputs);
-      useTodayStore.getState().commitRefresh(token, result, syncSelected);
+      useTodayStore.getState().commitRefresh(
+        token,
+        { viewModel: result.viewModel, runtime: result.runtime },
+        syncSelected
+      );
     } catch (err: any) {
       useTodayStore.getState().setError(token, err?.message ?? 'Failed to refresh Today screen');
     }

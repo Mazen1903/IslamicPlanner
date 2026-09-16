@@ -714,6 +714,120 @@ describe('TaskDefinitionRepository', () => {
           taskDefinitionRepository.findActiveNonRecurringByStartDateRange('invalid', '2026-09-15')
         ).rejects.toThrow(TaskValidationError);
       });
+
+      it('findActiveRecurringIntersectingRange (M10): finds intersecting active recurring definitions', async () => {
+        // 1. Gregorian recurring intersecting
+        await taskDefinitionRepository.create({
+          id: 'def-rec-greg-1',
+          title: 'Gregorian Daily',
+          startDate: '2026-09-10',
+          recurrenceRule: 'FREQ=DAILY',
+          seriesId: 'series-rec-1',
+          scheduleType: 'ANYTIME_TODAY',
+          scheduleData: {},
+          isActive: true,
+        });
+
+        // 2. Hijri recurring intersecting
+        await taskDefinitionRepository.create({
+          id: 'def-rec-hijri-1',
+          title: 'Hijri White Days',
+          startDate: '2026-09-01',
+          hijriRecurrence: {
+            hijriDays: [13, 14, 15],
+            hijriMonths: null,
+          },
+          seriesId: 'series-rec-2',
+          scheduleType: 'ANYTIME_TODAY',
+          scheduleData: {},
+          isActive: true,
+        });
+
+        // 3. Inactive recurring (excluded)
+        await taskDefinitionRepository.create({
+          id: 'def-rec-inactive',
+          title: 'Inactive Recurring',
+          startDate: '2026-09-10',
+          recurrenceRule: 'FREQ=DAILY',
+          seriesId: 'series-rec-3',
+          scheduleType: 'ANYTIME_TODAY',
+          scheduleData: {},
+          isActive: false,
+        });
+
+        // 4. Non-recurring (excluded)
+        await taskDefinitionRepository.create({
+          id: 'def-nonrec-test',
+          title: 'Non-recurring in range',
+          startDate: '2026-09-15',
+          seriesId: 'series-nr-test',
+          scheduleType: 'ANYTIME_TODAY',
+          scheduleData: {},
+          isActive: true,
+        });
+
+        // 5. Recurring with recurrenceEnd before rangeStart (excluded)
+        await taskDefinitionRepository.create({
+          id: 'def-rec-ended',
+          title: 'Ended Recurring',
+          startDate: '2026-08-01',
+          recurrenceRule: 'FREQ=DAILY',
+          recurrenceEnd: '2026-09-05',
+          seriesId: 'series-rec-4',
+          scheduleType: 'ANYTIME_TODAY',
+          scheduleData: {},
+          isActive: true,
+        });
+
+        // 6. Recurring starting after rangeEnd (excluded)
+        await taskDefinitionRepository.create({
+          id: 'def-rec-future',
+          title: 'Future Recurring',
+          startDate: '2026-10-01',
+          recurrenceRule: 'FREQ=DAILY',
+          seriesId: 'series-rec-5',
+          scheduleType: 'ANYTIME_TODAY',
+          scheduleData: {},
+          isActive: true,
+        });
+
+        // 7. Recurring with effectiveToDate before rangeStart (excluded)
+        await taskDefinitionRepository.create({
+          id: 'def-rec-effective-past',
+          title: 'Predecessor Recurring',
+          startDate: '2026-08-01',
+          recurrenceRule: 'FREQ=DAILY',
+          effectiveToDate: '2026-09-08',
+          seriesId: 'series-rec-6',
+          scheduleType: 'ANYTIME_TODAY',
+          scheduleData: {},
+          isActive: true,
+        });
+
+        const list = await taskDefinitionRepository.findActiveRecurringIntersectingRange(
+          '2026-09-10',
+          '2026-09-20'
+        );
+
+        const ids = list.map(d => d.id);
+        expect(ids).toContain('def-rec-greg-1');
+        expect(ids).toContain('def-rec-hijri-1');
+        expect(ids).not.toContain('def-rec-inactive');
+        expect(ids).not.toContain('def-nonrec-test');
+        expect(ids).not.toContain('def-rec-ended');
+        expect(ids).not.toContain('def-rec-future');
+        expect(ids).not.toContain('def-rec-effective-past');
+      });
+
+      it('findActiveRecurringIntersectingRange: validates range bounds', async () => {
+        await expect(
+          taskDefinitionRepository.findActiveRecurringIntersectingRange('2026-09-20', '2026-09-10')
+        ).rejects.toThrow(TaskValidationError);
+
+        await expect(
+          taskDefinitionRepository.findActiveRecurringIntersectingRange('invalid', '2026-09-10')
+        ).rejects.toThrow(TaskValidationError);
+      });
     });
   });
 });
