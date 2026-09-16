@@ -95,24 +95,28 @@
 ---
 
 ### 7. Hijri Calendar Core
-- **Authoritative Docs:** `docs/CURRENT_MILESTONE.md`, `docs/DECISIONS.md` (ADR-018)
+- **Authoritative Docs:** `docs/DECISIONS.md` (ADR-005, ADR-018), `docs/IMPLEMENTATION_STATUS.md`
 - **Source Paths:**
-  - `src/domain/calendar/HijriService.ts`
-  - `src/domain/calendar/TabbyHijriAdapter.ts` (Adapter for `@tabby_ai/hijri-converter`)
-  - `src/domain/calendar/types.ts`
+  - `src/domain/calendar/HijriService.ts` (Core service: civil conversion, adjustments, reverse resolution)
+  - `src/domain/calendar/HijriCalendarAdapter.ts` (Umm al-Qura adapter isolating `@tabby_ai/hijri-converter`)
+  - `src/domain/calendar/types.ts` (Canonical HijriDate, adjustment types, resolution results)
+  - `src/domain/calendar/errors.ts` (Domain error hierarchy: HijriConversionError, HijriValidationError, etc.)
+  - `src/domain/calendar/constants.ts` (Constants, month names, supported range)
 - **Relevant Tests:**
-  - `src/domain/calendar/__tests__/` (To be created in M8)
-- **Milestone Owner:** **M8 (CURRENT / ARCHITECTURE)**
+  - `src/domain/calendar/__tests__/HijriService.test.ts` (89 tests: Tier A/B fixtures, reverse resolution, adjustments)
+  - `src/domain/calendar/__tests__/HijriCalendarAdapter.test.ts` (8 tests: isolation, range, month lengths)
+- **Milestone Owner:** **M8 (CLOSED / OPUS APPROVED)**
 
 ---
 
 ### 8. Recurrence Engine
-- **Authoritative Docs:** `docs/MASTER_PRODUCT_SPEC.md` (Section 4), `docs/TECHNICAL_ARCHITECTURE.md` (Section 4)
+- **Authoritative Docs:** `docs/CURRENT_MILESTONE.md`, `docs/MASTER_PRODUCT_SPEC.md` (Section 4), `docs/TECHNICAL_ARCHITECTURE.md` (Section 4), `docs/DATA_MODEL.md` (TaskDefinition recurrence fields)
 - **Source Paths:**
-  - `src/domain/recurrence/`
+  - `src/domain/recurrence/` (TBD pending architecture)
+  - Relevant current schema/types: `src/data/schema.ts` (`recurrence_rule`, `recurrence_end`, `hijri_recurrence`), `src/domain/task/types.ts`
 - **Relevant Tests:**
   - `src/domain/recurrence/__tests__/` (To be created in M9)
-- **Milestone Owner:** **M9 (PENDING)**
+- **Milestone Owner:** **M9 (CURRENT / ARCHITECTURE NEXT)**
 
 ---
 

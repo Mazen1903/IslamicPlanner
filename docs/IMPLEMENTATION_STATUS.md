@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M8 — Hijri Calendar Core (IMPLEMENTED — AWAITING INDEPENDENT OPUS REVIEW)  
-**Last Updated:** 2026-09-15 (M8 Implemented)  
+**Current Milestone:** M9 — Recurrence Engine (ARCHITECTURE NEXT)  
+**Last Updated:** 2026-09-15 (M8 Closed / Opus Approved)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -18,8 +18,8 @@
 | **M5** | Scheduling engine + WallClockResolver | **CLOSED / OPUS APPROVED** | 2026-09-14 | All 60 M5 tests pass (308 total project tests), extracted WallClockResolver to domain/temporal, DST gap/overlap resolution, 4 scheduling modes, pure domain logic, M6 contract note, F-4 test hardening verified |
 | **M6** | Local persistence + materialization | **CLOSED / OPUS APPROVED** | 2026-09-15 | All 66 M6 tests pass (372 total project tests). Forward migration 0001_lazy_the_order.sql (window_start/window_end), MaterializationEngine pipeline, M6/M9 boundary preserved, atomic guarded update, terminal short-circuit before temporal context. |
 | **M7** | Today screen | **CLOSED / OPUS APPROVED** | 2026-09-15 | All 76 M7 tests pass (448 total project tests). Prayer-centered adaptive planner, 5 fixed prayer tabs, single 1-second timer owner, request generation safety, TodayRuntimeContext, pure projection, light theme design system. |
-| **M8** | Hijri Calendar Core / HijriService | **IMPLEMENTED — AWAITING INDEPENDENT OPUS REVIEW** | 2026-09-15 | All 97 M8 tests pass (545 total project tests). Pure Hijri calendar core, canonical HijriDate, bidirectional conversion, Umm al-Qura adapter, public getDaysInMonth probe, global & override adjustments, ±2 candidate reverse resolution, typed errors, zero deep imports. |
-| **M9** | Recurrence engine | Not Started | — | Prerequisites: M4, **M8**. Opus review required |
+| **M8** | Hijri Calendar Core / HijriService | **CLOSED / OPUS APPROVED** | 2026-09-15 | Implementation commit: `1a0b18a`. Final tests: 545/545 (97 M8 tests). Independent Opus review: A — APPROVED. No regressions. Pure Hijri calendar core, canonical HijriDate, bidirectional conversion, Umm al-Qura adapter, public getDaysInMonth probe, global & override adjustments, ±2 candidate reverse resolution, typed errors, zero deep imports. |
+| **M9** | Recurrence engine | ARCHITECTURE NEXT | — | Prerequisites: M4, M6, **M8**. Pure recurrence domain foundation, seed date generation, Gregorian & Hijri calendar recurrence rules. Opus review required. |
 | **M10** | Add Task flows | Not Started | — | Prerequisites: M7, M9 |
 | **M11** | Missed/completed/overdue behavior | Not Started | — | Prerequisites: M5, M7 |
 | **M12** | Location and travel | Not Started | — | Prerequisites: M2, M6. Opus review required |
@@ -509,7 +509,11 @@
 ## M8 Completion Record
 
 - **Date:** 2026-09-15
-- **Status:** **M8 IMPLEMENTED — AWAITING INDEPENDENT OPUS REVIEW**
+- **Status:** **M8 CLOSED / OPUS APPROVED**
+- **Implementation Commit:** `1a0b18a`
+- **Final Tests:** 545/545 passing (97 M8 tests, all 448 M1–M7 baseline tests green)
+- **Independent Opus Review:** A — APPROVED
+- **Regressions:** None (typecheck clean, lint clean, no dependency changes, no migrations, no closed-milestone regressions)
 - **Core Purpose & Invariants:**
   - Pure, deterministic, framework-agnostic Hijri Calendar Core in `src/domain/calendar/`.
   - Canonical `HijriDate` type (`{ readonly year: number; readonly month: number; readonly day: number; }`) with strictly 1-based month numbering (1 = Muharram .. 12 = Dhu al-Hijjah).
