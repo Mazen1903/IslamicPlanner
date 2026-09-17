@@ -242,7 +242,19 @@ export class MaterializationEngine implements MaterializationEngineAPI {
         }
       }
 
-      // 9. No existing row -> create new PENDING occurrence
+      // 9. No existing row -> create new PENDING occurrence (if allowed by createAllowedPlanningDayKeyRange)
+      if (request.createAllowedPlanningDayKeyRange) {
+        const { start, end } = request.createAllowedPlanningDayKeyRange;
+        if (derived.planningDayKey < start || derived.planningDayKey > end) {
+          return {
+            seriesId: request.seriesId,
+            seedDate: request.seedDate,
+            action: 'SKIPPED_CREATE_OUT_OF_RANGE',
+            occurrenceId: '',
+          };
+        }
+      }
+
       try {
         const created = await this.occurrenceRepo.create(
           {
@@ -366,6 +378,7 @@ export class MaterializationEngine implements MaterializationEngineAPI {
       skippedCompleted: 0,
       skippedMissed: 0,
       skippedCancelled: 0,
+      skippedCreateOutOfRange: 0,
       errors: [],
     };
 
@@ -400,6 +413,9 @@ export class MaterializationEngine implements MaterializationEngineAPI {
             break;
           case 'SKIPPED_CANCELLED':
             summary.skippedCancelled++;
+            break;
+          case 'SKIPPED_CREATE_OUT_OF_RANGE':
+            summary.skippedCreateOutOfRange++;
             break;
         }
       } catch (err) {

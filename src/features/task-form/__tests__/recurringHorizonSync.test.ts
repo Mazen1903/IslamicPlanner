@@ -245,4 +245,151 @@ describe('RecurringHorizonSync (M10 §29–§34)', () => {
       expect(occsHealthy.length).toBeGreaterThan(0);
     });
   });
+
+  describe('syncRange (M14 Calendar Month Sync)', () => {
+    it('materializes candidate seeds respecting createAllowedPlanningDayKeyRange with zero deletions', async () => {
+      const def = await taskEngine.createTask({
+        title: 'Daily Dhikr Sep',
+        startDate: '2026-08-30',
+        scheduleType: 'ANYTIME_TODAY',
+        scheduleData: {},
+        recurrenceRule: 'FREQ=DAILY',
+      });
+
+      // candidateSeedRange = [2026-08-30, 2026-10-02] (monthStart - 2, monthEnd + 2)
+      const candidateRange = { start: '2026-08-30', end: '2026-10-02' };
+      // Visible month is September: create only allowed within [2026-09-01, 2026-09-30]
+      const createAllowedRange = { start: '2026-09-01', end: '2026-09-30' };
+
+      const result = await horizonSync.syncRange(candidateRange, createAllowedRange, validTemporalInputs);
+
+      // Sept has 30 days -> 30 created
+      expect(result.created).toBe(30);
+      // August 30, 31 and Oct 1, 2 are outside allowed create range -> 4 skipped
+      expect(result.skippedCreateOutOfRange).toBe(4);
+      expect(result.issues).toHaveLength(0);
+
+      // Verify no rows exist for August or October
+      const allOccs = await taskOccurrenceRepository.findPendingBySeriesAndDateRange(
+        def.seriesId,
+        '2026-08-01',
+        '2026-10-31'
+      );
+      expect(allOccs).toHaveLength(30);
+      for (const occ of allOccs) {
+        expect(occ.planningDayKey >= '2026-09-01' && occ.planningDayKey <= '2026-09-30').toBe(true);
+      }
+    });
+
+    it('materializes missing non-recurring definition within candidate range', async () => {
+      const nonRec = await taskEngine.createTask({
+        title: 'Special Lecture',
+        startDate: '2026-09-15',
+        scheduleType: 'EXACT_TIME',
+        scheduleData: { localTime: '14:00' },
+      });
+
+      // Delete the initial occurrence created at task-creation time to simulate far-future/unmaterialized non-recurring task
+      const initialOccs = await taskOccurrenceRepository.findNonCancelledByPlanningDayKeyRange(
+        '2026-09-15',
+        '2026-09-15'
+      );
+      for (const o of initialOccs) {
+        await taskOccurrenceRepository.delete(o.id);
+      }
+
+      const candidateRange = { start: '2026-08-30', end: '2026-10-02' };
+      const createAllowedRange = { start: '2026-09-01', end: '2026-09-30' };
+
+      const result = await horizonSync.syncRange(candidateRange, createAllowedRange, validTemporalInputs);
+      expect(result.created).toBeGreaterThanOrEqual(1);
+
+      const recovered = await taskOccurrenceRepository.findNonCancelledByPlanningDayKeyRange(
+        '2026-09-15',
+        '2026-09-15'
+      );
+      expect(recovered.some(o => o.taskDefinitionId === nonRec.id)).toBe(true);
+    });
+
+    it('rematerializes existing PENDING non-recurring rows from Source-B canonically', async () => {
+      const nonRec = await taskEngine.createTask({
+        title: 'Doctor Appointment',
+        startDate: '2026-09-20',
+        scheduleType: 'EXACT_TIME',
+        scheduleData: { localTime: '10:00' },
+      });
+
+      await taskOccurrenceRepository.create({
+        id: 'occ-doc-app',
+        taskDefinitionId: nonRec.id,
+        seriesId: nonRec.seriesId,
+        localDate: '2026-09-20',
+        planningDayKey: '2026-09-20',
+        timezone: 'America/New_York',
+        status: 'PENDING',
+      });
+
+      const occs = await taskOccurrenceRepository.findNonCancelledByPlanningDayKeyRange(
+        '2026-09-20',
+        '2026-09-20'
+      );
+      expect(occs).toHaveLength(1);
+
+      const candidateRange = { start: '2026-08-30', end: '2026-10-02' };
+      const createAllowedRange = { start: '2026-09-01', end: '2026-09-30' };
+
+      const result = await horizonSync.syncRange(candidateRange, createAllowedRange, validTemporalInputs);
+      // Existing row was rematerialized canonically -> updated
+      expect(result.updated).toBeGreaterThanOrEqual(1);
+    });
+
+    it('isolates per-item scheduling resolution failure without crashing syncRange', async () => {
+      // Mock materializeOne to throw error for a specific series
+      const originalMaterializeOne = matEngine.materializeOne.bind(matEngine);
+      jest.spyOn(matEngine, 'materializeOne').mockImplementation(async (req, ctx) => {
+        if (req.seriesId === 'failing-series') {
+          throw new Error('INSUFFICIENT_TIMELINE mock failure');
+        }
+        return originalMaterializeOne(req, ctx);
+      });
+
+      // Healthy task
+      await taskEngine.createTask({
+        title: 'Healthy Task',
+        startDate: '2026-09-15',
+        scheduleType: 'ANYTIME_TODAY',
+        scheduleData: {},
+      });
+
+      // Manually create an existing PENDING row for 'failing-series' in Source-B
+      const defFail = await taskDefinitionRepository.create({
+        id: 'def-fail-range',
+        title: 'Failing Offset Task',
+        startDate: '2026-09-15',
+        scheduleType: 'ANYTIME_TODAY',
+        scheduleData: {},
+        seriesId: 'failing-series',
+        isActive: true,
+      });
+      await taskOccurrenceRepository.create({
+        id: 'occ-fail-range',
+        taskDefinitionId: defFail.id,
+        seriesId: 'failing-series',
+        localDate: '2026-09-15',
+        planningDayKey: '2026-09-15',
+        timezone: 'America/New_York',
+        status: 'PENDING',
+      });
+
+      const candidateRange = { start: '2026-09-01', end: '2026-09-30' };
+      const createAllowedRange = { start: '2026-09-01', end: '2026-09-30' };
+
+      const result = await horizonSync.syncRange(candidateRange, createAllowedRange, validTemporalInputs);
+
+      // Failing item recorded as an issue
+      expect(result.issues.some(i => i.seriesId === 'failing-series')).toBe(true);
+      // Overall sync completed safely without throwing!
+      expect(result.seriesProcessed).toBeGreaterThan(0);
+    });
+  });
 });

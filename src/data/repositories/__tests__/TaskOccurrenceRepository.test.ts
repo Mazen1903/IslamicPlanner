@@ -1056,5 +1056,88 @@ describe('TaskOccurrenceRepository', () => {
         ).rejects.toThrow(TaskValidationError);
       });
     });
+
+    describe('findNonCancelledByPlanningDayKeyRange', () => {
+      it('returns all non-cancelled occurrences within planningDayKey range and excludes CANCELLED', async () => {
+        const p1 = await taskOccurrenceRepository.create({
+          id: 'occ-rng-p1',
+          taskDefinitionId: testDefId,
+          localDate: '2026-09-01',
+          planningDayKey: '2026-09-05',
+          timezone: 'UTC',
+          status: 'PENDING',
+        });
+
+        const c1 = await taskOccurrenceRepository.create({
+          id: 'occ-rng-c1',
+          taskDefinitionId: testDefId,
+          localDate: '2026-09-02',
+          planningDayKey: '2026-09-10',
+          timezone: 'UTC',
+          status: 'COMPLETED',
+          completedAt: '2026-09-10T10:00:00Z',
+        });
+
+        const m1 = await taskOccurrenceRepository.create({
+          id: 'occ-rng-m1',
+          taskDefinitionId: testDefId,
+          localDate: '2026-09-03',
+          planningDayKey: '2026-09-15',
+          timezone: 'UTC',
+          status: 'MISSED',
+          missedAt: '2026-09-15T23:59:59Z',
+        });
+
+        const can1 = await taskOccurrenceRepository.create({
+          id: 'occ-rng-can1',
+          taskDefinitionId: testDefId,
+          localDate: '2026-09-04',
+          planningDayKey: '2026-09-12',
+          timezone: 'UTC',
+          status: 'CANCELLED',
+        });
+
+        const outBefore = await taskOccurrenceRepository.create({
+          id: 'occ-rng-out-before',
+          taskDefinitionId: testDefId,
+          localDate: '2026-08-31',
+          planningDayKey: '2026-08-31',
+          timezone: 'UTC',
+          status: 'PENDING',
+        });
+
+        const outAfter = await taskOccurrenceRepository.create({
+          id: 'occ-rng-out-after',
+          taskDefinitionId: testDefId,
+          localDate: '2026-10-01',
+          planningDayKey: '2026-10-01',
+          timezone: 'UTC',
+          status: 'PENDING',
+        });
+
+        const results = await taskOccurrenceRepository.findNonCancelledByPlanningDayKeyRange(
+          '2026-09-01',
+          '2026-09-30'
+        );
+
+        const ids = results.map(r => r.id);
+        expect(ids).toContain(p1.id);
+        expect(ids).toContain(c1.id);
+        expect(ids).toContain(m1.id);
+        expect(ids).not.toContain(can1.id);
+        expect(ids).not.toContain(outBefore.id);
+        expect(ids).not.toContain(outAfter.id);
+      });
+
+      it('validates start and end dates', async () => {
+        await expect(
+          taskOccurrenceRepository.findNonCancelledByPlanningDayKeyRange('invalid', '2026-09-30')
+        ).rejects.toThrow();
+
+        await expect(
+          taskOccurrenceRepository.findNonCancelledByPlanningDayKeyRange('2026-09-30', '2026-09-01')
+        ).rejects.toThrow(TaskValidationError);
+      });
+    });
   });
 });

@@ -1555,4 +1555,191 @@ describe('MaterializationEngine (M6 Persistence Pipeline)', () => {
       expect(rows).toHaveLength(1);
     });
   });
+
+  // =========================================================================
+  // 13. CREATE-ONLY RANGE SAFETY & PENDING REMATERIALIZATION (M14)
+  // =========================================================================
+  describe('Create-Only Range Safety & Pending Rematerialization (M14)', () => {
+    it('CR-01: Missing occurrence outside createAllowedPlanningDayKeyRange returns SKIPPED_CREATE_OUT_OF_RANGE and creates zero rows', async () => {
+      const def = await taskDefinitionRepository.create({
+        id: 'def-cr-01',
+        title: 'Out of Range Create Task',
+        startDate: '2026-09-15',
+        scheduleType: 'EXACT_TIME',
+        scheduleData: { localTime: '10:00' },
+        seriesId: 'series-cr-01',
+        isActive: true,
+      });
+
+      const context = createTestContext('2026-09-15');
+      // Allowed range is Oct 1 to Oct 31, but candidate resolves to 2026-09-15
+      const res = await materializationEngine.materializeOne(
+        {
+          seriesId: def.seriesId,
+          seedDate: '2026-09-15',
+          createAllowedPlanningDayKeyRange: {
+            start: '2026-10-01',
+            end: '2026-10-31',
+          },
+        },
+        context
+      );
+
+      expect(res.action).toBe('SKIPPED_CREATE_OUT_OF_RANGE');
+      expect(res.occurrenceId).toBe('');
+
+      // Verify zero rows created
+      const rows = nodeDb
+        .prepare('SELECT id FROM task_occurrences WHERE series_id = ?')
+        .all(def.seriesId);
+      expect(rows).toHaveLength(0);
+    });
+
+    it('CR-02: Missing occurrence inside createAllowedPlanningDayKeyRange returns CREATED', async () => {
+      const def = await taskDefinitionRepository.create({
+        id: 'def-cr-02',
+        title: 'In Range Create Task',
+        startDate: '2026-09-15',
+        scheduleType: 'EXACT_TIME',
+        scheduleData: { localTime: '10:00' },
+        seriesId: 'series-cr-02',
+        isActive: true,
+      });
+
+      const context = createTestContext('2026-09-15');
+      const res = await materializationEngine.materializeOne(
+        {
+          seriesId: def.seriesId,
+          seedDate: '2026-09-15',
+          createAllowedPlanningDayKeyRange: {
+            start: '2026-09-01',
+            end: '2026-09-30',
+          },
+        },
+        context
+      );
+
+      expect(res.action).toBe('CREATED');
+      expect(res.occurrenceId).toBeTruthy();
+
+      const rows = nodeDb
+        .prepare('SELECT id, planning_day_key FROM task_occurrences WHERE series_id = ?')
+        .all(def.seriesId);
+      expect(rows).toHaveLength(1);
+      expect((rows[0] as any).planning_day_key).toBe('2026-09-15');
+    });
+
+    it('CR-03: Existing PENDING occurrence moving outside range IS canonically updated (split create/update policy)', async () => {
+      const def = await taskDefinitionRepository.create({
+        id: 'def-cr-03',
+        title: 'Moving Out Pending Task',
+        startDate: '2026-09-30',
+        scheduleType: 'EXACT_TIME',
+        scheduleData: { localTime: '10:00' },
+        seriesId: 'series-cr-03',
+        isActive: true,
+      });
+
+      // Create pre-existing PENDING occurrence with old planningDayKey = '2026-09-30'
+      const occ = await taskOccurrenceRepository.create({
+        id: 'occ-cr-03',
+        taskDefinitionId: def.id,
+        seriesId: def.seriesId,
+        localDate: '2026-09-30',
+        planningDayKey: '2026-09-30',
+        timezone: 'America/Chicago',
+        status: 'PENDING',
+      });
+
+      // Now create context that resolves to 2026-09-30 10:00
+      const context = createTestContext('2026-09-30');
+
+      // We specify createAllowedPlanningDayKeyRange = [2026-10-01, 2026-10-31] (September 30 is outside!)
+      // BUT this row already exists as PENDING, so it must be UPDATED, not skipped!
+      const res = await materializationEngine.materializeOne(
+        {
+          seriesId: def.seriesId,
+          seedDate: '2026-09-30',
+          createAllowedPlanningDayKeyRange: {
+            start: '2026-10-01',
+            end: '2026-10-31',
+          },
+        },
+        context
+      );
+
+      expect(res.action).toBe('UPDATED');
+      expect(res.occurrenceId).toBe(occ.id);
+    });
+
+    it('CR-04: Terminal rows remain frozen even with createAllowedPlanningDayKeyRange', async () => {
+      const def = await taskDefinitionRepository.create({
+        id: 'def-cr-04',
+        title: 'Terminal Task',
+        startDate: '2026-09-15',
+        scheduleType: 'EXACT_TIME',
+        scheduleData: { localTime: '10:00' },
+        seriesId: 'series-cr-04',
+        isActive: true,
+      });
+
+      await taskOccurrenceRepository.create({
+        id: 'occ-cr-04-comp',
+        taskDefinitionId: def.id,
+        seriesId: def.seriesId,
+        localDate: '2026-09-15',
+        planningDayKey: '2026-09-15',
+        timezone: 'America/Chicago',
+        status: 'COMPLETED',
+        completedAt: '2026-09-15T10:30:00.000Z',
+      });
+
+      const context = createTestContext('2026-09-15');
+      const res = await materializationEngine.materializeOne(
+        {
+          seriesId: def.seriesId,
+          seedDate: '2026-09-15',
+          createAllowedPlanningDayKeyRange: {
+            start: '2026-09-01',
+            end: '2026-09-30',
+          },
+        },
+        context
+      );
+
+      expect(res.action).toBe('SKIPPED_COMPLETED');
+    });
+
+    it('CR-05: materializeBatch counts skippedCreateOutOfRange correctly', async () => {
+      const def = await taskDefinitionRepository.create({
+        id: 'def-cr-05',
+        title: 'Batch Range Task',
+        startDate: '2026-09-15',
+        scheduleType: 'EXACT_TIME',
+        scheduleData: { localTime: '10:00' },
+        seriesId: 'series-cr-05',
+        isActive: true,
+      });
+
+      const context = createTestContext('2026-09-15');
+      const summary = await materializationEngine.materializeBatch(
+        [
+          {
+            seriesId: def.seriesId,
+            seedDate: '2026-09-15',
+            createAllowedPlanningDayKeyRange: {
+              start: '2026-10-01',
+              end: '2026-10-31',
+            },
+          },
+        ],
+        context
+      );
+
+      expect(summary.created).toBe(0);
+      expect(summary.skippedCreateOutOfRange).toBe(1);
+      expect(summary.results[0].action).toBe('SKIPPED_CREATE_OUT_OF_RANGE');
+    });
+  });
 });
+

@@ -262,13 +262,34 @@
 ---
 
 ### 16. Calendar UI & Month Grid
-- **Authoritative Docs:** `docs/MASTER_PRODUCT_SPEC.md` (Section 6)
+- **Authoritative Docs:** `docs/MASTER_PRODUCT_SPEC.md` (Section 6), `docs/CURRENT_MILESTONE.md`
 - **Source Paths:**
-  - `src/domain/calendar/CalendarEngine.ts`
-  - `src/screens/CalendarScreen.tsx`
-  - `src/components/calendar/`
-- **Relevant Tests:** (To be created in M14)
-- **Milestone Owner:** **M14 (PENDING)**
+  - `src/domain/calendar/calendarGrid.ts` (Sunday-first 28/35/42-cell grid builder, Hijri mapping, accessibility labels)
+  - `src/services/CalendarMonthOrchestrator.ts` (Dual date model, SETUP_REQUIRED safety, historical guard, batch query, upcoming sorting, 5-prayer projection)
+  - `src/features/task-form/recurringHorizonSync.ts` (`syncRange` with `[monthStart - 2, monthEnd + 2]` seed range, Source-B non-recurring support)
+  - `src/domain/materialization/MaterializationEngine.ts` (Split policy: `createAllowedPlanningDayKeyRange` on CREATE only, canonical PENDING rematerialization)
+  - `src/data/repositories/TaskOccurrenceRepository.ts` (`findNonCancelledByPlanningDayKeyRange`)
+  - `src/hooks/useCalendar.ts` (Calendar state, filler cell navigation, app foreground refresh)
+  - `src/components/calendar/CalendarHeader.tsx` (Month title, Hijri header span, navigation)
+  - `src/components/calendar/CalendarDayCell.tsx` (Single neutral task dot, accessible labels, touch targets)
+  - `src/components/calendar/CalendarMonthGrid.tsx` (Sunday-first 4/5/6 row grid)
+  - `src/components/calendar/DayDetailTaskList.tsx` (Exactly five prayer sections in fixed order, Sunrise excluded, secondary Anytime area, read-only cards)
+  - `src/components/calendar/UpcomingSection.tsx` (Chronologically sorted future pending tasks in visible month, capped at 50)
+  - `app/(tabs)/calendar.tsx` (Screen integration with SETUP_REQUIRED handling)
+- **Relevant Tests:**
+  - `src/domain/materialization/MaterializationEngine.test.ts` (CR-01..05)
+  - `src/data/repositories/__tests__/TaskOccurrenceRepository.test.ts`
+  - `src/features/task-form/__tests__/recurringHorizonSync.test.ts`
+  - `src/domain/calendar/__tests__/calendarGrid.test.ts`
+  - `src/services/__tests__/CalendarMonthOrchestrator.test.ts`
+  - `src/components/calendar/__tests__/CalendarHeader.test.tsx`
+  - `src/components/calendar/__tests__/CalendarDayCell.test.tsx`
+  - `src/components/calendar/__tests__/CalendarMonthGrid.test.tsx`
+  - `src/components/calendar/__tests__/DayDetailTaskList.test.tsx`
+  - `src/components/calendar/__tests__/UpcomingSection.test.tsx`
+  - `src/hooks/__tests__/useCalendar.test.ts`
+  - `app/(tabs)/__tests__/calendar.test.tsx`
+- **Milestone Owner:** **M14 (IMPLEMENTED / AWAITING SONNET REVIEW)**
 
 ---
 

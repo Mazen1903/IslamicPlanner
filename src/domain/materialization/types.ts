@@ -3,6 +3,10 @@ import type { SchedulingContext } from '@/domain/scheduling/types';
 export interface MaterializationRequest {
   seriesId: string;
   seedDate: string; // 'YYYY-MM-DD'
+  createAllowedPlanningDayKeyRange?: {
+    start: string; // inclusive YYYY-MM-DD
+    end: string;   // inclusive YYYY-MM-DD
+  };
 }
 
 export type MaterializationAction =
@@ -10,7 +14,8 @@ export type MaterializationAction =
   | 'UPDATED'
   | 'SKIPPED_COMPLETED'
   | 'SKIPPED_MISSED'
-  | 'SKIPPED_CANCELLED';
+  | 'SKIPPED_CANCELLED'
+  | 'SKIPPED_CREATE_OUT_OF_RANGE';
 
 export interface MaterializationResult {
   seriesId: string;
@@ -32,6 +37,7 @@ export interface MaterializationSummary {
   skippedCompleted: number;
   skippedMissed: number;
   skippedCancelled: number;
+  skippedCreateOutOfRange: number;
   errors: MaterializationItemError[];
 }
 

@@ -167,6 +167,17 @@ export interface HorizonSyncResult {
   issues: SyncIssue[];
 }
 
+export interface CalendarRangeSyncResult {
+  seriesProcessed: number;
+  created: number;
+  updated: number;
+  skippedCompleted: number;
+  skippedMissed: number;
+  skippedCancelled: number;
+  skippedCreateOutOfRange: number;
+  issues: SyncIssue[];
+}
+
 export interface SchedulePreviewResult {
   status: 'READY' | 'CONTEXT_UNAVAILABLE' | 'INVALID';
   primaryLabel?: string;

@@ -409,6 +409,39 @@ export class TaskOccurrenceRepository {
   }
 
   /**
+   * Finds all non-CANCELLED TaskOccurrences whose planningDayKey falls within [startDate, endDate].
+   * Used for Calendar month display.
+   */
+  async findNonCancelledByPlanningDayKeyRange(
+    startDate: string,
+    endDate: string,
+    tx?: any
+  ): Promise<TaskOccurrence[]> {
+    assertValidCivilDate(startDate, 'startDate');
+    assertValidCivilDate(endDate, 'endDate');
+    if (startDate > endDate) {
+      throw new TaskValidationError(
+        `startDate (${startDate}) must be <= endDate (${endDate})`
+      );
+    }
+
+    const client = getDb(tx);
+    const rows = client
+      .select()
+      .from(taskOccurrences)
+      .where(
+        and(
+          ne(taskOccurrences.status, 'CANCELLED'),
+          gte(taskOccurrences.planningDayKey, startDate),
+          lte(taskOccurrences.planningDayKey, endDate)
+        )
+      )
+      .all();
+
+    return rows.map(mapRowToDomain);
+  }
+
+  /**
    * Queries occurrences belonging to a planning day.
    */
   async findByPlanningDay(planningDayKey: string, tx?: any): Promise<TaskOccurrence[]> {

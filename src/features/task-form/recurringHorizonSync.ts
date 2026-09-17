@@ -5,10 +5,10 @@ import { MaterializationEngine, materializationEngine as defaultMaterializationE
 import { HijriService } from '@/domain/calendar/HijriService';
 import { buildPrayerTimeline } from '@/domain/prayer/PrayerTimeline';
 import type { SchedulingContext } from '@/domain/scheduling/types';
-import type { TaskDefinition } from '@/domain/task/types';
+import type { TaskDefinition, TaskOccurrence } from '@/domain/task/types';
 import type { CivilDateRange, RecurrenceContext } from '@/domain/recurrence/types';
 import type { TodayTemporalInputs } from '@/services/types';
-import type { HorizonSyncResult, SyncIssue } from './types';
+import type { HorizonSyncResult, CalendarRangeSyncResult, SyncIssue } from './types';
 
 /**
  * Generates desired seeds for a specific TaskDefinition version within its effective
@@ -291,6 +291,222 @@ export class RecurringHorizonSync {
     }
 
     return { created, retained, deleted, issues };
+  }
+
+  /**
+   * Synchronizes occurrences for a Calendar month range (candidateSeedRange = [monthStart - 2, monthEnd + 2]).
+   *
+   * Invariants (M14):
+   * 1. Two-source discovery:
+   *    Source A: active recurring defs intersecting candidate range + active non-recurring defs in candidate range
+   *    Source B: existing PENDING occurrences via findPendingByLocalDateRange (both recurring and non-recurring)
+   * 2. Split create vs. update policy:
+   *    - createAllowedPlanningDayKeyRange is passed to materializeOne.
+   *    - Missing occurrences are only created if derived planningDayKey is within createAllowedRange.
+   *    - Existing PENDING occurrences are always canonically rematerialized even if their new placement
+   *      moves out of or into the visible month.
+   * 3. Terminal immutability: Never mutates COMPLETED, MISSED, or CANCELLED occurrences.
+   * 4. Zero deletion: Calendar never deletes PENDING occurrences.
+   * 5. Zero lifecycle sweep: Calendar never runs lifecycle sweep.
+   * 6. Error isolation: If scheduling resolution fails (e.g. INSUFFICIENT_TIMELINE for extreme offset),
+   *    records a SyncIssue and continues without crashing.
+   */
+  async syncRange(
+    candidateSeedRange: CivilDateRange,
+    createAllowedRange: { start: string; end: string },
+    temporalInputs: TodayTemporalInputs
+  ): Promise<CalendarRangeSyncResult> {
+    const issues: SyncIssue[] = [];
+    let totalCreated = 0;
+    let totalUpdated = 0;
+    let totalSkippedCompleted = 0;
+    let totalSkippedMissed = 0;
+    let totalSkippedCancelled = 0;
+    let totalSkippedCreateOutOfRange = 0;
+
+    // 1. Candidate Discovery
+    // A1. Active recurring definitions intersecting candidateSeedRange
+    let recurringDefs: TaskDefinition[] = [];
+    try {
+      recurringDefs = await this.defRepo.findActiveRecurringIntersectingRange(
+        candidateSeedRange.start,
+        candidateSeedRange.end
+      );
+    } catch (err: any) {
+      issues.push({
+        stage: 'DISCOVERY',
+        message: `Failed to discover active recurring definitions: ${err?.message ?? err}`,
+      });
+    }
+
+    // A2. Active non-recurring definitions with startDate in candidateSeedRange
+    let nonRecurringDefs: TaskDefinition[] = [];
+    try {
+      nonRecurringDefs = await this.defRepo.findActiveNonRecurringByStartDateRange(
+        candidateSeedRange.start,
+        candidateSeedRange.end
+      );
+    } catch (err: any) {
+      issues.push({
+        stage: 'DISCOVERY',
+        message: `Failed to discover active non-recurring definitions: ${err?.message ?? err}`,
+      });
+    }
+
+    // B. Existing PENDING occurrences in candidateSeedRange (by stable localDate)
+    let pendingOccurrences: TaskOccurrence[] = [];
+    try {
+      pendingOccurrences = await this.occRepo.findPendingByLocalDateRange(
+        candidateSeedRange.start,
+        candidateSeedRange.end
+      );
+    } catch (err: any) {
+      issues.push({
+        stage: 'DISCOVERY',
+        message: `Failed to discover pending occurrences: ${err?.message ?? err}`,
+      });
+    }
+
+    // Initialize Hijri context if needed for recurrence
+    let recurrenceCtx: RecurrenceContext | undefined;
+    try {
+      recurrenceCtx = {
+        hijriService: this.hijri,
+        hijriAdjustment: { globalAdjustment: 0 },
+      };
+    } catch (err: any) {
+      issues.push({
+        stage: 'CONTEXT',
+        message: `Failed to initialize Hijri recurrence context: ${err?.message ?? err}`,
+      });
+    }
+
+    // Collect all candidate (seriesId, seedDate) pairs to materialize
+    // Map of seriesId -> Set<seedDate>
+    const candidatesBySeries = new Map<string, Set<string>>();
+
+    const addCandidate = (seriesId: string, seedDate: string) => {
+      let set = candidatesBySeries.get(seriesId);
+      if (!set) {
+        set = new Set<string>();
+        candidatesBySeries.set(seriesId, set);
+      }
+      set.add(seedDate);
+    };
+
+    // 1. Add non-recurring definition seeds
+    for (const def of nonRecurringDefs) {
+      addCandidate(def.seriesId, def.startDate);
+    }
+
+    // 2. Add recurring definition desired seeds
+    const recurringSeriesIds = Array.from(new Set(recurringDefs.map(d => d.seriesId)));
+    for (const seriesId of recurringSeriesIds) {
+      try {
+        const allVersions = await this.defRepo.findBySeriesId(seriesId);
+        const activeVersions = allVersions.filter(v => v.isActive);
+        for (const version of activeVersions) {
+          const seeds = generateVersionSeeds(version, candidateSeedRange, this.recEngine, recurrenceCtx);
+          for (const s of seeds) {
+            addCandidate(seriesId, s);
+          }
+        }
+      } catch (err: any) {
+        issues.push({
+          stage: 'RECURRENCE',
+          seriesId,
+          message: `Failed generating recurrence seeds for series ${seriesId}: ${err?.message ?? err}`,
+        });
+      }
+    }
+
+    // 3. Add ALL Source-B existing PENDING occurrences (guarantees non-recurring and recurring PENDING are included!)
+    for (const occ of pendingOccurrences) {
+      addCandidate(occ.seriesId, occ.localDate);
+    }
+
+    let seriesProcessed = 0;
+
+    // Process all candidate pairs
+    for (const [seriesId, seeds] of candidatesBySeries.entries()) {
+      seriesProcessed++;
+      const sortedSeeds = Array.from(seeds).sort();
+
+      for (const seedDate of sortedSeeds) {
+        let context: SchedulingContext;
+        try {
+          const timeline = buildPrayerTimeline(
+            seedDate,
+            temporalInputs.coordinates,
+            temporalInputs.params
+          );
+          context = {
+            timeline,
+            planningDayConfig: temporalInputs.planningDayConfig,
+          };
+        } catch (err: any) {
+          issues.push({
+            stage: 'CONTEXT',
+            seriesId,
+            seedDate,
+            message: `Failed to build date-scoped scheduling context for ${seedDate}: ${err?.message ?? err}`,
+          });
+          continue;
+        }
+
+        try {
+          const res = await this.matEngine.materializeOne(
+            {
+              seriesId,
+              seedDate,
+              createAllowedPlanningDayKeyRange: createAllowedRange,
+            },
+            context
+          );
+
+          switch (res.action) {
+            case 'CREATED':
+              totalCreated++;
+              break;
+            case 'UPDATED':
+              totalUpdated++;
+              break;
+            case 'SKIPPED_COMPLETED':
+              totalSkippedCompleted++;
+              break;
+            case 'SKIPPED_MISSED':
+              totalSkippedMissed++;
+              break;
+            case 'SKIPPED_CANCELLED':
+              totalSkippedCancelled++;
+              break;
+            case 'SKIPPED_CREATE_OUT_OF_RANGE':
+              totalSkippedCreateOutOfRange++;
+              break;
+          }
+        } catch (err: any) {
+          // Failure isolation: large offsets (INSUFFICIENT_TIMELINE) or other scheduling issues
+          // are recorded as per-item sync issues; does not crash the month sync.
+          issues.push({
+            stage: 'MATERIALIZE',
+            seriesId,
+            seedDate,
+            message: `Failed to materialize occurrence for ${seedDate}: ${err?.message ?? err}`,
+          });
+        }
+      }
+    }
+
+    return {
+      seriesProcessed,
+      created: totalCreated,
+      updated: totalUpdated,
+      skippedCompleted: totalSkippedCompleted,
+      skippedMissed: totalSkippedMissed,
+      skippedCancelled: totalSkippedCancelled,
+      skippedCreateOutOfRange: totalSkippedCreateOutOfRange,
+      issues,
+    };
   }
 }
 

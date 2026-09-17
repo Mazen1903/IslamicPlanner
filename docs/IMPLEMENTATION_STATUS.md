@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M13 — Notifications (IMPLEMENTED / AWAITING SONNET REVIEW)  
-**Last Updated:** 2026-09-17 (M13 Implementation Complete)  
+**Current Milestone:** M14 — Calendar UI Screen (IMPLEMENTED / AWAITING SONNET REVIEW)  
+**Last Updated:** 2026-09-17 (M14 Implementation Complete)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -23,8 +23,8 @@
 | **M10** | Add/Edit Task | **CLOSED / SONNET APPROVED** | 2026-09-16 | Implementation commit: `a932ab0`. Review follow-up commit: `9b060e0`. Review result: A / APPROVED. Tests: 710/710 sequential. 1 dependency (`@react-native-community/datetimepicker`), 0 migrations. 4 modes, dual-date model, 2-phase save, plan-before-delete horizon sync, live preview, scope selection. Deferred debt recorded. |
 | **M11** | Missed / Completed / Overdue behavior | **CLOSED / SONNET APPROVED** | 2026-09-16 | Baseline: `55ff3d2acc2b4e56ee4dcdb44535c0af5dee12fc`. Implementation: `a961d65`. Review: A / APPROVED. Tests: 739/739 (39 suites). Migrations: 0. Dependencies: 0. Regressions: 0. Background lifecycle transitions, atomic PENDING->terminal updates, date-scoped timeline resolution, calm overdue/missed/completed UI presentation, live deriveOverdueState. |
 | **M12** | Location / Travel / Timezone Behavior | **CLOSED / SONNET APPROVED** | 2026-09-16 | Bundle isolation fix commit: `5897ec8`. 813/813 tests (48 suites). GeoNames offline city dataset outside JS bundle. |
-| **M13** | Notifications | **Implemented / Awaiting Sonnet Review** | 2026-09-17 | 907/907 tests (59 suites). Local task reminders via expo-notifications. Shared drain, platform-aware equality, cap 48, zero migrations, zero new dependencies. |
-| **M14** | Calendar month | Not Started | — | Prerequisites: M6, M7, **M8** |
+| **M13** | Notifications | **CLOSED / SONNET APPROVED** | 2026-09-17 | 907/907 tests (59 suites). Local task reminders via expo-notifications. Shared drain, platform-aware equality, cap 48, zero migrations, zero new dependencies. Physical device delivery verification pending native rebuild. |
+| **M14** | Calendar month | **Implemented / Awaiting Sonnet Review** | 2026-09-17 | 961/961 tests (68 suites). Sunday-first 28/35/42 natural grid, ±2 candidate seed discovery, CREATE-only historical bounds safety, canonical unconstrained PENDING rematerialization, batch query by planningDayKey, 5-prayer + Anytime read-only detail, Upcoming This Month section. |
 | **M15** | Worship Suggestions engine | Not Started | — | Prerequisites: M9, M8. Opus review required |
 | **M16** | Worship UI | Not Started | — | Prerequisites: M7, M15 |
 | **M17** | Settings | Not Started | — | Prerequisites: M1, M3, M12, M13, M8 |
@@ -757,5 +757,46 @@
   1. *GeoNames Timezone Validation:* 171,035 raw input records, 171,035 accepted output records, 0 rejected records, 392 unique valid timezones (100% validated via `Intl.DateTimeFormat`), minified output size 23,965,935 bytes (22.86 MB).
   2. *Lazy Dataset Metro Graph:* `cities.json` verified 0 MB startup memory impact, unloaded during Today screen, `useToday`, `useLocation`, and `SetupRequiredState` lifecycles (`getLoadedCityDataset() === null`).
   3. *Deterministic AUTO Mode Switching:* Explicit AUTO action prompts only on user intent, commits fresh GPS candidate if successful, falls back to committed AUTO snapshot if permission denied or GPS fix fails, and leaves user in current flow with manual fallback if no snapshot exists (never leaves broken `location_mode = 'AUTO'`).
+
+---
+
+## M13 Completion Record
+
+- **Date:** 2026-09-17
+- **Scope:** Local notification engine for task reminders via `expo-notifications`.
+- **Closure:** CLOSED / SONNET APPROVED (Commit: `471649d`).
+- **Tests:** 907 / 907 passing (59 test suites).
+- **Physical Device Delivery:** Verification pending native rebuild as an operational release item.
+
+---
+
+## M14 Completion Record
+
+- **Date:** 2026-09-17
+- **Scope:** Calendar Month Grid, Per-Cell Hijri Dates, Bounded Range Recurrence Synchronization, Read-Only 5-Prayer Selected-Day Detail, and Upcoming This Month Section.
+- **Architectural Deliverables:**
+  - `src/domain/materialization/types.ts`: Added `createAllowedPlanningDayKeyRange`, `SKIPPED_CREATE_OUT_OF_RANGE`, and `skippedCreateOutOfRange` batch result field.
+  - `src/domain/materialization/MaterializationEngine.ts`: Implemented split range policy (unconstrained canonical rematerialization for existing PENDING rows in Step 8; strict `createAllowedPlanningDayKeyRange` enforcement for new occurrence creation in Step 9; tracking in `materializeBatch`).
+  - `src/data/repositories/TaskOccurrenceRepository.ts`: Added `findNonCancelledByPlanningDayKeyRange(startDate, endDate)`.
+  - `src/features/task-form/recurringHorizonSync.ts`: Implemented `syncRange()` discovering recurring and non-recurring definitions and all Source-B PENDING occurrences; candidate seed range `[monthStart - 2, monthEnd + 2]`; zero deletion; zero lifecycle sweep; per-item error isolation.
+  - `src/domain/calendar/calendarGrid.ts`: Sunday-first 28/35/42 natural grid calculation (4, 5, or 6 rows; never forcing 5 rows), Hijri mapping, filler cell flags (`hasTasks = false`), and accessibility labels.
+  - `src/services/CalendarMonthOrchestrator.ts`: Dual date model (`plannerLocalCivilDate` vs `currentPlanningDayKey`), SETUP_REQUIRED safety (zero sync, no fabricated prayer/task data), entirely historical month guard (`currentPlanningDayKey > monthEnd` -> 0 sync), single-batch query by planningDayKey, upcoming sorting per 5 rules, and 5-prayer + Anytime selected-day projection.
+  - `src/hooks/useCalendar.ts`: Calendar state management, filler cell navigation, app foreground refresh.
+  - `src/components/calendar/CalendarHeader.tsx`: Month navigation and Hijri header span.
+  - `src/components/calendar/CalendarDayCell.tsx`: React.memo cell, Gregorian/Hijri numbers, today ring, selection highlight, single neutral/accent task dot (`hasTasks`), accessible labels.
+  - `src/components/calendar/CalendarMonthGrid.tsx`: Weekday headers and 4/5/6 row grid.
+  - `src/components/calendar/DayDetailTaskList.tsx`: Exactly 5 prayer sections in fixed order (`Fajr`, `Dhuhr`, `Asr`, `Maghrib`, `Isha`), Sunrise excluded, secondary Anytime area below prayer sections, read-only task cards (no completion mutation).
+  - `src/components/calendar/UpcomingSection.tsx`: Chronologically ordered future pending tasks for visible month, capped at 50 with overflow indicator.
+  - `app/(tabs)/calendar.tsx`: Screen connecting hook, header, grid, setup state, day detail, and upcoming section.
+- **Verification:**
+  - `npm test -- --runInBand`: Passed (68 test suites, 961 tests passed, 0 failures).
+  - `npm test`: Passed (68 test suites, 961 tests passed in parallel, 0 failures).
+  - `npm run typecheck`: Passed (0 errors).
+  - `npm run lint`: Passed (0 errors, 0 warnings).
+  - `npx expo-doctor`: 20/21 checks passed (known pre-existing patch version baseline unchanged).
+  - `npx expo install --check`: Confirmed 0 new dependencies added.
+  - SQLite migrations: 0 added.
+  - Dependencies: 0 added.
+
 
 
