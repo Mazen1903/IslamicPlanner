@@ -1,10 +1,10 @@
 # Current Milestone: M14 — Calendar UI Screen
 
-> **Current State:** M14 IMPLEMENTED / AWAITING SONNET REVIEW — 961/961 tests, 68 suites  
+> **Current State:** M14 CLOSED / SONNET APPROVED — 961/961 tests, 68 suites  
 > **Current Test Suite:** 961 tests passing (68 test suites)  
-> **Milestone Status:** M14 — IMPLEMENTED / AWAITING SONNET REVIEW  
+> **Milestone Status:** M14 — CLOSED / SONNET APPROVED  
 > **Architecture Status:** APPROVED & FROZEN  
-> **Implementation Status:** COMPLETED (961/961 tests green)  
+> **Implementation Status:** COMPLETED & CLOSED (961/961 tests green)  
 
 ---
 
@@ -39,7 +39,7 @@ Key architectural principles:
 |---|---|
 | **Milestone** | **M14 — Calendar UI Screen** |
 | **Type** | Calendar Month Grid & Read-Only Day Detail Screen |
-| **Current Phase** | **M14 — IMPLEMENTED / AWAITING SONNET REVIEW** |
+| **Current Phase** | **M14 — CLOSED / SONNET APPROVED** |
 | **Architecture Status** | **APPROVED & FROZEN** |
-| **Implementation Status** | **COMPLETED (961/961 tests green)** |
+| **Implementation Status** | **COMPLETED & CLOSED (961/961 tests green)** |
 | **Current Tests** | **961 / 961 passing (68 test suites)** |

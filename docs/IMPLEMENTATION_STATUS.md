@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M14 — Calendar UI Screen (IMPLEMENTED / AWAITING SONNET REVIEW)  
-**Last Updated:** 2026-09-17 (M14 Implementation Complete)  
+**Current Milestone:** M15 — Worship Suggestions Engine (PENDING)  
+**Last Updated:** 2026-09-17 (M14 CLOSED / SONNET APPROVED)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -24,7 +24,7 @@
 | **M11** | Missed / Completed / Overdue behavior | **CLOSED / SONNET APPROVED** | 2026-09-16 | Baseline: `55ff3d2acc2b4e56ee4dcdb44535c0af5dee12fc`. Implementation: `a961d65`. Review: A / APPROVED. Tests: 739/739 (39 suites). Migrations: 0. Dependencies: 0. Regressions: 0. Background lifecycle transitions, atomic PENDING->terminal updates, date-scoped timeline resolution, calm overdue/missed/completed UI presentation, live deriveOverdueState. |
 | **M12** | Location / Travel / Timezone Behavior | **CLOSED / SONNET APPROVED** | 2026-09-16 | Bundle isolation fix commit: `5897ec8`. 813/813 tests (48 suites). GeoNames offline city dataset outside JS bundle. |
 | **M13** | Notifications | **CLOSED / SONNET APPROVED** | 2026-09-17 | 907/907 tests (59 suites). Local task reminders via expo-notifications. Shared drain, platform-aware equality, cap 48, zero migrations, zero new dependencies. Physical device delivery verification pending native rebuild. |
-| **M14** | Calendar month | **Implemented / Awaiting Sonnet Review** | 2026-09-17 | 961/961 tests (68 suites). Sunday-first 28/35/42 natural grid, ±2 candidate seed discovery, CREATE-only historical bounds safety, canonical unconstrained PENDING rematerialization, batch query by planningDayKey, 5-prayer + Anytime read-only detail, Upcoming This Month section. |
+| **M14** | Calendar month | **CLOSED / SONNET APPROVED** | 2026-09-17 | 961/961 tests (68 suites). Sunday-first 28/35/42 natural grid, ±2 candidate seed discovery, CREATE-only historical bounds safety, canonical unconstrained PENDING rematerialization, batch query by planningDayKey, 5-prayer + Anytime read-only detail, Upcoming This Month section. |
 | **M15** | Worship Suggestions engine | Not Started | — | Prerequisites: M9, M8. Opus review required |
 | **M16** | Worship UI | Not Started | — | Prerequisites: M7, M15 |
 | **M17** | Settings | Not Started | — | Prerequisites: M1, M3, M12, M13, M8 |
