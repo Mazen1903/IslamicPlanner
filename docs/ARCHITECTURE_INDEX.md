@@ -234,9 +234,30 @@
 ### 15. Notifications & Reminders
 - **Authoritative Docs:** `docs/NOTIFICATIONS.md`, `docs/MASTER_PRODUCT_SPEC.md` (Section 8)
 - **Source Paths:**
-  - `src/domain/notification/`
-- **Relevant Tests:** (To be created in M13)
-- **Milestone Owner:** **M13 (PENDING)**
+  - `src/domain/notification/types.ts`
+  - `src/domain/notification/notificationIdentity.ts`
+  - `src/domain/notification/notificationTrigger.ts`
+  - `src/domain/notification/notificationEquality.ts`
+  - `src/domain/notification/index.ts`
+  - `src/services/notification/NotificationSchedulerAdapter.ts`
+  - `src/services/notification/NotificationChannelManager.ts`
+  - `src/services/notification/NotificationBootstrap.ts`
+  - `src/services/notification/NotificationReconciliationService.ts`
+  - `src/services/notification/index.ts`
+  - `app/(tabs)/settings/notifications.tsx`
+- **Relevant Tests:**
+  - `src/domain/notification/__tests__/notificationIdentity.test.ts`
+  - `src/domain/notification/__tests__/notificationTrigger.test.ts`
+  - `src/domain/notification/__tests__/notificationEquality.test.ts`
+  - `src/services/notification/__tests__/NotificationSchedulerAdapter.test.ts`
+  - `src/services/notification/__tests__/NotificationChannelManager.test.ts`
+  - `src/services/notification/__tests__/NotificationBootstrap.test.ts`
+  - `src/services/notification/__tests__/NotificationReconciliationService.test.ts`
+  - `src/services/notification/__tests__/NotificationConcurrency.test.ts`
+  - `src/services/notification/__tests__/NotificationIntegrations.test.ts`
+  - `src/hooks/__tests__/useTodayNotifications.test.ts`
+  - `app/(tabs)/settings/__tests__/notifications.test.tsx`
+- **Milestone Owner:** **M13 (IMPLEMENTED / AWAITING SONNET REVIEW)**
 
 ---
 

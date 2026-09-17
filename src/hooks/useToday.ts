@@ -23,6 +23,10 @@ import {
 import {
   OccurrenceLifecycleService,
 } from '@/services/OccurrenceLifecycleService';
+import {
+  NotificationReconciliationService,
+  notificationReconciliationService as defaultNotificationService,
+} from '@/services/notification/NotificationReconciliationService';
 
 export interface UseTodayOptions {
   inputProvider?: TodayTemporalInputProvider;
@@ -30,6 +34,7 @@ export interface UseTodayOptions {
   coordinator?: PlannerRefreshCoordinator;
   locationRefreshCoordinator?: LocationRefreshCoordinator;
   lifecycleService?: OccurrenceLifecycleService;
+  notificationService?: NotificationReconciliationService;
   engine?: TaskEngine;
   enableTimer?: boolean;
 }
@@ -41,9 +46,10 @@ export function useToday(options: UseTodayOptions = {}) {
   const engine = options.engine ?? taskEngine;
   const defaultLifecycle = useMemo(() => new OccurrenceLifecycleService(), []);
   const lifecycleService = options.lifecycleService ?? defaultLifecycle;
+  const notificationService = options.notificationService ?? defaultNotificationService;
   const defaultCoordinator = useMemo(
-    () => new PlannerRefreshCoordinator(inputProvider, orchestrator, undefined, lifecycleService),
-    [inputProvider, orchestrator, lifecycleService]
+    () => new PlannerRefreshCoordinator(inputProvider, orchestrator, undefined, lifecycleService, notificationService),
+    [inputProvider, orchestrator, lifecycleService, notificationService]
   );
   const coordinator = options.coordinator ?? defaultCoordinator;
   const locationRefresh = options.locationRefreshCoordinator ?? defaultLocationRefreshCoordinator;
@@ -54,6 +60,7 @@ export function useToday(options: UseTodayOptions = {}) {
   const coordinatorRef = useRef(coordinator);
   const locationRefreshRef = useRef(locationRefresh);
   const lifecycleServiceRef = useRef(lifecycleService);
+  const notificationServiceRef = useRef(notificationService);
   const engineRef = useRef(engine);
 
   useEffect(() => {
@@ -62,8 +69,9 @@ export function useToday(options: UseTodayOptions = {}) {
     coordinatorRef.current = coordinator;
     locationRefreshRef.current = locationRefresh;
     lifecycleServiceRef.current = lifecycleService;
+    notificationServiceRef.current = notificationService;
     engineRef.current = engine;
-  }, [inputProvider, orchestrator, coordinator, locationRefresh, lifecycleService, engine]);
+  }, [inputProvider, orchestrator, coordinator, locationRefresh, lifecycleService, notificationService, engine]);
 
   /**
    * Full refresh executor.
@@ -112,6 +120,10 @@ export function useToday(options: UseTodayOptions = {}) {
         const inputResult = await inputProviderRef.current.getInputs();
         if (inputResult.status === 'READY') {
           await lifecycleServiceRef.current.sweepExpired(now, inputResult.inputs);
+          // M13: Reconcile reminders after prayer transition sweep
+          notificationServiceRef.current.reconcile().catch(err => {
+            console.warn('[useToday] Prayer transition notification reconcile failed:', err);
+          });
         }
         const vm = await orchestratorRef.current.queryAndProject(runtime, now);
         useTodayStore.getState().commitReproject(token, vm);
@@ -146,6 +158,9 @@ export function useToday(options: UseTodayOptions = {}) {
   // Task completion action
   const completeTask = useCallback(async (occurrenceId: string) => {
     await engineRef.current.completeTask(occurrenceId);
+    // M13: Targeted cancellation of completed task reminder (best-effort)
+    notificationServiceRef.current.cancelOccurrenceReminder(occurrenceId).catch(() => {});
+
     const runtime = useTodayStore.getState().runtime;
     if (runtime) {
       const token = useTodayStore.getState().startReproject();

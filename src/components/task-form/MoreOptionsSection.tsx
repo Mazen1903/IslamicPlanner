@@ -160,48 +160,57 @@ export function MoreOptionsSection({
           <Text style={[typography.labelMedium, { color: colors.textSecondary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
             Reminder
           </Text>
-          <View style={styles.reminderPresetRow}>
-            {[
-              { val: null, label: 'None' },
-              { val: 0, label: 'At time' },
-              { val: 10, label: '10m before' },
-              { val: 15, label: '15m before' },
-              { val: 30, label: '30m before' },
-            ].map(item => {
-              const isSelected = state.reminderMinutes === item.val;
-              return (
-                <Pressable
-                  key={item.label}
-                  onPress={() => dispatch({ type: 'SET_REMINDER_MINUTES', payload: item.val })}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isSelected }}
-                  accessibilityLabel={`Reminder: ${item.label}`}
-                  testID={`reminder-preset-${item.val === null ? 'none' : item.val}`}
-                  style={[
-                    styles.reminderChip,
-                    {
-                      backgroundColor: isSelected ? colors.primary : colors.surfaceSecondary,
-                      borderColor: isSelected ? colors.primary : colors.border,
-                      borderRadius: radii.sm,
-                      minHeight: touchTargets.min,
-                    },
-                  ]}
-                >
-                  <Text
+          {state.scheduleMode === 'ANYTIME_TODAY' ? (
+            <Text
+              style={[typography.caption, { color: colors.textTertiary, fontStyle: 'italic', marginVertical: spacing.xs }]}
+              testID="anytime-reminder-helper"
+            >
+              Reminders require a specific time.
+            </Text>
+          ) : (
+            <View style={styles.reminderPresetRow}>
+              {[
+                { val: null, label: 'None' },
+                { val: 0, label: 'At time' },
+                { val: 10, label: '10m before' },
+                { val: 15, label: '15m before' },
+                { val: 30, label: '30m before' },
+              ].map(item => {
+                const isSelected = state.reminderMinutes === item.val;
+                return (
+                  <Pressable
+                    key={item.label}
+                    onPress={() => dispatch({ type: 'SET_REMINDER_MINUTES', payload: item.val })}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
+                    accessibilityLabel={`Reminder: ${item.label}`}
+                    testID={`reminder-preset-${item.val === null ? 'none' : item.val}`}
                     style={[
-                      typography.caption,
+                      styles.reminderChip,
                       {
-                        color: isSelected ? colors.textOnPrimary : colors.textPrimary,
-                        fontWeight: isSelected ? '700' : '500',
+                        backgroundColor: isSelected ? colors.primary : colors.surfaceSecondary,
+                        borderColor: isSelected ? colors.primary : colors.border,
+                        borderRadius: radii.sm,
+                        minHeight: touchTargets.min,
                       },
                     ]}
                   >
-                    {item.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+                    <Text
+                      style={[
+                        typography.caption,
+                        {
+                          color: isSelected ? colors.textOnPrimary : colors.textPrimary,
+                          fontWeight: isSelected ? '700' : '500',
+                        },
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
 
           {/* 3. Estimated Duration */}
           <Text style={[typography.labelMedium, { color: colors.textSecondary, marginTop: spacing.md, marginBottom: spacing.xs }]}>

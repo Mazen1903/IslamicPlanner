@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M12 — Location / Travel / Timezone Behavior (ARCHITECTURE NEXT)  
-**Last Updated:** 2026-09-16 (M11 Closed / Sonnet Approved)  
+**Current Milestone:** M13 — Notifications (IMPLEMENTED / AWAITING SONNET REVIEW)  
+**Last Updated:** 2026-09-17 (M13 Implementation Complete)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -22,8 +22,8 @@
 | **M9** | Recurrence engine | **CLOSED / OPUS APPROVED** | 2026-09-15 | Implementation commit: `5b713f2`. Final tests: 645/645 (100 M9 tests). Independent Claude Opus review: A — APPROVED. No regressions. Pure recurrence domain, strict RRULE allowlist, clamp-to-last-day monthly semantics, canonical Hijri membership, fail-fast range errors. No migration, no package changes. |
 | **M10** | Add/Edit Task | **CLOSED / SONNET APPROVED** | 2026-09-16 | Implementation commit: `a932ab0`. Review follow-up commit: `9b060e0`. Review result: A / APPROVED. Tests: 710/710 sequential. 1 dependency (`@react-native-community/datetimepicker`), 0 migrations. 4 modes, dual-date model, 2-phase save, plan-before-delete horizon sync, live preview, scope selection. Deferred debt recorded. |
 | **M11** | Missed / Completed / Overdue behavior | **CLOSED / SONNET APPROVED** | 2026-09-16 | Baseline: `55ff3d2acc2b4e56ee4dcdb44535c0af5dee12fc`. Implementation: `a961d65`. Review: A / APPROVED. Tests: 739/739 (39 suites). Migrations: 0. Dependencies: 0. Regressions: 0. Background lifecycle transitions, atomic PENDING->terminal updates, date-scoped timeline resolution, calm overdue/missed/completed UI presentation, live deriveOverdueState. |
-| **M12** | Location / Travel / Timezone Behavior | **Architecture Next** | — | Implementation not started. Prerequisites: M2, M6. Opus review required |
-| **M13** | Notifications | Not Started | — | Prerequisites: M2, M5, M12. Opus review required |
+| **M12** | Location / Travel / Timezone Behavior | **CLOSED / SONNET APPROVED** | 2026-09-16 | Bundle isolation fix commit: `5897ec8`. 813/813 tests (48 suites). GeoNames offline city dataset outside JS bundle. |
+| **M13** | Notifications | **Implemented / Awaiting Sonnet Review** | 2026-09-17 | 907/907 tests (59 suites). Local task reminders via expo-notifications. Shared drain, platform-aware equality, cap 48, zero migrations, zero new dependencies. |
 | **M14** | Calendar month | Not Started | — | Prerequisites: M6, M7, **M8** |
 | **M15** | Worship Suggestions engine | Not Started | — | Prerequisites: M9, M8. Opus review required |
 | **M16** | Worship UI | Not Started | — | Prerequisites: M7, M15 |

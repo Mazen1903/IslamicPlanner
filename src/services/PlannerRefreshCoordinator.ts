@@ -19,6 +19,10 @@ import {
   OccurrenceLifecycleService,
   occurrenceLifecycleService as defaultLifecycleService,
 } from './OccurrenceLifecycleService';
+import {
+  NotificationReconciliationService,
+  notificationReconciliationService as defaultNotificationService,
+} from './notification/NotificationReconciliationService';
 
 export type PlannerRefreshCoordinatorResult =
   | {
@@ -59,7 +63,8 @@ export class PlannerRefreshCoordinator {
     private readonly inputProvider: TodayTemporalInputProvider = new LocationAwareTodayTemporalInputProvider(),
     private readonly todayOrchestrator: TodayOrchestrator = new TodayOrchestrator(),
     private readonly recurringHorizonSync: RecurringHorizonSync = defaultRecurringHorizonSync,
-    private readonly lifecycleService: OccurrenceLifecycleService = defaultLifecycleService
+    private readonly lifecycleService: OccurrenceLifecycleService = defaultLifecycleService,
+    private readonly notificationService: NotificationReconciliationService = defaultNotificationService
   ) {}
 
   async fullRefresh(now: DateTime = DateTime.now()): Promise<PlannerRefreshCoordinatorResult> {
@@ -89,6 +94,13 @@ export class PlannerRefreshCoordinator {
     let finalViewModel = todayResult.viewModel;
     if (sweepResult.mutatedCount > 0) {
       finalViewModel = await this.todayOrchestrator.queryAndProject(todayResult.runtime, now);
+    }
+
+    // 7. M13: Reconcile local task reminders after canonical planner pipeline completes
+    try {
+      await this.notificationService.reconcile();
+    } catch (err) {
+      console.warn('[PlannerRefreshCoordinator] Notification reconcile failed recoverably:', err);
     }
 
     return {

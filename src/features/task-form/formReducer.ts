@@ -256,8 +256,8 @@ export function createInitialFormState(params: CreateFormInitialParams): FormSta
       notes,
       subtasks,
       tags: initialDefinition.tags ? [...initialDefinition.tags] : [],
-      reminderMinutes: initialDefinition.reminderRule?.offsetMinutes ?? null,
-      existingReminderRule: initialDefinition.reminderRule ?? null,
+      reminderMinutes: scheduleMode === 'ANYTIME_TODAY' ? null : (initialDefinition.reminderRule?.offsetMinutes ?? null),
+      existingReminderRule: scheduleMode === 'ANYTIME_TODAY' ? null : (initialDefinition.reminderRule ?? null),
       isDirty: false,
       validationErrors: {},
       savePhase: 'IDLE',
@@ -320,10 +320,12 @@ export function formReducer(state: FormState, action: FormAction): FormState {
       };
 
     case 'SET_SCHEDULE_MODE':
-      // Switching mode preserves all mode-specific draft values
+      // Switching mode preserves all mode-specific draft values; switching to ANYTIME_TODAY clears reminders
       return {
         ...state,
         scheduleMode: action.payload,
+        reminderMinutes: action.payload === 'ANYTIME_TODAY' ? null : state.reminderMinutes,
+        existingReminderRule: action.payload === 'ANYTIME_TODAY' ? null : state.existingReminderRule,
         isDirty: true,
       };
 

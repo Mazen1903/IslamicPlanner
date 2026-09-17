@@ -131,7 +131,7 @@ export function deriveRecurrenceFromState(state: FormState): {
  * Derives reminder rule preserving existing unknown metadata fields on edit.
  */
 export function deriveReminderRuleFromState(state: FormState): ReminderRule | null {
-  if (state.reminderMinutes === null) {
+  if (state.scheduleMode === 'ANYTIME_TODAY' || state.reminderMinutes === null) {
     return null;
   }
 
