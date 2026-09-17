@@ -152,12 +152,12 @@
 | **M5** | Scheduling Engine | **CLOSED** | `WallClockResolver`, DST semantics, relative prayer math |
 | **M6** | Materialization Pipeline | **CLOSED** | Occurrence persistence, idempotency, terminal freeze |
 | **M7** | Today Screen & View Model | **CLOSED** | 5-tab UI, `TodayOrchestrator`, timeline projection |
-| **M8** | Hijri Calendar Core | **NEXT** | Canonical `HijriDate`, civil conversion, Umm al-Qura |
-| **M9** | Recurrence Engine | *PENDING* | Gregorian RRULE + Hijri lunar recurrence generation |
-| **M10** | Add / Edit Task UX | *PENDING* | Creation modals, scheduling pickers, validation |
-| **M11** | Overdue & Missed Worker | *PENDING* | Background lifecycle transitions, terminal states |
-| **M12** | Location & Travel Detection | *PENDING* | Manual coordinates, GPS fallback, travel Qasr flags |
-| **M13** | Notification Engine | *PENDING* | Local notifications, prayer alerts, task reminders |
+| **M8** | Hijri Calendar Core | **CLOSED** | Canonical `HijriDate`, civil conversion, Umm al-Qura |
+| **M9** | Recurrence Engine | **CLOSED** | Gregorian RRULE + Hijri lunar recurrence generation |
+| **M10** | Add / Edit Task UX | **CLOSED** | Creation modals, scheduling pickers, validation |
+| **M11** | Overdue & Missed Worker | **CLOSED** | Background lifecycle transitions, terminal states |
+| **M12** | Location & Travel Detection | **CLOSED** | Manual coordinates, GPS fallback, travel Qasr flags |
+| **M13** | Notification Engine | **NEXT** | Local notifications, prayer alerts, task reminders |
 | **M14** | Calendar UI Screen | *PENDING* | Monthly grid, dual Gregorian/Hijri date display |
 | **M15** | Worship Suggestions Engine | *PENDING* | Rules engine for voluntary worship recommendations |
 | **M16** | Worship Suggestions UI | *PENDING* | Cards, one-tap add-to-today integration |

@@ -227,7 +227,7 @@
   - `src/services/__tests__/LocationRefreshCoordinator.test.ts`
   - `src/hooks/__tests__/useLocation.test.ts`
   - `src/__tests__/services/LocationTravelIntegration.test.ts`
-- **Milestone Owner:** **M12 (IMPLEMENTED / AWAITING REVIEW)**
+- **Milestone Owner:** **M12 (CLOSED / SONNET APPROVED)**
 
 ---
 
