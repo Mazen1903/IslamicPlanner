@@ -5,7 +5,9 @@ import type {
   TodayViewModel,
   TodayRuntimeContext,
 } from './types';
-import { M7BootstrapInputProvider } from './TodayTemporalInputProvider';
+import {
+  LocationAwareTodayTemporalInputProvider,
+} from './TodayTemporalInputProvider';
 import { TodayOrchestrator } from './TodayOrchestrator';
 import {
   RecurringHorizonSync,
@@ -54,7 +56,7 @@ export type PlannerRefreshCoordinatorResult =
  */
 export class PlannerRefreshCoordinator {
   constructor(
-    private readonly inputProvider: TodayTemporalInputProvider = new M7BootstrapInputProvider(),
+    private readonly inputProvider: TodayTemporalInputProvider = new LocationAwareTodayTemporalInputProvider(),
     private readonly todayOrchestrator: TodayOrchestrator = new TodayOrchestrator(),
     private readonly recurringHorizonSync: RecurringHorizonSync = defaultRecurringHorizonSync,
     private readonly lifecycleService: OccurrenceLifecycleService = defaultLifecycleService

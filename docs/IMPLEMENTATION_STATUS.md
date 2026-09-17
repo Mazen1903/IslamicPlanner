@@ -716,3 +716,42 @@
   1. `missedAt` implementation uses the actual missed boundary timestamp rather than sweep runtime `now`. This is intentional/correct and should supersede any implementation-report wording that implied `now.toUTC().toISO()`.
   2. `cancelAllPendingOccurrences()` retains older read-then-write behavior without the new PENDING SQL guard. This is pre-existing closed code and was not introduced by M11. Recorded as deferred technical debt only (do NOT modify now).
 
+---
+
+## M12 Completion Record
+
+- **Date:** 2026-09-16
+- **Status:** **M12 IMPLEMENTED / AWAITING SONNET REVIEW**
+- **Baseline Commit:** `5da8573`
+- **Tests:** 801 / 801 passing (47 suites: 62 new tests across 8 new suites + extensions, 739 baseline tests)
+- **Schema Migrations:** 1 (Migration `0002_solid_reaper.sql` adding `last_auto_latitude`, `last_auto_longitude` to `user_settings`, plus one-time legacy M7 backfill UPDATE)
+- **Dependencies Added:** 0 (No npm or native packages added)
+- **Regressions:** 0 (Typecheck clean, lint clean 0 errors/0 warnings, zero regressions across M1–M11)
+- **Scope:** Automatic & manual location resolution, 10 km movement threshold, timezone transition handling, single rematerialization pipeline, offline city dataset lookup, legacy M7 migration backfill, and non-prompting GPS resolution.
+- **Architectural Deliverables:**
+  - `src/domain/location/types.ts`: Domain models (`LocationMode`, `EffectiveLocation`, `TemporalEnvironment`, `CityRecord` with string id).
+  - `src/domain/location/haversine.ts`: Pure Haversine distance calculator and 10 km threshold evaluation (`SIGNIFICANT_MOVEMENT_KM = 10`).
+  - `src/domain/location/environmentComparator.ts`: Pure comparator for material environmental shifts.
+  - `src/domain/location/cityLoader.ts`: Lazy dynamic loader for offline cities dataset, preventing memory overhead at startup.
+  - `src/domain/location/citySearch.ts`: Pure city search with exact > prefix > substring ranking, minimum 2 characters, bounded results.
+  - `src/data/schema.ts`: Drizzle schema addition of nullable `lastAutoLatitude` and `lastAutoLongitude`.
+  - `src/data/migrations/0002_solid_reaper.sql`: Drizzle migration script adding columns and backfilling legacy working rows (`location_mode = 'AUTO'` with NULL auto coordinates and NOT NULL manual coordinates migrated to `'MANUAL'`).
+  - `src/data/repositories/UserSettingsRepository.ts`: Production implementation with strict AUTO / MANUAL coordinate isolation.
+  - `src/services/LocationService.ts`: Thin adapter over `expo-location` and `Intl.DateTimeFormat` with non-prompting status check and explicit permission request.
+  - `src/services/LocationRefreshCoordinator.ts`: Clean coordinator resolving effective environment without unsolicited permission prompts, discarding insignificant observations (<10 km), and delegating rematerialization exclusively to `PlannerRefreshCoordinator`.
+  - `src/services/TodayTemporalInputProvider.ts`: Updated with `LocationAwareTodayTemporalInputProvider` resolving from `UserSettingsRepository`.
+  - `src/services/PlannerRefreshCoordinator.ts`: Updated to default to `LocationAwareTodayTemporalInputProvider`.
+  - `src/hooks/useLocation.ts`: React hook managing location preferences, permissions, and manual city selection with debouncing.
+  - `src/hooks/useToday.ts`: Wired `LocationRefreshCoordinator.resolve(now)` before `coordinator.fullRefresh(now)`.
+  - `src/components/today/SetupRequiredState.tsx`: Added `[Use my current location]` and `[Set location manually]` actions with error display.
+  - `app/(tabs)/settings/prayer-location.tsx`: Settings screen with mode toggle, GPS refresh, and lazy-loaded offline city search.
+  - `docs/GEONAMES_ATTRIBUTION.md`: Creative Commons Attribution 4.0 license statement and dataset provenance.
+- **Verification:**
+  - `npm test -- --runInBand`: Passed (47 test suites, 801 tests passed, 0 failures)
+  - `npm test`: Passed (47 test suites, 801 tests passed, 0 failures in parallel)
+  - `npm run typecheck`: Passed (0 errors)
+  - `npm run lint`: Passed (0 errors, 0 warnings)
+  - `npx expo-doctor`: 20/21 checks passed (known pre-existing patch version baseline unchanged)
+  - `npx expo install --check`: Confirmed 0 new dependencies added
+
+

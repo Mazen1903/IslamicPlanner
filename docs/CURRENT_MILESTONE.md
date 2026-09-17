@@ -1,10 +1,10 @@
 # Current Milestone: M12 — Location / Travel / Timezone Behavior
 
-> **Current State:** M11 closed and Sonnet-approved; M12 architecture and planning next  
-> **Current Test Suite:** 739 tests passing (39 test suites)  
-> **Milestone Status:** M12 — ARCHITECTURE NEXT  
-> **Architecture Status:** NOT STARTED (Pending Architecture Phase)  
-> **Implementation Status:** NOT STARTED (Do NOT implement M12 yet)  
+> **Current State:** M12 implemented and verified; awaiting independent Sonnet review  
+> **Current Test Suite:** 801 tests passing (47 test suites)  
+> **Milestone Status:** M12 — IMPLEMENTED / AWAITING SONNET REVIEW  
+> **Architecture Status:** APPROVED & FROZEN  
+> **Implementation Status:** COMPLETED (Ready for Review)  
 
 ---
 
@@ -134,7 +134,7 @@ The proposed M12 test suite must cover:
 |---|---|
 | **Milestone** | **M12 — Location / Travel / Timezone Behavior** |
 | **Type** | Location & Travel Domain Service / Recalculation Orchestration |
-| **Current Phase** | **M12 — ARCHITECTURE NEXT** |
-| **Architecture Status** | **NOT STARTED (Pending Architecture Phase)** |
-| **Implementation Status** | **NOT STARTED (Do NOT implement yet)** |
-| **Baseline Tests** | **739 / 739 passing (39 test suites)** |
+| **Current Phase** | **M12 — IMPLEMENTED / AWAITING SONNET REVIEW** |
+| **Architecture Status** | **APPROVED & FROZEN** |
+| **Implementation Status** | **COMPLETED (801/801 tests green)** |
+| **Current Tests** | **801 / 801 passing (47 test suites)** |

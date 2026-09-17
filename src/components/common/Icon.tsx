@@ -13,6 +13,7 @@ export type IconName =
   | 'sun'
   | 'bell'
   | 'location'
+  | 'search'
   | 'chevron-right'
   | 'chevron-left'
   | 'chevron-down'
@@ -46,6 +47,7 @@ const ICON_MAP: Record<IconName, keyof typeof Ionicons.glyphMap> = {
   sun: 'sunny-outline',
   bell: 'notifications-outline',
   location: 'location-outline',
+  search: 'search-outline',
   'chevron-right': 'chevron-forward',
   'chevron-left': 'chevron-back',
   'chevron-down': 'chevron-down',

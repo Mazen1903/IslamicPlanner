@@ -6,7 +6,7 @@ import {
   TodayOrchestrator,
 } from '@/services/TodayOrchestrator';
 import {
-  M7BootstrapInputProvider,
+  LocationAwareTodayTemporalInputProvider,
 } from '@/services/TodayTemporalInputProvider';
 import type {
   TodayTemporalInputProvider,
@@ -17,6 +17,10 @@ import { useAppForeground } from './useAppForeground';
 import { usePrayerTimer } from './usePrayerTimer';
 import { PlannerRefreshCoordinator } from '@/services/PlannerRefreshCoordinator';
 import {
+  LocationRefreshCoordinator,
+  locationRefreshCoordinator as defaultLocationRefreshCoordinator,
+} from '@/services/LocationRefreshCoordinator';
+import {
   OccurrenceLifecycleService,
 } from '@/services/OccurrenceLifecycleService';
 
@@ -24,13 +28,14 @@ export interface UseTodayOptions {
   inputProvider?: TodayTemporalInputProvider;
   orchestrator?: TodayOrchestrator;
   coordinator?: PlannerRefreshCoordinator;
+  locationRefreshCoordinator?: LocationRefreshCoordinator;
   lifecycleService?: OccurrenceLifecycleService;
   engine?: TaskEngine;
   enableTimer?: boolean;
 }
 
 export function useToday(options: UseTodayOptions = {}) {
-  const defaultProvider = useMemo(() => new M7BootstrapInputProvider(), []);
+  const defaultProvider = useMemo(() => new LocationAwareTodayTemporalInputProvider(), []);
   const inputProvider = options.inputProvider ?? defaultProvider;
   const orchestrator = options.orchestrator ?? todayOrchestrator;
   const engine = options.engine ?? taskEngine;
@@ -41,11 +46,13 @@ export function useToday(options: UseTodayOptions = {}) {
     [inputProvider, orchestrator, lifecycleService]
   );
   const coordinator = options.coordinator ?? defaultCoordinator;
+  const locationRefresh = options.locationRefreshCoordinator ?? defaultLocationRefreshCoordinator;
 
   const store = useTodayStore();
   const inputProviderRef = useRef(inputProvider);
   const orchestratorRef = useRef(orchestrator);
   const coordinatorRef = useRef(coordinator);
+  const locationRefreshRef = useRef(locationRefresh);
   const lifecycleServiceRef = useRef(lifecycleService);
   const engineRef = useRef(engine);
 
@@ -53,9 +60,10 @@ export function useToday(options: UseTodayOptions = {}) {
     inputProviderRef.current = inputProvider;
     orchestratorRef.current = orchestrator;
     coordinatorRef.current = coordinator;
+    locationRefreshRef.current = locationRefresh;
     lifecycleServiceRef.current = lifecycleService;
     engineRef.current = engine;
-  }, [inputProvider, orchestrator, coordinator, lifecycleService, engine]);
+  }, [inputProvider, orchestrator, coordinator, locationRefresh, lifecycleService, engine]);
 
   /**
    * Full refresh executor.
@@ -65,6 +73,15 @@ export function useToday(options: UseTodayOptions = {}) {
     const token = useTodayStore.getState().startRefresh();
     try {
       const now = DateTime.now();
+
+      // 1. Resolve / update effective location environment (AUTO GPS or MANUAL snapshot)
+      const locResult = await locationRefreshRef.current.resolve(now);
+      if (locResult.status === 'SETUP_REQUIRED') {
+        useTodayStore.getState().setSetupRequired(token);
+        return;
+      }
+
+      // 2. Canonical full refresh pipeline (RecurringHorizonSync -> refreshToday -> sweepExpired)
       const result = await coordinatorRef.current.fullRefresh(now);
       if (result.status === 'SETUP_REQUIRED') {
         useTodayStore.getState().setSetupRequired(token);

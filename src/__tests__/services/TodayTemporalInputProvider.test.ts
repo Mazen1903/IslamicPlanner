@@ -1,4 +1,5 @@
 import {
+  LocationAwareTodayTemporalInputProvider,
   M7BootstrapInputProvider,
   StaticTodayTemporalInputProvider,
 } from '@/services/TodayTemporalInputProvider';
@@ -97,5 +98,132 @@ describe('TodayTemporalInputProvider (TI-01 to TI-04)', () => {
       expect(configuredResult.inputs.coordinates.latitude).toBe(51.5074);
       expect(configuredResult.inputs.params.timezone).toBe('Europe/London');
     }
+  });
+
+  describe('LocationAwareTodayTemporalInputProvider (TI-05 to TI-09)', () => {
+    it('TI-05: returns SETUP_REQUIRED when user_settings table is empty', async () => {
+      const db = getDatabase();
+      db.delete(userSettings).run();
+
+      const provider = new LocationAwareTodayTemporalInputProvider();
+      const result = await provider.getInputs();
+      expect(result.status).toBe('SETUP_REQUIRED');
+    });
+
+    it('TI-06: in AUTO mode, reads ONLY last_auto_* and last_known_timezone', async () => {
+      const db = getDatabase();
+      db.delete(userSettings).run();
+      db.insert(userSettings)
+        .values({
+          id: 'default',
+          locationMode: 'AUTO',
+          lastAutoLatitude: 41.8781,
+          lastAutoLongitude: -87.6298,
+          lastKnownTimezone: 'America/Chicago',
+          // Set distinct manual coordinates to verify isolation
+          manualLatitude: 24.4672,
+          manualLongitude: 39.6111,
+          manualTimezone: 'Asia/Riyadh',
+          calculationMethod: 'ISNA',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+        .run();
+
+      const provider = new LocationAwareTodayTemporalInputProvider();
+      const result = await provider.getInputs();
+
+      expect(result.status).toBe('READY');
+      if (result.status === 'READY') {
+        expect(result.inputs.coordinates.latitude).toBeCloseTo(41.8781);
+        expect(result.inputs.coordinates.longitude).toBeCloseTo(-87.6298);
+        expect(result.inputs.params.timezone).toBe('America/Chicago');
+        expect(result.inputs.params.method).toBe('ISNA');
+      }
+    });
+
+    it('TI-07: in AUTO mode, returns SETUP_REQUIRED if auto coordinates are missing (NO fallback to manual)', async () => {
+      const db = getDatabase();
+      db.delete(userSettings).run();
+      db.insert(userSettings)
+        .values({
+          id: 'default',
+          locationMode: 'AUTO',
+          lastAutoLatitude: null,
+          lastAutoLongitude: null,
+          lastKnownTimezone: null,
+          // Manual fields populated
+          manualLatitude: 41.8781,
+          manualLongitude: -87.6298,
+          manualTimezone: 'America/Chicago',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+        .run();
+
+      const provider = new LocationAwareTodayTemporalInputProvider();
+      const result = await provider.getInputs();
+
+      // STRICT ISOLATION: Must NOT fall back to manual
+      expect(result.status).toBe('SETUP_REQUIRED');
+    });
+
+    it('TI-08: in MANUAL mode, reads ONLY manual_* fields', async () => {
+      const db = getDatabase();
+      db.delete(userSettings).run();
+      db.insert(userSettings)
+        .values({
+          id: 'default',
+          locationMode: 'MANUAL',
+          manualLatitude: 24.4672,
+          manualLongitude: 39.6111,
+          manualLocationName: 'Medina',
+          manualTimezone: 'Asia/Riyadh',
+          // Set distinct auto coordinates to verify isolation
+          lastAutoLatitude: 51.5074,
+          lastAutoLongitude: -0.1278,
+          lastKnownTimezone: 'Europe/London',
+          calculationMethod: 'MAKKAH',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+        .run();
+
+      const provider = new LocationAwareTodayTemporalInputProvider();
+      const result = await provider.getInputs();
+
+      expect(result.status).toBe('READY');
+      if (result.status === 'READY') {
+        expect(result.inputs.coordinates.latitude).toBeCloseTo(24.4672);
+        expect(result.inputs.coordinates.longitude).toBeCloseTo(39.6111);
+        expect(result.inputs.params.timezone).toBe('Asia/Riyadh');
+        expect(result.inputs.params.method).toBe('MAKKAH');
+      }
+    });
+
+    it('TI-09: in MANUAL mode, returns SETUP_REQUIRED if manual coordinates are missing (NO fallback to auto)', async () => {
+      const db = getDatabase();
+      db.delete(userSettings).run();
+      db.insert(userSettings)
+        .values({
+          id: 'default',
+          locationMode: 'MANUAL',
+          manualLatitude: null,
+          manualLongitude: null,
+          manualTimezone: null,
+          // Auto fields populated
+          lastAutoLatitude: 51.5074,
+          lastAutoLongitude: -0.1278,
+          lastKnownTimezone: 'Europe/London',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+        .run();
+
+      const provider = new LocationAwareTodayTemporalInputProvider();
+      const result = await provider.getInputs();
+
+      expect(result.status).toBe('SETUP_REQUIRED');
+    });
   });
 });

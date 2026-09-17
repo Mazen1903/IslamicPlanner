@@ -222,4 +222,79 @@ describe('Drizzle Migrations & Discovery (MG Suite)', () => {
     const recorded2 = nodeDb.prepare('SELECT id, hash, created_at FROM __drizzle_migrations').all();
     expect(recorded2).toHaveLength(config.journal.entries.length);
   });
+
+  it('MG-05: Fresh DB includes last_auto_latitude and last_auto_longitude columns on user_settings', async () => {
+    const nodeDb = new DatabaseSync(':memory:');
+    nodeDb.exec('PRAGMA foreign_keys = ON;');
+
+    const client = createMockClient(nodeDb);
+    const db = drizzle(client as any, { schema });
+
+    await migrateDatabase(db);
+
+    const columns = (
+      nodeDb.prepare("PRAGMA table_info('user_settings')").all() as { name: string }[]
+    ).map(c => c.name);
+
+    expect(columns).toContain('last_auto_latitude');
+    expect(columns).toContain('last_auto_longitude');
+    expect(columns).toContain('location_mode');
+    expect(columns).toContain('manual_latitude');
+    expect(columns).toContain('manual_longitude');
+    expect(columns).toContain('last_known_timezone');
+  });
+
+  it('MG-06: Upgrade M11-era DB with legacy AUTO row backfills location_mode to MANUAL', async () => {
+    const nodeDb = new DatabaseSync(':memory:');
+    nodeDb.exec('PRAGMA foreign_keys = ON;');
+
+    // 1. Apply 0000 and 0001
+    for (const file of ['0000_initial.sql', '0001_lazy_the_order.sql']) {
+      const sqlContent = fs.readFileSync(path.join(__dirname, '..', 'migrations', file), 'utf8');
+      for (const stmt of sqlContent.split('--> statement-breakpoint')) {
+        const trimmed = stmt.trim();
+        if (trimmed) nodeDb.exec(trimmed);
+      }
+    }
+
+    // Record 0000 and 0001 as already applied in __drizzle_migrations
+    nodeDb.exec(
+      `CREATE TABLE IF NOT EXISTS "__drizzle_migrations" (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hash text NOT NULL,
+        created_at numeric
+      );`
+    );
+    const insertStmt = nodeDb.prepare('INSERT INTO "__drizzle_migrations" (hash, created_at) VALUES (?, ?)');
+    insertStmt.run('0000_initial_hash', 1789444181320);
+    insertStmt.run('0001_lazy_hash', 1789449475179);
+
+    // Insert legacy user_settings row with default AUTO mode and configured manual location
+    nodeDb.exec(`
+      INSERT INTO user_settings (
+        id, location_mode, manual_latitude, manual_longitude, manual_location_name,
+        manual_timezone, last_known_timezone, calculation_method, created_at, updated_at
+      ) VALUES (
+        'default', 'AUTO', 41.8781, -87.6298, 'Chicago',
+        'America/Chicago', 'America/Chicago', 'MWL', '2026-09-15T00:00:00.000Z', '2026-09-15T00:00:00.000Z'
+      );
+    `);
+
+    // 2. Now run migration to apply 0002
+    const client = createMockClient(nodeDb);
+    const db = drizzle(client as any, { schema });
+    await migrateDatabase(db);
+
+    // 3. Verify row was backfilled to MANUAL
+    const row = nodeDb
+      .prepare('SELECT location_mode, manual_latitude, manual_longitude, last_auto_latitude, last_auto_longitude FROM user_settings WHERE id = ?')
+      .get('default') as any;
+
+    expect(row).toBeDefined();
+    expect(row.location_mode).toBe('MANUAL');
+    expect(row.manual_latitude).toBeCloseTo(41.8781);
+    expect(row.manual_longitude).toBeCloseTo(-87.6298);
+    expect(row.last_auto_latitude).toBeNull();
+    expect(row.last_auto_longitude).toBeNull();
+  });
 });

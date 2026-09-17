@@ -207,12 +207,27 @@
 ---
 
 ### 14. Location & Travel Detection
-- **Authoritative Docs:** `docs/TECHNICAL_ARCHITECTURE.md` (Section 5), `docs/DECISIONS.md` (ADR-003)
+- **Authoritative Docs:** `docs/TECHNICAL_ARCHITECTURE.md` (Section 5), `docs/DECISIONS.md` (ADR-003), `docs/GEONAMES_ATTRIBUTION.md`
 - **Source Paths:**
-  - `src/domain/location/`
-  - `src/data/repositories/LocationRepository.ts`
-- **Relevant Tests:** (To be created in M12)
-- **Milestone Owner:** **M12 (ARCHITECTURE NEXT)**
+  - `src/domain/location/types.ts`
+  - `src/domain/location/haversine.ts` (10 km threshold evaluation)
+  - `src/domain/location/environmentComparator.ts`
+  - `src/domain/location/cityLoader.ts` (Lazy dynamic loader)
+  - `src/domain/location/citySearch.ts` (Exact > prefix > substring ranking)
+  - `src/data/repositories/UserSettingsRepository.ts` (AUTO/MANUAL coordinate isolation)
+  - `src/services/LocationService.ts`
+  - `src/services/LocationRefreshCoordinator.ts` (Non-prompting GPS check & jitter filtering)
+  - `src/hooks/useLocation.ts`
+- **Relevant Tests:**
+  - `src/domain/location/__tests__/haversine.test.ts`
+  - `src/domain/location/__tests__/environmentComparator.test.ts`
+  - `src/domain/location/__tests__/citySearch.test.ts`
+  - `src/data/repositories/__tests__/UserSettingsRepository.test.ts`
+  - `src/services/__tests__/LocationService.test.ts`
+  - `src/services/__tests__/LocationRefreshCoordinator.test.ts`
+  - `src/hooks/__tests__/useLocation.test.ts`
+  - `src/__tests__/services/LocationTravelIntegration.test.ts`
+- **Milestone Owner:** **M12 (IMPLEMENTED / AWAITING REVIEW)**
 
 ---
 

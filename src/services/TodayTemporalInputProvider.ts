@@ -13,14 +13,87 @@ import type {
   PrayerAdjustments,
 } from '@/domain/prayer/types';
 import type { PlanningDayConfig } from '@/domain/planning-day/types';
+import { isValidTimezone } from '@/domain/temporal/timezoneUtils';
+import {
+  buildCalculationParams,
+  buildPlanningDayConfig,
+} from './temporalSettingsHelper';
 
 /**
- * Production temporal input provider for M7.
- * Reads legitimate configured location and prayer parameters from the user_settings table.
+ * Production location-aware temporal input provider for M12.
+ * Reads committed effective location and prayer parameters strictly according to locationMode:
  *
- * CRITICAL PRODUCT INVARIANT:
- * MUST NOT silently fallback to Mecca, Riyadh, or any other geographic default.
- * If legitimate coordinates or timezone are missing, returns SETUP_REQUIRED.
+ * AUTO reads ONLY:
+ * - last_auto_latitude
+ * - last_auto_longitude
+ * - last_known_timezone
+ *
+ * MANUAL reads ONLY:
+ * - manual_latitude
+ * - manual_longitude
+ * - manual_timezone
+ *
+ * If active mode lacks a complete valid snapshot, returns SETUP_REQUIRED.
+ * AUTO never reads manual fields.
+ */
+export class LocationAwareTodayTemporalInputProvider implements TodayTemporalInputProvider {
+  async getInputs(): Promise<TodayTemporalInputResult> {
+    try {
+      const db = getDatabase();
+      const rows = db.select().from(userSettings).limit(1).all();
+      const settings = rows[0];
+
+      if (!settings) {
+        return { status: 'SETUP_REQUIRED' };
+      }
+
+      const mode = settings.locationMode ?? 'AUTO';
+
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      let timezone: string | null = null;
+
+      if (mode === 'AUTO') {
+        latitude = settings.lastAutoLatitude;
+        longitude = settings.lastAutoLongitude;
+        timezone = settings.lastKnownTimezone;
+      } else if (mode === 'MANUAL') {
+        latitude = settings.manualLatitude;
+        longitude = settings.manualLongitude;
+        timezone = settings.manualTimezone;
+      }
+
+      if (
+        latitude == null ||
+        longitude == null ||
+        !timezone ||
+        !isValidTimezone(timezone)
+      ) {
+        return { status: 'SETUP_REQUIRED' };
+      }
+
+      const inputs: TodayTemporalInputs = {
+        coordinates: {
+          latitude,
+          longitude,
+        },
+        params: buildCalculationParams(settings, timezone),
+        planningDayConfig: buildPlanningDayConfig(settings.planningDayStart),
+      };
+
+      return {
+        status: 'READY',
+        inputs,
+      };
+    } catch {
+      return { status: 'SETUP_REQUIRED' };
+    }
+  }
+}
+
+/**
+ * Legacy production temporal input provider for M7.
+ * Preserved for test/bootstrap backwards compatibility.
  */
 export class M7BootstrapInputProvider implements TodayTemporalInputProvider {
   async getInputs(): Promise<TodayTemporalInputResult> {

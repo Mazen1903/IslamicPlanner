@@ -111,6 +111,8 @@ export const userSettings = sqliteTable('user_settings', {
   manualLocationName: text('manual_location_name'),
   manualTimezone: text('manual_timezone'),
   lastKnownTimezone: text('last_known_timezone'),
+  lastAutoLatitude: real('last_auto_latitude'),
+  lastAutoLongitude: real('last_auto_longitude'),
   calculationMethod: text('calculation_method').notNull().default('MWL'),
   asrMethod: text('asr_method').notNull().default('SHAFI'),
   highLatitudeRule: text('high_latitude_rule').notNull().default('AUTO'),
