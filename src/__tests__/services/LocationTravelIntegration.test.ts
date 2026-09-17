@@ -484,7 +484,7 @@ describe('Location, Travel, and Timezone Behavior Integration (M12)', () => {
       expect(typeof (locationCoordinator as any).backgroundTimer).toBe('undefined');
     });
 
-    it('verifies cities.json is NOT loaded into memory by core startup and refresh providers', () => {
+    it('verifies cities dataset is NOT loaded into memory by core startup and refresh providers', () => {
       // Invariant: city dataset must remain unloaded in memory during normal app lifecycle
       expect(getLoadedCityDataset()).toBeNull();
     });

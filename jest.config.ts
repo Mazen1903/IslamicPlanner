@@ -8,6 +8,7 @@ const config: Config = {
   setupFilesAfterEnv: [],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '\\.dat$': '<rootDir>/src/__mocks__/assetMock.js',
   },
   testMatch: [
     '**/__tests__/**/*.test.[jt]s?(x)',

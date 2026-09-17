@@ -45,3 +45,6 @@ coverage/
 
 # AI review context packets
 .ai/context/
+
+# Temporary export verification directories
+.tmp/

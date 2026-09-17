@@ -6,7 +6,7 @@ const readline = require('readline');
 async function preprocessCities() {
   const sourcePath = path.join(__dirname, '..', 'cities_temp', 'cities1000.txt');
   const targetDir = path.join(__dirname, '..', 'src', 'assets');
-  const targetFile = path.join(targetDir, 'cities.json');
+  const targetFile = path.join(targetDir, 'cities.dat');
 
   if (!fs.existsSync(sourcePath)) {
     console.error(`Source file not found at ${sourcePath}`);

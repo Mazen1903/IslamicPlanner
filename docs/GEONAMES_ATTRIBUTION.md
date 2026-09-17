@@ -1,7 +1,7 @@
 # GeoNames Dataset Provenance & Attribution
 
 ## 1. Overview
-The offline city dataset bundled with this application (`src/assets/cities.json`) is derived from the **GeoNames** geographical database.
+The offline city dataset bundled with this application (`src/assets/cities.dat`) is derived from the **GeoNames** geographical database.
 
 - **Source:** [GeoNames cities1000 gazetteer dump](https://download.geonames.org/export/dump/cities1000.zip)
 - **Official Provider:** GeoNames (Marc Wick / geonames.org)
