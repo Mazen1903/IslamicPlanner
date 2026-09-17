@@ -4,6 +4,7 @@ import type { UserSettingsRepository, UserSettingsRow } from '@/data/repositorie
 import type { ILocationService } from '@/services/LocationService';
 import type { PlannerRefreshCoordinator } from '@/services/PlannerRefreshCoordinator';
 import type { CityRecord } from '@/domain/location/types';
+import { getLoadedCityDataset } from '@/domain/location/cityLoader';
 
 describe('useLocation Hook', () => {
   let mockSettings: UserSettingsRow;
@@ -127,8 +128,34 @@ describe('useLocation Hook', () => {
     expect(result.current.timezone).toBe('Europe/London');
   });
 
-  it('requestAutoLocation handles permission denial gracefully', async () => {
+  it('requestAutoLocation uses committed snapshot if permission denied but snapshot exists', async () => {
     mockLocationService.requestForegroundPermission.mockResolvedValue('DENIED');
+
+    const { result } = await renderHook(() =>
+      useLocation({
+        userSettingsRepo: mockRepo,
+        locationService: mockLocationService,
+        coordinator: mockCoordinator,
+      })
+    );
+
+    let success = false;
+    await act(async () => {
+      success = await result.current.requestAutoLocation();
+    });
+
+    expect(success).toBe(true);
+    expect(mockRepo.upsert).toHaveBeenCalledWith({ locationMode: 'AUTO' });
+    expect(mockCoordinator.fullRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('requestAutoLocation fails gracefully if permission denied and NO snapshot exists', async () => {
+    mockLocationService.requestForegroundPermission.mockResolvedValue('DENIED');
+    mockRepo.get.mockResolvedValue({
+      ...mockSettings,
+      lastAutoLatitude: null,
+      lastAutoLongitude: null,
+    });
 
     const { result } = await renderHook(() =>
       useLocation({
@@ -147,6 +174,54 @@ describe('useLocation Hook', () => {
     expect(mockRepo.saveAutoLocation).not.toHaveBeenCalled();
     expect(mockCoordinator.fullRefresh).not.toHaveBeenCalled();
     expect(result.current.error).toContain('denied');
+  });
+
+  it('requestAutoLocation uses committed snapshot if GPS fails but snapshot exists', async () => {
+    mockLocationService.getCurrentCoordinates.mockResolvedValue(null);
+
+    const { result } = await renderHook(() =>
+      useLocation({
+        userSettingsRepo: mockRepo,
+        locationService: mockLocationService,
+        coordinator: mockCoordinator,
+      })
+    );
+
+    let success = false;
+    await act(async () => {
+      success = await result.current.requestAutoLocation();
+    });
+
+    expect(success).toBe(true);
+    expect(mockRepo.upsert).toHaveBeenCalledWith({ locationMode: 'AUTO' });
+    expect(mockCoordinator.fullRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('requestAutoLocation fails gracefully if GPS fails and NO snapshot exists', async () => {
+    mockLocationService.getCurrentCoordinates.mockResolvedValue(null);
+    mockRepo.get.mockResolvedValue({
+      ...mockSettings,
+      lastAutoLatitude: null,
+      lastAutoLongitude: null,
+    });
+
+    const { result } = await renderHook(() =>
+      useLocation({
+        userSettingsRepo: mockRepo,
+        locationService: mockLocationService,
+        coordinator: mockCoordinator,
+      })
+    );
+
+    let success = true;
+    await act(async () => {
+      success = await result.current.requestAutoLocation();
+    });
+
+    expect(success).toBe(false);
+    expect(mockRepo.saveAutoLocation).not.toHaveBeenCalled();
+    expect(mockCoordinator.fullRefresh).not.toHaveBeenCalled();
+    expect(result.current.error).toContain('Unable to acquire');
   });
 
   it('setManualLocation validates city, persists MANUAL mode, and triggers fullRefresh', async () => {
@@ -211,5 +286,10 @@ describe('useLocation Hook', () => {
     expect(mockRepo.saveManualLocation).not.toHaveBeenCalled();
     expect(mockCoordinator.fullRefresh).not.toHaveBeenCalled();
     expect(result.current.error).toContain('Invalid timezone');
+  });
+
+  it('verifies cities dataset is NOT loaded into memory during useLocation lifecycle', async () => {
+    // getLoadedCityDataset() must remain null unless explicitly loaded by prayer-location screen
+    expect(getLoadedCityDataset()).toBeNull();
   });
 });

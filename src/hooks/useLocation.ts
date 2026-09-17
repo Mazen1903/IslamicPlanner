@@ -94,13 +94,46 @@ export function useLocation(options: UseLocationOptions = {}) {
    * Explicit user action: Request auto location.
    * Prompts for permission, acquires GPS coordinates and device timezone,
    * commits AUTO snapshot to repository, and runs one canonical full refresh.
+   *
+   * SAFEGUARD 3 (AUTO Mode Switching Determinism):
+   * - Request permission only because this is an explicit user action
+   * - If permission granted and GPS succeeds: resolve/commit candidate
+   * - If GPS fails but committed AUTO snapshot exists: use committed snapshot
+   * - If permission denied but committed AUTO snapshot exists: AUTO uses committed snapshot
+   * - If no usable committed AUTO snapshot exists: remain in setup flow with manual fallback
+   * - Never leave location_mode='AUTO' persisted without usable coordinates
    */
   const requestAutoLocation = useCallback(async (): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     try {
+      const current = await userSettingsRepo.get();
+      const hasAutoSnapshot =
+        current !== null &&
+        current.lastAutoLatitude !== null &&
+        current.lastAutoLongitude !== null &&
+        Boolean(current.lastKnownTimezone && isValidTimezone(current.lastKnownTimezone));
+
       const permission = await locationService.requestForegroundPermission();
       if (permission !== 'GRANTED') {
+        if (hasAutoSnapshot) {
+          // AUTO mode may use the committed last-known snapshot
+          await userSettingsRepo.upsert({ locationMode: 'AUTO' });
+          await loadCurrentSettings();
+
+          const token = useTodayStore.getState().startRefresh();
+          const result = await coordinator.fullRefresh(DateTime.now());
+          if (result.status === 'READY') {
+            useTodayStore.getState().commitRefresh(
+              token,
+              { viewModel: result.viewModel, runtime: result.runtime },
+              true
+            );
+          }
+          setIsLoading(false);
+          return true;
+        }
+
         setError('Location permission was denied. You can set your location manually.');
         setIsLoading(false);
         return false;
@@ -110,12 +143,30 @@ export function useLocation(options: UseLocationOptions = {}) {
       const tz = locationService.getDeviceTimezone();
 
       if (!coords || !tz || !isValidTimezone(tz)) {
-        setError('Unable to acquire current location or timezone.');
+        if (hasAutoSnapshot) {
+          // GPS failed, but committed AUTO snapshot exists: use committed snapshot
+          await userSettingsRepo.upsert({ locationMode: 'AUTO' });
+          await loadCurrentSettings();
+
+          const token = useTodayStore.getState().startRefresh();
+          const result = await coordinator.fullRefresh(DateTime.now());
+          if (result.status === 'READY') {
+            useTodayStore.getState().commitRefresh(
+              token,
+              { viewModel: result.viewModel, runtime: result.runtime },
+              true
+            );
+          }
+          setIsLoading(false);
+          return true;
+        }
+
+        setError('Unable to acquire current location or timezone. You can set your location manually.');
         setIsLoading(false);
         return false;
       }
 
-      // Persist AUTO location
+      // Fresh candidate acquired & verified
       await userSettingsRepo.saveAutoLocation(coords, tz);
       await loadCurrentSettings();
 
@@ -139,7 +190,7 @@ export function useLocation(options: UseLocationOptions = {}) {
       setIsLoading(false);
       return false;
     }
-  }, [locationService, userSettingsRepo, coordinator, loadCurrentSettings]);
+  }, [coordinator, locationService, userSettingsRepo, loadCurrentSettings]);
 
   /**
    * Explicit user action: Select a manual city.

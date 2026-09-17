@@ -723,11 +723,11 @@
 - **Date:** 2026-09-16
 - **Status:** **M12 IMPLEMENTED / AWAITING SONNET REVIEW**
 - **Baseline Commit:** `5da8573`
-- **Tests:** 801 / 801 passing (47 suites: 62 new tests across 8 new suites + extensions, 739 baseline tests)
+- **Tests:** 807 / 807 passing (47 suites: 68 new tests across 8 new suites + extensions, 739 baseline tests)
 - **Schema Migrations:** 1 (Migration `0002_solid_reaper.sql` adding `last_auto_latitude`, `last_auto_longitude` to `user_settings`, plus one-time legacy M7 backfill UPDATE)
 - **Dependencies Added:** 0 (No npm or native packages added)
 - **Regressions:** 0 (Typecheck clean, lint clean 0 errors/0 warnings, zero regressions across M1–M11)
-- **Scope:** Automatic & manual location resolution, 10 km movement threshold, timezone transition handling, single rematerialization pipeline, offline city dataset lookup, legacy M7 migration backfill, and non-prompting GPS resolution.
+- **Scope:** Automatic & manual location resolution, 10 km movement threshold, timezone transition handling, single rematerialization pipeline, offline city dataset lookup, legacy M7 migration backfill, non-prompting GPS resolution, and deterministic AUTO mode switching safeguards.
 - **Architectural Deliverables:**
   - `src/domain/location/types.ts`: Domain models (`LocationMode`, `EffectiveLocation`, `TemporalEnvironment`, `CityRecord` with string id).
   - `src/domain/location/haversine.ts`: Pure Haversine distance calculator and 10 km threshold evaluation (`SIGNIFICANT_MOVEMENT_KM = 10`).
@@ -741,17 +741,21 @@
   - `src/services/LocationRefreshCoordinator.ts`: Clean coordinator resolving effective environment without unsolicited permission prompts, discarding insignificant observations (<10 km), and delegating rematerialization exclusively to `PlannerRefreshCoordinator`.
   - `src/services/TodayTemporalInputProvider.ts`: Updated with `LocationAwareTodayTemporalInputProvider` resolving from `UserSettingsRepository`.
   - `src/services/PlannerRefreshCoordinator.ts`: Updated to default to `LocationAwareTodayTemporalInputProvider`.
-  - `src/hooks/useLocation.ts`: React hook managing location preferences, permissions, and manual city selection with debouncing.
+  - `src/hooks/useLocation.ts`: React hook managing location preferences, permissions, deterministic mode switching fallback, and manual city selection with debouncing.
   - `src/hooks/useToday.ts`: Wired `LocationRefreshCoordinator.resolve(now)` before `coordinator.fullRefresh(now)`.
   - `src/components/today/SetupRequiredState.tsx`: Added `[Use my current location]` and `[Set location manually]` actions with error display.
   - `app/(tabs)/settings/prayer-location.tsx`: Settings screen with mode toggle, GPS refresh, and lazy-loaded offline city search.
   - `docs/GEONAMES_ATTRIBUTION.md`: Creative Commons Attribution 4.0 license statement and dataset provenance.
 - **Verification:**
-  - `npm test -- --runInBand`: Passed (47 test suites, 801 tests passed, 0 failures)
-  - `npm test`: Passed (47 test suites, 801 tests passed, 0 failures in parallel)
+  - `npm test -- --runInBand`: Passed (47 test suites, 807 tests passed, 0 failures)
+  - `npm test`: Passed (47 test suites, 807 tests passed, 0 failures in parallel)
   - `npm run typecheck`: Passed (0 errors)
   - `npm run lint`: Passed (0 errors, 0 warnings)
   - `npx expo-doctor`: 20/21 checks passed (known pre-existing patch version baseline unchanged)
   - `npx expo install --check`: Confirmed 0 new dependencies added
+- **Safeguards Verified:**
+  1. *GeoNames Timezone Validation:* 171,035 raw input records, 171,035 accepted output records, 0 rejected records, 392 unique valid timezones (100% validated via `Intl.DateTimeFormat`), minified output size 23,965,935 bytes (22.86 MB).
+  2. *Lazy Dataset Metro Graph:* `cities.json` verified 0 MB startup memory impact, unloaded during Today screen, `useToday`, `useLocation`, and `SetupRequiredState` lifecycles (`getLoadedCityDataset() === null`).
+  3. *Deterministic AUTO Mode Switching:* Explicit AUTO action prompts only on user intent, commits fresh GPS candidate if successful, falls back to committed AUTO snapshot if permission denied or GPS fix fails, and leaves user in current flow with manual fallback if no snapshot exists (never leaves broken `location_mode = 'AUTO'`).
 
 

@@ -14,6 +14,7 @@ import { MaterializationEngine } from '@/domain/materialization/MaterializationE
 import { RecurringHorizonSync } from '@/features/task-form/recurringHorizonSync';
 import { OccurrenceLifecycleService } from '@/services/OccurrenceLifecycleService';
 import { TodayOrchestrator } from '@/services/TodayOrchestrator';
+import { getLoadedCityDataset } from '@/domain/location/cityLoader';
 
 describe('Location, Travel, and Timezone Behavior Integration (M12)', () => {
   let taskDefRepo: TaskDefinitionRepository;
@@ -481,6 +482,48 @@ describe('Location, Travel, and Timezone Behavior Integration (M12)', () => {
       const locationCoordinator = new LocationRefreshCoordinator(userSettingsRepo, mockLocationService);
       expect(typeof (locationCoordinator as any).startPolling).toBe('undefined');
       expect(typeof (locationCoordinator as any).backgroundTimer).toBe('undefined');
+    });
+
+    it('verifies cities.json is NOT loaded into memory by core startup and refresh providers', () => {
+      // Invariant: city dataset must remain unloaded in memory during normal app lifecycle
+      expect(getLoadedCityDataset()).toBeNull();
+    });
+
+    it('verifies deterministic AUTO mode switching with and without committed snapshot', async () => {
+      // 1. Setup in MANUAL mode
+      await userSettingsRepo.saveManualLocation(
+        { latitude: 35.6762, longitude: 139.6503 },
+        'Tokyo',
+        'Asia/Tokyo'
+      );
+
+      // Verify no AUTO snapshot exists initially
+      let row = await userSettingsRepo.get();
+      expect(row?.locationMode).toBe('MANUAL');
+      expect(row?.lastAutoLatitude).toBeNull();
+
+      // Case A: User in AUTO mode, but permission denied and NO snapshot exists -> SETUP_REQUIRED
+      await userSettingsRepo.upsert({ locationMode: 'AUTO' });
+      const locationCoordinator = new LocationRefreshCoordinator(userSettingsRepo, mockLocationService);
+      mockLocationService.getForegroundPermission.mockResolvedValue('DENIED');
+
+      const resultDeniedNoSnapshot = await locationCoordinator.resolve(DateTime.now());
+      expect(resultDeniedNoSnapshot.status).toBe('SETUP_REQUIRED');
+
+      // Case B: Now commit an AUTO snapshot (e.g. successful GPS fix)
+      await userSettingsRepo.saveAutoLocation(
+        { latitude: 51.5074, longitude: -0.1278 },
+        'Europe/London'
+      );
+
+      // Permission is denied, but committed AUTO snapshot exists:
+      // AUTO mode safely falls back to the committed snapshot
+      const resultDeniedWithSnapshot = await locationCoordinator.resolve(DateTime.now());
+      expect(resultDeniedWithSnapshot.status).toBe('READY');
+      if (resultDeniedWithSnapshot.status === 'READY') {
+        expect(resultDeniedWithSnapshot.environment.location.latitude).toBeCloseTo(51.5074);
+        expect(resultDeniedWithSnapshot.environment.location.timezone).toBe('Europe/London');
+      }
     });
   });
 });

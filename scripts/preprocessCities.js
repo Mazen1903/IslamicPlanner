@@ -24,10 +24,12 @@ async function preprocessCities() {
 
   const records = [];
   const tzCache = new Map();
-  let invalidTzCount = 0;
+  let rawInputCount = 0;
+  let rejectedCount = 0;
 
   for await (const line of rl) {
     if (!line.trim()) continue;
+    rawInputCount++;
     const parts = line.split('\t');
 
     // GeoNames cities1000 format:
@@ -47,8 +49,8 @@ async function preprocessCities() {
     const adminCode = parts[10] ? parts[10].trim() : undefined;
     const timezone = parts[17] ? parts[17].trim() : '';
 
-    if (!timezone) {
-      invalidTzCount++;
+    if (!timezone || isNaN(lat) || isNaN(lng) || !name) {
+      rejectedCount++;
       continue;
     }
 
@@ -58,11 +60,11 @@ async function preprocessCities() {
         tzCache.set(timezone, true);
       } catch {
         tzCache.set(timezone, false);
-        invalidTzCount++;
+        rejectedCount++;
         continue;
       }
     } else if (!tzCache.get(timezone)) {
-      invalidTzCount++;
+      rejectedCount++;
       continue;
     }
 
@@ -85,14 +87,16 @@ async function preprocessCities() {
   const jsonStr = JSON.stringify(records);
   fs.writeFileSync(targetFile, jsonStr, 'utf8');
 
+  const validTimezones = new Set(records.map(r => r.timezone));
   const stats = fs.statSync(targetFile);
   console.log('--- Preprocessing Summary ---');
-  console.log('Records processed:', records.length);
-  console.log('Distinct valid timezones:', tzCache.size);
-  console.log('Skipped invalid timezones:', invalidTzCount);
+  console.log('Raw input record count:', rawInputCount);
+  console.log('Accepted output record count:', records.length);
+  console.log('Rejected record count:', rejectedCount);
+  console.log('Unique valid timezone count:', validTimezones.size);
   console.log('Target file:', targetFile);
-  console.log('File size (bytes):', stats.size);
-  console.log('File size (MB):', (stats.size / (1024 * 1024)).toFixed(2));
+  console.log('Minified output size (bytes):', stats.size);
+  console.log('Minified output size (MB):', (stats.size / (1024 * 1024)).toFixed(2));
 }
 
 preprocessCities().catch(err => {
