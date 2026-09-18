@@ -1,7 +1,7 @@
 # Architecture Decision Log
 
 **Status:** Living document  
-**Updated:** 2026-09-14 (Rev 3 — architecture revision 3)  
+**Updated:** 2026-09-18 (Rev 4 — M17 ADR-025 added)  
 **Purpose:** Record every major architectural decision, the alternatives considered, and the rationale.
 
 ---
@@ -529,3 +529,52 @@ See SCHEDULING_ENGINE.md §4.3 for implementation.
 **Sync compatibility:** UUIDs, monotonic versions, non-overlapping date ranges, and soft-delete support eventual CRDT-friendly cloud sync.
 
 See DATA_MODEL.md §4A for full schema and operation details.
+
+---
+
+## ADR-025: Manual Prayer Adjustment Application Bound
+
+**Status:** Accepted — M17
+
+**Context:**
+
+The `PrayerAdjustments` domain shape (`fajr`, `sunrise`, `dhuhr`, `asr`, `maghrib`, `isha`) stores integers representing per-prayer minute offsets. The Adhan calculation library accepts these offsets without imposing any application-specific range restriction. M17 introduces user-facing stepper controls for these adjustments in the Prayer Calculation settings screen.
+
+Without an explicit application bound, the Settings UI would have no principled upper or lower limit, making it possible for users to accidentally enter extreme values (e.g., ±300 minutes) that would produce nonsensical schedules without any clear feedback.
+
+**Decision:**
+
+The M17 Settings UI and the `SettingsMutationCoordinator.validatePrayerAdjustments()` function accept integer manual prayer adjustments in the inclusive range:
+
+```
+-60 through +60 minutes
+```
+
+This bound applies independently to each of the six prayer keys: `fajr`, `sunrise`, `dhuhr`, `asr`, `maghrib`, `isha`.
+
+This bound is:
+- An **application/product guardrail** for the Settings entry surface
+- **NOT** a limitation imposed by the Adhan library
+- **NOT** a religious ruling
+- **NOT** a claim that values beyond ±60 are technically impossible to store or calculate
+
+Sunrise remains informational only and is not a planner prayer slot. Its adjustment key is retained for completeness but has no planner scheduling impact.
+
+The persisted `PrayerAdjustments` domain shape is unchanged. If a future product decision widens or narrows this bound, an explicit architecture amendment is required — not a silent change to validation.
+
+**Rationale:**
+
+- Prevents accidental extreme schedule corruption from normal Settings interaction
+- Provides a finite, comprehensible stepper range (±60 minutes = ±1 hour)
+- Retains sufficient correction range for ordinary calibration scenarios (local adhan vs. calculated time typically differs by seconds to a few minutes; ±60 minutes covers every known practical case)
+- Keeps UI validation deterministic and testable
+- Preserves the ability to store larger values at the domain layer if a future use case requires it, without re-migrating existing data
+
+**Alternatives considered:**
+
+| Alternative | Reason not chosen |
+|---|---|
+| No application bound (unbounded integer) | Produces incoherent schedules; poor UX |
+| ±30 minutes | Too restrictive for users in geographic edge cases who require larger corrections |
+| ±120 minutes | Wider than any known practical calibration need; makes UI steppers awkward |
+| Domain-layer enforcement in `PrayerAdjustments` type | Would require migration or runtime coercion for legacy stored values; application bound does not need to be a domain invariant |

@@ -1,13 +1,14 @@
 # M17 — Settings Architecture
 
-> **Status:** FROZEN — HARDENED — APPROVED FOR IMPLEMENTATION
+> **Status:** CLOSED — SONNET APPROVED
 > **Authored:** 2026-09-18
 > **Hardened:** 2026-09-18 (ISSUE 1–4 amendments)
 > **Milestone:** M17 — Settings & Preferences UI
 > **Baseline commit:** 09c68cd (M16 closed / Sonnet approved)
 > **Architecture freeze commit:** 00891c2
-> **Hardening amendment commit:** TBD
-> **Implementation commit:** TBD
+> **Hardening amendment commit:** a2af7a3
+> **Implementation commit:** 76ac716
+> **Closure commit:** (see closure record below)
 
 ---
 
@@ -867,4 +868,57 @@ The following documents are amended in the hardening commit:
 - [ ] MIDNIGHT/CUSTOM not selectable in planning-day screen
 - [ ] `isPremium` never referenced in M17 production code
 - [ ] `SettingsMutationCoordinator` tests pass independently of React
-- [ ] `RecurringHorizonSync` uses actual stored Hijri adjustment, not hardcoded 0
+- [x] `RecurringHorizonSync` uses actual stored Hijri adjustment, not hardcoded 0
+
+---
+
+## 14. M17 Closure Record
+
+**Status:** CLOSED / SONNET APPROVED
+**Closed:** 2026-09-18
+
+### 14.1 Commits
+
+| Role | Commit |
+|---|---|
+| Architecture freeze | `00891c2` — `docs: freeze M17 Settings architecture` |
+| Architecture hardening | `a2af7a3` — `docs: harden M17 settings architecture` |
+| Implementation | `76ac716` — `feat(settings): implement M17 settings experience` |
+| Closure (docs + ADR-025) | See DECISIONS.md ADR-025 |
+
+### 14.2 Independent Review Outcome
+
+| Severity | Count |
+|---|---|
+| BLOCKER | 0 |
+| HIGH | 0 |
+| MEDIUM | 1 |
+| LOW | 3 |
+| OBSERVATION | 4 |
+
+**MEDIUM-1 resolution:** Prayer adjustment ±60 range was architecture-frozen (M17_ARCHITECTURE.md §9.1) but lacked prior ADR provenance. Resolved during closure by adding ADR-025 to `docs/DECISIONS.md`. No production code change required.
+
+### 14.3 Final Pre-Closure Verification
+
+| Check | Result |
+|---|---|
+| Tests | 1171 / 1171 passing, 102 suites |
+| TypeScript | 0 errors |
+| ESLint | 0 errors / warnings |
+| New migrations | 0 |
+| New dependencies | 0 |
+| M15 crypto diff | 0 (unchanged) |
+
+### 14.4 Native / Operational QA Carry-Forward
+
+The following require a physical device or simulator and do not reopen M17:
+- Cold-start theme hydration visual behavior
+- Settings Stack back gesture
+- Physical biometric enable/disable through Settings
+- Prayer preview / stepper interaction on device
+- Confirm exactly five permanent bottom destinations
+- Settings persistence across process restart
+
+### 14.5 H-09 Regression Test — M23 Carry-Forward
+
+`syncRange()` loader-failure non-destructive behavior was verified by code analysis and M14 zero-deletion invariant. The dedicated H-09 regression test is deferred to M23 (QA / edge-case milestone) as a regression hardening item. This does not reopen M17.

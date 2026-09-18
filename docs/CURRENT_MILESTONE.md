@@ -1,51 +1,52 @@
-# Current Milestone: M17 — Settings
+# Current Milestone: M18 — Widgets
 
-> **Current State:** M17 CURRENT — ARCHITECTURE FROZEN — HARDENED — IMPLEMENTATION NOT STARTED
-> **Previous Milestone:** M16 CLOSED / SONNET APPROVED
-> **Milestone Status:** M17 — ARCHITECTURE FROZEN — HARDENED — IMPLEMENTATION NOT STARTED
-> **Architecture Status:** FROZEN + HARDENED — `docs/M17_ARCHITECTURE.md` (amended: Hijri recurrence fix, Premium rule, SettingsMutationCoordinator, doc reconciliation)
-> **Implementation Status:** NOT STARTED
+> **Current State:** M18 CURRENT — PENDING — ARCHITECTURE NOT YET FROZEN
+> **Previous Milestone:** M17 CLOSED / SONNET APPROVED
+> **Milestone Status:** M18 — PENDING — ARCHITECTURE NOT YET FROZEN
+> **Architecture Status:** NOT YET STARTED — Architecture must be authored and frozen before implementation begins
 
 ---
 
-## Prerequisites
+## M17 Closure Summary
 
-All prerequisites for M17 are satisfied:
+**M17 — Settings** is CLOSED / SONNET APPROVED as of 2026-09-18.
+
+| Commit Role | Hash |
+|---|---|
+| Architecture freeze | `00891c2` |
+| Architecture hardening | `a2af7a3` |
+| Implementation | `76ac716` |
+| Closure + ADR-025 | See closure commit |
+
+**Final verification:** 1171 / 1171 tests, 102 suites, 0 TypeScript errors, 0 ESLint errors, 0 new migrations, 0 new dependencies.
+
+---
+
+## Prerequisites for M18
+
+M18 (Widgets) requires a native dev build. Deferred native dependencies will be installed at M18 only (per ADR-009).
 
 | Prerequisite | Status | Notes |
 |---|---|---|
 | M1 — Design System & Theme Tokens | ✅ CLOSED | Theme tokens, Button, Card, Toggle, Icon, ThemeProvider |
-| M3 — Planning Day & Rollover Logic | ✅ CLOSED | PlanningDayConfig, rollover boundaries (Fajr, Midnight, Custom) |
-| M8 — Hijri Calendar Core | ✅ CLOSED / OPUS APPROVED | Canonical HijriService, Umm al-Qura adapter, adjustments |
-| M12 — Location / Travel / Timezone Behavior | ✅ CLOSED / SONNET APPROVED | UserSettingsRepository, AUTO/MANUAL location modes, offline city search |
-| M13 — Notifications | ✅ CLOSED / SONNET APPROVED | Task reminders, notification scheduling, channel management |
-| M15 — Journal Core & Privacy | ✅ CLOSED / SONNET APPROVED | AES-256-GCM encryption, SecureStore key management |
-| M16 — Journal Experience / UI | ✅ CLOSED / SONNET APPROVED | Biometric lock preference, journal experience |
+| M7 — Today Screen | ✅ CLOSED / OPUS APPROVED | Prayer-centered adaptive planner |
+| M17 — Settings | ✅ CLOSED / SONNET APPROVED | Full settings experience, theme bootstrap, prayer config |
 
 ---
 
 ## 1. Milestone Goal
 
-Deliver the consolidated user-facing Settings experience:
-- App preferences and theme configuration
-- Prayer calculation authority, juristic method (Asr), high-latitude rules, and manual prayer adjustments
-- Planning day boundary configuration (Fajr / Midnight / Custom time)
-- Hijri calendar configuration (global and month adjustments)
-- Location mode configuration (AUTO GPS with non-prompting checks vs MANUAL city selection)
-- Notification preferences and permissions
-- Journal privacy / biometric lock toggle
-- Data management (local data export/reset policies)
-- About & attribution (GeoNames, Adhan, open-source acknowledgements)
+M18 delivers widget integration for iOS and Android, surfacing prayer times and task summaries on the home screen. Requires a native development build.
 
-*Note: Detailed architecture specification to be authored during M17 architecture phase. Implementation must NOT begin until architecture is frozen and approved.*
+*Architecture specification to be authored during M18 architecture phase. Implementation must NOT begin until architecture is frozen and approved.*
 
 ---
 
 ## 2. Completed Milestones Baseline
 
-- **M15 — Journal Core & Privacy:** CLOSED / SONNET APPROVED (`71edcdf`, `5f3cb7a`)
 - **M16 — Journal Experience / UI:** CLOSED / SONNET APPROVED (`b4e09c1`, `cb2428a`)
-- **Baseline Tests:** 1092 / 1092 passing across 89 test suites. Clean TypeScript and ESLint.
+- **M17 — Settings:** CLOSED / SONNET APPROVED (`76ac716`, closure commit)
+- **Baseline Tests:** 1171 / 1171 passing across 102 test suites. Clean TypeScript and ESLint.
 
 ---
 
@@ -61,8 +62,8 @@ Deliver the consolidated user-facing Settings experience:
 ```
 M15 — Journal Core & Privacy       ✅ CLOSED / SONNET APPROVED
 M16 — Journal Experience / UI      ✅ CLOSED / SONNET APPROVED
-M17 — Settings                     ← CURRENT (PENDING — ARCHITECTURE NOT YET FROZEN)
-M18 — Widgets (dev build required)
+M17 — Settings                     ✅ CLOSED / SONNET APPROVED
+M18 — Widgets (dev build required) ← CURRENT (PENDING — ARCHITECTURE NOT YET FROZEN)
 M19 — Premium entitlement scaffolding
 M20 — Onboarding
 M21 — Dark mode polish
@@ -72,3 +73,30 @@ M24 — Release preparation
 ```
 
 Worship Suggestions remain **DEFERRED** (not deleted). May be re-introduced post-M24.
+
+---
+
+## 5. Native / Operational QA Carry-Forward
+
+The following checks require physical devices or simulators and are carried forward as release/final-QA operational items. They do not reopen any closed milestone.
+
+### M13 (Notifications)
+- Real local notification delivery on device
+
+### M15 (Journal Core)
+- Real expo-crypto AES-256-GCM roundtrip on device
+- Persisted encrypted Journal reopen/decrypt
+
+### M16 (Journal Experience)
+- Real fingerprint / Face ID on device
+- Biometric failure/cancel behavior
+- Background relock behavior
+- Process-restart relock
+
+### M17 (Settings)
+- Cold-start theme hydration visual behavior
+- Settings Stack back gesture
+- Physical biometric enable/disable through Settings
+- Prayer preview / stepper interaction on device
+- Confirm exactly five permanent bottom destinations
+- Settings persistence across process restart

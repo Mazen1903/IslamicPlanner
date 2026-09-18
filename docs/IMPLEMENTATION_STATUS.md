@@ -1,7 +1,5 @@
-# Implementation Status
-
-**Current Milestone:** M17 — Settings (ARCHITECTURE FROZEN — HARDENED)  
-**Last Updated:** 2026-09-18 (M16 closed; M17 architecture phase begins)  
+**Current Milestone:** M18 — Widgets (PENDING — ARCHITECTURE NOT YET FROZEN)  
+**Last Updated:** 2026-09-18 (M17 closed / SONNET APPROVED; M18 pending)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -27,8 +25,9 @@
 | **M14** | Calendar month | **CLOSED / SONNET APPROVED** | 2026-09-17 | 961/961 tests (68 suites). Sunday-first 28/35/42 natural grid, ±2 candidate seed discovery, CREATE-only historical bounds safety, canonical unconstrained PENDING rematerialization, batch query by planningDayKey, 5-prayer + Anytime read-only detail, Upcoming This Month section. |
 | **M15** | Journal Core & Privacy | **CLOSED / SONNET APPROVED** | 2026-09-17 | Implementation commit: `71edcdf`. Closure commit: `5f3cb7a`. 1005/1005 tests (73 suites). AES-256-GCM field encryption via expo-crypto, planningDayKey ownership, revision-based stale-write protection, ciphertext-only repository boundary, hard-delete semantics. Worship schema dormant. See `docs/M15_ARCHITECTURE.md`. Native AES physical-device verification pending. |
 | **M16** | Journal Experience / UI | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture commit `a316b19`, implementation commit `b4e09c1`, test hardening `cb2428a`. 1092/1092 tests (89 suites). Zero migrations. Replaces Worship tab with full encrypted Journal experience, autosave, planningDayKey pinning, optional biometric lock (`expo-local-authentication` ~57.0.3). Native biometric verification pending. |
-| **M17** | Settings | Not Started | — | Prerequisites: M1, M3, M12, M13, M8, M15, M16 |
-| **M18** | Widgets (dev build required) | Not Started | — | Native dependencies installed at M18 only |
+| **M17** | Settings | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `00891c2`, hardening `a2af7a3`, implementation `76ac716`. 1171/1171 tests (102 suites). 0 migrations. 0 dependencies. ADR-025 (prayer adjustment ±60 bound). Full Settings experience: prayer config, planning day (Fajr), Hijri calendar, appearance, journal privacy, about, hub. `SettingsMutationCoordinator` non-React orchestration. `HijriAdjustmentConfigLoader` dynamic Hijri config. Sonnet independent review APPROVED. Native device QA pending (does not reopen M17). |
+| **M18** | Widgets (dev build required) | **PENDING** | — | ARCHITECTURE NOT YET FROZEN. Native dependencies installed at M18 only. |
+
 | **M19** | Premium entitlement scaffolding | Not Started | — | Opus review required |
 | **M20** | Onboarding | Not Started | — | Prerequisites: M1, M12, M2 |
 | **M21** | Dark mode polish | Not Started | — | Prerequisites: M1, M7, M14, M16, M17 |
@@ -938,4 +937,124 @@ Zero production code changes were required.
 > - Process kill / restart relock semantics
 > - Enrollment unavailable / not-enrolled handling
 > - Physical keyboard / background lifecycle timing where relevant
+
+---
+
+## M17 Completion Record
+
+- **Date:** 2026-09-18
+- **Status:** **CLOSED / SONNET APPROVED**
+
+### Architecture & Implementation Commits
+
+| Role | Commit |
+|---|---|
+| Architecture freeze | `00891c2` — `docs: freeze M17 Settings architecture` |
+| Architecture hardening | `a2af7a3` — `docs: harden M17 settings architecture` |
+| Implementation | `76ac716` — `feat(settings): implement M17 settings experience` |
+
+### Independent Review
+
+- **Reviewer:** Sonnet (independent AI code review)
+- **Verdict:** APPROVED
+- **BLOCKER:** 0
+- **HIGH:** 0
+- **MEDIUM:** 1 (prayer adjustment ±60 range lacked prior ADR — resolved by ADR-025 during closure; no code change)
+- **LOW:** 3 (theme hydration flash accepted; About placeholder links per-architecture; PlanningDay isPremium assertion gap)
+- **OBSERVATION:** 4 (syncRange H-09 deferred to M23; disableLock auth confirmed; appearance bypass approved; Hub read-only confirmed)
+
+### ADR Added
+
+- **ADR-025** — Manual Prayer Adjustment Application Bound (±60 minutes, application guardrail, not Adhan library limit)
+
+### Delivered Capabilities
+
+**Settings Shell:**
+- Nested Settings Stack navigator (`_layout.tsx`)
+- Settings remains fifth permanent bottom tab
+- Settings Hub with live summaries for all groups
+- Dead placeholder routes removed: account.tsx, premium.tsx, planner.tsx, calendar-settings.tsx
+
+**Prayer Settings:**
+- All 12 calculation methods
+- Asr school (Shafi / Hanafi)
+- High-latitude rule (4 modes including AUTO)
+- Polar-circle resolution (3 modes)
+- Six manual prayer adjustments (fajr, sunrise, dhuhr, asr, maghrib, isha)
+- Draft/apply workflow — no SQLite write per stepper tap
+- Canonical PrayerEngine preview (useMemo — no persist, no fullRefresh)
+- One canonical planner fullRefresh per Apply
+
+**Location:**
+- M12 location infrastructure fully reused (prayer-location.tsx unchanged)
+- No permission request on screen open; explicit AUTO request only
+- Manual city selection preserved
+
+**Planning Day:**
+- FAJR active and freely selectable
+- MIDNIGHT/CUSTOM blocked at coordinator validation and UI (Premium/M19 deferred)
+- No fake entitlement check or paywall
+- Legacy stored MIDNIGHT/CUSTOM modes displayed with explicit switch-to-FAJR affordance
+
+**Hijri Calendar:**
+- Canonical shared `HijriAdjustmentConfigLoader` with `HijriAdjustmentLoadError` on failure
+- Global Hijri adjustment (±2 days)
+- Per-month Hijri override CRUD (±2 days per month)
+- `RecurringHorizonSync.sync()` and `syncRange()` now load actual stored adjustment config (hardcoded `globalAdjustment: 0` removed)
+- Global and month adjustment mutations trigger `HIJRI_RECURRENCE_REFRESH` fullRefresh
+- DB config-load failures fail safely (PLAN-before-DELETE invariant: zero destructive changes on loader failure)
+- PENDING recurrence reconciliation only; COMPLETED/MISSED/CANCELLED occurrences protected
+
+**Notifications:**
+- M13 notification settings reused (notifications.tsx unchanged)
+- No permission request on open; explicit request only
+- No fake prayer-alert toggle
+
+**Appearance:**
+- SYSTEM / LIGHT / DARK persisted in user_settings (SQLite, no AsyncStorage)
+- Root ThemeProvider bootstrap wired in _layout.tsx
+- SYSTEM follows OS via useColorScheme
+
+**Journal Privacy:**
+- M16 JournalLockController fully reused
+- Same SecureStore preference (no duplication)
+- Biometric authentication required to disable active lock
+- No M15 encryption changes
+
+**About:**
+- App version from expo-constants
+- Seven factual OSS/data-source attributions: GeoNames (CC BY 4.0), Adhan (MIT), Expo/React Native (MIT), Drizzle ORM/SQLite (Apache 2.0), Luxon (MIT), expo-crypto (MIT), expo-local-authentication (MIT)
+- No fabricated support/legal links
+
+**Settings Mutation Architecture:**
+- Non-React `SettingsMutationCoordinator` (all orchestration outside React)
+- `persist-before-refresh` contract: upsert always before fullRefresh
+- Typed result semantics: FAILED / SUCCESS / PERSISTED_REFRESH_FAILED
+- Forbidden internal settings not user-mutable (isPremium, onboardingCompleted, worshipSuggestionsEnabled, prayerAlertsEnabled, location fields)
+- Category-based whitelist: TEMPORAL_FULL_REFRESH / HIJRI_RECURRENCE_REFRESH / PRESENTATION_ONLY
+
+### Final Automated Verification
+
+| Check | Result |
+|---|---|
+| `npx jest --runInBand` | 1171 / 1171 tests, 102 suites |
+| `npm run typecheck` | 0 errors |
+| `npm run lint` | 0 errors / warnings |
+| Migrations added | 0 (0000–0003 unchanged) |
+| Dependencies added | 0 |
+| M15 crypto diff | 0 (unchanged) |
+
+### Native / Operational QA Carry-Forward (M17)
+
+The following require a physical device or simulator and do not reopen M17:
+- Cold-start theme hydration visual behavior
+- Settings Stack back gesture
+- Physical biometric enable/disable through Settings
+- Prayer preview / stepper interaction on device
+- Confirm exactly five permanent bottom destinations
+- Settings persistence across process restart
+
+### H-09 Regression Test — M23 Carry-Forward
+
+`syncRange()` loader-failure non-destructive behavior verified by code analysis and M14 zero-deletion invariant. The dedicated H-09 regression test is deferred to M23 (QA/edge-case milestone). This does not reopen M17.
 

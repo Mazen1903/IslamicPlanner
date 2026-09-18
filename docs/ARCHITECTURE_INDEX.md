@@ -320,8 +320,18 @@
   - `app/(tabs)/settings/about.tsx` (replace placeholder)
   - `app/(tabs)/settings/prayer-location.tsx` (existing, M12 — no changes)
   - `app/(tabs)/settings/notifications.tsx` (existing, M13 — no changes)
-- **Relevant Tests:** (To be created in M17 — see `docs/M17_ARCHITECTURE.md` §10)
-- **Milestone Owner:** **M17 (ARCHITECTURE FROZEN — IMPLEMENTATION NOT STARTED)**
+- **Relevant Tests:**
+  - `src/services/__tests__/HijriAdjustmentConfigLoader.test.ts` (4 tests: loader, defaults, DB failure, error cause)
+  - `src/services/__tests__/SettingsMutationCoordinator.test.ts` (validation, persistence order, refresh, Hijri overrides)
+  - `src/features/task-form/__tests__/recurringHorizonSync.hijriConfig.test.ts` (H-01..H-08: dynamic loader, adjustments, protection)
+  - `app/(tabs)/settings/__tests__/PrayerCalculation.test.tsx`
+  - `app/(tabs)/settings/__tests__/PlanningDay.test.tsx`
+  - `app/(tabs)/settings/__tests__/Appearance.test.tsx`
+  - `app/(tabs)/settings/__tests__/JournalPrivacy.test.tsx`
+  - `app/(tabs)/settings/__tests__/About.test.tsx`
+  - `app/(tabs)/settings/__tests__/HijriCalendar.test.tsx`
+  - `app/(tabs)/settings/__tests__/SettingsHub.test.tsx`
+- **Milestone Owner:** **M17 (CLOSED / SONNET APPROVED)**
 
 ---
 
@@ -379,4 +389,10 @@
 - **Milestone Owner:** **M16 (CLOSED / SONNET APPROVED)**
 - **Native Biometric Verification:** Pending physical-device development build (does not reopen M16)
 
+---
 
+### 21. Widgets
+- **Authoritative Docs:** (Architecture not yet frozen — see `docs/CURRENT_MILESTONE.md`)
+- **Source Paths:** TBD (native dev build required; no M17 source changes)
+- **Relevant Tests:** TBD
+- **Milestone Owner:** **M18 (PENDING — ARCHITECTURE NOT YET FROZEN)**
