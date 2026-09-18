@@ -1,4 +1,4 @@
-# Architecture Decision Log
+﻿# Architecture Decision Log
 
 **Status:** Living document  
 **Updated:** 2026-09-18 (Rev 4 — M17 ADR-025 added)  
@@ -578,3 +578,44 @@ The persisted `PrayerAdjustments` domain shape is unchanged. If a future product
 | ±30 minutes | Too restrictive for users in geographic edge cases who require larger corrections |
 | ±120 minutes | Wider than any known practical calibration need; makes UI steppers awkward |
 | Domain-layer enforcement in `PrayerAdjustments` type | Would require migration or runtime coercion for legacy stored values; application bound does not need to be a domain invariant |
+
+---
+
+## ADR-026: M18 Widget Architecture � Home-Screen Widgets as Read-Only Presentation Surfaces
+
+**Status:** Accepted (2026-09-18)
+
+**Context:**
+
+Users requested home-screen widgets (iOS WidgetKit, Android AppWidgets) for the Islamic Planner app. Two approaches were considered: (A) full mini-planner with separate database access, or (B) read-only presentation surface driven by the canonical planner pipeline.
+
+**Decision:**
+
+Widgets are PRESENTATION SURFACES. All widget content derives from the canonical planner pipeline via WidgetSnapshotBuilder and WidgetSyncCoordinator. Widgets are strictly read-only.
+
+**Key sub-decisions:**
+
+1. **ADR-026-A (Library selection):** expo-widgets for iOS (WidgetKit-native timeline API); eact-native-android-widget for Android.
+
+2. **ADR-026-B (No GPS in widgets):** Widget refresh MUST NOT trigger GPS location permission requests. WidgetSnapshotBuilder reads from LocationAwareTodayTemporalInputProvider which only accesses committed location snapshots in SQLite. getCurrentPosition() is never called from widget code paths.
+
+3. **ADR-026-C (No database migrations):** WidgetSnapshot is a serialized JSON object stored exclusively in the platform widget storage (iOS UserDefaults group / Android Glance StateDefinition). Zero new SQLite tables or columns.
+
+4. **ADR-026-D (Prayer-boundary timeline, not polling):** iOS timelines are pre-built at sync time with one entry per prayer boundary; the OS advances them natively. Android uses background update workers, not foreground polling.
+
+5. **ADR-026-E (Sunrise exclusion):** Sunrise never appears in WidgetPrayer. The five canonical prayers (FAJR, DHUHR, ASR, MAGHRIB, ISHA) are the only widget prayer keys.
+
+6. **ADR-026-F (Privacy by design):** WidgetSnapshot contains no Journal content, no encryption keys, no GPS coordinates, no task notes or descriptions.
+
+7. **ADR-026-G (Preview artwork deferred):** Android widget preview image assets (previewImage) are omitted in M18 as optional visual polish to ensure clean, reliable prebuilds without unverified placeholder assets. Preview artwork is recorded as deferred visual polish.
+
+**Supersedes:** ADR-009 (which deprecated a prior widget approach). ADR-026 is the authoritative M18 widget contract.
+
+**Alternatives considered:**
+
+| Alternative | Reason not chosen |
+|---|---|
+| Standalone mini-planner in widget process | Violates Single Source of Truth; duplicates domain logic |
+| Polling timer in widget (JS setTimeout) | Platform will kill headless process; native scheduler required |
+| GPS-triggered widget refresh | Would require Always-On location permission; rejected per user consent philosophy |
+

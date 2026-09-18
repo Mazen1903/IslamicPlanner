@@ -23,6 +23,7 @@ import {
   NotificationReconciliationService,
   notificationReconciliationService as defaultNotificationService,
 } from './notification/NotificationReconciliationService';
+import { widgetSyncCoordinator } from './widget/WidgetSyncCoordinator';
 
 export type PlannerRefreshCoordinatorResult =
   | {
@@ -102,6 +103,11 @@ export class PlannerRefreshCoordinator {
     } catch (err) {
       console.warn('[PlannerRefreshCoordinator] Notification reconcile failed recoverably:', err);
     }
+
+    // 8. M18: Push widget snapshot (best-effort, never propagates failure)
+    widgetSyncCoordinator.sync().catch(err => {
+      console.warn('[PlannerRefreshCoordinator] Widget sync failed recoverably:', err);
+    });
 
     return {
       status: 'READY',

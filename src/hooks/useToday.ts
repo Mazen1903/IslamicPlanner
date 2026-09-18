@@ -27,6 +27,7 @@ import {
   NotificationReconciliationService,
   notificationReconciliationService as defaultNotificationService,
 } from '@/services/notification/NotificationReconciliationService';
+import { widgetSyncCoordinator } from '@/services/widget/WidgetSyncCoordinator';
 
 export interface UseTodayOptions {
   inputProvider?: TodayTemporalInputProvider;
@@ -127,6 +128,8 @@ export function useToday(options: UseTodayOptions = {}) {
         }
         const vm = await orchestratorRef.current.queryAndProject(runtime, now);
         useTodayStore.getState().commitReproject(token, vm);
+        // M18: Sync widgets after prayer transition
+        widgetSyncCoordinator.sync().catch(() => {});
       } catch {
         // Leave previous viewModel intact if reprojection failed
       }
@@ -172,6 +175,11 @@ export function useToday(options: UseTodayOptions = {}) {
         // Leave previous state
       }
     }
+
+    // M18: Best-effort widget synchronization after task completion
+    widgetSyncCoordinator.sync().catch(err => {
+      console.warn('[useToday] completeTask widget sync failed:', err);
+    });
   }, []);
 
   const viewTransitionPrayer = useCallback(() => {

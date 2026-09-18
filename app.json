@@ -8,7 +8,8 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mm1903.islamicplannerapp"
     },
     "android": {
       "adaptiveIcon": {
@@ -35,6 +36,50 @@
         "expo-local-authentication",
         {
           "faceIDPermission": "Allow $(PRODUCT_NAME) to use Face ID to unlock your private Journal."
+        }
+      ],
+      [
+        "expo-widgets",
+        {
+          "widgets": [
+            {
+              "name": "IslamicPlannerSmall",
+              "displayName": "Prayer Times",
+              "targetName": "IslamicPlannerSmall",
+              "entryPoint": "./widgets/ios/SmallWidget.tsx",
+              "supportedFamilies": ["systemSmall"]
+            },
+            {
+              "name": "IslamicPlannerMedium",
+              "displayName": "Prayer and Tasks",
+              "targetName": "IslamicPlannerMedium",
+              "entryPoint": "./widgets/ios/MediumWidget.tsx",
+              "supportedFamilies": ["systemMedium"]
+            }
+          ]
+        }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "IslamicPlannerSmall",
+              "label": "Islamic Planner (Small)",
+              "minWidth": "120dp",
+              "minHeight": "110dp",
+              "description": "Current prayer and next prayer time.",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "IslamicPlannerMedium",
+              "label": "Islamic Planner (Medium)",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "description": "Prayer schedule and upcoming tasks.",
+              "updatePeriodMillis": 1800000
+            }
+          ]
         }
       ]
     ]
