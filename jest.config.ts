@@ -9,6 +9,7 @@ const config: Config = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^expo-crypto$': '<rootDir>/src/__mocks__/expo-crypto.ts',
+    '^expo-local-authentication$': '<rootDir>/src/__mocks__/expo-local-authentication.ts',
     '\\.dat$': '<rootDir>/src/__mocks__/assetMock.js',
   },
   testMatch: [

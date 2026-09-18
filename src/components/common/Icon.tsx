@@ -24,7 +24,8 @@ export type IconName =
   | 'trash'
   | 'user'
   | 'star'
-  | 'journal';
+  | 'journal'
+  | 'lock';
 
 export interface IconProps {
   name: IconName;
@@ -60,6 +61,7 @@ const ICON_MAP: Record<IconName, keyof typeof Ionicons.glyphMap> = {
   user: 'person-outline',
   star: 'star',
   journal: 'book-outline',
+  lock: 'lock-closed-outline',
 };
 
 export function Icon({

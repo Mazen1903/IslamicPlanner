@@ -20,7 +20,7 @@ const TAB_CONFIG: Record<string, { label: string; icon: IconName }> = {
   today: { label: 'Today', icon: 'sun' },
   calendar: { label: 'Calendar', icon: 'calendar' },
   add: { label: 'Add', icon: 'plus' },
-  worship: { label: 'Worship', icon: 'prayer' },
+  journal: { label: 'Journal', icon: 'journal' },
   settings: { label: 'Settings', icon: 'settings' },
 };
 
@@ -31,7 +31,7 @@ export function BottomNavBar(props: BottomNavBarProps) {
     { key: 'today', name: 'today' },
     { key: 'calendar', name: 'calendar' },
     { key: 'add', name: 'add' },
-    { key: 'worship', name: 'worship' },
+    { key: 'journal', name: 'journal' },
     { key: 'settings', name: 'settings' },
   ];
 
