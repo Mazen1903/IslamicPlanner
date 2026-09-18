@@ -1,9 +1,13 @@
 # M16 — Journal Experience / UI: Architecture Freeze
 
-> **Status:** FROZEN — PENDING OPUS APPROVAL
+> **Status:** CLOSED / SONNET APPROVED
 > **Authority:** Authoritative over M16 implementation decisions
 > **Baseline:** M15 CLOSED / SONNET APPROVED — 1005/1005 tests, 73 suites, commit `9752921`
-> **Last Updated:** 2026-09-17
+> **Architecture Commit:** `a316b19`
+> **Implementation Commit:** `b4e09c1`
+> **Test-Hardening Commit:** `cb2428a`
+> **Final Automated Verification:** 1092/1092 tests (89 suites), clean typecheck, clean lint
+> **Last Updated:** 2026-09-18
 
 ---
 

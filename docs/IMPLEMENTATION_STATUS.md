@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M16 — Journal Experience / UI (PENDING — ARCHITECTURE NOT YET FROZEN)  
-**Last Updated:** 2026-09-17 (M15 closed; M16 architecture phase begins)  
+**Current Milestone:** M17 — Settings (PENDING — ARCHITECTURE NOT YET FROZEN)  
+**Last Updated:** 2026-09-18 (M16 closed; M17 architecture phase begins)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -26,8 +26,8 @@
 | **M13** | Notifications | **CLOSED / SONNET APPROVED** | 2026-09-17 | 907/907 tests (59 suites). Local task reminders via expo-notifications. Shared drain, platform-aware equality, cap 48, zero migrations, zero new dependencies. Physical device delivery verification pending native rebuild. |
 | **M14** | Calendar month | **CLOSED / SONNET APPROVED** | 2026-09-17 | 961/961 tests (68 suites). Sunday-first 28/35/42 natural grid, ±2 candidate seed discovery, CREATE-only historical bounds safety, canonical unconstrained PENDING rematerialization, batch query by planningDayKey, 5-prayer + Anytime read-only detail, Upcoming This Month section. |
 | **M15** | Journal Core & Privacy | **CLOSED / SONNET APPROVED** | 2026-09-17 | Implementation commit: `71edcdf`. Closure commit: `5f3cb7a`. 1005/1005 tests (73 suites). AES-256-GCM field encryption via expo-crypto, planningDayKey ownership, revision-based stale-write protection, ciphertext-only repository boundary, hard-delete semantics. Worship schema dormant. See `docs/M15_ARCHITECTURE.md`. Native AES physical-device verification pending. |
-| **M16** | Journal Experience / UI | Not Started | — | Replaces Worship UI. Tab replacement (worship→journal), compose view, history, biometric lock. Prerequisites: M15, M1, M7. |
-| **M17** | Settings | Not Started | — | Prerequisites: M1, M3, M12, M13, M8 |
+| **M16** | Journal Experience / UI | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture commit `a316b19`, implementation commit `b4e09c1`, test hardening `cb2428a`. 1092/1092 tests (89 suites). Zero migrations. Replaces Worship tab with full encrypted Journal experience, autosave, planningDayKey pinning, optional biometric lock (`expo-local-authentication` ~57.0.3). Native biometric verification pending. |
+| **M17** | Settings | Not Started | — | Prerequisites: M1, M3, M12, M13, M8, M15, M16 |
 | **M18** | Widgets (dev build required) | Not Started | — | Native dependencies installed at M18 only |
 | **M19** | Premium entitlement scaffolding | Not Started | — | Opus review required |
 | **M20** | Onboarding | Not Started | — | Prerequisites: M1, M12, M2 |
@@ -852,3 +852,90 @@
 ### Operational Item (Does Not Reopen M15)
 
 > **Native AES Physical-Device Verification Pending.** Jest tests use a Node.js `crypto` mock. Real `expo-crypto` AES-256-GCM encrypt/decrypt on a physical development build has not yet been verified. This must be completed before final QA / release. If it fails, treat as a Journal security bug.
+
+---
+
+## M16 Completion Record
+
+- **Date:** 2026-09-18
+- **Scope:** Journal Experience / UI — full user-facing Journal tab replacing Worship tab.
+- **Closure:** CLOSED / SONNET APPROVED.
+- **Architecture commit:** `a316b19` (docs: freeze M16 Journal Experience architecture)
+- **Implementation commit:** `b4e09c1` (feat(journal): implement M16 journal experience)
+- **Test-hardening commit:** `cb2428a` (test(journal): harden M16 security and planning-day invariants)
+- **Independent review:** APPROVED (0 BLOCKER, 0 HIGH, 2 MEDIUM test-only regression gaps resolved in `cb2428a`, 0 production code changes).
+
+### What M16 Delivered
+
+- Permanent bottom navigation updated to: `Today | Calendar | + | Journal | Settings`
+- Worship placeholder route (`app/(tabs)/worship.tsx`) replaced by Journal route (`app/(tabs)/journal.tsx`)
+- Dormant Worship domain scaffolding (`src/domain/worship/`) and schema (`worship_item_settings`, `worshipItemKey`, source `WORSHIP`) preserved
+- Encrypted M15 Journal backend integrated into user-facing UI
+- Current planning-day Journal editor with `planningDayKey` pinned for active editing session
+- Gregorian primary date display
+- Effective Hijri secondary date display using canonical `HijriService` and existing adjustment configuration
+- Main free-writing field
+- Four optional reflection fields: `gratitude`, `wentWell`, `improvement`, `dua`
+- Collapsible reflection UI with count indicator
+- Serialized 2000ms debounced autosave (`JournalAutosaveController`)
+- Latest-draft-wins and write coalescing behavior
+- Revision-based stale-write recovery with one automatic retry
+- Local draft preserved in memory/UI on save failure
+- New blank Journal days do not create empty DB rows
+- Existing entries cleared to blank persist encrypted empty payload (does not delete)
+- Deletion only through explicit user confirmation dialog
+- Metadata-only Journal history view (`JournalHistory`, `JournalHistoryRow`)
+- Historical entry editing with date-pinned save
+- No plaintext history previews (metadata only)
+- Optional biometric Journal session lock (`JournalLockController`, `JournalLockPreference`, `LocalAuthenticationAdapter`)
+- Strong Android biometric policy (`biometricsSecurityLevel: 'strong'`)
+- No device/PIN fallback (`disableDeviceFallback: true`)
+- Lock enablement requires successful biometric authentication
+- Lock disablement requires successful biometric authentication
+- App background relock and process-restart relock semantics
+- SecureStore lock preference: `journal_biometric_lock_enabled_v1`
+- M15 encryption architecture completely unchanged
+
+### Test-Hardening Record
+
+Independent review identified two non-production test coverage gaps:
+1. Android unlock path test explicitly verifying `biometricsSecurityLevel: 'strong'` and `disableDeviceFallback: true` with safe `Platform.OS` restoration.
+2. Planning-day / Fajr rollover test explicitly verifying an active editing session remains bound to its originally pinned `planningDayKey` even when `getCurrentPlanningDayKey()` advances.
+
+Both regression tests were added in commit `cb2428a`:
+- `LC-09b` in `src/services/journal/__tests__/JournalLockController.test.ts`
+- `ASC-17` in `src/services/journal/__tests__/JournalAutosaveController.test.ts`
+
+Final project test total: **1092 / 1092 passed (89 suites)**.
+Zero production code changes were required.
+
+### Technical Details
+
+- **New dependency:** `expo-local-authentication ~57.0.3` (autolinked and configured in `app.json` plugins)
+- **Database migrations added:** 0 (existing migrations 0000, 0001, 0002, 0003 untouched)
+- **Worship schema & scaffolding:** Dormant, preserved untouched
+- **TypeScript:** 0 errors (`npm run typecheck`)
+- **ESLint:** 0 errors, 0 warnings (`npm run lint`)
+- **Expo checks:** 20/21 checks passed (`npx expo-doctor`), known pre-existing patch baseline unchanged
+
+### Native Verification Items (Operational QA — Pending Release Build)
+
+> [!IMPORTANT]
+> Physical-device native verification remains pending as operational QA items before production release. They do NOT reopen M15 or M16:
+>
+> **M15 (Journal Core & Privacy):**
+> - Real `expo-crypto` AES-256-GCM encryption/decryption on physical device/development build
+> - Encrypted Journal persistence across app restart
+> - Reopen / decrypt persisted entry on device
+>
+> **M16 (Journal Experience / UI):**
+> - Real fingerprint / Face ID enable flow
+> - Real biometric unlock flow
+> - Biometric cancel / failure handling
+> - Strong Android biometric behavior on real device
+> - Background relock on device home/task switcher
+> - Foreground unlock requirement
+> - Process kill / restart relock semantics
+> - Enrollment unavailable / not-enrolled handling
+> - Physical keyboard / background lifecycle timing where relevant
+

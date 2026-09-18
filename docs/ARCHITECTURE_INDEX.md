@@ -339,22 +339,32 @@
 ---
 
 ### 20. Journal Experience / UI
-- **Authoritative Docs:** TBD (M16 Architecture not yet frozen)
-- **Milestone Owner:** **M16 (PENDING — ARCHITECTURE NOT YET FROZEN)**
-- **Prerequisites:** M15 (CLOSED), M1 design system, M7 Today UI patterns, canonical PlanningDayEngine, canonical HijriService
-- **M16 Scope:**
-  - Worship tab → Journal tab replacement
-  - Journal screen (compose view + history list)
-  - Debounced autosave with `planningDayKey` pinning from M15 API
-  - Optional biometric lock via `expo-local-authentication` (NOT installed in M15)
-  - Visual integration with M1 design system
 - **Authoritative Docs:** `docs/M16_ARCHITECTURE.md` (Frozen architecture specification)
-- **Planned Source Paths:**
-  - `app/(tabs)/journal.tsx` (replaces worship.tsx)
-  - `src/components/journal/` (JournalEditor, JournalHeader, ReflectionSection, JournalHistory, JournalLockedState, JournalPrivacySheet, etc.)
+- **Source Paths:**
+  - `app/(tabs)/journal.tsx` (replaces worship tab)
+  - `src/components/journal/` (JournalEditor, JournalHeader, ReflectionSection, JournalHistory, JournalHistoryRow, JournalLockedState, JournalPrivacySheet, JournalSaveStatus, JournalDeleteDialog)
   - `src/hooks/useJournal.ts`
   - `src/services/journal/JournalAutosaveController.ts`
   - `src/services/journal/JournalLockController.ts`
   - `src/services/journal/JournalLockPreference.ts`
   - `src/services/journal/LocalAuthenticationAdapter.ts`
+- **Relevant Tests:**
+  - `app/(tabs)/__tests__/journal.test.tsx`
+  - `src/components/journal/__tests__/JournalEditor.test.tsx`
+  - `src/components/journal/__tests__/JournalHeader.test.tsx`
+  - `src/components/journal/__tests__/JournalHistory.test.tsx`
+  - `src/components/journal/__tests__/JournalHistoryRow.test.tsx`
+  - `src/components/journal/__tests__/JournalLockedState.test.tsx`
+  - `src/components/journal/__tests__/JournalPrivacySheet.test.tsx`
+  - `src/components/journal/__tests__/JournalSaveStatus.test.tsx`
+  - `src/components/journal/__tests__/JournalDeleteDialog.test.tsx`
+  - `src/components/journal/__tests__/ReflectionSection.test.tsx`
+  - `src/hooks/__tests__/useJournal.test.ts`
+  - `src/services/journal/__tests__/JournalAutosaveController.test.ts` (ASC-01..ASC-17)
+  - `src/services/journal/__tests__/JournalLockController.test.ts` (LC-01..LC-18)
+  - `src/services/journal/__tests__/JournalLockPreference.test.ts`
+  - `src/services/journal/__tests__/LocalAuthenticationAdapter.test.ts`
+- **Milestone Owner:** **M16 (CLOSED / SONNET APPROVED)**
+- **Native Biometric Verification:** Pending physical-device development build (does not reopen M16)
+
 
