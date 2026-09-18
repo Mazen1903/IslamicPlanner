@@ -1,9 +1,9 @@
 # Current Milestone: M17 — Settings
 
-> **Current State:** M17 CURRENT — ARCHITECTURE FROZEN — IMPLEMENTATION NOT STARTED
+> **Current State:** M17 CURRENT — ARCHITECTURE FROZEN — HARDENED — IMPLEMENTATION NOT STARTED
 > **Previous Milestone:** M16 CLOSED / SONNET APPROVED
-> **Milestone Status:** M17 — ARCHITECTURE FROZEN — IMPLEMENTATION NOT STARTED
-> **Architecture Status:** FROZEN — `docs/M17_ARCHITECTURE.md`
+> **Milestone Status:** M17 — ARCHITECTURE FROZEN — HARDENED — IMPLEMENTATION NOT STARTED
+> **Architecture Status:** FROZEN + HARDENED — `docs/M17_ARCHITECTURE.md` (amended: Hijri recurrence fix, Premium rule, SettingsMutationCoordinator, doc reconciliation)
 > **Implementation Status:** NOT STARTED
 
 ---

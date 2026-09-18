@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Current Milestone:** M17 — Settings (PENDING — ARCHITECTURE NOT YET FROZEN)  
+**Current Milestone:** M17 — Settings (ARCHITECTURE FROZEN — HARDENED)  
 **Last Updated:** 2026-09-18 (M16 closed; M17 architecture phase begins)  
 **Project:** Islamic Prayer-Centered Planner  
 

@@ -173,7 +173,7 @@ Do not combine all scheduling logic inside TodayScreen.
 The permanent bottom navigation is:
 
 ```text
-Today | Calendar | + | Worship | Settings
+Today | Calendar | + | Journal | Settings
 ```
 
 ## 4.1 Today
@@ -185,11 +185,15 @@ Month-only Gregorian/Hijri overview.
 ## 4.3 +
 Global Add Task action.
 
-## 4.4 Worship
-Worship Suggestions configuration and related voluntary worship automation.
+## 4.4 Journal
+Private encrypted daily journal with Hijri date display.
+
+> **Note:** Worship Suggestions are DEFERRED (see §32). The Worship tab has been replaced by Journal as of M15/M16.
 
 ## 4.5 Settings
-Prayer, location, planner, notification, appearance, account, Premium, help.
+Prayer Calculation, Prayer Location, Planning Day, Hijri Calendar, Appearance, Notifications, Journal Privacy, About.
+
+> **Deferred:** Account & Sync, Premium, Worship Suggestions are not in the M17 Settings IA. See §32.
 
 ---
 
@@ -1295,16 +1299,20 @@ Exact entitlement may be finalized later.
 Main sections:
 
 ```text
-Prayer & Location
-Planner
-Notifications
+Prayer Calculation
+Prayer Location
+Planning Day
+Hijri Calendar
 Appearance
-Calendar
-Worship Suggestions
-Account & Sync
-Premium
-About & Help
+Notifications
+Journal Privacy
+About
 ```
+
+> **Deferred sections (not in M17):**
+> - Worship Suggestions — DEFERRED (worship functionality deferred post-M24)
+> - Account & Sync — DEFERRED (no cloud sync designed)
+> - Premium — DEFERRED to M19 (entitlement scaffolding)
 
 ---
 
@@ -1334,11 +1342,12 @@ Include:
 - task sorting preferences if needed
 - routine settings if implemented
 
-Premium:
-- custom planning-day start
+Premium (M19):
+- MIDNIGHT planning-day start
+- CUSTOM planning-day start (fixed local time)
 
 Default free:
-- Fajr start
+- FAJR start (only option available before M19)
 
 ---
 
@@ -1981,17 +1990,16 @@ The app should eventually contain:
 - Task detail/edit
 - Calendar Month
 - Calendar selected-date prayer view
-- Worship Suggestions
-- Worship category detail
+- Journal
 - Settings
-- Prayer & Location
-- Planner Settings
+- Prayer Calculation
+- Prayer Location
+- Planning Day
+- Hijri Calendar
 - Notifications
 - Appearance
-- Calendar Settings
-- Account & Sync
-- Premium
-- About & Help
+- Journal Privacy
+- About
 
 ## Supporting
 - Location selector
@@ -2077,8 +2085,8 @@ M11 Location and travel
 M12 Notifications
 M13 Calendar month
 M14 Hijri calendar integration
-M15 Worship Suggestions engine
-M16 Worship UI
+M15 Journal Core & Privacy
+M16 Journal Experience / UI
 M17 Settings
 M18 Widgets
 M19 Premium entitlement scaffolding

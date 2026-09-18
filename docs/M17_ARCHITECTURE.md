@@ -1,16 +1,29 @@
 # M17 — Settings Architecture
 
-> **Status:** FROZEN — APPROVED FOR IMPLEMENTATION
+> **Status:** FROZEN — HARDENED — APPROVED FOR IMPLEMENTATION
 > **Authored:** 2026-09-18
+> **Hardened:** 2026-09-18 (ISSUE 1–4 amendments)
 > **Milestone:** M17 — Settings & Preferences UI
 > **Baseline commit:** 09c68cd (M16 closed / Sonnet approved)
+> **Architecture freeze commit:** 00891c2
+> **Hardening amendment commit:** TBD
 > **Implementation commit:** TBD
 
 ---
 
 ## 0. Document Purpose
 
-This document freezes the technical architecture for M17. Implementation agents **must not** begin coding until this document is committed locally with the freeze commit. No production code may deviate from this specification without a formal revision.
+This document freezes the technical architecture for M17. Implementation agents **must not** begin coding until this document is committed locally with the hardening commit. No production code may deviate from this specification without a formal revision.
+
+### 0.1 Amendment History
+
+| Date | Amendment | Reason |
+|---|---|---|
+| 2026-09-18 | Initial freeze | `00891c2` |
+| 2026-09-18 | ISSUE 1: Hijri recurrence adjustment correction | `hijriAdjustment: { globalAdjustment: 0 }` is hardcoded in `recurringHorizonSync.ts`; Hijri-recurring tasks ignore user's stored adjustment |
+| 2026-09-18 | ISSUE 2: Planning-day Premium rule | MIDNIGHT/CUSTOM are Premium-gated; M17 must not expose them as selectable without M19 entitlement |
+| 2026-09-18 | ISSUE 3: SettingsMutationCoordinator | Domain orchestration must not live in React hooks |
+| 2026-09-18 | ISSUE 4: Source-of-truth doc reconciliation | MASTER_PRODUCT_SPEC.md still references stale Worship navigation |
 
 ---
 
@@ -19,11 +32,12 @@ This document freezes the technical architecture for M17. Implementation agents 
 Deliver a fully functional, accessible Settings experience that:
 
 1. Surfaces all existing user-facing preferences stored in `user_settings`.
-2. Coordinates preference mutations through **existing canonical services** — never bypassing them.
+2. Coordinates preference mutations through a **non-React `SettingsMutationCoordinator`** that delegates to existing canonical services — never bypassing them.
 3. Wires theme persistence into the existing `ThemeProvider` (already live in root `_layout.tsx`).
 4. Adds a **Stack navigator layout** to `app/(tabs)/settings/` so sub-screens navigate with a proper back-button stack without leaking routes into the Bottom Nav.
 5. Implements a unified Settings Hub (`index.tsx`) that lists all settings groups as navigable rows.
 6. Builds each sub-screen to completion — **no placeholders at M17 close**.
+7. **Corrects the hardcoded `hijriAdjustment: { globalAdjustment: 0 }`** in `RecurringHorizonSync` so that Hijri-recurring tasks use the user's actual stored adjustment configuration.
 
 ---
 
@@ -35,7 +49,7 @@ Deliver a fully functional, accessible Settings experience that:
 |---|---|---|
 | **Prayer Calculation** | `prayer-calculation.tsx` *(new)* | Method, Asr school, High-latitude rule, Polar circle resolution, per-prayer minute adjustments |
 | **Location** | `prayer-location.tsx` *(existing, keep)* | AUTO/MANUAL mode, city search — already fully implemented |
-| **Planning Day** | `planning-day.tsx` *(new)* | Day-start boundary: Fajr / Midnight / Custom time |
+| **Planning Day** | `planning-day.tsx` *(new)* | Day-start boundary: Fajr only (MIDNIGHT/CUSTOM are Premium — M19) |
 | **Hijri Calendar** | `hijri-calendar.tsx` *(new)* | Global ±2 day adjustment, per-month override list |
 | **Appearance** | `appearance.tsx` *(replace placeholder)* | Light / Dark / System theme selector |
 | **Notifications** | `notifications.tsx` *(existing, keep)* | Permission grant, reconcile trigger — already fully implemented |
@@ -44,17 +58,23 @@ Deliver a fully functional, accessible Settings experience that:
 | **Settings Hub** | `index.tsx` *(replace placeholder)* | Root list: all groups as tappable rows |
 | **Stack layout** | `_layout.tsx` *(new)* | Expo Router Stack navigator for settings sub-screens |
 
-### 2.2 Explicitly Out of Scope — M17
+### 2.2 Production Code Correction — In Scope
+
+| File | Issue | Correction |
+|---|---|---|
+| `src/features/task-form/recurringHorizonSync.ts` | `hijriAdjustment: { globalAdjustment: 0 }` hardcoded (lines 128, 375) | Load from `loadUserHijriAdjustmentConfig()` instead of hardcoded zero |
+
+### 2.3 Explicitly Out of Scope — M17
 
 | Item | Reason |
 |---|---|
-| Premium / entitlement gating | Deferred to M19 |
+| Premium entitlement scaffolding | Deferred to M19 |
 | Account / cloud sync | Not designed |
 | Data export / destructive reset | Not architecturally vetted — defer |
 | Worship Suggestions toggle | Worship deferred; `worshipSuggestionsEnabled` column preserved dormant |
 | Prayer alert toggles | Deferred; notification engine has no per-prayer alert UI |
 | Custom planning day *prayer-offset* mode | `CUSTOM:prayer+offset` format exists in schema; UI deferred post-MVP |
-| Premium planning day features (Midnight, Custom) | UI gating deferred to M19; expose all options in M17 with no paywall guard |
+| Planning day MIDNIGHT and CUSTOM modes | Premium-gated (M19); M17 shows FAJR as sole selectable option |
 
 > **Note on Premium fields**: `isPremium`, `onboardingCompleted` are schema columns that Settings must **never set or read** in M17. Premium entitlement is owned entirely by M19.
 
@@ -84,7 +104,7 @@ This makes `settings/index.tsx` the hub screen, and all sub-screens (`prayer-cal
 
 > **Important**: `headerShown: false` is required because each sub-screen renders its own accessible header using the design system (matching `prayer-location.tsx` and `notifications.tsx` pattern).
 
-### 3.3 Route Map
+### 3.3 Final Route Tree
 
 ```
 app/(tabs)/settings/
@@ -100,11 +120,18 @@ app/(tabs)/settings/
 └── about.tsx            ← REPLACE placeholder
 ```
 
-Removable stubs (currently placeholder only):
-- `account.tsx` → **REMOVE** (no account system in M17)
-- `calendar-settings.tsx` → **REMOVE** (no calendar settings defined; Calendar is view-only)
-- `planner.tsx` → **REMOVE** (planning day is covered by `planning-day.tsx`)
-- `premium.tsx` → **REMOVE** (deferred to M19)
+### 3.4 Placeholder Route Removal
+
+The following dead placeholder routes are removed in M17:
+
+| Route | Reason for removal | Future path |
+|---|---|---|
+| `account.tsx` | No account system exists; no M17 scope | M19+ if cloud sync designed |
+| `calendar-settings.tsx` | Calendar is view-only; no calendar-specific settings defined | Reintroduce if calendar settings scope appears |
+| `planner.tsx` | Planning day is covered by `planning-day.tsx`; same functional scope, clearer name | Superseded by `planning-day.tsx` |
+| `premium.tsx` | Premium scaffolding deferred to M19 | M19 creates its own Premium route |
+
+**Verification before removal:** No existing routes, tests, or navigation logic reference these placeholder files. Each is an identical 318-byte placeholder with zero functionality. No test file exists for any of them.
 
 ---
 
@@ -150,83 +177,354 @@ ABOUT
 
 ### 5.1 Principle: Thin Control Surface
 
-Settings screens are **thin UI shells** over canonical services. They **never** implement preference logic themselves; they delegate exclusively to existing service layer.
+Settings screens are **thin UI shells** over a **non-React `SettingsMutationCoordinator`** that delegates to canonical services. React hooks handle only view state (loading/error/result); all orchestration logic lives in the coordinator.
 
 ```
-Settings UI
+Settings UI (React)
     │
     ▼
-userSettingsRepository.upsert(patch)      ← data layer
+useSettingsMutation hook (thin: calls coordinator, exposes loading/error)
     │
     ▼
-plannerRefreshCoordinator.fullRefresh()   ← canonical refresh pipeline
+SettingsMutationCoordinator (non-React, testable)
+    │  ├── validate input
+    │  ├── persist: userSettingsRepository.upsert(patch)
+    │  ├── classify mutation category
+    │  └── invoke downstream:
+    │        ├── TEMPORAL_FULL_REFRESH → plannerRefreshCoordinator.fullRefresh()
+    │        ├── HIJRI_RECURRENCE_REFRESH → plannerRefreshCoordinator.fullRefresh()
+    │        ├── PRESENTATION_ONLY → (no refresh)
+    │        ├── LOCATION_EXISTING_FLOW → (not owned; useLocation owns this)
+    │        ├── NOTIFICATION_EXISTING_FLOW → (not owned; notifications screen owns this)
+    │        └── JOURNAL_PRIVACY_EXISTING_FLOW → (not owned; JournalLockController owns this)
+    ▼
+plannerRefreshCoordinator.fullRefresh()
     │
     ▼
-[RecurringHorizonSync, TodayOrchestrator, OccurrenceLifecycleService,
+[RecurringHorizonSync (now with effective Hijri config),
+ TodayOrchestrator,
+ OccurrenceLifecycleService,
  NotificationReconciliationService]
-    │
-    ▼
-useTodayStore.commitRefresh(...)
 ```
 
-### 5.2 Mutation Side-Effect Matrix
+### 5.2 Mutation Categories
 
-| Setting Changed | DB Write | fullRefresh Required | Additional Side Effect |
+| Category | Trigger | DB Write | Downstream |
 |---|---|---|---|
-| `calculationMethod` | `userSettings.upsert` | **YES** | Prayer times change → all PENDING occurrences shift |
-| `asrMethod` | `userSettings.upsert` | **YES** | Same as above |
-| `highLatitudeRule` | `userSettings.upsert` | **YES** | Same as above |
-| `polarCircleResolution` | `userSettings.upsert` | **YES** | Same as above |
-| `prayerAdjustments` | `userSettings.upsert` | **YES** | Per-prayer minute offsets shift task placement |
-| `planningDayStart` | `userSettings.upsert` | **YES** | Planning day boundaries shift; occurrences re-project |
-| `hijriBaseMethod` | `userSettings.upsert` | NO | HijriService reads live; no PENDING occurrence shift |
-| `hijriGlobalAdjustment` | `userSettings.upsert` | NO | Calendar display only |
-| `themeMode` | `userSettings.upsert` + `ThemeProvider.setThemeMode()` | NO | Visual-only; no planner pipeline impact |
-| `locationMode` / coordinates | Already handled by `useLocation` hook | — | `useLocation` owns the full mutation + refresh cycle |
+| `TEMPORAL_FULL_REFRESH` | `calculationMethod`, `asrMethod`, `highLatitudeRule`, `polarCircleResolution`, `prayerAdjustments`, `planningDayStart` | `userSettings.upsert` | `plannerRefreshCoordinator.fullRefresh()` |
+| `HIJRI_RECURRENCE_REFRESH` | `hijriGlobalAdjustment`, `hijriMonthOverrides` row changes | `userSettings.upsert` and/or override table write | `plannerRefreshCoordinator.fullRefresh()` |
+| `PRESENTATION_ONLY` | `themeMode`, `hijriBaseMethod` | `userSettings.upsert` | No refresh pipeline. Theme: `ThemeProvider.setThemeMode()`. HijriBaseMethod: live read by `HijriService`. |
+| `LOCATION_EXISTING_FLOW` | Location mode / coordinates | Not owned by `SettingsMutationCoordinator` | Owned by `useLocation` hook (M12) |
+| `NOTIFICATION_EXISTING_FLOW` | Notification permission | Not owned by `SettingsMutationCoordinator` | Owned by `notifications.tsx` screen (M13) |
+| `JOURNAL_PRIVACY_EXISTING_FLOW` | Biometric lock toggle | Not owned by `SettingsMutationCoordinator` | Owned by `JournalLockController` (M16) |
 
-> **Terminal State Safety**: `fullRefresh()` → `PlannerRefreshCoordinator` → `OccurrenceLifecycleService.sweepExpired()` only touches `PENDING` occurrences. Terminal states (`COMPLETED`, `MISSED`, `CANCELLED`) are permanently immutable and will not be reinterpreted by any settings change.
+### 5.3 Mutation Side-Effect Matrix (Corrected)
 
-### 5.3 usePrayerSettingsMutation Hook (new)
+| Setting Changed | DB Write | Mutation Category | Side Effect |
+|---|---|---|---|
+| `calculationMethod` | `userSettings.upsert` | `TEMPORAL_FULL_REFRESH` | Prayer times change → all PENDING occurrences shift |
+| `asrMethod` | `userSettings.upsert` | `TEMPORAL_FULL_REFRESH` | Same as above |
+| `highLatitudeRule` | `userSettings.upsert` | `TEMPORAL_FULL_REFRESH` | Same as above |
+| `polarCircleResolution` | `userSettings.upsert` | `TEMPORAL_FULL_REFRESH` | Same as above |
+| `prayerAdjustments` | `userSettings.upsert` | `TEMPORAL_FULL_REFRESH` | Per-prayer minute offsets shift task placement |
+| `planningDayStart` | `userSettings.upsert` | `TEMPORAL_FULL_REFRESH` | Planning day boundaries shift; occurrences re-project |
+| `hijriGlobalAdjustment` | `userSettings.upsert` | `HIJRI_RECURRENCE_REFRESH` | **Hijri-recurring task seed dates shift; PENDING Hijri occurrences reconciled** |
+| `hijriMonthOverrides` | Override table write | `HIJRI_RECURRENCE_REFRESH` | **Same: specific Hijri month seed dates shift** |
+| `hijriBaseMethod` | `userSettings.upsert` | `PRESENTATION_ONLY` | `HijriService` reads live; no PENDING recurrence shift (base method affects raw conversion, not adjustment config) |
+| `themeMode` | `userSettings.upsert` | `PRESENTATION_ONLY` | Visual-only; `ThemeProvider.setThemeMode()` |
+| `locationMode` / coordinates | Already handled by `useLocation` hook | `LOCATION_EXISTING_FLOW` | `useLocation` owns the full mutation + refresh cycle |
 
-To avoid duplicating mutation logic across sub-screens, introduce a single shared hook:
+> **Terminal State Safety**: `fullRefresh()` → `PlannerRefreshCoordinator` → `RecurringHorizonSync` only reconciles `PENDING` occurrences. `OccurrenceLifecycleService.sweepExpired()` only transitions `PENDING` → `MISSED`. Terminal states (`COMPLETED`, `MISSED`, `CANCELLED`) are permanently immutable and will not be deleted, reinterpreted, or re-projected by any settings change.
+
+---
+
+## 6. ISSUE 1 CORRECTION — Hijri Recurrence Adjustment
+
+### 6.1 Problem
+
+`RecurringHorizonSync` (in both `sync()` and `syncRange()`) constructs the `RecurrenceContext` with a hardcoded zero adjustment:
 
 ```ts
-// src/hooks/usePrayerSettingsMutation.ts
-interface MutationOptions {
-  requiresFullRefresh: boolean;
-}
-interface MutationResult {
-  isSaving: boolean;
-  save: (patch: UserSettingsPatch) => Promise<void>;
-  error: string | null;
-}
-export function usePrayerSettingsMutation(
-  options: MutationOptions
-): MutationResult;
+// Lines 128, 375 of recurringHorizonSync.ts — CURRENT (INCORRECT)
+recurrenceCtx = {
+  hijriService: this.hijri,
+  hijriAdjustment: { globalAdjustment: 0 },
+};
 ```
 
-Internal flow:
-1. `setIsSaving(true)`
-2. `userSettingsRepository.upsert(patch)`
-3. If `requiresFullRefresh`:
-   - `token = useTodayStore.getState().startRefresh()`
-   - `result = await plannerRefreshCoordinator.fullRefresh()`
-   - `useTodayStore.getState().commitRefresh(token, {...}, true)`
-4. `setIsSaving(false)`
-5. On error: `setError(message)`
+This means all Hijri-recurring tasks are evaluated as if the user has zero global adjustment and zero month overrides, regardless of what the user has actually configured. When the user changes `hijriGlobalAdjustment` from 0 to +1, no recurrence seed dates shift.
 
-This hook is the **only** place in M17 that calls `plannerRefreshCoordinator.fullRefresh()` from a Settings screen.
+### 6.2 Solution: Use Canonical Loader
 
-> **Note on Location**: Location mutation is **not** routed through `usePrayerSettingsMutation`. It is owned exclusively by the existing `useLocation` hook which already contains the full mutation + refresh cycle per M12 architecture.
+A canonical loader already exists: `loadUserHijriAdjustmentConfig()` in `src/services/journal/journalDateUtils.ts`. This function:
+- Reads `userSettings.hijriGlobalAdjustment` from the DB
+- Reads all `hijriMonthOverrides` rows
+- Returns a `HijriAdjustmentConfig` object
 
-### 5.4 Theme Wiring
+**M17 production code correction:**
+
+1. **Extract** `loadUserHijriAdjustmentConfig` from `src/services/journal/journalDateUtils.ts` into a standalone canonical module `src/services/HijriAdjustmentConfigLoader.ts`. This avoids a circular dependency where `recurringHorizonSync` would import from a journal-specific module.
+
+2. **Modify `RecurringHorizonSync`**:
+   - Accept `HijriAdjustmentConfig` as a parameter to `sync()` and `syncRange()`, or load it internally.
+   - **Chosen approach**: Load internally at the start of `sync()` and `syncRange()` using the canonical loader. This keeps the API surface stable and ensures every sync invocation uses fresh DB state.
+
+3. **Replace hardcoded lines 128, 375** with:
+   ```ts
+   const hijriConfig = await loadUserHijriAdjustmentConfig();
+   recurrenceCtx = {
+     hijriService: this.hijri,
+     hijriAdjustment: hijriConfig,
+   };
+   ```
+
+4. **Result**: `RecurringHorizonSync` now uses the user's actual stored global adjustment and month overrides when evaluating Hijri recurrence membership and generating seed dates.
+
+### 6.3 File Ownership
+
+| File | Action |
+|---|---|
+| `src/services/HijriAdjustmentConfigLoader.ts` | **NEW** — Extracted canonical `loadUserHijriAdjustmentConfig()` function |
+| `src/services/journal/journalDateUtils.ts` | **MODIFY** — Import from `HijriAdjustmentConfigLoader` instead of inline implementation; re-export for backward compatibility |
+| `src/features/task-form/recurringHorizonSync.ts` | **MODIFY** — Lines 126–129 and 371–376: replace hardcoded `{ globalAdjustment: 0 }` with `await loadUserHijriAdjustmentConfig()` |
+
+### 6.4 Downstream Effect
+
+When `hijriGlobalAdjustment` or a `hijriMonthOverrides` row changes and `SettingsMutationCoordinator` invokes `plannerRefreshCoordinator.fullRefresh()`:
+
+1. `PlannerRefreshCoordinator.fullRefresh()` calls `RecurringHorizonSync.sync(horizon, inputs)`.
+2. `RecurringHorizonSync.sync()` now loads the **updated** Hijri config from DB (it was just persisted by the coordinator).
+3. `RecurrenceEngine.generateSeedDates()` evaluates Hijri-recurring tasks with the new adjustment, potentially generating different seed dates.
+4. PENDING occurrences that are no longer desired seeds are deleted; new desired seeds are materialized.
+5. Terminal occurrences (COMPLETED/MISSED/CANCELLED) are untouched — `materializeOne` short-circuits them.
+6. Gregorian recurrence is unaffected (no `RecurrenceContext` is passed for Gregorian tasks).
+
+### 6.5 Calendar and Journal Consistency
+
+- `CalendarMonthOrchestrator.loadMonth()` receives `hijriAdjustment` as a parameter from `useCalendar` → loads via the same canonical loader.
+- `useJournal` loads via the same canonical loader (via `journalDateUtils.ts` which re-exports from `HijriAdjustmentConfigLoader`).
+- All three consumers (recurrence sync, calendar display, journal display) read from the same DB source via the same canonical function. No duplication.
+
+---
+
+## 7. ISSUE 2 CORRECTION — Planning Day Premium Rule
+
+### 7.1 Product Rule
+
+From `MASTER_PRODUCT_SPEC.md` §34:
+
+| Mode | Tier |
+|---|---|
+| `FAJR` | Free / default |
+| `MIDNIGHT` | Premium (M19) |
+| `CUSTOM` | Premium (M19) |
+
+### 7.2 M17 Approach: Option A (Smallest Implementation)
+
+M17 exposes **only FAJR** as the active/selectable planning day mode.
+
+MIDNIGHT and CUSTOM are **documented as deferred until M19** in the planning-day sub-screen's info card. They are NOT listed as disabled options in M17. There is no fake entitlement logic, no passive capability seam, and no paywall UI.
+
+The planning-day screen in M17 is effectively an informational/display screen showing:
+1. Current mode: **Fajr** (default, read from DB).
+2. Info card: "Your planning day begins at Fajr prayer. Additional planning day modes (Midnight, Custom) will be available in a future update."
+3. No mode selector needed (only one option is available).
+
+### 7.3 Constraints
+
+- `isPremium` is **never read or written** by M17 code.
+- No fake paywall, paywall link, or "upgrade" button.
+- If a user somehow has `planningDayStart = 'MIDNIGHT'` in their DB (e.g. from direct DB manipulation), M17 displays it correctly but does not allow changing it to anything other than FAJR.
+- The DB column `planningDayStart` remains capable of storing `MIDNIGHT` and `CUSTOM:HH:MM` values for when M19 enables them.
+
+---
+
+## 8. ISSUE 3 CORRECTION — SettingsMutationCoordinator
+
+### 8.1 Problem
+
+The original architecture proposed `usePrayerSettingsMutation` as a React hook containing domain orchestration (repository upsert, fullRefresh invocation, Zustand store manipulation). This violates the principle that domain logic must be testable without React.
+
+### 8.2 Solution: Non-React SettingsMutationCoordinator
+
+**File:** `src/services/SettingsMutationCoordinator.ts`
+
+```ts
+export type MutationCategory =
+  | 'TEMPORAL_FULL_REFRESH'
+  | 'HIJRI_RECURRENCE_REFRESH'
+  | 'PRESENTATION_ONLY';
+
+export type SettingsMutationResult =
+  | { status: 'SUCCESS'; category: MutationCategory; refreshed: boolean }
+  | { status: 'FAILED'; error: string };
+
+export class SettingsMutationCoordinator {
+  constructor(
+    private readonly userSettingsRepo: UserSettingsRepository,
+    private readonly plannerRefreshCoordinator: PlannerRefreshCoordinator
+  ) {}
+
+  /**
+   * Persists a settings patch and runs the appropriate downstream pipeline.
+   *
+   * 1. Validates mutation input (category must be provided).
+   * 2. Persists via userSettingsRepository.upsert(patch).
+   * 3. If category is TEMPORAL_FULL_REFRESH or HIJRI_RECURRENCE_REFRESH:
+   *    Invokes plannerRefreshCoordinator.fullRefresh() exactly once.
+   * 4. Returns typed success/failure.
+   *
+   * INVARIANT: If persistence fails, no downstream refresh is invoked.
+   * INVARIANT: If refresh fails, the error is surfaced but the settings
+   *            change is already committed (consistent with existing behavior
+   *            in useLocation and task-form save flows).
+   */
+  async applySettingsChange(
+    patch: UserSettingsPatch,
+    category: MutationCategory
+  ): Promise<SettingsMutationResult>;
+}
+```
+
+### 8.3 Hook / Controller Boundary
+
+The React hook (`useSettingsMutation`) becomes a thin wrapper:
+
+**File:** `src/hooks/useSettingsMutation.ts`
+
+```ts
+export function useSettingsMutation() {
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const save = useCallback(async (
+    patch: UserSettingsPatch,
+    category: MutationCategory
+  ) => {
+    setIsSaving(true);
+    setError(null);
+    const result = await settingsMutationCoordinator.applySettingsChange(patch, category);
+    if (result.status === 'FAILED') {
+      setError(result.error);
+    }
+    setIsSaving(false);
+    return result;
+  }, []);
+
+  return { isSaving, error, save };
+}
+```
+
+The hook has **zero domain logic**. It:
+1. Manages React loading/error state.
+2. Delegates to `SettingsMutationCoordinator`.
+3. Returns result to the screen.
+
+### 8.4 `useUserSettings` (read hook — unchanged)
+
+**File:** `src/hooks/useUserSettings.ts`
+
+Simple read hook for loading the `user_settings` row on mount.
+
+```ts
+interface UseUserSettingsResult {
+  settings: UserSettingsRow | null;
+  isLoading: boolean;
+  error: string | null;
+  reload: () => void;
+}
+export function useUserSettings(): UseUserSettingsResult;
+```
+
+Used by Prayer Calculation, Planning Day, Hijri Calendar, and Appearance screens to read current values.
+
+---
+
+## 9. Sub-Screen Specifications
+
+### 9.1 Prayer Calculation (`prayer-calculation.tsx`)
+
+**Reads from:** `useUserSettings()`
+**Writes via:** `useSettingsMutation()` → `SettingsMutationCoordinator.applySettingsChange(patch, 'TEMPORAL_FULL_REFRESH')`
+
+**UI sections:**
+
+1. **Calculation Method** — single-select list of all 12 methods from `CALCULATION_METHOD_LABELS` (in `calculationMethods.ts`). Shows `label` and `description` per item.
+2. **Asr School** — two-option toggle: `SHAFI` (Standard) / `HANAFI` (Hanafi). Shows brief description of each.
+3. **High Latitude Rule** — four-option single-select: `AUTO` (Recommended) / `MIDDLE_OF_NIGHT` / `ONE_SEVENTH` / `ANGLE_BASED`. `AUTO` is the default and recommended.
+4. **Polar Circle Resolution** — three-option single-select: `AQRAB_YAUM` (Nearest Day) / `AQRAB_BALAD` (Nearest Place) / `UNRESOLVED`. Only relevant for extreme latitudes; shown as an advanced option.
+5. **Prayer Time Adjustments** — six stepper controls (±60 min, step 1 min): Fajr, Sunrise, Dhuhr, Asr, Maghrib, Isha. Parsed from/serialized to `prayerAdjustments` JSON.
+
+**Persistence**: All five groups are saved as a single `upsert` call when the user taps "Save" or navigates away (auto-save with debounce acceptable). `TEMPORAL_FULL_REFRESH` for all changes.
+
+**Transparency requirement (Constitution §7.4)**: A persistent info card explains the active method label and authority.
+
+---
+
+### 9.2 Prayer Location (`prayer-location.tsx`)
+
+**Already complete.** Implemented in M12. Uses `useLocation` hook.
+
+No changes in M17.
+
+---
+
+### 9.3 Planning Day (`planning-day.tsx`)
+
+**Reads from:** `useUserSettings()` — `planningDayStart`
+
+**M17 behavior (per §7 Premium correction):**
+
+- Displays the current planning day mode (always `FAJR` for free users).
+- Info card explains: "Your planning day begins at Fajr prayer. Additional planning day modes (Midnight, Custom) will be available in a future update."
+- If `planningDayStart` is already `MIDNIGHT` or `CUSTOM:*` (edge case: direct DB manipulation), display the current value but only allow switching back to `FAJR` via `SettingsMutationCoordinator.applySettingsChange({ planningDayStart: 'FAJR' }, 'TEMPORAL_FULL_REFRESH')`.
+- No Premium entitlement check. No paywall UI. No disabled options list.
+
+---
+
+### 9.4 Hijri Calendar (`hijri-calendar.tsx`)
+
+**Reads from:** `useUserSettings()` + `HijriMonthOverrideRepository` (to be implemented from stub)
+**Writes via:** `useSettingsMutation()` → `SettingsMutationCoordinator.applySettingsChange(patch, ...)`
+
+**UI sections:**
+
+1. **Base Method** — single-select: `UMM_AL_QURA` (Official Saudi Arabia) / `CALCULATED` (Arithmetic). Brief description of each.
+   - **Category:** `PRESENTATION_ONLY` — `HijriService` reads `hijriBaseMethod` live. No recurrence impact.
+2. **Global Day Adjustment** — stepper ±2 days (range: -2 to +2, step 1). "Adjust all Hijri dates ±1–2 days to match local moon-sighting announcements."
+   - **Category:** `HIJRI_RECURRENCE_REFRESH` — changes Hijri-recurring task seed dates.
+3. **Month-by-Month Overrides** — list of months with individual ±2 day adjustments. Reads/writes `hijriMonthOverrides` table.
+   - **Category:** `HIJRI_RECURRENCE_REFRESH` — changes specific month seed dates.
+4. **Info card**: "Hijri dates are calculated algorithmically. Use adjustments to align with your local moon-sighting authority. Changes to adjustments will recompute any Hijri-based recurring tasks."
+
+**Implementation detail**: `HijriMonthOverrideRepository` must be implemented from its current empty stub (`export {};`). It needs `findAll()`, `upsert(year, month, adjustmentDays)`, and `delete(year, month)` methods.
+
+---
+
+### 9.5 Appearance (`appearance.tsx`)
+
+**Reads from:** `ThemeContext.themeMode` (via `useTheme()`)
+**Writes via:** `ThemeContext.setThemeMode()` → propagates through `onModeChange` → persists to DB
+
+**UI:**
+
+1. **Theme Mode** — three-option single-select with visual previews:
+   - `LIGHT` — "Always light"
+   - `DARK` — "Always dark"
+   - `SYSTEM` — "Follow system setting" (default)
+2. Each option shows a small color swatch preview of the theme palette.
+
+**No coordinator call required.** Theme is purely visual and routed through `ThemeProvider.onModeChange`.
+
+> **Note**: `DO NOT expand dark mode during MVP` (Constitution §9.12) means `DARK` mode is selectable but visual polish is deferred to M21. M17 only wires the toggle; the `darkTheme` tokens already exist.
+
+### 9.6 Theme Wiring
 
 `ThemeProvider` (at `app/_layout.tsx` root) currently accepts `initialMode` but does not load the persisted `themeMode` from the database on mount.
 
 **M17 must add a thin wiring layer in `app/_layout.tsx`**:
 
 ```tsx
-// app/_layout.tsx
 function RootLayoutWithTheme() {
   const [themeMode, setThemeMode] = useState<ThemeMode>('SYSTEM');
 
@@ -251,108 +549,17 @@ function RootLayoutWithTheme() {
 }
 ```
 
-The Appearance screen calls `setThemeMode()` from `useTheme()`, which propagates through `ThemeProvider`'s `onModeChange` callback into the root state and persists to DB.
-
-> **Constraint**: Must use `ThemeProvider`'s existing controlled-mode API (`mode` + `onModeChange` props). Must NOT use `AsyncStorage` directly or implement a second theme state store.
+> **Constraint**: Must use `ThemeProvider`'s existing controlled-mode API. Must NOT use `AsyncStorage` directly or implement a second theme state store.
 
 ---
 
-## 6. Sub-Screen Specifications
+### 9.7 Notifications (`notifications.tsx`)
 
-### 6.1 Prayer Calculation (`prayer-calculation.tsx`)
-
-**Reads from:** `userSettings` (via `userSettingsRepository.get()`)
-**Writes via:** `usePrayerSettingsMutation({ requiresFullRefresh: true })`
-
-**UI sections:**
-
-1. **Calculation Method** — single-select list of all 12 methods from `CALCULATION_METHOD_LABELS` (in `calculationMethods.ts`). Shows `label` and `description` per item.
-2. **Asr School** — two-option toggle: `SHAFI` (Standard) / `HANAFI` (Hanafi). Shows brief description of each.
-3. **High Latitude Rule** — four-option single-select: `AUTO` (Recommended) / `MIDDLE_OF_NIGHT` / `ONE_SEVENTH` / `ANGLE_BASED`. `AUTO` is the default and recommended.
-4. **Polar Circle Resolution** — three-option single-select: `AQRAB_YAUM` (Nearest Day) / `AQRAB_BALAD` (Nearest Place) / `UNRESOLVED`. Only relevant for extreme latitudes; shown as an advanced option.
-5. **Prayer Time Adjustments** — six stepper controls (±60 min, step 1 min): Fajr, Sunrise, Dhuhr, Asr, Maghrib, Isha. Parsed from/serialized to `prayerAdjustments` JSON.
-
-**Persistence**: All five groups are saved as a single `upsert` call when the user taps "Save" or navigates away (auto-save with debounce acceptable). `requiresFullRefresh: true` for all changes.
-
-**Transparency requirement (Constitution §7.4)**: A persistent info card explains the active method label and authority.
+**Already complete.** Implemented in M13. No changes in M17.
 
 ---
 
-### 6.2 Prayer Location (`prayer-location.tsx`)
-
-**Already complete.** Implemented in M12. Uses `useLocation` hook.
-
-No changes in M17.
-
----
-
-### 6.3 Planning Day (`planning-day.tsx`)
-
-**Reads from:** `userSettings.planningDayStart`
-**Writes via:** `usePrayerSettingsMutation({ requiresFullRefresh: true })`
-
-**Schema encoding** (already in DB):
-- `'FAJR'` → `{ mode: 'FAJR' }`
-- `'MIDNIGHT'` → `{ mode: 'MIDNIGHT' }`
-- `'CUSTOM:HH:MM'` → `{ mode: 'CUSTOM', localTime: 'HH:MM' }` (e.g. `'CUSTOM:04:30'`)
-
-**UI:**
-
-1. **Mode selector** — three-option single-select:
-   - `FAJR` (Default — Recommended): "Day begins at Fajr prayer."
-   - `MIDNIGHT`: "Day begins at civil midnight."
-   - `CUSTOM`: "Day begins at a fixed local time." → reveals time picker.
-2. **Custom time picker** (visible only when `CUSTOM` selected): `HH:MM` local time input, range 00:00–23:59.
-3. **Info card**: Explains the impact on task occurrence assignment.
-
-> **No paywall in M17**: All three modes are exposed. Premium gating is M19's responsibility.
-
----
-
-### 6.4 Hijri Calendar (`hijri-calendar.tsx`)
-
-**Reads from:** `userSettings.hijriBaseMethod`, `userSettings.hijriGlobalAdjustment`, `hijriMonthOverrides` table
-**Writes:** `userSettingsRepository.upsert(patch)` (no `fullRefresh` required for Hijri settings)
-
-**UI sections:**
-
-1. **Base Method** — single-select: `UMM_AL_QURA` (Official Saudi Arabia) / `CIVIL` (Arithmetic Civil). Brief description of each.
-2. **Global Day Adjustment** — stepper ±2 days (range: -2 to +2, step 1). "Adjust all Hijri dates ±1–2 days to match local moon-sighting announcements."
-3. **Month-by-Month Overrides** — list of months with individual ±2 day adjustments. Reads/writes `hijriMonthOverrides` table via `HijriMonthOverrideRepository` (already exists from M8).
-4. **Info card**: "Hijri dates are calculated algorithmically. Use adjustments to align with your local moon-sighting authority."
-
-**Schema note**: `hijriMonthOverrides` table is already schema-defined. Repository methods must be verified at implementation time.
-
----
-
-### 6.5 Appearance (`appearance.tsx`)
-
-**Reads from:** `ThemeContext.themeMode` (via `useTheme()`)
-**Writes via:** `ThemeContext.setThemeMode()` → propagates through `onModeChange` → persists to DB
-
-**UI:**
-
-1. **Theme Mode** — three-option single-select with visual previews:
-   - `LIGHT` — "Always light"
-   - `DARK` — "Always dark"
-   - `SYSTEM` — "Follow system setting" (default)
-2. Each option shows a small color swatch preview of the theme palette.
-
-**No fullRefresh required.** Theme is purely visual.
-
-> **Note**: `DO NOT expand dark mode during MVP` (Constitution §9.12) means `DARK` mode is selectable but visual polish is deferred to M21. M17 only wires the toggle; the `darkTheme` tokens already exist.
-
----
-
-### 6.6 Notifications (`notifications.tsx`)
-
-**Already complete.** Implemented in M13. Uses `NotificationSchedulerAdapter`, `NotificationChannelManager`, `NotificationReconciliationService`.
-
-No changes in M17.
-
----
-
-### 6.7 Journal Privacy (`journal-privacy.tsx`)
+### 9.8 Journal Privacy (`journal-privacy.tsx`)
 
 **Reads from:** `JournalLockController.getLockPreference()` (M16)
 **Writes via:** `JournalLockController.setLockPreference(enabled: boolean)` (M16)
@@ -366,14 +573,11 @@ No changes in M17.
 2. **Status row**: Shows current lock state.
 3. **Info card**: "Your journal is encrypted with AES-256-GCM. Biometric lock adds an access control layer."
 
-**Implementation notes:**
-- Import `JournalLockController` from `@/services/journal/JournalLockController`.
-- Uses `LocalAuthentication` (already wired in M16) for the enabling flow.
-- No `fullRefresh` needed — journal lock is not in the planner pipeline.
+**Not routed through `SettingsMutationCoordinator`** — `JournalLockController` already owns the biometric contract. No `fullRefresh` needed.
 
 ---
 
-### 6.8 About (`about.tsx`)
+### 9.9 About (`about.tsx`)
 
 **Static screen.** No DB reads required at runtime.
 
@@ -393,7 +597,7 @@ No changes in M17.
 
 ---
 
-## 7. Component Reuse
+## 10. Component Reuse
 
 M17 will require shared UI patterns across multiple sub-screens. Define these **within the settings feature** to avoid polluting `src/components/common/`:
 
@@ -411,42 +615,61 @@ All components must use `useTheme()` design tokens exclusively. No hardcoded col
 
 ---
 
-## 8. New Service / Hook
+## 11. New Files Summary
 
-### 8.1 `usePrayerSettingsMutation` (new hook)
+### 11.1 New Service
 
-**File:** `src/hooks/usePrayerSettingsMutation.ts`
+| File | Purpose |
+|---|---|
+| `src/services/SettingsMutationCoordinator.ts` | Non-React orchestrator: validate → persist → classify → invoke downstream |
+| `src/services/HijriAdjustmentConfigLoader.ts` | Canonical `loadUserHijriAdjustmentConfig()` extracted from journalDateUtils |
 
-Encapsulates the standard mutation + optional fullRefresh pattern used by Prayer Calculation and Planning Day screens. See §5.3 for full interface and flow.
+### 11.2 Modified Production Files
 
-### 8.2 `useUserSettings` (new hook)
+| File | Change |
+|---|---|
+| `src/features/task-form/recurringHorizonSync.ts` | Replace hardcoded `{ globalAdjustment: 0 }` with `await loadUserHijriAdjustmentConfig()` |
+| `src/services/journal/journalDateUtils.ts` | Re-export `loadUserHijriAdjustmentConfig` from `HijriAdjustmentConfigLoader` |
+| `src/data/repositories/HijriMonthOverrideRepository.ts` | Implement from empty stub |
+| `app/_layout.tsx` | Theme persistence wiring |
 
-**File:** `src/hooks/useUserSettings.ts`
+### 11.3 New Hooks
 
-Simple read hook for loading the `user_settings` row on mount.
+| File | Purpose |
+|---|---|
+| `src/hooks/useSettingsMutation.ts` | Thin React wrapper over `SettingsMutationCoordinator` |
+| `src/hooks/useUserSettings.ts` | Read-only hook for `user_settings` row |
 
-```ts
-interface UseUserSettingsResult {
-  settings: UserSettingsRow | null;
-  isLoading: boolean;
-  error: string | null;
-  reload: () => void;
-}
-export function useUserSettings(): UseUserSettingsResult;
-```
+### 11.4 New Routes
 
-Used by Prayer Calculation, Planning Day, Hijri Calendar, and Appearance screens to read current values.
+| File | Purpose |
+|---|---|
+| `app/(tabs)/settings/_layout.tsx` | Stack navigator |
+| `app/(tabs)/settings/prayer-calculation.tsx` | Prayer calculation settings |
+| `app/(tabs)/settings/planning-day.tsx` | Planning day display (FAJR only) |
+| `app/(tabs)/settings/hijri-calendar.tsx` | Hijri adjustment settings |
+| `app/(tabs)/settings/journal-privacy.tsx` | Biometric lock toggle |
 
-### 8.3 No New Service Layer
+### 11.5 Replaced Routes
 
-M17 adds **no new services** to `src/services/`. All mutation routing goes through:
-- `userSettingsRepository` (existing)
-- `plannerRefreshCoordinator` (existing)
-- `JournalLockController` (existing, M16)
+| File | Purpose |
+|---|---|
+| `app/(tabs)/settings/index.tsx` | Settings Hub |
+| `app/(tabs)/settings/appearance.tsx` | Theme selector |
+| `app/(tabs)/settings/about.tsx` | About / credits |
+
+### 11.6 Removed Routes
+
+| File |
+|---|
+| `app/(tabs)/settings/account.tsx` |
+| `app/(tabs)/settings/calendar-settings.tsx` |
+| `app/(tabs)/settings/planner.tsx` |
+| `app/(tabs)/settings/premium.tsx` |
 
 ---
 
-## 9. File Classification
+## 12. File Classification (Final)
 
 | File | Classification | M17 Action |
 |---|---|---|
@@ -464,36 +687,82 @@ M17 adds **no new services** to `src/services/`. All mutation routing goes throu
 | `app/(tabs)/settings/calendar-settings.tsx` | Removable placeholder | REMOVE |
 | `app/(tabs)/settings/planner.tsx` | Removable placeholder | REMOVE |
 | `app/(tabs)/settings/premium.tsx` | Removable placeholder | REMOVE |
+| `src/services/SettingsMutationCoordinator.ts` | **MISSING** | CREATE |
+| `src/services/HijriAdjustmentConfigLoader.ts` | **MISSING** | CREATE |
+| `src/hooks/useSettingsMutation.ts` | **MISSING** | CREATE |
+| `src/hooks/useUserSettings.ts` | **MISSING** | CREATE |
+| `src/data/repositories/HijriMonthOverrideRepository.ts` | Empty stub | IMPLEMENT |
+| `src/features/task-form/recurringHorizonSync.ts` | Active | MODIFY (Hijri config fix) |
+| `src/services/journal/journalDateUtils.ts` | Active | MODIFY (re-export from extracted loader) |
+| `app/_layout.tsx` | Active | MODIFY (theme wiring) |
 
 ---
 
-## 10. Test Coverage Requirements
+## 13. Test Coverage Requirements
 
-### 10.1 Unit Tests (Jest)
+### 13.1 Unit Tests (Jest)
 
 | Test File | Scope |
 |---|---|
-| `src/hooks/__tests__/usePrayerSettingsMutation.test.ts` | Verifies upsert + fullRefresh orchestration; verifies no fullRefresh called when flag is false |
+| `src/services/__tests__/SettingsMutationCoordinator.test.ts` | **COORDINATOR**: persist → classify → invoke; failed persistence blocks refresh; no refresh for PRESENTATION_ONLY; single fullRefresh for TEMPORAL/HIJRI; downstream failure surfaced |
+| `src/services/__tests__/HijriAdjustmentConfigLoader.test.ts` | Loads global adjustment; loads month overrides; defaults to 0 when no settings; handles empty override table |
+| `src/data/repositories/__tests__/HijriMonthOverrideRepository.test.ts` | findAll, upsert, delete, unique constraint enforcement |
+| `src/hooks/__tests__/useSettingsMutation.test.ts` | Thin hook: calls coordinator, exposes loading/error state |
 | `src/hooks/__tests__/useUserSettings.test.ts` | Load on mount, reload, error states |
 | `app/(tabs)/settings/__tests__/SettingsHub.test.tsx` | Hub renders all group rows; each row navigates correctly |
-| `app/(tabs)/settings/__tests__/PrayerCalculation.test.tsx` | Renders all 5 groups; save calls upsert with correct patch; fullRefresh triggered |
-| `app/(tabs)/settings/__tests__/PlanningDay.test.tsx` | FAJR/MIDNIGHT/CUSTOM selection; CUSTOM shows time picker; correct patch encoding |
-| `app/(tabs)/settings/__tests__/HijriCalendar.test.tsx` | Base method selection; global adjustment stepper; no fullRefresh |
+| `app/(tabs)/settings/__tests__/PrayerCalculation.test.tsx` | Renders all 5 groups; save calls coordinator with TEMPORAL_FULL_REFRESH; correct patch |
+| `app/(tabs)/settings/__tests__/PlanningDay.test.tsx` | Displays FAJR as active; info card shows Premium deferral; no MIDNIGHT/CUSTOM selectable |
+| `app/(tabs)/settings/__tests__/HijriCalendar.test.tsx` | Base method selection (PRESENTATION_ONLY); global adjustment stepper (HIJRI_RECURRENCE_REFRESH); month overrides |
 | `app/(tabs)/settings/__tests__/Appearance.test.tsx` | Theme mode selection calls setThemeMode; correct value persisted |
 | `app/(tabs)/settings/__tests__/JournalPrivacy.test.tsx` | Toggle enable path: biometric auth called first; toggle disable: direct save |
 | `app/(tabs)/settings/__tests__/About.test.tsx` | Static content renders; version number present |
 
-### 10.2 Integration Invariants
+### 13.2 Hijri Recurrence Tests (NEW — Issue 1)
+
+| Test | Scope |
+|---|---|
+| `src/features/task-form/__tests__/recurringHorizonSync.hijriConfig.test.ts` | **H-01**: sync() loads actual hijriGlobalAdjustment from DB, not hardcoded 0 |
+| | **H-02**: syncRange() loads actual hijriGlobalAdjustment from DB, not hardcoded 0 |
+| | **H-03**: globalAdjustment=+1 shifts desired Hijri recurrence seed dates |
+| | **H-04**: month override shifts desired seed dates for specific Hijri months |
+| | **H-05**: fullRefresh with updated adjustment reconciles PENDING Hijri occurrences |
+| | **H-06**: COMPLETED/MISSED/CANCELLED Hijri occurrences remain untouched after adjustment change |
+| | **H-07**: Gregorian-recurring tasks unaffected by Hijri adjustment changes |
+| | **H-08**: Calendar/Journal effective Hijri display uses same canonical config |
+
+### 13.3 Planning Day Premium Tests (NEW — Issue 2)
+
+| Test | Scope |
+|---|---|
+| `app/(tabs)/settings/__tests__/PlanningDay.test.tsx` | **P-01**: Free/default state displays FAJR as active mode |
+| | **P-02**: MIDNIGHT is not rendered as a selectable option |
+| | **P-03**: CUSTOM is not rendered as a selectable option |
+| | **P-04**: `isPremium` is never read or written by planning-day screen |
+| | **P-05**: No paywall UI elements rendered |
+
+### 13.4 Mutation Coordinator Tests (NEW — Issue 3)
+
+| Test | Scope |
+|---|---|
+| `src/services/__tests__/SettingsMutationCoordinator.test.ts` | **MC-01**: Setting persists via upsert before downstream call |
+| | **MC-02**: TEMPORAL_FULL_REFRESH invokes fullRefresh exactly once |
+| | **MC-03**: HIJRI_RECURRENCE_REFRESH invokes fullRefresh exactly once |
+| | **MC-04**: PRESENTATION_ONLY does NOT invoke fullRefresh |
+| | **MC-05**: Failed persistence does not invoke downstream refresh |
+| | **MC-06**: Downstream refresh failure is surfaced in result (settings already committed) |
+| | **MC-07**: No double-refresh: same value → no unnecessary refresh (optimization, optional) |
+
+### 13.5 Integration Invariants
 
 These must be confirmed by implementation tests:
 
 1. **Terminal state safety**: After changing `calculationMethod`, no `COMPLETED` / `MISSED` / `CANCELLED` occurrence row is mutated.
 2. **Theme persistence**: After setting theme to `DARK`, a fresh `userSettingsRepository.get()` returns `themeMode: 'DARK'`.
-3. **No double-refresh**: Changing a setting value that is already the current value does not trigger an unnecessary fullRefresh.
+3. **Hijri recurrence consistency**: After changing `hijriGlobalAdjustment`, the next `fullRefresh` uses the updated value in `RecurringHorizonSync`.
 
 ---
 
-## 11. Worship Deferment Safeguard
+## 14. Worship Deferment Safeguard
 
 M17 must **not**:
 - Render `worshipSuggestionsEnabled` toggle
@@ -504,7 +773,7 @@ The dormant schema columns (`worshipItemKey`, `worshipSuggestionsEnabled`, `sour
 
 ---
 
-## 12. Design System Compliance
+## 15. Design System Compliance
 
 All M17 screens must:
 - Use `useTheme()` tokens exclusively (no hardcoded colors/spacing/radii)
@@ -515,38 +784,87 @@ All M17 screens must:
 
 ---
 
-## 13. Decisions Log
+## 16. ISSUE 4 — Source-of-Truth Doc Reconciliation
+
+The following documents are amended in the hardening commit:
+
+### 16.1 `docs/MASTER_PRODUCT_SPEC.md`
+
+| Section | Current (stale) | Corrected |
+|---|---|---|
+| §4 Bottom Navigation | `Today \| Calendar \| + \| Worship \| Settings` | `Today \| Calendar \| + \| Journal \| Settings` |
+| §4.4 | "Worship" | "Journal" with description "Private encrypted daily journal with Hijri date display" |
+| §4.5 Settings | "Prayer, location, planner, notification, appearance, account, Premium, help" | "Prayer Calculation, Prayer Location, Planning Day, Hijri Calendar, Appearance, Notifications, Journal Privacy, About" |
+| §32 Settings IA | Lists "Worship Suggestions", "Account & Sync", "Premium" as active | Add deferment note: "Worship Suggestions: DEFERRED. Account & Sync: DEFERRED. Premium: DEFERRED to M19." |
+| §34 Planner Settings | Lists "custom planning-day start" as Premium without stating MIDNIGHT explicitly | Add note: "MIDNIGHT and CUSTOM modes are Premium (M19). FAJR is free/default." |
+| Milestone table | M15 "Worship Suggestions engine", M16 "Worship UI" | M15 "Journal Core & Privacy", M16 "Journal Experience / UI" |
+| Screen inventory | Lists "Worship Suggestions", "Worship category detail" | Replace with "Journal" |
+
+### 16.2 `docs/IMPLEMENTATION_STATUS.md`
+
+| Change | Detail |
+|---|---|
+| Line 3 header | Update from "PENDING — ARCHITECTURE NOT YET FROZEN" to "ARCHITECTURE FROZEN — HARDENED" |
+
+### 16.3 `docs/CURRENT_MILESTONE.md`
+
+| Change | Detail |
+|---|---|
+| Architecture status | Update to reflect hardening amendment commit |
+
+---
+
+## 17. Decisions Log
 
 | # | Decision | Rationale |
 |---|---|---|
 | D1 | Stack layout inside Settings tab | Prevents sub-screens from leaking into bottom-nav; enables native back gesture |
-| D2 | Remove 4 placeholder routes | `account`, `premium`, `calendar-settings`, `planner` have no M17 scope; removing avoids dead routes |
-| D3 | `usePrayerSettingsMutation` hook | DRY: centralizes upsert + fullRefresh pattern across 2+ screens |
+| D2 | Remove 4 placeholder routes | `account`, `premium`, `calendar-settings`, `planner` have no M17 scope; removing avoids dead routes; future M19+ paths documented |
+| D3 | `SettingsMutationCoordinator` (non-React) | Domain orchestration must be testable without React; hooks are thin wrappers only |
 | D4 | `useUserSettings` hook | DRY: centralizes DB read + loading state |
-| D5 | All modes exposed, no paywall | Premium gating is M19; exposing all options avoids architecture coupling |
-| D6 | No new services | All needed service interfaces already exist |
+| D5 | FAJR-only in M17 (Option A) | Smallest implementation; MIDNIGHT/CUSTOM are Premium (M19); no fake entitlement |
+| D6 | One new service (`SettingsMutationCoordinator`) | Replaces hook-based orchestration; validates, persists, classifies, invokes |
 | D7 | Theme wiring in `_layout.tsx` root | `ThemeProvider` already at root; persistence belongs in the same layer |
-| D8 | Hijri: no fullRefresh | `HijriService` reads settings live per call; no PENDING occurrence re-projection needed |
-| D9 | Journal Privacy delegates to `JournalLockController` | M16 owns the biometric contract; Settings is a thin surface |
+| D8 | Hijri adjustment: `HIJRI_RECURRENCE_REFRESH` | Changing adjustment shifts Hijri-recurring seed dates; requires fullRefresh |
+| D9 | Hijri base method: `PRESENTATION_ONLY` | `HijriService` reads base method live; no recurrence membership change |
+| D10 | Journal Privacy delegates to `JournalLockController` | M16 owns the biometric contract; Settings is a thin surface |
+| D11 | Extract `loadUserHijriAdjustmentConfig` to standalone module | Avoids circular dependency (recurrence → journal); single canonical source |
+| D12 | `RecurringHorizonSync` loads config internally | Keeps API surface stable; ensures fresh DB state on every sync invocation |
 
 ---
 
-## 14. Verification Plan
+## 18. Dependency and Migration Count
 
-### Pre-commit (architecture freeze)
+| Metric | Count |
+|---|---|
+| New npm dependencies | **0** |
+| New database migrations | **0** |
+| Schema changes | **0** (all tables/columns already exist) |
+
+---
+
+## 19. Verification Plan
+
+### Pre-commit (hardening amendment)
 
 - [ ] TypeScript passes: `npx tsc --noEmit`
 - [ ] Tests pass: `npx jest --passWithNoTests`
 - [ ] Git status clean
+- [ ] origin/main unchanged at `09c68cd`
 
 ### Post-implementation (before review request)
 
 - [ ] All 1092+ existing tests pass
-- [ ] New test count meets §10.1 requirements (9+ new test files)
+- [ ] New test count meets §13 requirements (12+ new test files)
 - [ ] `npx tsc --noEmit` clean
 - [ ] `npx eslint src` clean
 - [ ] No placeholder screens remain in `app/(tabs)/settings/`
-- [ ] Terminal state safety confirmed via test
-- [ ] Theme persistence confirmed via test
+- [ ] Terminal state safety confirmed via test (§13.5.1)
+- [ ] Theme persistence confirmed via test (§13.5.2)
+- [ ] Hijri recurrence consistency confirmed via test (§13.5.3)
 - [ ] Navigation: all rows in hub navigate to correct sub-screens
 - [ ] Back-button returns to hub from every sub-screen
+- [ ] MIDNIGHT/CUSTOM not selectable in planning-day screen
+- [ ] `isPremium` never referenced in M17 production code
+- [ ] `SettingsMutationCoordinator` tests pass independently of React
+- [ ] `RecurringHorizonSync` uses actual stored Hijri adjustment, not hardcoded 0
