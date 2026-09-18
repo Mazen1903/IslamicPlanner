@@ -81,7 +81,8 @@
             }
           ]
         }
-      ]
+      ],
+      "./plugins/withAndroidWorkManagerResolution.js"
     ]
   }
 }

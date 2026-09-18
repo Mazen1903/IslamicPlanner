@@ -453,6 +453,21 @@ describe('WidgetSyncCoordinator', () => {
         expect(widget.previewImage).toBeUndefined();
       }
     });
+
+    it('CFG-04: app.json includes withAndroidWorkManagerResolution config plugin', () => {
+      expect(plugins).toContain('./plugins/withAndroidWorkManagerResolution.js');
+    });
+
+    it('CFG-05: withAndroidWorkManagerResolution plugin exports 2.8.1 and injects resolutionStrategy', () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { WORKMANAGER_ALIGNED_VERSION, setWorkManagerResolutionStrategy } = require('../../../../plugins/withAndroidWorkManagerResolution');
+      expect(WORKMANAGER_ALIGNED_VERSION).toBe('2.8.1');
+
+      const mockGradle = 'allprojects {\n  repositories {\n    google()\n  }\n}\n';
+      const modified = setWorkManagerResolutionStrategy(mockGradle);
+      expect(modified).toContain("details.requested.group == 'androidx.work'");
+      expect(modified).toContain("details.useVersion '2.8.1'");
+    });
   });
 
   // -------------------------------------------------------------------------

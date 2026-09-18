@@ -1,4 +1,4 @@
-﻿# Architecture Decision Log
+# Architecture Decision Log
 
 **Status:** Living document  
 **Updated:** 2026-09-18 (Rev 4 — M17 ADR-025 added)  
@@ -608,6 +608,13 @@ Widgets are PRESENTATION SURFACES. All widget content derives from the canonical
 6. **ADR-026-F (Privacy by design):** WidgetSnapshot contains no Journal content, no encryption keys, no GPS coordinates, no task notes or descriptions.
 
 7. **ADR-026-G (Preview artwork deferred):** Android widget preview image assets (previewImage) are omitted in M18 as optional visual polish to ensure clean, reliable prebuilds without unverified placeholder assets. Preview artwork is recorded as deferred visual polish.
+
+8. **ADR-026-H (Android WorkManager dependency alignment under CNG):**
+   - **Exact Conflict:** `react-native-android-widget` (0.22.1) requests `androidx.work:work-runtime:2.8.1`, while `expo-widgets` (57.0.20) transitively pulls `androidx.work:work-runtime-ktx:2.7.1` via `androidx.glance:glance-appwidget:1.2.0-rc01`. In WorkManager 2.8.0+, Google migrated Kotlin extension classes (`OneTimeWorkRequestKt`, `PeriodicWorkRequestKt`) directly into `work-runtime`. When `work-runtime:2.8.1` and `work-runtime-ktx:2.7.1` coexist, Android's `checkDebugDuplicateClasses` fails.
+   - **Permanent CNG Resolution:** Implemented tracked Expo config plugin (`plugins/withAndroidWorkManagerResolution.js`) registered in `app.json`. It injects a Gradle `resolutionStrategy` into `allprojects` aligning all `androidx.work` artifacts to version `2.8.1`. In `2.8.1`, `work-runtime-ktx` is an empty compatibility stub, eliminating duplicate classes while preserving full API and runtime compatibility.
+   - **Why Required Under CNG:** Because `/android` is generated and untracked, direct edits to `android/build.gradle` would be wiped on every prebuild. A tracked config plugin ensures 100% reproducible native configuration from `app.json`.
+   - **Build Verification:** Verified via clean prebuild (`npx expo prebuild --platform android --clean`) and Gradle assembly (`.\gradlew.bat assembleDebug --no-daemon`), exiting with code 0 and successfully producing `app-debug.apk`. Generated `android/` remains untracked per project policy.
+   - **Runtime Status:** Physical widget runtime on device/launcher remains pending until tested on target hardware.
 
 **Supersedes:** ADR-009 (which deprecated a prior widget approach). ADR-026 is the authoritative M18 widget contract.
 

@@ -1,4 +1,4 @@
-﻿# M18 - Widgets Architecture
+# M18 - Widgets Architecture
 
 > **Status:** FROZEN - APPROVED FOR IMPLEMENTATION
 > **Authored:** 2026-09-18
@@ -639,6 +639,13 @@ HIGH-2: Android headless SQLite access. The widgetTaskHandler must access SQLite
 
 HIGH-3: iOS App Group requirement. Verify whether expo-widgets updateTimeline reliably delivers data to the widget when the app is not in the foreground. Resolution: Test with the app fully terminated. Impact if unresolved: Amend App Group config before M18 closure.
 
+### 35.1 Android WorkManager Dependency Resolution (ADR-026-H)
+
+- **Conflict:** `react-native-android-widget` (0.22.1) requests `androidx.work:work-runtime:2.8.1`, while `expo-widgets` (57.0.20) transitively pulls `androidx.work:work-runtime-ktx:2.7.1` via `androidx.glance:glance-appwidget:1.2.0-rc01`. In WorkManager 2.8.0+, Google migrated Kotlin extension classes (`OneTimeWorkRequestKt`, `PeriodicWorkRequestKt`) into `work-runtime`. When `work-runtime:2.8.1` and `work-runtime-ktx:2.7.1` coexist, Android `checkDebugDuplicateClasses` fails.
+- **Resolution:** Tracked Expo config plugin `plugins/withAndroidWorkManagerResolution.js` registered in `app.json` injects a Gradle `resolutionStrategy` into `allprojects` aligning all `androidx.work` artifacts to version `2.8.1`. In `2.8.1`, `work-runtime-ktx` is an empty stub, eliminating duplicate classes while preserving full API and runtime compatibility.
+- **CNG Policy:** `/android` remains generated and untracked. No manual edits to `android/` are committed. Clean prebuild and `assembleDebug` verified with exit code 0.
+- **Runtime Verification:** Physical widget launcher appearance remains pending until tested on hardware.
+
 ---
 
 ## 36. Amendment History
@@ -646,6 +653,7 @@ HIGH-3: iOS App Group requirement. Verify whether expo-widgets updateTimeline re
 | Date | Amendment | Reason |
 |---|---|---|
 | 2026-09-18 | Initial freeze | Architecture authored |
+| 2026-09-18 | WorkManager Dependency Alignment (ADR-026-H) | Added `plugins/withAndroidWorkManagerResolution.js` to resolve AndroidX WorkManager 2.8.1 duplicate class conflict under CNG |
 
 ---
 
