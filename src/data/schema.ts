@@ -195,3 +195,19 @@ export const notificationSchedule = sqliteTable('notification_schedule', {
   status: text('status').notNull().default('SCHEDULED'),
   createdAt: text('created_at').notNull(),
 });
+
+// ==========================================
+// 2.8 journal_entries
+// ==========================================
+export const journalEntries = sqliteTable(
+  'journal_entries',
+  {
+    id: text('id').primaryKey(),
+    planningDayKey: text('planning_day_key').notNull().unique(),
+    encryptedPayload: text('encrypted_payload').notNull(),
+    encryptionVersion: integer('encryption_version').notNull().default(1),
+    revision: integer('revision').notNull().default(1),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  }
+);

@@ -8,6 +8,7 @@ const config: Config = {
   setupFilesAfterEnv: [],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^expo-crypto$': '<rootDir>/src/__mocks__/expo-crypto.ts',
     '\\.dat$': '<rootDir>/src/__mocks__/assetMock.js',
   },
   testMatch: [

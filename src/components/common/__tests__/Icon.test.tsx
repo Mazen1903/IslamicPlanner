@@ -23,4 +23,14 @@ describe('Icon Component', () => {
 
     expect(screen.getByRole('image')).toBeTruthy();
   });
+
+  it('renders journal icon without crashing', async () => {
+    await render(
+      <ThemeProvider>
+        <Icon name="journal" accessibilityLabel="Journal" />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByRole('image')).toBeTruthy();
+  });
 });
