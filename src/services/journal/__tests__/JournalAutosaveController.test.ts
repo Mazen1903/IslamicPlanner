@@ -242,6 +242,40 @@ describe('JournalAutosaveController', () => {
       await controller.flush();
       expect(mockService.saveEntry).not.toHaveBeenCalled();
     });
+
+    it('ASC-17: saves always use pinned planningDayKey even if current day changes (Fajr rollover)', async () => {
+      controller.beginSession('2026-09-17');
+
+      // Simulate Fajr rollover: service would now return next day
+      mockService.getCurrentPlanningDayKey.mockResolvedValue('2026-09-18');
+
+      mockService.saveEntry.mockResolvedValueOnce({
+        id: 'entry-pinned',
+        planningDayKey: '2026-09-17',
+        payload: {
+          body: 'Reflection written before and after Fajr',
+          reflections: { gratitude: '', wentWell: '', improvement: '', dua: '' },
+        },
+        revision: 1,
+        createdAt: '2026-09-17T04:59:00Z',
+        updatedAt: '2026-09-17T05:01:00Z',
+      });
+
+      controller.enqueueEdit({
+        body: 'Reflection written before and after Fajr',
+        reflections: { gratitude: '', wentWell: '', improvement: '', dua: '' },
+      });
+
+      jest.advanceTimersByTime(2000);
+      await controller.flush();
+
+      // Must save to pinned original key (2026-09-17), NOT 2026-09-18
+      expect(mockService.saveEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ planningDayKey: '2026-09-17' })
+      );
+      // Autosave controller must not query getCurrentPlanningDayKey during save
+      expect(mockService.getCurrentPlanningDayKey).not.toHaveBeenCalled();
+    });
   });
 
   describe('Write Serialization and Coalescing', () => {

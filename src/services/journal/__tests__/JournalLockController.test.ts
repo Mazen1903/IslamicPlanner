@@ -182,6 +182,30 @@ describe('JournalLockController', () => {
       );
     });
 
+    it('LC-09b: passes biometricsSecurityLevel strong and disableDeviceFallback true on Android unlock', async () => {
+      const originalOS = Platform.OS;
+      try {
+        Platform.OS = 'android';
+        mockLockPref.isEnabled.mockResolvedValue(true);
+        await controller.initialize();
+        expect(controller.state).toBe('locked');
+
+        mockLocalAuth.authenticateAsync.mockResolvedValueOnce({ success: true });
+
+        const newState = await controller.unlock();
+
+        expect(newState).toBe('unlocked');
+        expect(mockLocalAuth.authenticateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            biometricsSecurityLevel: 'strong',
+            disableDeviceFallback: true,
+          })
+        );
+      } finally {
+        Platform.OS = originalOS;
+      }
+    });
+
     it('LC-11: cancelled unlock keeps session locked and sets no error message', async () => {
       mockLockPref.isEnabled.mockResolvedValue(true);
       await controller.initialize();
