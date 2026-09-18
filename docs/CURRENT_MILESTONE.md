@@ -1,9 +1,9 @@
 # Current Milestone: M17 — Settings
 
-> **Current State:** M17 CURRENT — PENDING — ARCHITECTURE NOT YET FROZEN
+> **Current State:** M17 CURRENT — ARCHITECTURE FROZEN — IMPLEMENTATION NOT STARTED
 > **Previous Milestone:** M16 CLOSED / SONNET APPROVED
-> **Milestone Status:** M17 — PENDING — ARCHITECTURE NOT YET FROZEN, IMPLEMENTATION NOT STARTED
-> **Architecture Status:** PENDING — ARCHITECTURE NOT YET FROZEN
+> **Milestone Status:** M17 — ARCHITECTURE FROZEN — IMPLEMENTATION NOT STARTED
+> **Architecture Status:** FROZEN — `docs/M17_ARCHITECTURE.md`
 > **Implementation Status:** NOT STARTED
 
 ---

@@ -304,12 +304,24 @@
 ---
 
 ### 18. User Settings & Preferences
-- **Authoritative Docs:** `docs/DATA_MODEL.md` (Table `user_settings`), `docs/DECISIONS.md`
-- **Source Paths:**
-  - `src/data/repositories/UserSettingsRepository.ts`
-  - `src/screens/SettingsScreen.tsx`
-- **Relevant Tests:** (To be created in M17)
-- **Milestone Owner:** **M17 (PENDING)**
+- **Authoritative Docs:** `docs/M17_ARCHITECTURE.md` (Frozen architecture specification), `docs/DATA_MODEL.md` (Table `user_settings`), `docs/DECISIONS.md`
+- **Source Paths (M17):**
+  - `src/data/repositories/UserSettingsRepository.ts` (existing, singleton `user_settings` upsert)
+  - `src/hooks/usePrayerSettingsMutation.ts` (new — mutation + optional fullRefresh hook)
+  - `src/hooks/useUserSettings.ts` (new — read hook)
+  - `src/components/settings/` (new — SettingsRow, SettingsSectionHeader, SettingsToggle, SettingsSelectOption, SettingsStepper, SettingsInfoCard, SettingsScreenHeader)
+  - `app/(tabs)/settings/_layout.tsx` (new — Stack navigator)
+  - `app/(tabs)/settings/index.tsx` (replace placeholder — Settings Hub)
+  - `app/(tabs)/settings/prayer-calculation.tsx` (new)
+  - `app/(tabs)/settings/planning-day.tsx` (new)
+  - `app/(tabs)/settings/hijri-calendar.tsx` (new)
+  - `app/(tabs)/settings/appearance.tsx` (replace placeholder)
+  - `app/(tabs)/settings/journal-privacy.tsx` (new)
+  - `app/(tabs)/settings/about.tsx` (replace placeholder)
+  - `app/(tabs)/settings/prayer-location.tsx` (existing, M12 — no changes)
+  - `app/(tabs)/settings/notifications.tsx` (existing, M13 — no changes)
+- **Relevant Tests:** (To be created in M17 — see `docs/M17_ARCHITECTURE.md` §10)
+- **Milestone Owner:** **M17 (ARCHITECTURE FROZEN — IMPLEMENTATION NOT STARTED)**
 
 ---
 
