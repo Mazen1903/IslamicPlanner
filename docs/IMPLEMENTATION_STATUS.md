@@ -1,7 +1,7 @@
 # Implementation Status
 
-**Current Milestone:** M15 — Journal Core & Privacy (ARCHITECTURE FROZEN / OPUS APPROVED)  
-**Last Updated:** 2026-09-17 (Worship→Journal pivot, M15 architecture frozen)  
+**Current Milestone:** M16 — Journal Experience / UI (PENDING — ARCHITECTURE NOT YET FROZEN)  
+**Last Updated:** 2026-09-17 (M15 closed; M16 architecture phase begins)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---

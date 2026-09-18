@@ -1,9 +1,9 @@
 # Current Milestone: M16 — Journal Experience / UI
 
-> **Current State:** M16 PENDING — ARCHITECTURE NOT YET FROZEN
+> **Current State:** M16 CURRENT — ARCHITECTURE FROZEN / PENDING OPUS APPROVAL
 > **Previous Milestone:** M15 CLOSED / SONNET APPROVED
-> **Milestone Status:** M16 — PENDING ARCHITECTURE FREEZE
-> **Architecture Status:** NOT STARTED
+> **Milestone Status:** M16 — ARCHITECTURE FROZEN, IMPLEMENTATION NOT STARTED
+> **Architecture Status:** FROZEN — see `docs/M16_ARCHITECTURE.md`
 > **Implementation Status:** NOT STARTED
 
 ---

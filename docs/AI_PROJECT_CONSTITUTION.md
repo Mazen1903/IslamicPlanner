@@ -160,7 +160,7 @@
 | **M12** | Location & Travel Detection | **CLOSED** | Manual coordinates, GPS fallback, travel Qasr flags |
 | **M13** | Notification Engine | **CLOSED** | Local notifications, prayer alerts, task reminders |
 | **M14** | Calendar UI Screen | **CLOSED** | Monthly grid, dual Gregorian/Hijri date display |
-| **M15** | Journal Core & Privacy | *ARCHITECTURE FROZEN* | Encrypted private journal, planningDayKey ownership, AES-256-GCM |
+| **M15** | Journal Core & Privacy | **CLOSED / SONNET APPROVED** | Encrypted private journal, planningDayKey ownership, AES-256-GCM, expo-crypto, ciphertext-only repository boundary. Implementation commit: `71edcdf`. Final HEAD: `9752921`. |
 | **M16** | Journal Experience / UI | *PENDING* | Compose view, history, biometric lock, tab replacement |
 | **M17** | Settings & Preferences UI | *PENDING* | Method picker, juristic switch, Hijri adjustment |
 
