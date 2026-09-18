@@ -172,13 +172,13 @@
 ### 11. Database Schema & Migrations
 - **Authoritative Docs:** `docs/DATA_MODEL.md`, `docs/DECISIONS.md` (ADR-001, ADR-002, ADR-018, ADR-020)
 - **Source Paths:**
-  - `src/data/schema.ts` (DDL for 7 tables: tasks, occurrences, exceptions, settings, etc.)
+  - `src/data/schema.ts` (DDL for 8 tables: tasks, occurrences, exceptions, settings, notification_schedule, worship_item_settings, journal_entries, etc.)
   - `src/data/db.ts` (Database connection and transaction manager)
-  - `src/data/migrations/` (Versioned migration runner)
+  - `src/data/migrations/` (Versioned migration runner — 0000 through 0003)
 - **Relevant Tests:**
   - `src/data/__tests__/db.test.ts`
   - `src/data/__tests__/migrations.test.ts`
-- **Milestone Owner:** **M4 / M6 (CLOSED)**
+- **Milestone Owner:** **M4 / M6 (CLOSED)** — schema extended by M15 (migration 0003)
 
 ---
 
@@ -316,17 +316,35 @@
 ### 19. Journal Core & Privacy
 - **Authoritative Docs:** `docs/M15_ARCHITECTURE.md` (Frozen architecture specification)
 - **Source Paths:**
-  - `src/domain/journal/types.ts` (JournalPayload, JournalEntryRow, JournalEntryMetadata, errors)
+  - `src/domain/journal/types.ts` (JournalPayload, JournalEntry, JournalEntryRow, JournalEntryMetadata, JournalEntrySaveInput)
   - `src/domain/journal/errors.ts` (JournalEncryptionError, StaleWriteError, JournalKeyError)
   - `src/domain/journal/index.ts`
-  - `src/data/repositories/JournalRepository.ts` (SQLite CRUD, revision-checked upsert)
+  - `src/data/repositories/JournalRepository.ts` (SQLite CRUD, revision-checked upsert, ciphertext-only boundary)
+  - `src/data/schema.ts` — `journalEntries` table (appended at end of file)
+  - `src/data/migrations/0003_colorful_gorilla_man.sql` (journal_entries + UNIQUE index)
   - `src/services/journal/JournalCryptoService.ts` (AES-256-GCM via expo-crypto)
-  - `src/services/journal/JournalKeyManager.ts` (Key lifecycle via expo-secure-store)
-  - `src/services/journal/JournalService.ts` (Orchestrator: planningDayKey, encrypt-then-persist)
+  - `src/services/journal/JournalKeyManager.ts` (Key lifecycle via expo-secure-store slot `journal_encryption_key_v1`)
+  - `src/services/journal/JournalService.ts` (Orchestrator: getCurrentPlanningDayKey, encrypt-then-persist, decrypt-on-load)
   - `src/services/journal/index.ts`
+  - `src/__mocks__/expo-crypto.ts` (Jest mock using Node.js AES-256-GCM)
 - **Relevant Tests:**
-  - `src/data/repositories/__tests__/JournalRepository.test.ts`
-  - `src/services/journal/__tests__/JournalCryptoService.test.ts`
-  - `src/services/journal/__tests__/JournalKeyManager.test.ts`
-  - `src/services/journal/__tests__/JournalService.test.ts`
-- **Milestone Owner:** **M15 (ARCHITECTURE FROZEN / OPUS APPROVED)**
+  - `src/data/repositories/__tests__/JournalRepository.test.ts` (JR-01..JR-13)
+  - `src/data/migrations/__tests__/migration0003.test.ts` (JM-01..JM-04)
+  - `src/services/journal/__tests__/JournalCryptoService.test.ts` (JC-01..JC-09)
+  - `src/services/journal/__tests__/JournalKeyManager.test.ts` (JK-01..JK-07)
+  - `src/services/journal/__tests__/JournalService.test.ts` (JS-01..JS-11)
+- **Milestone Owner:** **M15 (CLOSED / SONNET APPROVED)**
+- **Native AES Verification:** Pending physical-device development build (does not reopen M15)
+
+---
+
+### 20. Journal Experience / UI
+- **Authoritative Docs:** TBD (M16 Architecture not yet frozen)
+- **Milestone Owner:** **M16 (PENDING — ARCHITECTURE NOT YET FROZEN)**
+- **Prerequisites:** M15 (CLOSED), M1 design system, M7 Today UI patterns, canonical PlanningDayEngine, canonical HijriService
+- **M16 Scope:**
+  - Worship tab → Journal tab replacement
+  - Journal screen (compose view + history list)
+  - Debounced autosave with `planningDayKey` pinning from M15 API
+  - Optional biometric lock via `expo-local-authentication` (NOT installed in M15)
+  - Visual integration with M1 design system

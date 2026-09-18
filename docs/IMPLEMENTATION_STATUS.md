@@ -25,7 +25,7 @@
 | **M12** | Location / Travel / Timezone Behavior | **CLOSED / SONNET APPROVED** | 2026-09-16 | Bundle isolation fix commit: `5897ec8`. 813/813 tests (48 suites). GeoNames offline city dataset outside JS bundle. |
 | **M13** | Notifications | **CLOSED / SONNET APPROVED** | 2026-09-17 | 907/907 tests (59 suites). Local task reminders via expo-notifications. Shared drain, platform-aware equality, cap 48, zero migrations, zero new dependencies. Physical device delivery verification pending native rebuild. |
 | **M14** | Calendar month | **CLOSED / SONNET APPROVED** | 2026-09-17 | 961/961 tests (68 suites). Sunday-first 28/35/42 natural grid, ±2 candidate seed discovery, CREATE-only historical bounds safety, canonical unconstrained PENDING rematerialization, batch query by planningDayKey, 5-prayer + Anytime read-only detail, Upcoming This Month section. |
-| **M15** | Journal Core & Privacy | **ARCHITECTURE FROZEN / OPUS APPROVED** | — | Replaces Worship Suggestions Engine. AES-256-GCM field encryption via expo-crypto, planningDayKey ownership, revision-based stale-write protection. Worship schema dormant. See `docs/M15_ARCHITECTURE.md`. |
+| **M15** | Journal Core & Privacy | **CLOSED / SONNET APPROVED** | 2026-09-17 | Implementation commit: `71edcdf`. Closure commit: `5f3cb7a`. 1005/1005 tests (73 suites). AES-256-GCM field encryption via expo-crypto, planningDayKey ownership, revision-based stale-write protection, ciphertext-only repository boundary, hard-delete semantics. Worship schema dormant. See `docs/M15_ARCHITECTURE.md`. Native AES physical-device verification pending. |
 | **M16** | Journal Experience / UI | Not Started | — | Replaces Worship UI. Tab replacement (worship→journal), compose view, history, biometric lock. Prerequisites: M15, M1, M7. |
 | **M17** | Settings | Not Started | — | Prerequisites: M1, M3, M12, M13, M8 |
 | **M18** | Widgets (dev build required) | Not Started | — | Native dependencies installed at M18 only |
@@ -798,5 +798,57 @@
   - SQLite migrations: 0 added.
   - Dependencies: 0 added.
 
+---
 
+## M15 Completion Record
 
+- **Date:** 2026-09-17
+- **Scope:** Journal Core & Privacy — data layer only. No Journal UI delivered (deferred to M16).
+- **Closure:** CLOSED / SONNET APPROVED.
+- **Architecture commit:** `1359289` (docs: freeze M15 Journal Core & Privacy architecture -- Opus approved)
+- **Implementation commit:** `71edcdf` (feat(journal): implement M15 journal core and privacy)
+- **Closure commit:** `5f3cb7a` (docs: close M15 after Antigravity independent code review -- APPROVED)
+
+### What M15 Delivered
+
+- `journal_entries` SQLite table (migration `0003_colorful_gorilla_man.sql`)
+- One entry per `planningDayKey` (UNIQUE constraint)
+- AES-256-GCM encrypted `JournalPayload` (body + reflections) via `expo-crypto`
+- `expo-secure-store`-backed 256-bit AES key (`journal_encryption_key_v1`)
+- Ciphertext-only repository boundary: `JournalRepository` never handles plaintext
+- `JournalService`: encrypt-then-persist, decrypt-on-load, planning-day key pinning
+- Revision-based stale-write protection (optimistic concurrency)
+- Metadata-only `listHistory` (no decrypted content in history queries)
+- Hard-delete semantics (no soft-delete)
+- `journal` icon abstraction in `Icon` component (`book-outline`)
+- Comprehensive test suite: JR-01..JR-13, JC-01..JC-09, JK-01..JK-07, JS-01..JS-11, JM-01..JM-04
+
+### What M15 Explicitly Did NOT Deliver (Deferred to M16)
+
+- Journal tab / screen UI
+- Worship tab → Journal tab replacement
+- Compose / editor view with autosave
+- History list UI
+- Optional biometric lock (`expo-local-authentication` NOT installed)
+- Visual integration with the design system
+- M16 autosave debounce / lifecycle handling
+
+### Technical Details
+
+- **New dependency:** `expo-crypto ~57.0.3` (autolinked — NOT added to `app.json` plugins)
+- **New migration:** `0003_colorful_gorilla_man.sql` (additive only; no ALTER TABLE)
+- **Existing migrations:** 0000, 0001, 0002 untouched
+- **Worship schema:** Dormant (`worship_item_settings`, `worship_item_key`, source `WORSHIP`, `worship_suggestions_enabled`) — all untouched
+- **Calendar (M14):** Untouched. Zero regressions.
+
+### Verification
+
+- `npx jest --runInBand`: **1005 / 1005 passed (73 suites)**
+- `npm run typecheck`: Passed (0 errors)
+- `npm run lint`: Passed (0 errors, 0 warnings)
+- `npx expo install --check`: Confirmed (expo-crypto correctly installed)
+- `npx expo-doctor`: 20/21 checks (known pre-existing patch version advisory unchanged)
+
+### Operational Item (Does Not Reopen M15)
+
+> **Native AES Physical-Device Verification Pending.** Jest tests use a Node.js `crypto` mock. Real `expo-crypto` AES-256-GCM encrypt/decrypt on a physical development build has not yet been verified. This must be completed before final QA / release. If it fails, treat as a Journal security bug.

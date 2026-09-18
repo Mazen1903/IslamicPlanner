@@ -1,9 +1,27 @@
 # M15 — Journal Core & Privacy: Architecture Freeze
 
 > **Status:** FROZEN — OPUS APPROVED  
-> **Authority:** Authoritative over Gemini M15 implementation decisions  
+> **Implementation Status:** CLOSED / SONNET APPROVED  
+> **Authority:** Authoritative over M15 implementation decisions  
 > **Baseline:** M14 CLOSED / SONNET APPROVED — 961/961 tests, 68 suites  
+> **Implementation:** 1005/1005 tests, 73 suites — commit `71edcdf`  
 > **Last Updated:** 2026-09-17
+
+### Implementation Closure Record
+
+| Item | Value |
+|---|---|
+| Architecture commit | `1359289` |
+| Implementation commit | `71edcdf` |
+| Closure commit | `5f3cb7a` |
+| Final tests | 1005 / 1005 (73 suites) |
+| TypeScript | Clean (0 errors) |
+| ESLint | Clean (0 errors) |
+| New dependency | `expo-crypto ~57.0.3` |
+| New migration | `0003_colorful_gorilla_man.sql` |
+| expo-crypto plugin | NOT added (autolinked — see §13.1) |
+
+> **⚠️ Native AES Verification Pending:** Real `expo-crypto` AES-256-GCM encrypt/decrypt on a physical development build/device has not yet been verified. Jest tests use a Node.js `crypto` mock (`src/__mocks__/expo-crypto.ts`) that faithfully implements the same algorithm and wire format. This operational item must be completed before release / final QA. If it fails, that failure must be treated as a real Journal security bug. This does NOT reopen M15.
 
 ---
 
@@ -93,14 +111,16 @@ interface JournalPayload {
 - Reflections are tightly coupled to one entry — no relational normalization needed
 - Forward-compatible: new fields can be added to the JSON without migration
 
-**Serialization:** `JSON.stringify(payload)` → UTF-8 bytes → base64 → `aesEncryptAsync()` → stored as `encrypted_payload`
+**Serialization:** `JSON.stringify(payload)` → `TextEncoder.encode()` → UTF-8 `Uint8Array` → `aesEncryptAsync()` → `sealedData.combined('base64')` → stored as `encrypted_payload`
+
+> **Note:** There is no plaintext base64 intermediate. The payload bytes are passed directly to `aesEncryptAsync` as a `Uint8Array`. The base64 encoding is the output of the encryption (the combined IV‖ciphertext‖tag), not an input step.
 
 ### 3.4 What Is NOT Stored
 
 | Field | Rationale |
 |---|---|
 | `civilDate` | Derived from `planningDayKey` (they are often identical; when they differ due to planning-day mode, `planningDayKey` is authoritative) |
-| `hijriDate` | Derived at display time via `HijriService.fromGregorian()` |
+| `hijriDate` | Derived at display time via `HijriService.toHijri(planningDayKey)` |
 | `timezone` | Not needed; Journal is not a scheduled event |
 | `mood` / `score` | Prohibited by product identity |
 
@@ -223,7 +243,7 @@ The Journal entry for "today" belongs to `currentPlanningDayKey` as resolved by 
 
 ### 6.3 Hijri Display
 
-Hijri date for a Journal entry is derived at display time: `HijriService.fromGregorian(planningDayKey)`. Not stored.
+Hijri date for a Journal entry is derived at display time: `hijriService.toHijri(planningDayKey)`. Not stored.
 
 ---
 
@@ -266,6 +286,8 @@ interface JournalEntrySaveInput {
   revision?: number;             // required for updates; omit for creates
 }
 ```
+
+> **Planning-day pinning:** The caller (M16 UI) is responsible for providing the correct `planningDayKey`. `JournalService.saveEntry()` uses the explicit `planningDayKey` from the input exactly as supplied — it does **not** recalculate or override the planning day. The UI must resolve `getCurrentPlanningDayKey()` at the moment the editor opens, store it in component state, and pass the same key on every autosave until the editor is closed.
 
 ### 7.4 `JournalEntryRow` (Domain Model)
 
@@ -318,12 +340,16 @@ Each `save()` call:
 
 ```typescript
 interface JournalService {
+  getCurrentPlanningDayKey(now?: DateTime): Promise<string | null>;
   loadEntry(planningDayKey: string): Promise<JournalEntry | null>;
   saveEntry(input: JournalEntrySaveInput): Promise<JournalEntry>;
-  deleteEntry(id: string): Promise<void>;
+  deleteEntry(id: string): Promise<boolean>;
   listHistory(options?: { limit?: number; offset?: number }): Promise<JournalEntryMetadata[]>;
+  findByDateRange(startKey: string, endKey: string): Promise<JournalEntryMetadata[]>;
 }
 ```
+
+> **`saveEntry` pinning contract:** `saveEntry()` uses `input.planningDayKey` verbatim. It does not re-derive the planning day from the current clock. The M16 UI must call `getCurrentPlanningDayKey()` once when the editor opens, cache it in local state, and pass the same key on every save.
 
 M16 will implement debounced autosave in the UI layer:
 - Debounce interval: ~2 seconds after last keystroke
@@ -479,9 +505,12 @@ Worship Suggestions are **DEFERRED** — not deleted. They may be re-introduced 
 | Package | `expo-crypto` |
 | Version | `~57.0.x` (matches SDK 57) |
 | Justification | First-party Expo AES-256-GCM implementation; no third-party crypto needed |
-| Plugin required | Yes — add `"expo-crypto"` to `app.json` plugins array |
-| Native rebuild | Required (after `npx expo install expo-crypto`) |
-| Test mock | `expo-crypto` must be mockable for unit tests |
+| Plugin required | **No.** `expo-crypto` is autolinked and does NOT have a config plugin. Do NOT add it to `app.json` plugins. |
+| Installation | `npx expo install expo-crypto` — autolinks on next native rebuild |
+| Native rebuild | Required before physical-device AES verification |
+| Test mock | `expo-crypto` must be mocked for Jest — see `src/__mocks__/expo-crypto.ts` |
+
+> **⚠️ Implementation Note:** Adding `"expo-crypto"` to `app.json → expo.plugins` will cause a build error ("Stripping types is currently unsupported"). Do not add it. The package is autolinked.
 
 **No other new dependencies.**
 
@@ -517,7 +546,7 @@ Worship Suggestions are **DEFERRED** — not deleted. They may be re-introduced 
 | `src/data/migrations/meta/_journal.json` | Add idx 3 entry |
 | `package.json` | Add `expo-crypto` dependency |
 | `package-lock.json` | Updated by npm install |
-| `app.json` | Add `"expo-crypto"` to plugins array |
+| `app.json` | **No change** — `expo-crypto` is autolinked, do NOT add to plugins |
 | `docs/AI_PROJECT_CONSTITUTION.md` | Update bottom nav line (Worship → Journal), add Journal invariants |
 | `docs/ARCHITECTURE_INDEX.md` | Add Section 19 (Journal), update Section 17 (Worship deferred) |
 | `docs/IMPLEMENTATION_STATUS.md` | Update M15/M16 rows, roadmap |
