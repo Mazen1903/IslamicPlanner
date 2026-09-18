@@ -1,10 +1,12 @@
 # Current Milestone: M15 — Journal Core & Privacy
 
-> **Current State:** M15 ARCHITECTURE FROZEN / OPUS APPROVED  
-> **Baseline:** 961/961 tests, 68 suites (M14)  
-> **Milestone Status:** M15 — ARCHITECTURE FROZEN, AWAITING IMPLEMENTATION  
-> **Architecture Status:** FROZEN (see `docs/M15_ARCHITECTURE.md`)  
-> **Implementation Status:** NOT STARTED  
+> **Current State:** M15 CLOSED / ANTIGRAVITY INDEPENDENT REVIEW APPROVED
+> **Baseline:** 961/961 tests, 68 suites (M14)
+> **Implementation Result:** 1005/1005 tests, 73 suites
+> **Milestone Status:** M15 — CLOSED
+> **Architecture Status:** FROZEN (see `docs/M15_ARCHITECTURE.md`)
+> **Implementation Commit:** `71edcdf feat(journal): implement M15 journal core and privacy`
+> **Review Commit:** See `docs/M15_review_verdict.md`
 
 ---
 
@@ -28,6 +30,7 @@ M15 delivers the **data layer only**. The Journal UI (tab, compose, history) shi
 | Stale-write protection | Revision counter with optimistic concurrency |
 | Biometric lock | Deferred to M16 |
 | Worship schema | Dormant — no changes |
+| expo-crypto app.json plugin | NOT added — expo-crypto is autolinked, no config plugin needed |
 
 ---
 
@@ -51,12 +54,26 @@ M15 delivers the **data layer only**. The Journal UI (tab, compose, history) shi
 | Component | Status |
 |---|---|
 | Architecture freeze | ✅ COMPLETE |
-| `expo-crypto` installation | ❌ Not started |
-| Schema + migration | ❌ Not started |
-| Domain types | ❌ Not started |
-| JournalRepository | ❌ Not started |
-| JournalCryptoService | ❌ Not started |
-| JournalKeyManager | ❌ Not started |
-| JournalService | ❌ Not started |
-| Tests | ❌ Not started |
+| `expo-crypto` installation | ✅ COMPLETE |
+| Schema + migration (0003) | ✅ COMPLETE |
+| Domain types | ✅ COMPLETE |
+| JournalRepository | ✅ COMPLETE |
+| JournalCryptoService | ✅ COMPLETE |
+| JournalKeyManager | ✅ COMPLETE |
+| JournalService | ✅ COMPLETE |
+| Tests (44 new, 1005 total) | ✅ COMPLETE |
 | Doc updates | ✅ COMPLETE |
+| Independent code review | ✅ APPROVED |
+
+---
+
+## 5. Next Milestone
+
+**M16 — Journal Experience / UI**
+
+Scope:
+- Journal tab screen (replaces Worship tab placeholder)
+- Compose view (debounced autosave, planningDayKey-pinned)
+- History list (metadata only, no decrypted previews)
+- Biometric lock option via `expo-local-authentication`
+- Calm, zero-guilt design language matching Today/Calendar aesthetics
