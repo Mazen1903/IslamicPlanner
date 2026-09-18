@@ -34,7 +34,8 @@
    - There is no separate top-level "Anytime" tab. Tasks scheduled as `ANYTIME_TODAY` or `PRAYER_WINDOW` are placed inside their designated or active prayer section tabs.
 5. **Main Bottom Navigation**:
    - The primary app shell consists strictly of five tabs:
-     `Today` | `Calendar` | `+` (Add Task Action) | `Worship` | `Settings`
+      `Today` | `Calendar` | `+` (Add Task Action) | `Journal` | `Settings`
+    - *Note: Journal replaced Worship as a permanent tab. Worship Suggestions are deferred, not deleted. See `docs/M15_ARCHITECTURE.md`.*
 6. **Visual Palette (MVP)**:
    - Clean, light, warm palette. Dark mode expansion is explicitly deferred post-MVP to maintain design discipline.
 
@@ -157,10 +158,10 @@
 | **M10** | Add / Edit Task UX | **CLOSED** | Creation modals, scheduling pickers, validation |
 | **M11** | Overdue & Missed Worker | **CLOSED** | Background lifecycle transitions, terminal states |
 | **M12** | Location & Travel Detection | **CLOSED** | Manual coordinates, GPS fallback, travel Qasr flags |
-| **M13** | Notification Engine | **NEXT** | Local notifications, prayer alerts, task reminders |
-| **M14** | Calendar UI Screen | *PENDING* | Monthly grid, dual Gregorian/Hijri date display |
-| **M15** | Worship Suggestions Engine | *PENDING* | Rules engine for voluntary worship recommendations |
-| **M16** | Worship Suggestions UI | *PENDING* | Cards, one-tap add-to-today integration |
+| **M13** | Notification Engine | **CLOSED** | Local notifications, prayer alerts, task reminders |
+| **M14** | Calendar UI Screen | **CLOSED** | Monthly grid, dual Gregorian/Hijri date display |
+| **M15** | Journal Core & Privacy | *ARCHITECTURE FROZEN* | Encrypted private journal, planningDayKey ownership, AES-256-GCM |
+| **M16** | Journal Experience / UI | *PENDING* | Compose view, history, biometric lock, tab replacement |
 | **M17** | Settings & Preferences UI | *PENDING* | Method picker, juristic switch, Hijri adjustment |
 
 ### Closed Milestone Trust Contract

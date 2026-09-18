@@ -1,6 +1,12 @@
 # Worship Engine
 
-**Status:** Source of truth for worship suggestion generation  
+> [!IMPORTANT]
+> **DEFERRED** — As of 2026-09-17, Worship Suggestions are deferred indefinitely.
+> Journal replaces Worship in the permanent bottom navigation (M15/M16).
+> Dormant Worship schema scaffolding (`worship_item_settings`, `worship_item_key`, source `WORSHIP`, `worship_suggestions_enabled`) remains in the database for potential future implementation.
+> This document is preserved as a historical/future design reference. It does NOT describe current implementation work.
+
+**Original Status:** Source of truth for worship suggestion generation  
 **Updated:** 2026-09-14 (Rev 2 — architecture review)  
 **Implements:** MASTER_PRODUCT_SPEC §26, §27, §28
 

@@ -257,7 +257,7 @@
   - `src/services/notification/__tests__/NotificationIntegrations.test.ts`
   - `src/hooks/__tests__/useTodayNotifications.test.ts`
   - `app/(tabs)/settings/__tests__/notifications.test.tsx`
-- **Milestone Owner:** **M13 (IMPLEMENTED / AWAITING SONNET REVIEW)**
+- **Milestone Owner:** **M13 (CLOSED / SONNET APPROVED)**
 
 ---
 
@@ -289,18 +289,17 @@
   - `src/components/calendar/__tests__/UpcomingSection.test.tsx`
   - `src/hooks/__tests__/useCalendar.test.ts`
   - `app/(tabs)/__tests__/calendar.test.tsx`
-- **Milestone Owner:** **M14 (IMPLEMENTED / AWAITING SONNET REVIEW)**
+- **Milestone Owner:** **M14 (CLOSED / SONNET APPROVED)**
 
 ---
 
-### 17. Worship Suggestions & Guidance
-- **Authoritative Docs:** `docs/WORSHIP_ENGINE.md`, `docs/MASTER_PRODUCT_SPEC.md` (Section 7)
+### 17. Worship Suggestions & Guidance — DEFERRED
+- **Status:** DEFERRED. Journal replaces Worship in permanent bottom navigation. Worship may be re-introduced post-M24.
+- **Dormant Schema:** `worship_item_settings` table, `task_definitions.worship_item_key`, source `WORSHIP`, `user_settings.worship_suggestions_enabled` — all remain in schema, untouched.
+- **Authoritative Docs:** `docs/WORSHIP_ENGINE.md` (preserved with deferment header)
 - **Source Paths:**
-  - `src/domain/worship/`
-  - `src/components/worship/`
-  - `src/screens/WorshipScreen.tsx`
-- **Relevant Tests:** (To be created in M15/M16)
-- **Milestone Owner:** **M15 (Engine) / M16 (UI) (PENDING)**
+  - `src/domain/worship/` (empty stubs — preserved)
+- **Milestone Owner:** **Deferred (was M15/M16)**
 
 ---
 
@@ -311,3 +310,23 @@
   - `src/screens/SettingsScreen.tsx`
 - **Relevant Tests:** (To be created in M17)
 - **Milestone Owner:** **M17 (PENDING)**
+
+---
+
+### 19. Journal Core & Privacy
+- **Authoritative Docs:** `docs/M15_ARCHITECTURE.md` (Frozen architecture specification)
+- **Source Paths:**
+  - `src/domain/journal/types.ts` (JournalPayload, JournalEntryRow, JournalEntryMetadata, errors)
+  - `src/domain/journal/errors.ts` (JournalEncryptionError, StaleWriteError, JournalKeyError)
+  - `src/domain/journal/index.ts`
+  - `src/data/repositories/JournalRepository.ts` (SQLite CRUD, revision-checked upsert)
+  - `src/services/journal/JournalCryptoService.ts` (AES-256-GCM via expo-crypto)
+  - `src/services/journal/JournalKeyManager.ts` (Key lifecycle via expo-secure-store)
+  - `src/services/journal/JournalService.ts` (Orchestrator: planningDayKey, encrypt-then-persist)
+  - `src/services/journal/index.ts`
+- **Relevant Tests:**
+  - `src/data/repositories/__tests__/JournalRepository.test.ts`
+  - `src/services/journal/__tests__/JournalCryptoService.test.ts`
+  - `src/services/journal/__tests__/JournalKeyManager.test.ts`
+  - `src/services/journal/__tests__/JournalService.test.ts`
+- **Milestone Owner:** **M15 (ARCHITECTURE FROZEN / OPUS APPROVED)**
