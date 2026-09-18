@@ -7,6 +7,8 @@ import { buildPrayerTimeline } from '@/domain/prayer/PrayerTimeline';
 import type { SchedulingContext } from '@/domain/scheduling/types';
 import type { TaskDefinition, TaskOccurrence } from '@/domain/task/types';
 import type { CivilDateRange, RecurrenceContext } from '@/domain/recurrence/types';
+import type { HijriAdjustmentConfig } from '@/domain/calendar/types';
+import { loadUserHijriAdjustmentConfig } from '@/services/HijriAdjustmentConfigLoader';
 import type { TodayTemporalInputs } from '@/services/types';
 import type { HorizonSyncResult, CalendarRangeSyncResult, SyncIssue } from './types';
 
@@ -50,7 +52,8 @@ export class RecurringHorizonSync {
     private occRepo: TaskOccurrenceRepository = taskOccurrenceRepository,
     private recEngine: RecurrenceEngine = new RecurrenceEngine(),
     private matEngine: MaterializationEngine = defaultMaterializationEngine,
-    private hijri: HijriService = new HijriService()
+    private hijri: HijriService = new HijriService(),
+    private hijriConfigLoader: () => Promise<HijriAdjustmentConfig> = loadUserHijriAdjustmentConfig
   ) {}
 
   /**
@@ -123,9 +126,10 @@ export class RecurringHorizonSync {
 
     let recurrenceCtx: RecurrenceContext | undefined;
     try {
+      const hijriAdjustment = await this.hijriConfigLoader();
       recurrenceCtx = {
         hijriService: this.hijri,
-        hijriAdjustment: { globalAdjustment: 0 },
+        hijriAdjustment,
       };
     } catch (err: any) {
       issues.push({
@@ -370,9 +374,10 @@ export class RecurringHorizonSync {
     // Initialize Hijri context if needed for recurrence
     let recurrenceCtx: RecurrenceContext | undefined;
     try {
+      const hijriAdjustment = await this.hijriConfigLoader();
       recurrenceCtx = {
         hijriService: this.hijri,
-        hijriAdjustment: { globalAdjustment: 0 },
+        hijriAdjustment,
       };
     } catch (err: any) {
       issues.push({

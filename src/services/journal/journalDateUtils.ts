@@ -1,9 +1,5 @@
 import { DateTime } from 'luxon';
-import { getDatabase } from '@/data/db';
-import { userSettings, hijriMonthOverrides } from '@/data/schema';
-import { eq } from 'drizzle-orm';
 import {
-  getHijriMonthKey,
   type HijriAdjustmentConfig,
   type HijriMonthNumber,
   HIJRI_MONTH_NAMES,
@@ -43,36 +39,7 @@ export function formatHijriJournalDate(
   }
 }
 
-/**
- * Loads the effective user Hijri adjustment configuration from database settings
- * and month overrides.
- */
-export async function loadUserHijriAdjustmentConfig(): Promise<HijriAdjustmentConfig> {
-  try {
-    const db = getDatabase();
-    const settingsRows = db
-      .select({ hijriGlobalAdjustment: userSettings.hijriGlobalAdjustment })
-      .from(userSettings)
-      .where(eq(userSettings.id, 'default'))
-      .limit(1)
-      .all();
-
-    const settings = settingsRows[0];
-    const overrides = db.select().from(hijriMonthOverrides).all();
-    const monthOverrides = new Map<string, number>();
-
-    for (const ov of overrides) {
-      monthOverrides.set(
-        getHijriMonthKey(ov.hijriYear, ov.hijriMonth),
-        ov.adjustmentDays
-      );
-    }
-
-    return {
-      globalAdjustment: settings?.hijriGlobalAdjustment ?? 0,
-      monthOverrides: monthOverrides.size > 0 ? monthOverrides : undefined,
-    };
-  } catch {
-    return { globalAdjustment: 0 };
-  }
-}
+export {
+  loadUserHijriAdjustmentConfig,
+  HijriAdjustmentLoadError,
+} from '@/services/HijriAdjustmentConfigLoader';
