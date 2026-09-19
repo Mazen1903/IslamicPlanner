@@ -1,9 +1,9 @@
 # Current Milestone: M22 — Accessibility / RTL
 
-> **Current State:** M22 ARCHITECTURE HARDENED / FROZEN LOCALLY — PENDING LEAD REVIEW
+> **Current State:** M22 ARCHITECTURE FINALIZED LOCALLY — PENDING LEAD APPROVAL
 > **Previous Milestone:** M21 CLOSED / SONNET APPROVED
-> **Milestone Status:** M22 — CURRENT — ARCHITECTURE HARDENED, IMPLEMENTATION NOT STARTED
-> **Architecture Status:** HARDENED AND FROZEN LOCALLY — 82-file audit complete; all 17 Lead corrections applied; ADR-030 authorized
+> **Milestone Status:** M22 — CURRENT — ARCHITECTURE FINALIZED, IMPLEMENTATION NOT STARTED
+> **Architecture Status:** FINALIZED AND FROZEN LOCALLY — 82-file audit complete; all Lead corrections applied; ADR-030 authorized and finalized
 
 ---
 
@@ -216,40 +216,48 @@ The following checks require physical devices or simulators and are carried forw
 
 ## M22 Architecture Summary
 
-**M22 — Accessibility / RTL** architecture is HARDENED AND FROZEN LOCALLY.
+**M22 — Accessibility / RTL** architecture is FINALIZED AND FROZEN LOCALLY — PENDING LEAD APPROVAL.
 
 | Commit Role | Hash | Description |
 |---|---|---|
 | Architecture freeze | `20c68e2` | docs(m22): freeze M22 architecture - accessibility and RTL |
-| Architecture hardening | *(hardening commit)* | docs(m22): harden accessibility and RTL architecture |
+| Architecture hardening | `c79cdaf` | docs(m22): harden accessibility and RTL architecture |
+| Architecture finalization | *(finalization commit)* | docs(m22): finalize accessibility and RTL contract |
 
-**Architecture Status:** HARDENED / FROZEN LOCALLY — PENDING LEAD REVIEW
+**Architecture Status:** FINALIZED / FROZEN LOCALLY — PENDING LEAD APPROVAL
 
 ### Scope
 
 | Item | Count |
 |---|---|
 | Production files audited | 82 |
-| Production files with planned changes | 43 |
-| Accessibility issues (A-1..A-23) | 23 |
-| RTL issues (RTL-1..RTL-6) | 6 |
-| Total findings | 29 |
-| HIGH severity | 6 |
-| MEDIUM severity | 14 |
-| LOW severity | 8 |
-| OBSERVATION (no change) | 2 |
+| Production files with planned changes | **45** |
+| Accessibility implementation findings (A-1..A-24 excl. A-19) | **24** |
+| RTL implementation findings (RTL-1..RTL-4) | **4** |
+| Non-actionable observations (OBS-1..OBS-3) | **3** |
+| Total implementation findings | **28** |
+| HIGH severity | **7** |
+| MEDIUM severity | **13** |
+| LOW severity | **7** |
+| Directional icon consumer files | **4** |
+| Modal consumers | **6** |
 
 ### Key Decisions Frozen
 
-- **RTL scope:** Layout readiness only — no `I18nManager.forceRTL`, no locale system
+- **RTL scope:** Layout readiness + directional glyph correction — no `I18nManager.forceRTL`, no locale system
+- **Directional icon RTL:** `directional` prop on `Icon.tsx`; reads `I18nManager.isRTL` (read-only); 4 icon instances in 3 consumer files
+- **Non-directional (disclosure) icons:** `SettingsRow`, `JournalHistoryRow`, expand-collapse toggles — NOT mirrored
 - **Prayer tab RTL:** Natural flex mirroring (Fajr at logical start, reads chronologically in both LTR and RTL)
 - **BottomNavBar RTL:** Natural flex mirroring; canonical route indices unchanged
 - **Calendar RTL:** Natural flex mirroring; callback semantics (onPreviousMonth/onNextMonth) unchanged
 - **Modal isolation:** All 6 Modals require `accessibilityViewIsModal={true}` + `accessibilityRole="header"` on title
-- **Radio state:** `accessibilityRole="radio"` requires `accessibilityState={{ checked }}` (not `selected`)
-- **`maxFontSizeMultiplier={2}`:** Calendar weekday labels + day cell numbers only (justified)
+- **Modal backdrop:** `accessible={false}` on backdrop Pressable when explicit dismiss button exists (no duplicate screen-reader control)
+- **PremiumLockedInfo:** Remove `accessible` from card View — OK button must be individually traversable
+- **Radio state:** `accessibilityRole="radio"` requires `accessibilityState={{ checked }}` (not `selected`) — includes CustomRecurrenceModal calendar-switcher (A-24)
+- **`maxFontSizeMultiplier={2}`:** 3 calendar cell Text nodes only — per-node justification in §10 of M22_ARCHITECTURE.md
 - **Icon `decorative` prop:** New prop on `Icon.tsx`; all labeled-Pressable icon callsites pass `decorative`
-- **ADR-030:** Authorized — Accessibility Semantics and RTL Layout Contract
+- **Icon `directional` prop:** New prop on `Icon.tsx`; back/prev/next navigation icons pass `directional`
+- **ADR-030:** AUTHORIZED AND FINALIZED
 
 ### Unresolved Blocking Items
 
@@ -260,13 +268,13 @@ The following checks require physical devices or simulators and are carried forw
 | Metric | Value |
 |---|---|
 | Test baseline | 1404 / 121 suites |
-| Estimated new tests | 138 |
-| Expected total | ~1542 |
+| Estimated new tests | **142** |
+| Expected total | **~1546** |
 | Minimum acceptable | ≥ 1504 |
 
 ### Native QA Carry-Forward
 
-VoiceOver/TalkBack focus order verification, modal focus trapping on device, RTL visual layout on device, large text calendar layout — all carried to M23.
+VoiceOver/TalkBack focus order, modal focus trapping on device, RTL visual layout on device, directional icon glyph verification on RTL device, large text calendar layout — all carried to M23.
 
 ### Prerequisites for Implementation
 

@@ -199,15 +199,17 @@ The following negative constraints are absolute and non-negotiable across all fu
 
 ## 12. Accessibility Invariants (ADR-030, established M22)
 
-1. **`accessibilityRole="radio"` requires `accessibilityState={{ checked }}`** — not `selected`. This applies to all onboarding selection options and any future mutually-exclusive single-select controls.
+1. **`accessibilityRole="radio"` requires `accessibilityState={{ checked }}`** — not `selected`. This applies to all onboarding selection options, the CustomRecurrenceModal calendar-switcher, and any future mutually-exclusive single-select controls.
 2. **`accessibilityRole="tab"` uses `accessibilityState={{ selected }}`** — not `checked`.
-3. **All `<Modal>` consumers must have `accessibilityViewIsModal={true}`** on the innermost content View. Do not omit this — it is required for Android TalkBack focus trapping.
-4. **All modal/dialog title Text elements must have `accessibilityRole="header"`**.
-5. **All section header Text elements (SettingsSectionHeader, etc.) must have `accessibilityRole="header"`**.
-6. **Decorative icons inside labeled Pressables** must pass the `decorative` prop to `<Icon>`. Never let redundant icon announcements pollute screen reader output.
-7. **Informational compound containers** (TaskCard content, PrayerHeader text block) must be grouped with `accessible={true}` + `importantForAccessibility="no-hide-descendants"` and a composite `accessibilityLabel`. Interactive elements (checkboxes, buttons) must be siblings OUTSIDE the group — never nested inside.
-8. **Error messages that appear dynamically** require `accessibilityLiveRegion="assertive"`.
-9. **`allowFontScaling={true}` is the default** — never disable globally. `maxFontSizeMultiplier` is authorized only for calendar grid cells (justified in `M22_ARCHITECTURE.md §10`). Any future use requires written architectural justification.
+3. **All `<Modal>` consumers must have `accessibilityViewIsModal={true}`** on the innermost content View. Platform note: primarily effective for iOS VoiceOver; Android TalkBack focus containment is subject to native device verification. Do not claim this prop alone guarantees TalkBack trapping.
+4. **Modal backdrop Pressables with explicit dismiss buttons (Cancel/Done/OK/Close) must use `accessible={false}`** — NOT `accessibilityRole="button"` with a label. Duplicating the dismiss action as a backdrop screen-reader control is incorrect.
+5. **Do NOT use `accessible={true}` as a group wrapper when interactive descendants need individual traversal.** Example: `PremiumLockedInfo` card — the OK button must be individually accessible. Never group a container that contains interactive children that must be reachable individually.
+6. **All modal/dialog title Text elements must have `accessibilityRole="header"`**.
+7. **All section header Text elements (SettingsSectionHeader, etc.) must have `accessibilityRole="header"`**.
+8. **Decorative icons inside labeled Pressables** must pass the `decorative` prop to `<Icon>`. Never let redundant icon announcements pollute screen reader output.
+9. **Informational compound containers** (TaskCard content, PrayerHeader text block) must be grouped with `accessible={true}` + `importantForAccessibility="no-hide-descendants"` and a composite `accessibilityLabel`. Interactive elements (checkboxes, buttons) must be siblings OUTSIDE the group — never nested inside.
+10. **Error messages that appear dynamically** require `accessibilityLiveRegion="assertive"`.
+11. **`allowFontScaling={true}` is the default** — never disable globally. `maxFontSizeMultiplier` is authorized only for 3 specific calendar grid cell Text nodes (justified in `M22_ARCHITECTURE.md §10`). Any future use requires written architectural justification.
 
 ---
 
@@ -218,3 +220,5 @@ The following negative constraints are absolute and non-negotiable across all fu
 3. **`onPreviousMonth` and `onNextMonth` calendar callbacks are semantic** — their meaning never swaps regardless of layout direction.
 4. **Icon-text row spacing uses logical properties**: `marginStart`/`marginEnd`/`paddingStart`/`paddingEnd` — never `marginLeft`/`marginRight`/`paddingLeft`/`paddingRight` in `flexDirection: 'row'` contexts. `marginLeft: 'auto'` for flex push is exempt (direction-neutral).
 5. **No runtime `I18nManager.forceRTL` call** without a full localization system.
+6. **Directional navigation icons use the `directional` prop on `<Icon>`.** When `directional={true}` and `I18nManager.isRTL`, the glyph is horizontally flipped. This is a **read-only** use of `I18nManager` — never calls `forceRTL` or `allowRTL`. Directional icons: back chevrons (navigation) and prev/next month chevrons. Disclosure chevrons (SettingsRow, JournalHistoryRow, expand-collapse) are NOT directional.
+7. **Canonical callback meaning NEVER changes with layout direction.** `router.back()` always navigates back. `onPreviousMonth` always navigates to the previous month. Only the visual glyph adapts.

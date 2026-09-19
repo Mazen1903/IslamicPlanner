@@ -1,5 +1,5 @@
-**Current Milestone:** M22 — Accessibility / RTL (ARCHITECTURE HARDENED / FROZEN — PENDING LEAD REVIEW)
-**Last Updated:** 2026-09-19 (M22 Architecture Hardened — 82-file audit, 17 corrections applied, ADR-030 authorized)
+**Current Milestone:** M22 — Accessibility / RTL (ARCHITECTURE FINALIZED / FROZEN — PENDING LEAD APPROVAL)
+**Last Updated:** 2026-09-19 (M22 Architecture Finalized — 82-file audit, all corrections applied, ADR-030 finalized, directional icon + modal backdrop + text-scaling contracts frozen)
 **Project:** Islamic Prayer-Centered Planner  
 
 ---

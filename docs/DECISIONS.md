@@ -782,7 +782,7 @@ theme-hydration race condition in `app/_layout.tsx`.
 
 ## ADR-030: Accessibility Semantics and RTL Layout Contract
 
-**Status:** AUTHORIZED — M22 Architecture Hardened 2026-09-19
+**Status:** AUTHORIZED AND FINALIZED — M22 Architecture Finalized 2026-09-19
 
 **Decision:** Establish a permanent accessibility semantics contract and RTL layout readiness contract for the Islamic Planner application.
 
@@ -794,7 +794,7 @@ theme-hydration race condition in `app/_layout.tsx`.
 2. **Tab bars:** `accessibilityRole="tab"` requires `accessibilityState={{ selected: boolean }}`.
 3. **Checkboxes and switches:** `accessibilityState={{ checked: boolean }}`.
 4. **Section headers:** All visible section headings (SettingsSectionHeader, modal title Text, dialog title Text) use `accessibilityRole="header"` on the Text node.
-5. **Modal isolation:** All `<Modal>` consumers must apply `accessibilityViewIsModal={true}` to the innermost content View. This ensures TalkBack (Android) traps focus within the modal. For dialogs with backdrop dismiss, the backdrop Pressable carries `accessibilityRole="button"` and a descriptive label.
+5. **Modal isolation:** All `<Modal>` consumers must apply `accessibilityViewIsModal={true}` to the innermost content View. **Platform note:** `accessibilityViewIsModal` is primarily effective for iOS VoiceOver; Android TalkBack focus containment requires native device verification (M23). For modals with an explicit dismiss action (Cancel/Done/OK/Close button), the backdrop Pressable is excluded from accessibility traversal: `accessible={false}`. The explicit in-dialog dismiss button remains the sole screen-reader dismiss path. `onRequestClose` handles hardware-back.
 6. **Decorative icons:** All icons inside labeled Pressables that are purely decorative (the Pressable label already describes the action) receive `decorative` prop on `<Icon>`. The `decorative` prop sets `accessibilityLabel=""`, `accessibilityRole="none"`, and `importantForAccessibility="no"`.
 7. **Informational grouping:** Non-interactive compound content containers (e.g., TaskCard content, PrayerHeader text block) use `accessible={true}` + `importantForAccessibility="no-hide-descendants"` on the container View with a composite `accessibilityLabel`. Interactive descendants (e.g., TaskCheckbox Pressable) must be placed as siblings OUTSIDE the grouped container, not inside it.
 8. **Error live regions:** Error messages that appear dynamically require `accessibilityLiveRegion="assertive"`. Save/autosave status use `"polite"`.
@@ -826,11 +826,18 @@ theme-hydration race condition in `app/_layout.tsx`.
 - Natural RTL flex mirroring is correct. Arabic-locale users expect Sunday at the right.
 - `onPreviousMonth` and `onNextMonth` callbacks are semantic — their meaning never swaps regardless of layout direction.
 
-### F. Icon Mirroring
+### F. Icon Directional Mirroring Contract
 
-- **Directional icons (require future RTL mirroring):** `chevron-left` (back/previous) and `chevron-right` (forward/next) in navigation usage.
-- **Non-directional icons:** All other icons — no mirroring. Glyph is semantically universal.
-- Runtime RTL mirroring (`transform: [{ scaleX: -1 }]`) deferred to a future RTL activation milestone.
+- **`directional` prop on `Icon.tsx`:** When `directional={true}` and `I18nManager.isRTL === true`, apply `transform: [{ scaleX: -1 }]` to flip the glyph. Never calls `forceRTL` or `allowRTL`.
+- **Directional icon instances (require `directional` prop in M22):**
+  - `SettingsScreenHeader` — `chevron-left` back navigation
+  - `CalendarHeader` — `chevron-left` previous month, `chevron-right` next month
+  - `JournalHistory` — `chevron-left` back to today
+- **Non-directional (disclosure) icons — NOT mirrored:**
+  - `SettingsRow` — `chevron-right` disclosure (navigate to sub-screen)
+  - `JournalHistoryRow` — `chevron-right` disclosure (navigate to entry)
+  - `CompletedSection` / `AnytimeTodaySection` — `chevron-right`/`chevron-down` expand-collapse (symmetric affordance)
+- **Canonical callback meaning NEVER changes regardless of glyph direction:** `onPreviousMonth` always navigates to previous month; `router.back()` always navigates back. Only the visual glyph adapts.
 
 ### G. Text Scaling — `maxFontSizeMultiplier` Policy
 
@@ -851,11 +858,13 @@ The codebase reached M22 with excellent structural accessibility scaffolding but
 | `maxFontSizeMultiplier={1.0}` globally | Disables user's accessibility settings; violates WCAG and Apple/Google accessibility guidelines |
 | Keep `accessibilityRole="text"` on PremiumBadge | Not a valid React Native role; silently ignored by screen readers but incorrect in spec |
 | `selected` state for radio buttons | Incorrect — VoiceOver/TalkBack announce `selected` as selection, not checked state; radio must use `checked` |
+| Accessible backdrop Pressable with label when explicit dismiss button exists | Creates duplicate screen-reader control; modal has one dismiss path, not two |
+| `accessible` group on PremiumLockedInfo card | Hides nested OK Pressable from individual screen-reader traversal; explicit control must be independently accessible |
 
 **Consequences:**
 
-- 43 production files modified in M22
+- 45 production files modified in M22
 - 11 new test files created
-- Estimated +138 new tests; total ≥ 1504
+- Estimated +142 new tests; total ≥ 1546
 - 0 new dependencies, 0 migrations
 - ADR-030 durable rules apply to all subsequent milestones (M23, M24, post-release)

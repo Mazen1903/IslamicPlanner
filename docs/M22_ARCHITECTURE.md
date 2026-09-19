@@ -1,13 +1,13 @@
 # M22 — Accessibility / RTL Architecture
 
-**Status:** HARDENED — PENDING LEAD REVIEW
+**Status:** ARCHITECTURE FROZEN LOCALLY — PENDING LEAD APPROVAL
 **Milestone:** M22 — Accessibility / RTL
-**Architect:** Sonnet (independent reviewer role)
 **React Native version:** 0.86.3
-**Baseline commit:** `a8c837c6ef6c27d3bc81a48b6e1d12e6489874f1`
+**M21 baseline / origin/main:** `a8c837c6ef6c27d3bc81a48b6e1d12e6489874f1`
 **Initial freeze commit:** `20c68e2`
-**Hardening commit:** *(this document revision)*
-**Date hardened:** 2026-09-19
+**Hardening commit:** `c79cdaf`
+**Finalization commit:** *(this revision)*
+**Date finalized:** 2026-09-19
 
 ---
 
@@ -16,7 +16,7 @@
 M22 makes the application materially accessible and RTL-ready. It addresses two related but distinct concerns:
 
 - **Part A — Accessibility:** Expose correct accessible names, roles, states, touch targets, modal isolation, text scaling, error announcements, and non-color signals to screen readers (VoiceOver / TalkBack).
-- **Part B — RTL Layout Readiness:** Audit and classify all directional styling; establish a logical-direction contract; resolve the prayer-tab RTL ordering question, the bottom-nav RTL question, and the calendar RTL question.
+- **Part B — RTL Layout Readiness:** Audit all directional styling; establish the logical-direction and directional-glyph contract; resolve prayer-tab, bottom-nav, and calendar RTL ordering.
 
 M22 must not change domain logic, scheduling behavior, database schema, or planner semantics.
 
@@ -32,9 +32,8 @@ M22 must not change domain logic, scheduling behavior, database schema, or plann
 
 - **CHANGE:** M22 production changes required
 - **COMPLIANT:** Inspected — already compliant, no change needed
-- **PLACEHOLDER:** Inspected — stub/placeholder component, no production UI, no change
-- **BARREL:** Index barrel file — no UI, no accessibility concerns, no change
-- **LAYOUT:** Infrastructure/layout file with no accessibility issues
+- **PLACEHOLDER:** Stub/placeholder component, no production UI
+- **BARREL:** Index barrel file — no UI, no accessibility concerns
 - **OUT-OF-SCOPE:** Explicitly out of M22 scope (reason given)
 
 ### 2.2 Complete 82-File Audit Matrix
@@ -43,13 +42,13 @@ M22 must not change domain logic, scheduling behavior, database schema, or plann
 |---|---|---|---|
 | 1 | `app/(tabs)/_layout.tsx` | COMPLIANT | Navigation shell, no interactive elements |
 | 2 | `app/(tabs)/add.tsx` | COMPLIANT | Delegates to TaskFormScreen; no direct a11y or RTL gaps |
-| 3 | `app/(tabs)/calendar.tsx` | COMPLIANT | Delegates to CalendarHeader, CalendarMonthGrid, DayDetailTaskList; screen-level no direct gaps |
+| 3 | `app/(tabs)/calendar.tsx` | COMPLIANT | Delegates to sub-components; screen-level no direct gaps |
 | 4 | `app/(tabs)/journal.tsx` | **CHANGE** | Physical `marginLeft` (L253, L312); error/lock Text lacks `accessibilityLiveRegion` |
 | 5 | `app/(tabs)/settings/_layout.tsx` | COMPLIANT | Stack navigator shell; no direct UI |
-| 6 | `app/(tabs)/settings/about.tsx` | COMPLIANT | Purely informational Text; no interactive elements with missing labels |
-| 7 | `app/(tabs)/settings/appearance.tsx` | COMPLIANT | Uses `SettingsSelectOption` (compliant); physical margins in spacing but no icon-text directional spacing |
-| 8 | `app/(tabs)/settings/hijri-calendar.tsx` | **CHANGE** | Modal missing `accessibilityViewIsModal`; modal title missing `accessibilityRole="header"`; physical `marginRight`/`marginLeft` in modal actions (L392, L400) |
-| 9 | `app/(tabs)/settings/index.tsx` | COMPLIANT | Hub using `SettingsRow`; no direct gaps |
+| 6 | `app/(tabs)/settings/about.tsx` | COMPLIANT | Purely informational; no interactive elements with missing labels |
+| 7 | `app/(tabs)/settings/appearance.tsx` | COMPLIANT | Uses `SettingsSelectOption`; no direct a11y/RTL gaps |
+| 8 | `app/(tabs)/settings/hijri-calendar.tsx` | **CHANGE** | Modal: no `accessibilityViewIsModal`; title no `accessibilityRole="header"`; physical `marginRight`/`marginLeft` in modal actions (L392, L400) |
+| 9 | `app/(tabs)/settings/index.tsx` | COMPLIANT | Hub; `SettingsRow` handles accessibility |
 | 10 | `app/(tabs)/settings/journal-privacy.tsx` | COMPLIANT | Uses `SettingsToggle`, `SettingsRow`; no direct gaps |
 | 11 | `app/(tabs)/settings/notifications.tsx` | **CHANGE** | Physical `marginRight`/`marginLeft` on icon spacing rows |
 | 12 | `app/(tabs)/settings/planning-day.tsx` | **CHANGE** | Physical `marginRight`/`marginLeft` on icon spacing rows |
@@ -57,520 +56,468 @@ M22 must not change domain logic, scheduling behavior, database schema, or plann
 | 14 | `app/(tabs)/settings/prayer-location.tsx` | **CHANGE** | Physical `marginRight`/`marginLeft` on icon spacing rows |
 | 15 | `app/(tabs)/today.tsx` | **CHANGE** | Error state `Text` lacks `accessibilityLiveRegion="assertive"` |
 | 16 | `app/_layout.tsx` | COMPLIANT | Root layout; `themeReady` gate; no direct a11y/RTL |
-| 17 | `app/demo.tsx` | OUT-OF-SCOPE | Not a user-facing production route; demo gating deferred to M24 per ADR-029 |
-| 18 | `app/onboarding/index.tsx` | **CHANGE** | Theme-select Pressables (A-13): no role/label/state; method-select Pressables (A-14): no role/label/state; city result Pressables (A-15): no role/label |
+| 17 | `app/demo.tsx` | OUT-OF-SCOPE | Not a user-facing route; demo gating deferred to M24 per ADR-029 |
+| 18 | `app/onboarding/index.tsx` | **CHANGE** | Theme-select Pressables (A-13): no role/label/state; method-select Pressables (A-14): no role/label/state; city result Pressables (A-15): no label |
 | 19 | `app/task/[id].tsx` | COMPLIANT | Delegates to TaskFormScreen; no direct a11y/RTL gaps |
 | 20 | `app/task/add.tsx` | COMPLIANT | Delegates to TaskFormScreen; no direct a11y/RTL gaps |
-| 21 | `src/components/calendar/CalendarDayCell.tsx` | **CHANGE** | `maxFontSizeMultiplier={2}` on day number and Hijri sub-number Text only (justified per §10) |
-| 22 | `src/components/calendar/CalendarHeader.tsx` | COMPLIANT | Prev/Next labeled, month `accessibilityRole="header"`, Today labeled |
-| 23 | `src/components/calendar/CalendarMonthGrid.tsx` | **CHANGE** | Weekday headers have incorrect `accessibilityRole="text"` (remove); `maxFontSizeMultiplier={2}` on weekday header labels (justified per §10) |
+| 21 | `src/components/calendar/CalendarDayCell.tsx` | **CHANGE** | `maxFontSizeMultiplier={2}` on day number and Hijri sub-number (justified per §10) |
+| 22 | `src/components/calendar/CalendarHeader.tsx` | **CHANGE** | `chevron-left`/`chevron-right` navigation icons require `directional` prop (per §3); no accessibility gaps |
+| 23 | `src/components/calendar/CalendarMonthGrid.tsx` | **CHANGE** | `accessibilityRole="text"` on weekday labels is invalid (remove); `maxFontSizeMultiplier={2}` on weekday labels (justified per §10) |
 | 24 | `src/components/calendar/DayDetailTaskList.tsx` | **CHANGE** | Arabic name Text (L67–69) lacks `importantForAccessibility="no"`; physical `marginLeft` (L67) |
-| 25 | `src/components/calendar/UpcomingSection.tsx` | **CHANGE** | Icon `marginRight` at L26: physical, replace with `marginEnd`; icon `marginRight` at L107: physical, replace with `marginEnd`; task cards are read-only informational, no checkbox — no grouping issue |
-| 26 | `src/components/common/BottomSheet.tsx` | PLACEHOLDER | Stub component; exports `Placeholder` function; no production UI |
+| 25 | `src/components/calendar/UpcomingSection.tsx` | **CHANGE** | Icon `marginRight` L26: physical → `marginEnd`; icon `marginRight` L107: physical → `marginEnd` |
+| 26 | `src/components/common/BottomSheet.tsx` | PLACEHOLDER | Stub; no production UI |
 | 27 | `src/components/common/Button.tsx` | **CHANGE** | Physical `marginLeft`/`marginRight` in icon-spacing (L167–168) |
-| 28 | `src/components/common/Card.tsx` | COMPLIANT | Pressable variant has `accessibilityRole="button"`, label, disabled state; View variant is non-interactive container |
-| 29 | `src/components/common/Icon.tsx` | **CHANGE** | Add `decorative?: boolean` prop — when true: `accessibilityLabel=""`, `accessibilityRole="none"`, `importantForAccessibility="no"` on Android |
+| 28 | `src/components/common/Card.tsx` | COMPLIANT | Pressable variant labeled, role, disabled state; View variant non-interactive |
+| 29 | `src/components/common/Icon.tsx` | **CHANGE** | Add `decorative?: boolean` prop; add `directional?: boolean` prop (see §3) |
 | 30 | `src/components/common/Toggle.tsx` | **CHANGE** | Physical `marginRight: 16` on textContainer (L144) |
-| 31 | `src/components/form/ExactTimePicker.tsx` | PLACEHOLDER | Stub; no production UI |
-| 32 | `src/components/form/PrayerRelativePicker.tsx` | PLACEHOLDER | Stub; no production UI |
-| 33 | `src/components/form/PrayerWindowPicker.tsx` | PLACEHOLDER | Stub; no production UI |
-| 34 | `src/components/form/RecurrencePicker.tsx` | PLACEHOLDER | Stub; no production UI |
-| 35 | `src/components/form/ReminderPicker.tsx` | PLACEHOLDER | Stub; no production UI |
-| 36 | `src/components/form/ScheduleModePicker.tsx` | PLACEHOLDER | Stub; no production UI |
-| 37 | `src/components/journal/index.ts` | BARREL | Re-export barrel; no UI |
-| 38 | `src/components/journal/JournalDeleteDialog.tsx` | **CHANGE** | No `accessibilityViewIsModal`; title Text not `accessibilityRole="header"`; physical `marginRight` (L78) |
+| 31 | `src/components/form/ExactTimePicker.tsx` | PLACEHOLDER | Stub |
+| 32 | `src/components/form/PrayerRelativePicker.tsx` | PLACEHOLDER | Stub |
+| 33 | `src/components/form/PrayerWindowPicker.tsx` | PLACEHOLDER | Stub |
+| 34 | `src/components/form/RecurrencePicker.tsx` | PLACEHOLDER | Stub |
+| 35 | `src/components/form/ReminderPicker.tsx` | PLACEHOLDER | Stub |
+| 36 | `src/components/form/ScheduleModePicker.tsx` | PLACEHOLDER | Stub |
+| 37 | `src/components/journal/index.ts` | BARREL | Re-export barrel |
+| 38 | `src/components/journal/JournalDeleteDialog.tsx` | **CHANGE** | No `accessibilityViewIsModal`; title no `accessibilityRole="header"`; backdrop Pressable accessibility contract per §4 (L38 backdrop Pressable already exists); physical `marginRight` (L78) |
 | 39 | `src/components/journal/JournalEditor.tsx` | COMPLIANT | `accessibilityLabel`, `accessibilityHint` already present |
 | 40 | `src/components/journal/JournalHeader.tsx` | **CHANGE** | Physical `marginLeft` (L128, L154) |
-| 41 | `src/components/journal/JournalHistory.tsx` | **CHANGE** | Back button verified ✅ (has `accessibilityRole="button"`, label "Back to today's entry"); physical `marginLeft` on Text at L52 |
-| 42 | `src/components/journal/JournalHistoryRow.tsx` | **CHANGE** | `chevron-right` Icon inside labeled Pressable — passes `decorative` (A-2 fix); no physical directional margin issues |
+| 41 | `src/components/journal/JournalHistory.tsx` | **CHANGE** | `chevron-left` back button icon → `directional` prop; physical `marginLeft` on Text at L52 |
+| 42 | `src/components/journal/JournalHistoryRow.tsx` | **CHANGE** | `chevron-right` disclosure icon → `decorative` prop (NOT directional — disclosure/navigate) |
 | 43 | `src/components/journal/JournalLockedState.tsx` | COMPLIANT | Unlock button labeled, disabled state |
-| 44 | `src/components/journal/JournalPrivacySheet.tsx` | **CHANGE** | No `accessibilityViewIsModal`; title Text not `accessibilityRole="header"`; physical `marginLeft` (L63); physical `paddingRight: 12` (L202) |
-| 45 | `src/components/journal/JournalSaveStatus.tsx` | COMPLIANT | `accessibilityLiveRegion="polite"`, label |
-| 46 | `src/components/journal/ReflectionField.tsx` | COMPLIANT | `accessibilityLabel` from field label, `accessibilityHint` |
+| 44 | `src/components/journal/JournalPrivacySheet.tsx` | **CHANGE** | No `accessibilityViewIsModal`; title no `accessibilityRole="header"`; backdrop accessibility per §4; physical `marginLeft` (L63); physical `paddingRight: 12` (L202) |
+| 45 | `src/components/journal/JournalSaveStatus.tsx` | COMPLIANT | `accessibilityLiveRegion="polite"`, label already present |
+| 46 | `src/components/journal/ReflectionField.tsx` | COMPLIANT | `accessibilityLabel`, `accessibilityHint` present |
 | 47 | `src/components/journal/ReflectionSection.tsx` | **CHANGE** | Physical `marginLeft` (L59) |
-| 48 | `src/components/layout/BottomNavBar.tsx` | **CHANGE** | Icon in tab not `decorative` (A-2 fix); Icon in Add button not `decorative` (A-2 fix); LTR/RTL ordering contract per §17 |
-| 49 | `src/components/layout/SafeArea.tsx` | COMPLIANT | Infrastructure wrapper; no a11y/RTL concerns |
-| 50 | `src/components/prayer/PrayerHeader.tsx` | **CHANGE** | No accessible grouping (A-7); countdown traversal (A-8); decorative ornament not hidden (position: absolute, right: -30); Arabic name `Text` not hidden; physical `marginLeft` (L64), `marginRight` (L97) |
-| 51 | `src/components/prayer/PrayerTabBar.tsx` | **CHANGE** | Indicator dot not `importantForAccessibility="no"` (A-16); RTL ordering contract per §16; tab Icons not `decorative` |
+| 48 | `src/components/layout/BottomNavBar.tsx` | **CHANGE** | Tab icons and Add icon → `decorative` prop; RTL order per §17 |
+| 49 | `src/components/layout/SafeArea.tsx` | COMPLIANT | Infrastructure wrapper |
+| 50 | `src/components/prayer/PrayerHeader.tsx` | **CHANGE** | No accessible grouping (A-7); countdown traversal noise (A-8); decorative ornament not hidden; Arabic name not hidden; physical `marginLeft` (L64), `marginRight` (L97) |
+| 51 | `src/components/prayer/PrayerTabBar.tsx` | **CHANGE** | Indicator dot not suppressed (A-16); tab Icons → `decorative` prop |
 | 52 | `src/components/prayer/PrayerTransitionBanner.tsx` | **CHANGE** | Physical `marginRight: 12` (L101), physical `marginLeft: 8` (L109) |
-| 53 | `src/components/premium/index.ts` | BARREL | Re-export barrel; no UI |
-| 54 | `src/components/premium/PremiumBadge.tsx` | **CHANGE** | `accessibilityRole="text"` — not a valid RN role (should be omitted or `"none"`); physical `marginRight: 3` on icon; icon inside accessible group should be `decorative` |
-| 55 | `src/components/premium/PremiumLockedInfo.tsx` | **CHANGE** | Missing `accessibilityViewIsModal={true}` on content `View` (currently uses `accessibilityRole="alert"` on the content View — this is acceptable, but `accessibilityViewIsModal` is still required for Android TalkBack containment); title `Text` (line 73) lacks `accessibilityRole="header"`; physical `marginRight: spacing.sm` on icon container (L67) |
-| 56 | `src/components/settings/index.ts` | BARREL | Re-export barrel; no UI |
+| 53 | `src/components/premium/index.ts` | BARREL | Re-export barrel |
+| 54 | `src/components/premium/PremiumBadge.tsx` | **CHANGE** | `accessibilityRole="text"` invalid (remove); physical `marginRight: 3`; lock icon → `decorative` |
+| 55 | `src/components/premium/PremiumLockedInfo.tsx` | **CHANGE** | `accessibilityViewIsModal={true}` on content View; remove `accessible` from content View (hides OK button); title `Text` → `accessibilityRole="header"`; backdrop accessibility per §4; physical `marginRight: spacing.sm` (L67) |
+| 56 | `src/components/settings/index.ts` | BARREL | Re-export barrel |
 | 57 | `src/components/settings/SettingsInfoCard.tsx` | **CHANGE** | Physical `marginRight: spacing.sm` on icon (L37) |
-| 58 | `src/components/settings/SettingsRow.tsx` | **CHANGE** | Physical `marginRight: spacing.md` (L55, L103); `chevron-right` Icon at L114 not `decorative` |
-| 59 | `src/components/settings/SettingsScreenHeader.tsx` | COMPLIANT | Back button labeled "Go back", touch target sized; `chevron-left` Icon in back button — no `decorative` needed since Pressable label covers it, but Icon inside labeled Pressable → add `decorative` |
-| 60 | `src/components/settings/SettingsSectionHeader.tsx` | **CHANGE** | Section title `Text` missing `accessibilityRole="header"` (A-18) |
+| 58 | `src/components/settings/SettingsRow.tsx` | **CHANGE** | Physical `marginRight: spacing.md` (L55, L103); `chevron-right` disclosure Icon → `decorative` prop; physical `marginRight: spacing.xs` (L103) |
+| 59 | `src/components/settings/SettingsScreenHeader.tsx` | **CHANGE** | `chevron-left` back Icon → `decorative` + `directional` props (back navigation) |
+| 60 | `src/components/settings/SettingsSectionHeader.tsx` | **CHANGE** | Title `Text` missing `accessibilityRole="header"` |
 | 61 | `src/components/settings/SettingsSelectOption.tsx` | **CHANGE** | Physical `paddingRight: 12` (L85) |
-| 62 | `src/components/settings/SettingsStepper.tsx` | COMPLIANT | Decrement/Increment `touchTargets.min`-sized, labeled "Decrease"/"Increase {label}" |
-| 63 | `src/components/settings/SettingsToggle.tsx` | **CHANGE** | Double announcement risk (A-1): icon `View` and textContainer `View` not suppressed; physical `marginRight: spacing.md` (L57); physical `paddingRight: 12` (L117) |
-| 64 | `src/components/task/AllDoneState.tsx` | COMPLIANT | Purely informational; icon in non-interactive container — no accessibility grouping concerns |
-| 65 | `src/components/task/AnytimeTodaySection.tsx` | **CHANGE** | Physical `marginRight: 6` on icon (L46) |
-| 66 | `src/components/task/CompletedSection.tsx` | **CHANGE** | `chevron-right`/`chevron-down` Icon in labeled Pressable → add `decorative` |
-| 67 | `src/components/task/EmptyPrayerState.tsx` | COMPLIANT | Purely informational; icon in non-interactive container |
-| 68 | `src/components/task/MissedTaskRow.tsx` | COMPLIANT | Thin wrapper around `TaskCard`; no direct a11y/RTL gaps |
-| 69 | `src/components/task/TaskCard.tsx` | **CHANGE** | Badge traversal noise (A-10); `contentContainer` physical `marginLeft: 8` (StyleSheet L191); clock icon in metaItem physical `marginRight: 4` (inline, L97) |
-| 70 | `src/components/task/TaskCheckbox.tsx` | COMPLIANT | `accessibilityRole="checkbox"`, `accessibilityState={{ checked, disabled }}` — compliant |
-| 71 | `src/components/task/TaskList.tsx` | COMPLIANT | Orchestration wrapper; delegates to TaskCard, MissedTaskRow, etc. |
-| 72 | `src/components/task-form/CustomRecurrenceModal.tsx` | **CHANGE** | No `accessibilityViewIsModal` on content `View`; title `Text` not `accessibilityRole="header"` |
+| 62 | `src/components/settings/SettingsStepper.tsx` | COMPLIANT | Touch targets sized, labeled |
+| 63 | `src/components/settings/SettingsToggle.tsx` | **CHANGE** | Double announcement risk (A-1); physical `marginRight: spacing.md` (L57); physical `paddingRight: 12` (L117) |
+| 64 | `src/components/task/AllDoneState.tsx` | COMPLIANT | Purely informational |
+| 65 | `src/components/task/AnytimeTodaySection.tsx` | **CHANGE** | Physical `marginRight: 6` on icon (L46); `sun` icon → `decorative`; `chevron-right/down` expand icon → `decorative` (not directional) |
+| 66 | `src/components/task/CompletedSection.tsx` | **CHANGE** | `chevron-right/down` expand Icon → `decorative` prop (not directional) |
+| 67 | `src/components/task/EmptyPrayerState.tsx` | COMPLIANT | Purely informational |
+| 68 | `src/components/task/MissedTaskRow.tsx` | COMPLIANT | Thin wrapper around `TaskCard` |
+| 69 | `src/components/task/TaskCard.tsx` | **CHANGE** | Badge traversal noise (A-10); physical `marginLeft: 8` on contentContainer (L191); physical `marginRight: 4` on clock icon (L97) |
+| 70 | `src/components/task/TaskCheckbox.tsx` | COMPLIANT | `accessibilityRole="checkbox"`, `accessibilityState={{ checked, disabled }}` — correct |
+| 71 | `src/components/task/TaskList.tsx` | COMPLIANT | Orchestration wrapper |
+| 72 | `src/components/task-form/CustomRecurrenceModal.tsx` | **CHANGE** | No `accessibilityViewIsModal`; title no `accessibilityRole="header"`; calendar-switcher Pressables use `accessibilityRole="radio"` but wrong state key `selected` → must use `checked` (A-24) |
 | 73 | `src/components/task-form/DateTimePickerInput.tsx` | **CHANGE** | Physical `marginRight: spacing.sm` (L83, L171) |
-| 74 | `src/components/task-form/EditScopeSheet.tsx` | **CHANGE** | No `accessibilityViewIsModal` on content `View`; title `Text` not `accessibilityRole="header"` |
-| 75 | `src/components/task-form/index.ts` | BARREL | Re-export barrel; no UI |
+| 74 | `src/components/task-form/EditScopeSheet.tsx` | **CHANGE** | No `accessibilityViewIsModal`; title no `accessibilityRole="header"`; has Cancel + Close Pressable buttons |
+| 75 | `src/components/task-form/index.ts` | BARREL | Re-export barrel |
 | 76 | `src/components/task-form/MoreOptionsSection.tsx` | **CHANGE** | Physical `marginRight: spacing.sm` (L80, L293); physical `marginLeft: 4` (L378) |
-| 77 | `src/components/task-form/PartialSuccessView.tsx` | COMPLIANT | Retry and Done buttons labeled; icon in non-interactive container; no directional margin issues on icon |
+| 77 | `src/components/task-form/PartialSuccessView.tsx` | COMPLIANT | Retry and Done buttons labeled |
 | 78 | `src/components/task-form/RecurrenceSection.tsx` | **CHANGE** | Physical `marginRight: spacing.sm` (L188) |
 | 79 | `src/components/task-form/ScheduleModeCards.tsx` | **CHANGE** | Physical `marginLeft: spacing.sm` (L113); `marginRight: spacing.sm` (L401); `marginRight: spacing.xs` (L425) |
 | 80 | `src/components/task-form/SuccessScreen.tsx` | **CHANGE** | Physical `marginRight: 6` (L89, L97) |
 | 81 | `src/components/task-form/TaskFormScreen.tsx` | **CHANGE** | Physical `marginLeft: spacing.xs` on validation error Text (L326) |
-| 82 | `src/components/today/SetupRequiredState.tsx` | **CHANGE** | Physical `marginRight: spacing.xs` (L140), `marginLeft: spacing.xs` (L170); error banner `Text` lacks `accessibilityLiveRegion="assertive"` (A-17) |
+| 82 | `src/components/today/SetupRequiredState.tsx` | **CHANGE** | Physical `marginRight: spacing.xs` (L140), `marginLeft: spacing.xs` (L170); error banner Text lacks `accessibilityLiveRegion="assertive"` |
 
 **Summary:**
-- CHANGE required: **42 files**
-- COMPLIANT (no change): **28 files**
-- PLACEHOLDER / BARREL / OUT-OF-SCOPE: **12 files**
+- CHANGE required: **44 files** (`CalendarHeader` added for directional icon fix; `SettingsScreenHeader` added)
+- COMPLIANT: **27 files**
+- PLACEHOLDER / BARREL / OUT-OF-SCOPE: **11 files**
 - **Total audited: 82 files ✓**
 
 ---
 
-## 3. Authoritative Finding Inventory
+## 3. Directional Icon RTL Contract (NEW — M22 MANDATORY)
 
-### 3.1 Accessibility Issues (A-series)
+### 3.1 Background
 
-All 21 issues follow. Each maps to exactly one category, severity, file(s), action, and test group.
+Ionicons glyphs (`chevron-forward`, `chevron-back`, etc.) are **fixed bitmap/vector glyphs**. They do not automatically mirror when `I18nManager.isRTL` is `true`. The Yoga layout engine mirrors the *positions* of flex children in RTL, but individual glyph shapes remain unchanged. Therefore: in an RTL layout, a `chevron-forward` (pointing right) used as a "back" indicator will point in the wrong direction for RTL users.
 
-| ID | Category | Severity | Affected File(s) | Required Action | Test Group |
-|---|---|---|---|---|---|
-| A-1 | Announcement | HIGH | `SettingsToggle.tsx` | Add `importantForAccessibility="no"` to icon `View` and textContainer `View` siblings of `Switch` | A |
-| A-2 | Traversal / Noise | MEDIUM | `Icon.tsx` + 20 callsites in labeled Pressables | Add `decorative?: boolean` prop; when true: `accessibilityLabel=""`, `accessibilityRole="none"`, `importantForAccessibility="no"` | A |
-| A-3 | Modal Isolation | HIGH | `JournalDeleteDialog.tsx` | Add `accessibilityViewIsModal={true}` to card View; add `accessibilityRole="header"` to title Text | E |
-| A-4 | Modal Isolation | HIGH | `JournalPrivacySheet.tsx` | Same as A-3 | E |
-| A-5 | Modal Isolation | HIGH | `CustomRecurrenceModal.tsx` | Same as A-3 | E |
-| A-6 | Modal Isolation | MEDIUM | `EditScopeSheet.tsx` | Same as A-3 | E |
-| A-7 | Traversal / Noise | MEDIUM | `PrayerHeader.tsx` | Group content `View` with `accessible={true}`, composite `accessibilityLabel`; hide decorative ornament; hide Arabic name | A, B |
-| A-8 | Traversal / Noise | MEDIUM | `PrayerHeader.tsx` | Suppress countdown `Text` individual traversal; include in composite label | A |
-| A-9 | Traversal / Noise | LOW | `SettingsRow.tsx` | Pass `decorative` to chevron Icon (via A-2 fix) | A |
-| A-10 | Grouping | MEDIUM | `TaskCard.tsx` | Group informational `contentContainer View` with `accessible={true}` + composite label; see §15 for grouping safety | A, B |
-| A-11 | Traversal / Noise | LOW | `DayDetailTaskList.tsx` | Add `importantForAccessibility="no"` to Arabic name `Text` | A |
-| A-12 | Role | LOW | `CalendarMonthGrid.tsx` | Remove `accessibilityRole="text"` from weekday header labels (not a valid RN role; default is correct) | B |
-| A-13 | Role / State | HIGH | `app/onboarding/index.tsx` | Add `accessibilityRole="radio"`, `accessibilityLabel`, `accessibilityState={{ checked: isSelected }}` to theme option Pressables | A, B, C |
-| A-14 | Role / State | HIGH | `app/onboarding/index.tsx` | Add `accessibilityRole="radio"`, `accessibilityLabel`, `accessibilityState={{ checked: isSelected }}` to method option Pressables | A, B, C |
-| A-15 | Label | MEDIUM | `app/onboarding/index.tsx` | Add `accessibilityRole="button"` and `accessibilityLabel` (city+country+timezone) to city result Pressables | A |
-| A-16 | Traversal / Noise | LOW | `PrayerTabBar.tsx` | Add `importantForAccessibility="no"` to indicator dot `View` | A |
-| A-17 | Live Region | MEDIUM | `SetupRequiredState.tsx`, `today.tsx`, `journal.tsx`, `JournalLockedState.tsx` | Add `accessibilityLiveRegion="assertive"` to dynamically appearing error Text elements | C |
-| A-18 | Role | MEDIUM | `SettingsSectionHeader.tsx` | Add `accessibilityRole="header"` to section title `Text` | B |
-| A-19 | Role | OBSERVATION | `CalendarHeader.tsx` | `accessibilityRole="header"` already correctly applied. No change. | — |
-| A-20 | Text Scaling | MEDIUM | `CalendarMonthGrid.tsx`, `CalendarDayCell.tsx` | `maxFontSizeMultiplier={2}` on calendar weekday labels and day cell numbers only (see §10 for full justification) | F |
-| A-21 | Label | LOW | `JournalHistory.tsx` | Back button verified ✅: has `accessibilityRole="button"` + label "Back to today's entry". Only physical margin fix remains (see RTL). | A |
+**Solution:** Add `directional?: boolean` to `Icon.tsx`. When `directional === true` and `I18nManager.isRTL === true`, apply `style: transform: [{scaleX: -1}]` to the Ionicons component.
 
-**Accessibility issue totals:** 21 issues (A-1..A-21)
+**This does NOT activate RTL for the app.** It only corrects the glyph orientation when the device system language causes `I18nManager.isRTL` to be `true`. No `forceRTL`, no `allowRTL`, no locale system.
 
-### 3.2 RTL Issues (RTL-series)
+### 3.2 Icon.tsx Implementation Contract
 
-| ID | Category | Severity | Affected File(s) | Required Action | Test Group |
-|---|---|---|---|---|---|
-| RTL-1 | Logical Margin | MEDIUM | 24 files (see §14 table) | Replace `marginLeft`→`marginStart`, `marginRight`→`marginEnd` in icon-text row contexts | H |
-| RTL-2 | Physical Absolute | LOW | `PrayerHeader.tsx` | `right: -30` on decorative ornament — keep as physical (see §14.2) | — |
-| RTL-3 | textAlign | OBSERVATION | All files | `textAlign: 'center'` is direction-neutral. No change. | — |
-| RTL-4 | Logical Padding | MEDIUM | 3 files | Replace `paddingRight: 12`→`paddingEnd: 12` | H |
-| RTL-5 | Row Layout | LOW | See §17, §18, §19 | PrayerTabBar, BottomNavBar, CalendarMonthGrid: ordering decisions frozen in §16–19 | J, K, L |
-| RTL-6 | Icon Direction | MEDIUM | `SettingsScreenHeader.tsx` | Back chevron icon contract per §15 icon matrix; `decorative` prop per A-2; no runtime mirroring in M22 | I |
+```tsx
+import { I18nManager } from 'react-native';
 
-**RTL issue totals:** 6 issues (RTL-1..RTL-6)
+export interface IconProps {
+  name: IconName;
+  size?: number | IconSizeKey;
+  color?: string;
+  style?: StyleProp<TextStyle>;
+  accessibilityLabel?: string;
+  testID?: string;
+  /** When true: suppresses icon from accessibility traversal (use inside labeled Pressables) */
+  decorative?: boolean;
+  /** When true: applies horizontal flip in RTL layouts to correct directional glyph orientation */
+  directional?: boolean;
+}
 
-### 3.3 Additional Finding: PremiumLockedInfo and PremiumBadge
+export function Icon({ name, size = 'md', color, style, accessibilityLabel, testID, decorative, directional }: IconProps) {
+  const theme = useTheme();
+  const resolvedSize = typeof size === 'number' ? size : theme.iconSizes[size];
+  const resolvedColor = color ?? theme.colors.textPrimary;
+  const ioniconName = ICON_MAP[name] ?? 'help-circle-outline';
 
-| ID | Category | Severity | Affected File(s) | Required Action | Test Group |
-|---|---|---|---|---|---|
-| A-22 | Modal Isolation | MEDIUM | `PremiumLockedInfo.tsx` | Add `accessibilityViewIsModal={true}` to content card `View` (content already has `accessibilityRole="alert"` which is good, but Android TalkBack needs `accessibilityViewIsModal`); add `accessibilityRole="header"` to title Text | E |
-| A-23 | Role | LOW | `PremiumBadge.tsx` | Remove `accessibilityRole="text"` (not a valid RN role); it exposes `accessible` + `accessibilityLabel="Premium feature"` which is correct — just remove the invalid role | B |
+  const rtlStyle = directional && I18nManager.isRTL
+    ? { transform: [{ scaleX: -1 }] }
+    : undefined;
 
-**Revised total accessibility issues: 23 (A-1..A-23)**
+  return (
+    <Ionicons
+      testID={testID}
+      name={ioniconName}
+      size={resolvedSize}
+      color={resolvedColor}
+      style={[style, rtlStyle]}
+      accessibilityLabel={decorative ? '' : (accessibilityLabel ?? name)}
+      accessibilityRole={decorative ? 'none' : 'image'}
+      importantForAccessibility={decorative ? 'no' : undefined}
+    />
+  );
+}
+```
 
-### 3.4 Severity Summary (authoritative)
+**Note:** The `decorative` and `directional` props are independent and combinable. A back-navigation chevron inside a labeled Pressable should receive both: `decorative directional`. A chevron in an unlabeled non-interactive container should receive only `directional`.
 
-| Severity | Count | Issue IDs |
-|---|---|---|
-| HIGH | 6 | A-1, A-3, A-4, A-5, A-13, A-14 |
-| MEDIUM | 14 | A-2, A-6, A-7, A-8, A-10, A-15, A-17, A-18, A-20, A-22, RTL-1, RTL-4, RTL-5 (ordered by sub-decision), RTL-6 |
-| LOW | 8 | A-9, A-11, A-12, A-16, A-21, A-23, RTL-2, RTL-5 (row classification) |
-| OBSERVATION | 2 | A-19, RTL-3 |
-| **Total (non-observation)** | **28** | |
+### 3.3 Authoritative Directional Icon Consumer Matrix
+
+Semantic taxonomy:
+- **Navigation / Back:** Icon indicates the direction of travel for the user. Meaning reverses in RTL. → `directional={true}`
+- **Previous/Next temporal:** Previous month (left), Next month (right). Meaning reverses visually in RTL. → `directional={true}`
+- **Disclosure / Expand-collapse:** Icon indicates a panel will open/close. Not directional in the navigation sense — the expand/collapse semantics are symmetric. → NOT directional
+- **Decorative:** Icon supplements a labeled Pressable. → `decorative={true}` (and `directional` if applicable)
+
+| Consumer File | Icon | Semantic | LTR glyph | RTL glyph | `directional` | `decorative` | Callback unchanged |
+|---|---|---|---|---|---|---|---|
+| `SettingsScreenHeader.tsx` L45 | `chevron-left` | Back navigation | ← | → (mirrored) | **YES** | YES (inside labeled Pressable) | YES — `handleBack` always calls `router.back()` |
+| `CalendarHeader.tsx` L73 | `chevron-left` | Previous month | ← | → (mirrored) | **YES** | YES (inside labeled Pressable) | YES — `onPreviousMonth` callback semantics never change |
+| `CalendarHeader.tsx` L91 | `chevron-right` | Next month | → | ← (mirrored) | **YES** | YES (inside labeled Pressable) | YES — `onNextMonth` callback semantics never change |
+| `JournalHistory.tsx` L51 | `chevron-left` | Back to today navigation | ← | → (mirrored) | **YES** | YES (inside labeled Pressable) | YES — `onBackToToday` callback unchanged |
+| `SettingsRow.tsx` L114 | `chevron-right` | Disclosure / navigate to sub-screen | → | → (not mirrored) | **NO** | YES (inside labeled Pressable) | YES — disclosure affordance is symmetric in RTL |
+| `JournalHistoryRow.tsx` L70-74 | `chevron-right` | Disclosure / navigate to entry | → | → (not mirrored) | **NO** | YES (inside labeled Pressable) | YES |
+| `CompletedSection.tsx` L44-48 | `chevron-right` / `chevron-down` | Expand-collapse toggle | → / ↓ | → / ↓ (not mirrored) | **NO** | YES (inside labeled Pressable) | YES |
+| `AnytimeTodaySection.tsx` L51-55 | `chevron-right` / `chevron-down` | Expand-collapse toggle | → / ↓ | → / ↓ (not mirrored) | **NO** | YES (inside labeled Pressable) | YES |
+
+**Total directional-icon consumer files: 4**
+(`SettingsScreenHeader`, `CalendarHeader`, `JournalHistory`, plus `Icon.tsx` itself as the implementation site)
+
+**Total directional icon usages: 4 icon instances** (across 3 consumer files)
+
+**Reasoning for disclosure icons (SettingsRow, JournalHistoryRow, expand toggles):**
+Disclosure indicators (`chevron-right`) are visually non-directional in this context — they mean "there is more content here" or "expand/collapse". In RTL layouts, the cell positions will already mirror via flex (the chevron appears on the opposite side). Mirroring the glyph itself would be wrong — RTL users understand `chevron-right` as a disclosure indicator in both directions. This is standard iOS/Android convention.
+
+### 3.4 Directional Icon Test Group I (added tests)
+
+Tests in `src/__tests__/m22/RTLIcons.test.tsx`:
+
+| Test | Description |
+|---|---|
+| I-1 | Icon renders no `scaleX` transform when `directional={false}` and `isRTL=true` |
+| I-2 | Icon renders `scaleX: -1` transform when `directional={true}` and `isRTL=true` |
+| I-3 | Icon renders no transform when `directional={true}` and `isRTL=false` |
+| I-4 | SettingsScreenHeader back icon has `directional` prop |
+| I-5 | CalendarHeader prev-month icon has `directional` prop |
+| I-6 | CalendarHeader next-month icon has `directional` prop |
+| I-7 | JournalHistory back icon has `directional` prop |
+| I-8 | SettingsRow disclosure chevron does NOT have `directional` prop |
+
+**Native visual confirmation:** Carried to M23 (requires device with RTL system language).
 
 ---
 
-## 4. Modal Accessibility Inventory (Exhaustive)
+## 4. Modal Accessibility Contract (REVISED)
 
-**Independent search confirmed exactly 6 native `<Modal>` consumers** in production `app/**` and `src/components/**`:
+### 4.1 Platform Behavior Clarification
 
-| # | File | Title | Has `accessibilityViewIsModal`? | Has header role on title? | Backdrop accessible? | Backdrop dismiss action | Current `animationType` | M22 Action |
+**`accessibilityViewIsModal`:**
+- **iOS:** The `<Modal>` component itself traps VoiceOver focus within the modal by default. `accessibilityViewIsModal={true}` on an inner View is additive — it further instructs iOS VoiceOver that elements outside the View are not accessible. On iOS it is applied for belt-and-suspenders correctness but the `<Modal>` already provides the primary trapping.
+- **Android:** The `<Modal>` in React Native 0.86 does **not** automatically trap TalkBack focus. `accessibilityViewIsModal={true}` is a prop that maps to the Android `setImportantForAccessibility` API on the Window content view. It is the primary mechanism for TalkBack focus containment on Android.
+- **This architecture doc does NOT claim that setting this prop alone guarantees TalkBack containment.** Native device verification is required in M23 QA.
+
+### 4.2 Backdrop Accessibility Policy
+
+**Problem with prior contract:** The previous architecture required the backdrop `Pressable` to carry `accessibilityRole="button"` and a screen-reader label in all dismissible modals. This creates a **duplicate screen-reader control** when the modal already has an explicit dismiss action (Cancel, Done, OK, Close). Duplicate controls cause confusion — users would encounter "Close dialog backdrop" and "Cancel" or "Done" as separate screen-reader targets for the same action.
+
+**Frozen policy:**
+
+For modals that have an **explicit in-dialog dismiss action** (Cancel, Done, OK, Close button):
+1. The backdrop `Pressable` is pointer/touch dismissable (for sighted mouse/touch users).
+2. The backdrop is excluded from accessibility traversal: `accessible={false}` (or `importantForAccessibility="no"` on Android — but `accessible={false}` is the cross-platform prop).
+3. The explicit dismiss button inside the dialog remains the canonical screen-reader dismiss target.
+4. `onRequestClose` on `<Modal>` handles hardware-back on Android.
+
+For modals that have **no in-dialog dismiss action** (no Cancel/OK button, information-only, or user must choose a destructive action):
+- No backdrop Pressable. `onRequestClose` handles hardware-back.
+
+**Rationale:** A screen reader user navigating a modal should encounter exactly one dismiss mechanism per modal. Duplicating it via a backdrop accessible button adds noise and confusion.
+
+### 4.3 PremiumLockedInfo Grouping Decision
+
+**Critical correction:** `PremiumLockedInfo.tsx` currently uses:
+
+```tsx
+<View
+  accessible
+  accessibilityRole="alert"
+  ...
+>
+  <View>...</View>           {/* headerRow with lock icon + title */}
+  <Text>...</Text>            {/* description */}
+  <Text>...</Text>            {/* notice */}
+  <View>                      {/* actionsRow */}
+    <Pressable                {/* OK button — inside accessible group */}
+      accessibilityRole="button"
+      accessibilityLabel="OK"
+    >
+      <Text>OK</Text>
+    </Pressable>
+  </View>
+</View>
+```
+
+`accessible={true}` on the card View groups all its descendants into a single accessibility element. This **hides the nested OK button from individual screen-reader traversal**. VoiceOver/TalkBack reads the card as a single element with a concatenated label. The OK button cannot be individually focused or activated via screen reader.
+
+**Required fix:** Remove `accessible` and `accessibilityRole="alert"` from the outer card View. Instead:
+1. Apply `accessibilityViewIsModal={true}` to the card View (for modal isolation).
+2. Add `accessibilityRole="header"` to the title Text.
+3. The OK `Pressable` remains individually accessible with its own role/label.
+4. The description Text is individually traversable as normal content.
+
+The `accessibilityRole="alert"` idiom is for live-region-style alerts that announce themselves immediately. It is inappropriate here because this is a modal dialog requiring explicit user action, not a transient alert.
+
+### 4.4 All 6 Modal Consumers — Exhaustive Policy Table
+
+| # | File | Title | Explicit dismiss action | Backdrop exists? | M22 backdrop action | `accessibilityViewIsModal` target | Title `accessibilityRole="header"` | Other action |
 |---|---|---|---|---|---|---|---|---|
-| 1 | `JournalDeleteDialog.tsx` | "Delete this journal entry?" | ❌ No | ❌ No | ❌ backdrop is `StyleSheet.absoluteFill` View — not a Pressable | No dismiss-outside currently | `fade` | Add `accessibilityViewIsModal` to card View; add `accessibilityRole="header"` to title; no backdrop Pressable needed (dialog pattern; user must choose) |
-| 2 | `JournalPrivacySheet.tsx` | "Journal Privacy" | ❌ No | ❌ No | Backdrop `Pressable` exists (line 49), `accessibilityRole="button"`, label "Close privacy settings" — ✅ | Tap-outside → dismiss | `slide` | Add `accessibilityViewIsModal` to `sheetCard` View; add `accessibilityRole="header"` to title Text |
-| 3 | `CustomRecurrenceModal.tsx` | "Custom Repeat" | ❌ No | ❌ No | Backdrop `Pressable` exists | Tap-outside → dismiss | `slide` | Add `accessibilityViewIsModal` to `modalContent` View; add `accessibilityRole="header"` to title Text |
-| 4 | `EditScopeSheet.tsx` | "Edit Recurring Task" | ❌ No | ❌ No | Overlay has `justifyContent: 'flex-end'`; no explicit backdrop Pressable | No tap-outside dismiss (by design — user must choose scope) | `fade` | Add `accessibilityViewIsModal` to `sheetContainer` View; add `accessibilityRole="header"` to title Text |
-| 5 | `PremiumLockedInfo.tsx` | "Premium Feature" (default) | ❌ No | ❌ No | Backdrop `Pressable` exists (line 38–44), `accessibilityRole="button"`, label "Close dialog backdrop" — ✅ | Tap-outside → close | `fade` | Add `accessibilityViewIsModal` to card `View`; add `accessibilityRole="header"` to title Text |
-| 6 | `app/(tabs)/settings/hijri-calendar.tsx` | "Add Month Override" | ❌ No | ❌ No | Overlay `View` with no backdrop Pressable — no tap-outside dismiss (forced modal) | No tap-outside (user must Cancel/Save) | `slide` | Add `accessibilityViewIsModal` to `modalContent` View; add `accessibilityRole="header"` to title Text |
+| 1 | `JournalDeleteDialog.tsx` | "Delete this journal entry?" | YES — Cancel + Delete buttons | YES — bare `Pressable` at L38 with `onPress={onCancel}` | Add `accessible={false}` to backdrop Pressable | Card `View` (testID `journal-delete-dialog-content`) | Title Text at L52 | Replace `marginRight: spacing.sm` at L78 with `marginEnd: spacing.sm` |
+| 2 | `JournalPrivacySheet.tsx` | "Journal Privacy" | YES — Done button + Switch | YES — bare `Pressable` at L44 with `onPress={onClose}` | Add `accessible={false}` to backdrop Pressable | `sheetCard` View (testID `journal-privacy-content`) | Title Text at L64 | Replace `marginLeft: spacing.md` at L63 with `marginStart: spacing.md`; `paddingRight: 12` at L202 → `paddingEnd: 12` |
+| 3 | `CustomRecurrenceModal.tsx` | "Custom Repeat" | YES — Done / Apply button + Close button | NO backdrop Pressable (overlay View, no `onPress`) | No change to overlay | `modalContent` View (testID `custom-recurrence-modal`) | Title Text at L111 | Fix A-24: calendar-switcher `accessibilityState={{ selected }}` → `{ checked }` |
+| 4 | `EditScopeSheet.tsx` | "Edit Recurring Task" | YES — Cancel button + three scope option buttons | NO backdrop Pressable (overlay positioned flex-end) | No change to overlay | `sheetContainer` View (testID `edit-scope-sheet`) | Title Text at L66 | No other changes needed |
+| 5 | `PremiumLockedInfo.tsx` | "Premium Feature" | YES — OK button | YES — `Pressable` at L38-44 with `onPress={onClose}`, label "Close dialog backdrop" | Replace label approach: add `accessible={false}` to backdrop Pressable; remove `accessibilityRole="button"`, `accessibilityLabel` from backdrop | Card `View` (testID `{testID}-content`) | Title Text at L73 | Remove `accessible` and `accessibilityRole="alert"` from card View; replace `marginRight: spacing.sm` at L67 with `marginEnd: spacing.sm` |
+| 6 | `hijri-calendar.tsx` | "Add Month Override" | YES — Cancel + Save Override buttons | NO backdrop Pressable (forced modal, overlay View, no `onPress`) | No change to overlay | `modalContent` View (testID `add-override-modal`) | Title Text at L355 | Replace physical margins at L392, L400 with logical |
 
-**Total Modal consumers: 6. All 6 require `accessibilityViewIsModal` and header role.**
-
-### 4.1 Modal Accessibility Contract
+### 4.5 Modal Accessibility Template
 
 ```tsx
 <Modal visible={...} transparent animationType="..." onRequestClose={dismiss}>
   <View style={overlay}>
-    {/* Only if tap-outside dismiss is desired: */}
-    <Pressable
-      style={StyleSheet.absoluteFill}
-      onPress={dismiss}
-      accessibilityRole="button"
-      accessibilityLabel="Close [dialog name]"
-    />
-    {/* Content container — must have accessibilityViewIsModal */}
+    {/* Touch-dismiss backdrop — EXCLUDED from accessibility traversal */}
+    {hasDismissibleBackdrop && (
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={dismiss}
+        accessible={false}              {/* excluded from screen reader */}
+      />
+    )}
+    {/* Content container — modal isolation */}
     <View
       accessibilityViewIsModal={true}
       style={contentStyles}
     >
       <Text accessibilityRole="header">{dialogTitle}</Text>
-      {/* body */}
+      {/* body content — traversable individually */}
+      {/* explicit dismiss/confirm buttons — traversable individually */}
     </View>
   </View>
 </Modal>
 ```
 
-**Platform notes:**
-- iOS: `<Modal>` itself provides focus containment on iOS. `accessibilityViewIsModal={true}` on the inner content View is additive and harmless.
-- Android: Background content remains accessible without `accessibilityViewIsModal`. This property is essential on Android.
-- Placement: Always on the innermost *content* `View`, not on the overlay wrapper.
-
-**Backdrop accessibility decisions by modal type:**
-- Informational/warning dialogs with required choice (JournalDeleteDialog, EditScopeSheet, hijri-calendar override): No backdrop Pressable. User must use the provided action buttons. `onRequestClose` handles hardware-back.
-- Dismissible sheets (JournalPrivacySheet, CustomRecurrenceModal, PremiumLockedInfo): Backdrop Pressable with `accessibilityRole="button"` and descriptive label.
+**Platform note:** `accessible={false}` is the cross-platform prop to remove a view from the accessibility tree. `importantForAccessibility="no"` is Android-specific but is equivalent. Using `accessible={false}` covers both iOS and Android.
 
 ---
 
-## 5. Explicit M22 Scope
+## 5. Authoritative Finding Inventory
 
-### In scope (42 production files)
+### 5.1 Finding Classification Schema
 
-1. `Icon.tsx` — `decorative` prop (prerequisite for all other icon fixes)
-2. `Button.tsx` — logical margin replacement
-3. `Toggle.tsx` — logical margin replacement
-4. `SettingsToggle.tsx` — double-announcement suppression; logical replacements
-5. `SettingsRow.tsx` — decorative chevron; logical replacements
-6. `SettingsSelectOption.tsx` — logical padding replacement
-7. `SettingsSectionHeader.tsx` — `accessibilityRole="header"` on section title
-8. `SettingsInfoCard.tsx` — logical margin replacement
-9. `SettingsScreenHeader.tsx` — decorative chevron Icon
-10. `PremiumBadge.tsx` — remove invalid `accessibilityRole="text"`; logical margin; decorative lock icon
-11. `PremiumLockedInfo.tsx` — `accessibilityViewIsModal`; header role; logical margin
-12. `PrayerTabBar.tsx` — indicator dot hidden; tab Icons decorative; LTR order enforcement (§16)
-13. `PrayerHeader.tsx` — grouping + composite label; decorative ornament hidden; Arabic name hidden; logical margins
-14. `PrayerTransitionBanner.tsx` — logical margins
-15. `TaskCard.tsx` — informational grouping (§15); logical margins
-16. `TaskCheckbox.tsx` — already COMPLIANT *(no change)*
-17. `AnytimeTodaySection.tsx` — logical margin
-18. `CompletedSection.tsx` — decorative chevron Icon
-19. `DayDetailTaskList.tsx` — Arabic name hidden; logical margin
-20. `UpcomingSection.tsx` — logical margins
-21. `CalendarDayCell.tsx` — `maxFontSizeMultiplier={2}` on day/Hijri text only
-22. `CalendarMonthGrid.tsx` — remove invalid `accessibilityRole="text"`; `maxFontSizeMultiplier={2}` on weekday labels
-23. `JournalDeleteDialog.tsx` — `accessibilityViewIsModal`; header role; logical margin
-24. `JournalPrivacySheet.tsx` — `accessibilityViewIsModal`; header role; logical replacements
-25. `JournalHeader.tsx` — logical margins
-26. `JournalHistory.tsx` — logical margin
-27. `JournalHistoryRow.tsx` — decorative chevron Icon
-28. `ReflectionSection.tsx` — logical margin
-29. `CustomRecurrenceModal.tsx` — `accessibilityViewIsModal`; header role
-30. `EditScopeSheet.tsx` — `accessibilityViewIsModal`; header role
-31. `DateTimePickerInput.tsx` — logical margins
-32. `MoreOptionsSection.tsx` — logical margins
-33. `RecurrenceSection.tsx` — logical margin
-34. `ScheduleModeCards.tsx` — logical margins
-35. `SuccessScreen.tsx` — logical margins
-36. `TaskFormScreen.tsx` — logical margin
-37. `SetupRequiredState.tsx` — logical margins; `accessibilityLiveRegion="assertive"` on error Text
-38. `app/(tabs)/today.tsx` — `accessibilityLiveRegion="assertive"` on error Text
-39. `app/(tabs)/journal.tsx` — logical margins; `accessibilityLiveRegion="assertive"` on error Text
-40. `app/(tabs)/settings/hijri-calendar.tsx` — `accessibilityViewIsModal`; header role; logical margins in modal actions
-41. `app/(tabs)/settings/notifications.tsx` — logical margins
-42. `app/(tabs)/settings/planning-day.tsx` — logical margins
-43. `app/(tabs)/settings/prayer-location.tsx` — logical margins
-44. `app/onboarding/index.tsx` — `accessibilityRole="radio"`, `accessibilityState={{ checked }}`, labels for theme/method options; labels for city results
+Findings are divided into two categories:
+- **Implementation findings (A-series, RTL-series):** Require production code changes in M22.
+- **Non-actionable observations (OBS-series):** Confirmed compliant; no code change needed. Documented for completeness.
 
-**Exact production change file count: 43** (SettingsScreenHeader added per A-2 decorative icon fix; 1 more than initial report)
+### 5.2 Accessibility Implementation Findings (A-1..A-24)
 
-### Not in scope
+All 24 findings require code changes. Each has exactly one ID, category, severity, file(s), action, and test group.
 
-- Arabic full app translation
-- Runtime RTL activation (`I18nManager.forceRTL`)
-- New localization/i18n system
-- Widget accessibility (M23/M24 native QA carry-forward)
-- Android navigation-bar theming (M23/M24)
-- Any domain, scheduling, database, or notification changes
+| ID | Category | Severity | Affected File(s) | Required Action | Test Group |
+|---|---|---|---|---|---|
+| A-1 | Announcement | HIGH | `SettingsToggle.tsx` | Add `importantForAccessibility="no"` to icon `View` and textContainer `View` siblings of `Switch` | A |
+| A-2 | Traversal / Noise | MEDIUM | `Icon.tsx` + ~20 callsites in labeled Pressables | Add `decorative?: boolean` prop; when true: empty label, role=none, importantForAccessibility=no | A |
+| A-3 | Modal Isolation | HIGH | `JournalDeleteDialog.tsx` | `accessibilityViewIsModal={true}` on card View; `accessibilityRole="header"` on title | E |
+| A-4 | Modal Isolation | HIGH | `JournalPrivacySheet.tsx` | Same as A-3 | E |
+| A-5 | Modal Isolation | HIGH | `CustomRecurrenceModal.tsx` | Same as A-3 | E |
+| A-6 | Modal Isolation | MEDIUM | `EditScopeSheet.tsx` | Same as A-3 | E |
+| A-7 | Traversal / Noise | MEDIUM | `PrayerHeader.tsx` | Group content View with composite `accessibilityLabel`; hide decorative ornament; hide Arabic name | A, B |
+| A-8 | Traversal / Noise | MEDIUM | `PrayerHeader.tsx` | Suppress countdown Text from individual traversal; include in composite label (throttled to 1/minute) | A |
+| A-9 | Traversal / Noise | LOW | `SettingsRow.tsx` | Pass `decorative` to chevron Icon (via A-2) | A |
+| A-10 | Grouping | MEDIUM | `TaskCard.tsx` | Group informational `contentContainer View`; composite label; interactive checkbox stays outside group | A, B |
+| A-11 | Traversal / Noise | LOW | `DayDetailTaskList.tsx` | `importantForAccessibility="no"` on Arabic name Text | A |
+| A-12 | Role | LOW | `CalendarMonthGrid.tsx` | Remove invalid `accessibilityRole="text"` from weekday header labels | B |
+| A-13 | Role / State | HIGH | `app/onboarding/index.tsx` | Theme-select Pressables: `accessibilityRole="radio"`, `accessibilityLabel`, `accessibilityState={{ checked: isSelected }}` | A, B, C |
+| A-14 | Role / State | HIGH | `app/onboarding/index.tsx` | Method-select Pressables: same as A-13 | A, B, C |
+| A-15 | Label | MEDIUM | `app/onboarding/index.tsx` | City result Pressables: `accessibilityRole="button"`, `accessibilityLabel` (city+country+timezone) | A |
+| A-16 | Traversal / Noise | LOW | `PrayerTabBar.tsx` | `importantForAccessibility="no"` on indicator dot View | A |
+| A-17 | Live Region | MEDIUM | `SetupRequiredState.tsx`, `today.tsx`, `journal.tsx` | `accessibilityLiveRegion="assertive"` on dynamically appearing error Text | C |
+| A-18 | Role | MEDIUM | `SettingsSectionHeader.tsx` | `accessibilityRole="header"` on section title Text | B |
+| A-20 | Text Scaling | MEDIUM | `CalendarMonthGrid.tsx`, `CalendarDayCell.tsx` | `maxFontSizeMultiplier={2}` on calendar weekday labels and day cell numbers (§10) | F |
+| A-21 | Label | LOW | `JournalHistory.tsx` | Back button already has role/label ✅; `chevron-left` needs `directional` prop (per §3); physical margin fix only | A |
+| A-22 | Modal Isolation | MEDIUM | `PremiumLockedInfo.tsx` | `accessibilityViewIsModal={true}`; remove `accessible`/`accessibilityRole="alert"` from card View (hides OK button); title → `accessibilityRole="header"` | E |
+| A-23 | Role | LOW | `PremiumBadge.tsx` | Remove `accessibilityRole="text"` (invalid role); `accessible + accessibilityLabel` retained | B |
+| A-24 | Role / State | MEDIUM | `CustomRecurrenceModal.tsx` | Calendar-switcher Pressables already have `accessibilityRole="radio"` but wrong state key: change `{ selected }` → `{ checked }` (L137 in modal) | B, C |
 
----
+> **A-19 is reclassified as OBS-1 (non-actionable observation). See §5.4.**
 
-## 6. Unresolved Questions — Resolved
+**Accessibility implementation finding count: 24 (A-1..A-24, excluding A-19)**
 
-The prior freeze contained 3 unresolved questions (UQ-1, UQ-2, UQ-3). All three are resolved here. The architecture is fully deterministic.
+### 5.3 RTL Implementation Findings (RTL-1..RTL-5)
 
-### UQ-1 (RESOLVED) — Prayer tab LTR enforcement mechanism
+| ID | Category | Severity | Affected File(s) | Required Action | Test Group |
+|---|---|---|---|---|---|
+| RTL-1 | Logical Margin | MEDIUM | 24 files (see §14) | Replace `marginLeft`→`marginStart`, `marginRight`→`marginEnd` in icon-text row contexts | H |
+| RTL-2 | Logical Padding | MEDIUM | 3 files | Replace `paddingRight: 12`→`paddingEnd: 12` in icon-text/scroll contexts | H |
+| RTL-3 | Directional Glyph | HIGH | `Icon.tsx`, `SettingsScreenHeader.tsx`, `CalendarHeader.tsx`, `JournalHistory.tsx` | Add `directional` prop to Icon; apply to 4 directional icon instances (§3) | I |
+| RTL-4 | Row Layout | LOW | See §16–18 | PrayerTabBar, BottomNavBar, CalendarMonthGrid: ordering decisions frozen in §16–18 | J, K, L |
+| RTL-5 | Physical Absolute | OBSERVATION | `PrayerHeader.tsx` | `right: -30` on decorative ornament — classified KEEP physical (§14.1) | — |
 
-**Question:** `direction: 'ltr'` on `PrayerTabBar` — is it supported in RN 0.86?
+> **RTL-5 is reclassified as OBS-2 (non-actionable observation). See §5.4.**
 
-**Resolution:** The `direction` CSS property is accepted in React Native `ViewStyle` as of RN 0.57+ and remains supported in RN 0.86. It controls the layout direction for that subtree. The value `'ltr'` forces left-to-right layout regardless of `I18nManager.isRTL`.
+**RTL implementation finding count: 4 (RTL-1..RTL-4)**
 
-**Frozen decision (binding):** See §16 for the complete prayer tab RTL contract. `direction: 'ltr'` style is NOT used. See §16 for the correct design.
+### 5.4 Non-Actionable Observations
 
-### UQ-2 (RESOLVED) — `accessibilityViewIsModal` iOS vs Android placement
+These are confirmed compliant items documented for completeness. They are **not** implementation findings and do **not** count toward severity totals.
 
-**Question:** Does `accessibilityViewIsModal` on the content View cause double-isolation on iOS?
+| ID | Item | Finding | Reason |
+|---|---|---|---|
+| OBS-1 | `CalendarHeader.tsx` — `accessibilityRole="header"` on month title | Already correctly applied | COMPLIANT — no change needed |
+| OBS-2 | `PrayerHeader.tsx` — `right: -30` on decorative ornament | Physical absolute property | Retained as physical (decorative geometry) |
+| OBS-3 | `textAlign: 'center'` across all files | Physical text alignment | Direction-neutral — no change |
 
-**Resolution:** On iOS, `<Modal>` automatically isolates VoiceOver focus. `accessibilityViewIsModal={true}` on the inner content `View` is redundant on iOS but harmless — iOS simply ignores it if the parent Modal already isolates. On Android, it is required. The correct placement is on the innermost content `View`, not on the overlay wrapper. This is documented and frozen in §4.1.
+### 5.5 Reconciled Severity Summary
 
-**Frozen decision (binding):** Apply `accessibilityViewIsModal={true}` to the content `View` for all 6 Modal consumers (per §4 table). No double-isolation risk.
+**Implementation findings only (A-1..A-24 excl. A-19, RTL-1..RTL-4):**
 
-### UQ-3 (RESOLVED) — TaskCard grouping vs. TaskCheckbox interactivity
+| Severity | A-series | RTL-series | Combined |
+|---|---|---|---|
+| HIGH | A-1, A-3, A-4, A-5, A-13, A-14; RTL-3 | — | **7** |
+| MEDIUM | A-2, A-6, A-7, A-8, A-10, A-15, A-17, A-18, A-20, A-22, A-24; RTL-1, RTL-2 | — | **13** |
+| LOW | A-9, A-11, A-12, A-16, A-21, A-23; RTL-4 | — | **7** |
+| **Total** | **21** | **7** | **27** |
 
-**Question:** Can the informational `contentContainer View` be grouped without making the `TaskCheckbox` Pressable inaccessible?
+**Non-actionable observations: 3 (OBS-1, OBS-2, OBS-3)**
 
-**Resolution:** React Native's accessibility tree allows an `accessible={true}` View (composite label group) to coexist with an accessible sibling Pressable in the same parent `View`, as long as the group does not use `accessibilityElementsHidden` or `importantForAccessibility="no-hide-descendants"` on a View that wraps the Pressable. The solution is:
-
-1. Apply `accessible={true}` + composite `accessibilityLabel` on `contentContainer View` only (the View containing title, metaRow, and badges).
-2. `importantForAccessibility="no-hide-descendants"` on `contentContainer View` only — this prevents VoiceOver/TalkBack from traversing individual children of that container.
-3. The `TaskCheckbox` Pressable remains in the `mainRow` as a separate sibling — it is NOT inside `contentContainer`. It remains fully accessible.
-4. The overall card `View` has no accessibility props — it is a neutral container.
-
-**Frozen decision (binding):** See §15 for complete grouping policy. No interactive element becomes inaccessible.
-
-**Result: 0 unresolved blocking architecture questions.**
+**Grand total (findings + observations): 30** — which reconciles with the prior severity count of 30 (the discrepancy was that OBS items were mixed into the A/RTL numbering and RTL-5 was double-counted as both MEDIUM and LOW).
 
 ---
 
-## 7. Accessibility Semantic Contract
+## 6. Accessibility Semantic Contract
 
-### 7.1 Role Contract (frozen, RN 0.86 validated)
+### 6.1 Role Contract (frozen, RN 0.86 validated)
 
-| Control Type | `accessibilityRole` | Notes |
+| Control Type | `accessibilityRole` |
+|---|---|
+| Pressable navigation/close/save/retry | `"button"` |
+| Native `Switch` | `"switch"` (implicit) |
+| Settings scope toggle Pressable | `"switch"` |
+| Checkbox | `"checkbox"` |
+| Tab item | `"tab"` |
+| Tab container | `"tablist"` |
+| Radio option (mutually exclusive, single-select) | `"radio"` |
+| Dialog content View | `accessibilityViewIsModal={true}` (not a role) |
+| Dialog title / section header / calendar month title | `"header"` on the `Text` node |
+| Decorative icon | `"none"` + `importantForAccessibility="no"` via `decorative` prop |
+| Informational grouped card | `accessible={true}` + composite label on View, role omitted |
+
+### 6.2 Accessibility State Contract (frozen)
+
+| Role | Correct state key | Incorrect state key (do not use) |
 |---|---|---|
-| Pressable navigation/close/save/retry | `"button"` | |
-| Native `Switch` standalone | `"switch"` (implicit from Switch component) | |
-| Settings toggle row Pressable | `"switch"` | If wrapping Pressable handles the interaction |
-| Checkbox | `"checkbox"` | |
-| Tab item | `"tab"` | |
-| Tab container | `"tablist"` | |
-| Radio option (mutually exclusive, single-select) | `"radio"` | |
-| Dialog/sheet content View | `accessibilityViewIsModal={true}` | Not a role — it is a separate prop |
-| Dialog/sheet title Text | `"header"` | |
-| Section header Text | `"header"` | |
-| Calendar month title | `"header"` | |
-| Decorative icon | `"none"` + `importantForAccessibility="no"` | Via `decorative` prop |
-| Informational grouped card | `accessible={true}` + composite label on View | Role omitted (defaults to none) |
-| PremiumBadge | No role (remove invalid `"text"`) | `accessible + accessibilityLabel` retained |
-
-### 7.2 Accessibility State Contract (frozen, RN 0.86 validated)
-
-**CRITICAL CORRECTION from prior draft:** `accessibilityRole="radio"` requires `accessibilityState={{ checked }}`, not `selected`. `selected` is for tabs and list items.
-
-| Role | Correct state key | Notes |
-|---|---|---|
-| `"radio"` | `{ checked: boolean }` | Required — VoiceOver/TalkBack announce "checked"/"unchecked" |
-| `"checkbox"` | `{ checked: boolean \| "mixed" }` | Boolean for simple, "mixed" for indeterminate |
+| `"radio"` | `{ checked: boolean }` | `{ selected }` — WRONG |
+| `"checkbox"` | `{ checked: boolean \| "mixed" }` | |
 | `"switch"` | `{ checked: boolean }` | |
 | `"tab"` | `{ selected: boolean }` | |
-| Any `"button"` in disabled state | `{ disabled: boolean }` | |
-| Any `"button"` in loading/busy state | `{ busy: boolean }` | |
-| Collapsible header | `{ expanded: boolean }` | |
+| Any interactive in disabled state | `{ disabled: boolean }` | |
+| Any interactive in loading/busy state | `{ busy: boolean }` | |
+| Collapsible/expandable | `{ expanded: boolean }` | |
 
-**Onboarding theme/method options must use `{ checked: isSelected }` not `{ selected: isSelected }`.** The prior architecture doc was incorrect.
-
----
-
-## 8. Touch-Target Contract
-
-Enforced via `theme.touchTargets.min = 44` and `theme.touchTargets.comfortable = 48`.
-
-**Verified across 82 files:** No material touch-target violations found in M22 audit scope. The `touchTargets` token system is consistently applied across all interactive elements.
+**Calendar-switcher in `CustomRecurrenceModal` uses `accessibilityRole="radio"` with `{ selected }` — this is the bug caught in A-24 that must be corrected to `{ checked }`.**
 
 ---
 
-## 9. Screen-Reader Live Region Contract
+## 7. RTL Activation / Readiness Contract
 
-Live regions announce content changes to screen readers without requiring focus.
+### 7.1 Current RTL Status
 
-| Trigger | Element | `accessibilityLiveRegion` | Rationale |
-|---|---|---|---|
-| Countdown (PrayerHeader) | countdown `Text` | **NONE** — suppress from traversal | 1-second updates would cause constant disruption; included in composite label on demand |
-| Autosave status (JournalSaveStatus) | status `Text` | `"polite"` ✅ already present | Low-urgency save notification |
-| Prayer transition (PrayerTransitionBanner) | banner `Text` | `"polite"` ✅ already present | Prayer time change; non-urgent |
-| Error appearing (SetupRequiredState, today.tsx, journal.tsx, JournalLockedState) | error `Text` | `"assertive"` | User action required; errors are urgent |
-
----
-
-## 10. Text Scaling Contract
-
-### 10.1 Policy
-
-- Default font scaling (`allowFontScaling={true}`) is preserved everywhere. This is the RN default and must not be disabled.
-- `maxFontSizeMultiplier` is a last resort, only justified when unrestricted scaling collapses a fixed-dimension structural layout that cannot be made flexible.
-
-### 10.2 Calendar Cell Justification
-
-**Why calendar cells are the only justified case:**
-
-`CalendarMonthGrid` renders a 7-column grid where each column is `flex: 1` horizontally but where rows have a fixed minimum height. Each cell (`CalendarDayCell`) must fit:
-- A Gregorian day number (e.g., "31")
-- An optional Hijri sub-number (e.g., "14")
-
-At font scale ≥ 300% (iOS Larger Dynamic Type at maximum), a two-digit number with `typography.bodyMedium` (16pt base) becomes 48pt. The grid row minimum height (set by `touchTargets.min = 44`) cannot expand vertically without breaking the month grid layout — doing so would require a fundamentally different calendar rendering architecture. The visual integrity of the calendar month view is essential for usability.
-
-**Why `maxFontSizeMultiplier={2}` is the least-restrictive safe cap:**
-- At 2× scale (32pt for 16pt base text), grid cells remain readable and the layout does not collapse.
-- At 2.5× scale, 40pt text exceeds the touch-target minimum row height and cells start clipping.
-- `maxFontSizeMultiplier={1.5}` would be overly restrictive.
-- `maxFontSizeMultiplier={2.5}` would still cause collapse.
-- `maxFontSizeMultiplier={2}` is the maximum that preserves layout integrity.
-
-**Alternative layouts considered:**
-- Scrollable calendar rows: Would break the fixed month-grid visual contract. Rejected.
-- Hiding Hijri sub-number at large scales: Possible but requires logic; better to cap the multiplier for just the calendar cells.
-- Wrapping text: Calendar cells cannot wrap because the grid is width-constrained.
-
-**Exact authorized uses:**
-1. `CalendarMonthGrid.tsx` — weekday header `Text` (Sun/Mon/Tue...): `maxFontSizeMultiplier={2}`
-2. `CalendarDayCell.tsx` — Gregorian day number `Text`: `maxFontSizeMultiplier={2}`
-3. `CalendarDayCell.tsx` — Hijri sub-number `Text`: `maxFontSizeMultiplier={2}`
-
-**Native QA required:** Verify at iOS "Accessibility > Display & Text Size > Larger Text > Maximum" and Android "Settings > Font size > Largest".
-
-**No other `maxFontSizeMultiplier` uses are authorized in M22.**
-
----
-
-## 11. Modal / Screen-Reader Contract
-
-See §4 (complete exhaustive modal audit) and §4.1 (contract template). The contract is fully frozen.
-
----
-
-## 12. State / Non-Color Signal Contract
-
-M21 established semantic contrast. All states have non-color supplemental cues:
-
-| State | Color Signal | Non-Color Cue | M22 Action |
-|---|---|---|---|
-| Selected prayer tab | Background tint | `accessibilityState.selected`, bold weight | COMPLIANT |
-| Selected calendar day | Background tint | `accessibilityState.selected` | COMPLIANT |
-| Completed task | Muted color, strikethrough | Badge Text "Completed", `textDecorationLine: 'line-through'` | COMPLIANT |
-| Missed task | Warning color | Badge Text "Missed" | COMPLIANT |
-| Overdue task | Warning color | Badge Text "X min overdue" | COMPLIANT |
-| Important task | Danger tint | Badge Text "IMPORTANT" | COMPLIANT |
-| Toggle on/off | Track color | `accessibilityState.checked`, thumb position | COMPLIANT |
-| Task checkbox checked | Fill color | Check icon, `accessibilityState.checked` | COMPLIANT |
-| SettingsSelectOption selected | Primary color, bold | Checkmark icon, `accessibilityState.checked` | COMPLIANT |
-| Journal locked | Lock icon fill | Lock button labeled | COMPLIANT |
-| Error state | Danger/warning text color | `accessibilityLiveRegion="assertive"` | **NEW — A-17** |
-| Onboarding radio selected | Background tint | `accessibilityState.checked` | **NEW — A-13, A-14** |
-
----
-
-## 13. RTL Activation / Readiness Contract
-
-### 13.1 Current RTL Status
-
-- `app.json`: No `supportsRTL`, no `forcesRTL` key.
-- `I18nManager`: Not imported anywhere in production source.
-- No locale system exists.
+- `app.json`: No `supportsRTL`, no `forcesRTL`.
+- `I18nManager`: NOT imported anywhere in production source (after M22, `Icon.tsx` will import it for `directional` prop — this is a read-only use of `I18nManager.isRTL`, not `forceRTL`).
+- No locale system.
 - App is English-language only.
-- Arabic prayer names are embedded decorative content, not UI language.
 
-**Current RTL status: zero RTL activation. App is LTR only.**
+### 7.2 M22 RTL Scope
 
-### 13.2 M22 RTL Scope Decision (FINAL)
+**M22 scope: RTL Layout Readiness + Directional Glyph Correction.**
 
-**M22 scope: RTL Layout Readiness Only.**
+M22 does NOT add:
+- Runtime RTL activation
+- Language selector
+- Localization/i18n system
+- UI translation
 
-M22 does not add runtime RTL activation. The app will naturally respond to device-level RTL if the system is configured for an RTL locale, because:
-1. Expo/RN 0.86 defaults `I18nManager.allowRTL(true)`.
-2. `flexDirection: 'row'` automatically mirrors via the yoga layout engine when `I18nManager.isRTL` is true.
-3. After M22 logical-style cleanup, `marginStart`/`marginEnd`/`paddingStart`/`paddingEnd` respond correctly without any additional code.
-
-`I18nManager.forceRTL` must NOT be called in M22. No language selector introduced.
-
-### 13.3 RTL Direction Source / Read API (frozen)
-
-**How components read RTL direction in M22:**
-
-Components do NOT import or call `I18nManager.isRTL` directly in M22. Direction-awareness is achieved purely through:
-1. **Logical style properties** (`marginStart`, `marginEnd`, `paddingStart`, `paddingEnd`) which the Yoga engine applies correctly based on `I18nManager.isRTL`.
-2. **`flexDirection: 'row'`** which Yoga automatically mirrors.
-3. **Explicit `direction: 'ltr'`** on PrayerTabBar container to prevent row reversal (see §16).
-
-**What can be unit/render tested:**
-- Jest tests can mock `I18nManager.isRTL = true` and render components to verify:
-  - `flexDirection: 'row'` containers render items in RTL order
-  - `marginStart`/`marginEnd` are used (not `marginLeft`/`marginRight`) — static style audit
-  - PrayerTabBar renders tabs in Fajr-first canonical order regardless of `isRTL`
-  - BottomNavBar renders routes in canonical order regardless of `isRTL`
-
-**What requires native QA:**
-- Visual confirmation that `marginStart`/`marginEnd` physically display correctly on device set to RTL locale (requires app reload).
-- VoiceOver/TalkBack focus order in RTL.
-- Calendar cell layout in RTL.
-- Prayer tab visual LTR enforcement on device.
+M22 DOES add:
+- Logical-style properties (marginStart/End, paddingStart/End) for icon-text row spacing
+- `directional` prop on `Icon.tsx` that reads `I18nManager.isRTL` to flip directional glyphs
+- The `directional` import of `I18nManager` is a **read-only use** — it does not call `forceRTL` or `allowRTL`.
 
 ---
 
-## 14. Logical vs Physical Direction Contract
+## 8. Logical vs Physical Direction Contract
 
-### 14.1 Classification Rules
+### 8.1 Classification Rules
 
 | Pattern | Classification | Rule |
 |---|---|---|
 | `marginLeft` / `marginRight` between icon and adjacent text in `flexDirection: 'row'` | **LOGICAL** | Replace with `marginStart` / `marginEnd` |
-| `paddingLeft` / `paddingRight` creating internal content gap within a row container | **LOGICAL** | Replace with `paddingStart` / `paddingEnd` |
-| `marginLeft: 'auto'` for badge push-to-end | **PHYSICAL — KEEP** | `auto` is direction-neutral in flexbox; moves to flex end regardless of direction |
+| `paddingLeft` / `paddingRight` creating internal content gap in a row container | **LOGICAL** | Replace with `paddingStart` / `paddingEnd` |
+| `marginLeft: 'auto'` for badge push-to-end | **PHYSICAL — KEEP** | `auto` is direction-neutral in flexbox |
 | `textAlign: 'center'` | **PHYSICAL — KEEP** | Direction-neutral |
-| `left: 0, right: 0, top: 0, bottom: 0` on overlay backdrops | **PHYSICAL — KEEP** | Full-screen geometric; not directional |
-| `right: -30` on decorative ornament (PrayerHeader) | **PHYSICAL — KEEP** | Purely decorative visual effect; not directional semantic |
-| `top: 4` on indicator dot | **PHYSICAL — KEEP** | Vertical; not directional |
-| `borderBottomWidth`, `borderTopWidth`, `borderLeftWidth`, `borderRightWidth` | **PHYSICAL — KEEP** | Structural borders; not directional in app context |
-| `marginLeft: spacing.xs` in `contentContainer` (TaskCard) | **LOGICAL** | Spacing between checkbox and content — replaces with `marginStart` |
-| Inline style `marginRight: 4` on icon in metaItem (TaskCard L97) | **LOGICAL** | Icon before text — replace with `marginEnd` |
+| `left: 0, right: 0, top: 0, bottom: 0` on overlay backdrops | **PHYSICAL — KEEP** | Full-screen geometric, not directional |
+| `right: -30` on decorative ornament (PrayerHeader) | **PHYSICAL — KEEP** | Purely decorative visual effect (OBS-2) |
+| `borderBottomWidth`, `borderTopWidth`, `borderLeftWidth`, `borderRightWidth` | **PHYSICAL — KEEP** | Structural borders; not directional |
 
-### 14.2 RN 0.86 Logical Style Confirmation
-
-`marginStart`, `marginEnd`, `paddingStart`, `paddingEnd` are confirmed supported in `ViewStyle` TypeScript types for React Native 0.86. No type assertion (`as ViewStyle`) needed.
-
-### 14.3 Complete Logical Replacement Table
+### 8.2 Complete Logical Replacement Table
 
 | File | Location | Current | Replace with |
 |---|---|---|---|
 | `Button.tsx` | L167 | `marginLeft` | `marginStart` |
 | `Button.tsx` | L168 | `marginRight` | `marginEnd` |
-| `Toggle.tsx` | StyleSheet | `marginRight: 16` | `marginEnd: 16` |
-| `SettingsRow.tsx` | StyleSheet L55 | `marginRight: spacing.md` | `marginEnd: spacing.md` |
-| `SettingsRow.tsx` | StyleSheet L103 | `marginRight: ...` | `marginEnd: ...` |
-| `SettingsInfoCard.tsx` | StyleSheet L37 | `marginRight: spacing.sm` | `marginEnd: spacing.sm` |
-| `SettingsToggle.tsx` | StyleSheet L57 | `marginRight: spacing.md` | `marginEnd: spacing.md` |
-| `SettingsToggle.tsx` | StyleSheet L117 | `paddingRight: 12` | `paddingEnd: 12` |
-| `SettingsSelectOption.tsx` | StyleSheet L85 | `paddingRight: 12` | `paddingEnd: 12` |
-| `PremiumLockedInfo.tsx` | Inline L67 | `marginRight: spacing.sm` | `marginEnd: spacing.sm` |
-| `PremiumBadge.tsx` | Inline | `marginRight: 3` | `marginEnd: 3` |
+| `Toggle.tsx` | textContainer StyleSheet | `marginRight: 16` | `marginEnd: 16` |
+| `SettingsRow.tsx` | iconWrapper StyleSheet L55 | `marginRight: spacing.md` | `marginEnd: spacing.md` |
+| `SettingsRow.tsx` | value Text L103 | `marginRight: ...` | `marginEnd: ...` |
+| `SettingsInfoCard.tsx` | icon StyleSheet L37 | `marginRight: spacing.sm` | `marginEnd: spacing.sm` |
+| `SettingsToggle.tsx` | icon StyleSheet L57 | `marginRight: spacing.md` | `marginEnd: spacing.md` |
+| `SettingsToggle.tsx` | paddingRight L117 | `paddingRight: 12` | `paddingEnd: 12` |
+| `SettingsSelectOption.tsx` | L85 | `paddingRight: 12` | `paddingEnd: 12` |
+| `PremiumLockedInfo.tsx` | iconContainer inline L67 | `marginRight: spacing.sm` | `marginEnd: spacing.sm` |
+| `PremiumBadge.tsx` | icon inline | `marginRight: 3` | `marginEnd: 3` |
 | `PrayerHeader.tsx` | L64 | `marginLeft: spacing.md` | `marginStart: spacing.md` |
 | `PrayerHeader.tsx` | L97 | `marginRight: spacing.xs` | `marginEnd: spacing.xs` |
 | `PrayerTransitionBanner.tsx` | L101 | `marginRight: 12` | `marginEnd: 12` |
 | `PrayerTransitionBanner.tsx` | L109 | `marginLeft: 8` | `marginStart: 8` |
-| `TaskCard.tsx` | StyleSheet contentContainer | `marginLeft: 8` | `marginStart: 8` |
-| `TaskCard.tsx` | Inline metaItem L97 | `marginRight: 4` | `marginEnd: 4` |
-| `TaskCard.tsx` | Inline metaItem L105 | `marginLeft: spacing.md` | `marginStart: spacing.md` |
-| `AnytimeTodaySection.tsx` | Inline L46 | `marginRight: 6` | `marginEnd: 6` |
+| `TaskCard.tsx` | contentContainer StyleSheet | `marginLeft: 8` | `marginStart: 8` |
+| `TaskCard.tsx` | metaItem inline L97 | `marginRight: 4` | `marginEnd: 4` |
+| `AnytimeTodaySection.tsx` | sun icon inline L46 | `marginRight: 6` | `marginEnd: 6` |
 | `JournalHeader.tsx` | L128 | `marginLeft: spacing.xs` | `marginStart: spacing.xs` |
 | `JournalHeader.tsx` | L154 | `marginLeft: 4` | `marginStart: 4` |
 | `JournalHistory.tsx` | L52 | `marginLeft: spacing.xs` | `marginStart: spacing.xs` |
-| `JournalDeleteDialog.tsx` | L78 | `marginRight: spacing.sm` | `marginEnd: spacing.sm` |
-| `JournalPrivacySheet.tsx` | L63 | `marginLeft: spacing.md` | `marginStart: spacing.md` |
-| `JournalPrivacySheet.tsx` | StyleSheet L202 | `paddingRight: 12` | `paddingEnd: 12` |
+| `JournalDeleteDialog.tsx` | Cancel button L78 | `marginRight: spacing.sm` | `marginEnd: spacing.sm` |
+| `JournalPrivacySheet.tsx` | titleContainer L63 | `marginLeft: spacing.md` | `marginStart: spacing.md` |
+| `JournalPrivacySheet.tsx` | toggleLabelContainer L202 | `paddingRight: 12` | `paddingEnd: 12` |
 | `ReflectionSection.tsx` | L59 | `marginLeft: spacing.sm` | `marginStart: spacing.sm` |
 | `DayDetailTaskList.tsx` | L67 | `marginLeft: spacing.xs` | `marginStart: spacing.xs` |
 | `UpcomingSection.tsx` | L26 | `marginRight: spacing.xs` | `marginEnd: spacing.xs` |
@@ -586,36 +533,34 @@ Components do NOT import or call `I18nManager.isRTL` directly in M22. Direction-
 | `ScheduleModeCards.tsx` | L425 | `marginRight: spacing.xs` | `marginEnd: spacing.xs` |
 | `SuccessScreen.tsx` | L89 | `marginRight: 6` | `marginEnd: 6` |
 | `SuccessScreen.tsx` | L97 | `marginRight: 6` | `marginEnd: 6` |
-| `TaskFormScreen.tsx` | L326 | `marginLeft: spacing.xs` | `marginStart: spacing.xs` |
+| `TaskFormScreen.tsx` | validation error L326 | `marginLeft: spacing.xs` | `marginStart: spacing.xs` |
 | `SetupRequiredState.tsx` | L140 | `marginRight: spacing.xs` | `marginEnd: spacing.xs` |
 | `SetupRequiredState.tsx` | L170 | `marginLeft: spacing.xs` | `marginStart: spacing.xs` |
 | `app/journal.tsx` | L253 | `marginLeft: spacing.xs` | `marginStart: spacing.xs` |
 | `app/journal.tsx` | L312 | `marginLeft: 12` | `marginStart: 12` |
-| `hijri-calendar.tsx` | Modal actions L392 | `marginRight: spacing.sm` | `marginEnd: spacing.sm` |
-| `hijri-calendar.tsx` | Modal actions L400 | `marginLeft: spacing.sm` | `marginStart: spacing.sm` |
-| `notifications.tsx` | Icon margins | `marginRight` | `marginEnd` |
-| `planning-day.tsx` | Icon margins | `marginRight` | `marginEnd` |
-| `prayer-location.tsx` | Icon margins | `marginRight`/`marginLeft` | `marginEnd`/`marginStart` |
+| `hijri-calendar.tsx` | modal actions L392 | `marginRight: spacing.sm` | `marginEnd: spacing.sm` |
+| `hijri-calendar.tsx` | modal actions L400 | `marginLeft: spacing.sm` | `marginStart: spacing.sm` |
+| `notifications.tsx` | icon margin rows | `marginRight` / `marginLeft` | `marginEnd` / `marginStart` |
+| `planning-day.tsx` | icon margin rows | `marginRight` / `marginLeft` | `marginEnd` / `marginStart` |
+| `prayer-location.tsx` | icon margin rows | `marginRight` / `marginLeft` | `marginEnd` / `marginStart` |
 
-**Physical properties to KEEP:**
-- `marginLeft: 'auto'` on badge push-to-end in TaskCard — keep
-- All `left: 0, right: 0` on overlay backdrops — keep
-- `right: -30` on PrayerHeader decorative ornament — keep
+**Physical properties confirmed to KEEP:**
+- `marginLeft: 'auto'` on badge push-to-end in TaskCard
+- All `left: 0, right: 0, ...` on overlay backdrops
+- `right: -30` on PrayerHeader decorative ornament (OBS-2)
 
 ---
 
-## 15. Accessibility Grouping Policy
+## 9. Accessibility Grouping Policy
 
-**Core principle:** Setting `accessible={true}` on a container groups all non-interactive children into a single accessibility element. However, it does NOT hide separately accessible Pressable/interactive descendants in the same sibling tree — only descendants inside that specific container.
+### 9.1 TaskCard
 
-### 15.1 TaskCard
-
-**Structure:**
+**Structure after M22:**
 ```
 <View> {/* card — neutral container */}
   <View style={mainRow}>
-    <TaskCheckbox />          {/* interactive — accessible sibling */}
-    <View                     {/* contentContainer — GROUP THIS */}
+    <TaskCheckbox />          {/* interactive — accessible sibling, NOT inside grouped container */}
+    <View                     {/* contentContainer — GROUP */}
       style={contentContainer}
       accessible={true}
       accessibilityLabel={compositeLabel}
@@ -629,418 +574,306 @@ Components do NOT import or call `I18nManager.isRTL` directly in M22. Direction-
 </View>
 ```
 
-**Composite label formula:**
-```
-"{title}. {priority === 'IMPORTANT' ? 'Important. ' : ''}{status badge text if not PENDING}. {overdueLabel if overdue}"
-```
+**Composite label formula:** `"{title}{. Important.?}{. {statusBadge}?}{. {overdueLabel}?}"`
 
-**Examples:**
-- Pending: `"Buy groceries"`
-- Important + pending: `"Buy groceries. Important."`
-- Overdue: `"Buy groceries. 5 minutes overdue."`
-- Completed: `"Buy groceries. Completed."`
-- Missed: `"Buy groceries. Missed."`
+**TaskCheckbox:** `accessibilityRole="checkbox"`, `accessibilityLabel="Complete task: {title}"`, `accessibilityState={{ checked: isCompleted, disabled: !isPending }}` — unchanged, fully accessible as separate sibling.
 
-**TaskCheckbox** remains a separate sibling accessible element: `accessibilityRole="checkbox"`, `accessibilityLabel="Complete task: Buy groceries"`, `accessibilityState={{ checked: isCompleted, disabled: !isPending }}`.
+### 9.2 PrayerHeader
 
-### 15.2 PrayerHeader
+- Group name block + badge + countdown in one `View` with `accessible={true}` + composite label.
+- `importantForAccessibility="no-hide-descendants"` on that wrapper.
+- Decorative ornament `View` (absolute): `importantForAccessibility="no"` (Android) + `accessibilityElementsHidden={true}` (iOS).
+- Composite label throttled to update at most 1/minute to prevent continuous VoiceOver re-announcement.
 
-**Approach:**
-- Wrap the name block, badge, and countdown in a single `View` with `accessible={true}` and composite label.
-- Apply `importantForAccessibility="no-hide-descendants"` on that wrapper.
-- The ornament `View` (absolute positioned decorative arch): add `importantForAccessibility="no"` (Android) and `accessibilityElementsHidden={true}` (iOS) — both needed for cross-platform.
-- The Arabic name `Text`: add `importantForAccessibility="no"` — it is already inside the grouped view so will be hidden by `no-hide-descendants`, but explicit suppression is belt-and-suspenders.
+**Composite label formula:** `"Current prayer: {name}.{countdown ? ' Next: {nextName} in {countdown}' : ''}"`
 
-**Composite label formula:**
-```
-"Current prayer: {name}. {countdown ? `Next: ${nextPrayerName} in ${countdown}` : 'Last prayer of the day'}"
-```
+### 9.3 Other Group Decisions
 
-**Note:** Countdown is updated every second. The composite `accessibilityLabel` must only be updated when the minute changes (not every second) to avoid continuous VoiceOver re-announcement when a user has the header focused. Implementation must throttle label updates to ≤1/minute.
-
-### 15.3 SettingsRow
-
-`SettingsRow` is a `Pressable` with `accessibilityRole`, `accessibilityLabel`, and `accessibilityValue`. All its children (icon, text, chevron) are inside the Pressable. The Pressable is itself `accessible={true}` by default for a Pressable, so all children are already grouped. The `chevron-right` Icon child should receive the `decorative` prop — it will be suppressed within the accessible Pressable group.
-
-### 15.4 CalendarDayCell
-
-`CalendarDayCell` already has `accessible={true}` and a composite `accessibilityLabel` from the model. It is compliant. No change needed for grouping.
-
-### 15.5 JournalHeader / JournalDeleteDialog
-
-Already labeled — only modal isolation (A-3, A-4) and logical margin fixes needed.
+- `SettingsRow`: Pressable already groups all children — no additional grouping needed. Chevron Icon receives `decorative`.
+- `PremiumLockedInfo`: Do NOT group the card — OK button must remain individually accessible. (See §4.3.)
+- `CalendarDayCell`: Already has `accessible={true}` + composite `accessibilityLabel` from model — COMPLIANT.
 
 ---
 
-## 16. Prayer Tab RTL Order — REVISED AND FROZEN
+## 10. Text Scaling Contract — Per-Node Justification
 
-### 16.1 The Lead's Position
+### 10.1 Policy
 
-The prior freeze mandated `direction: 'ltr'` on the `PrayerTabBar` container to prevent RTL reversal of tabs. The Lead has directed a re-evaluation, requesting that the canonical prayer sequence never changes but that physical RTL behavior be considered.
+- `allowFontScaling={true}` is the default everywhere. **Never disable globally.**
+- `maxFontSizeMultiplier` is a last-resort architectural accommodation, not a general tool.
+- Each use requires this exact justification framework:
 
-### 16.2 Analysis
+> (1) Which exact Text node. (2) Why unrestricted scaling breaks essential usability. (3) Flexible alternatives considered. (4) Why layout flexibility alone is insufficient. (5) Why 2.0 is the least-restrictive safe cap. (6) What content remains readable at 2×. (7) Automated test. (8) Native large-text QA in M23.
 
-**Canonical data order:** `FAJR → DHUHR → ASR → MAGHRIB → ISHA` (chronological by time-of-day). This array must never change.
+### 10.2 Node 1 — CalendarMonthGrid weekday header labels ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
 
-**The question is physical rendering position in RTL:**
+**Exact Text node:** `CalendarMonthGrid.tsx` weekday header Text, lines ~34–46. Typography: `typography.caption` (base ~11pt). StyleSheet uses `flex: 1` on the cell View and `weekdayHeaderRow` is `flexDirection: 'row'` with `justifyContent: 'space-between'`.
 
-| Option | LTR visual | RTL visual | Reading order in RTL |
-|---|---|---|---|
-| A: Force LTR container | Fajr-left to Isha-right | Same as LTR (forced) | RTL reader encounters Isha first (rightmost), Fajr last |
-| B: Allow natural RTL flip | Fajr-left to Isha-right | Isha-left to Fajr-right | RTL reader encounters Fajr first (rightmost in their reading direction), Isha last |
+**Why unrestricted scaling breaks essential usability:** The weekday header row contains exactly 7 cells in `flexDirection: 'row'`, each with `flex: 1`. At font scale 3× (33pt for 11pt base), a 3-character abbreviation ("Sun") would require approximately 40+ pt of width. On a 375pt-wide phone screen (iPhone SE), each of 7 cells has ~53pt. At 3× scale, the text at 33pt requires ~50pt width with letter spacing, leaving 3pt margin — this causes text clipping or overflow against the constrained `flex: 1` width. The weekday headers are navigational context for the calendar grid; clipped or overflowed headers destroy the visual column-alignment that makes the grid readable.
 
-**Analysis of Option A (forced LTR):**
-- A user reading RTL scans right-to-left. Forced LTR tabs put Fajr at the left edge, which the RTL user reaches *last*. This is anti-chronological from the RTL reading perspective.
-- This would be considered an accessibility regression for RTL users.
-- Only argument for Option A: physical position stays consistent regardless of device locale.
+**Flexible alternatives considered:**
+- Shrink the text with `adjustsFontSizeToFit` — causes illegibility at scales where the user has specifically requested large text.
+- Single-character abbreviations ("S", "M", "T") — ambiguous (Tue/Thu both "T", Sat/Sun both "S"), less accessible for screen readers that already read the label.
+- Allow wrapping — a `flexWrap: 'wrap'` text in a fixed 1/7-width cell would wrap to 2 lines, breaking the header row height from the grid rows below and causing visual misalignment between header and data cells.
 
-**Analysis of Option B (natural RTL flip):**
-- In RTL, the first logical item (`FAJR`) maps to the rightmost visual position. An RTL reader scans from right to left and encounters `FAJR` → `DHUHR` → `ASR` → `MAGHRIB` → `ISHA`. The chronological reading experience is preserved.
-- The canonical data array remains `[FAJR, DHUHR, ASR, MAGHRIB, ISHA]`. No array reversal needed.
-- React Native `flexDirection: 'row'` with `I18nManager.isRTL = true` naturally places logical index 0 (FAJR) at the rightmost visual position.
-- Screen readers traverse elements in logical DOM order (FAJR → ISHA), not visual order.
+**Why layout flexibility alone is insufficient:** The grid is structurally constrained to 7 equal-width columns. Each column's width is determined by the screen width, not by content. There is no `minWidth` for content that would allow the row to expand — doing so would break the fixed-7-column layout contract that makes the month grid functional.
 
-### 16.3 FROZEN DECISION
+**Why 2.0 is the least-restrictive safe cap:** At 2× scale (22pt for 11pt base), a 3-character abbreviation in a ~53pt-wide cell renders with adequate spacing. At 2.5× (27.5pt), text begins competing for the cell's narrow width. At 3× (33pt), clipping occurs. `maxFontSizeMultiplier={2}` is the largest value that preserves layout integrity across standard screen sizes (375pt width, which is the smallest common current device).
 
-**Option B is adopted: canonical array never changes; container follows logical UI direction; prayer tab RTL behavior is natural flex mirroring.**
+**What remains readable at 2×:** The 3-character day abbreviation at 22pt is comfortably readable. The weekday headers serve as column labels — their abbreviations ("Sun", "Mon") remain unambiguous at this size.
 
-- **`direction: 'ltr'` style is NOT added to `PrayerTabBar`.**
-- The underlying `tabs` array always arrives in `[FAJR, DHUHR, ASR, MAGHRIB, ISHA]` order. This contract is unchanged.
-- In LTR: Fajr visually left → Isha visually right.
-- In RTL: Fajr visually right → Isha visually left. Reading order: Fajr first → Isha last. Chronologically correct for RTL users.
-- Screen reader traversal: always Fajr → Isha (DOM order), regardless of visual layout direction.
-- `accessibilityLabel` per tab includes prayer name and time — semantically correct in both directions.
+**Automated test:** Group F test `F-1` — render `CalendarMonthGrid` with mocked `PixelRatio.getFontScale()` = 3; assert `Text` nodes with `maxFontSizeMultiplier={2}` cap rendering at 22pt (not 33pt).
 
-**The only change to `PrayerTabBar.tsx` in M22:** indicator dot `importantForAccessibility="no"`, and tab icon `decorative` prop.
+**Native M23 QA:** Verify at iOS "Settings → Accessibility → Display & Text Size → Larger Text → maximum" and Android "Settings → Font size → Largest". Confirm no header text clips or overflows.
 
----
+### 10.3 Node 2 — CalendarDayCell Gregorian day number ("1"–"31")
 
-## 17. BottomNavBar RTL Contract — FROZEN
+**Exact Text node:** `CalendarDayCell.tsx` Gregorian day number Text, lines ~53–67. Typography: `typography.bodyMedium` (base ~16pt). Cell container: `styles.cellContainer` has `flex: 1`, `minHeight: touchTargets.min` (44pt), `minWidth: touchTargets.min` (44pt), `paddingVertical: 4`.
 
-### 17.1 Canonical Route Order (unchanging)
+**Why unrestricted scaling breaks essential usability:** The day cell has a fixed `minHeight: 44` and `minWidth: 44` (touch target minimum). At 3× font scale, the Gregorian number at 48pt would be taller than the cell's minimum height, causing vertical overflow. The cell also contains a Hijri sub-number below and a task-presence dot. At 3× scale, the Gregorian number alone at 48pt occupies the entire cell height, pushing the Hijri number and task dot out of bounds.
 
-```
-Index 0: today
-Index 1: calendar
-Index 2: add (special center button)
-Index 3: journal
-Index 4: settings
-```
+**Flexible alternatives considered:**
+- Remove `minHeight`/`minWidth` touch target — violates accessibility minimum touch target requirement (44pt is the Apple HIG and Android minimum). Removing it would fail an accessibility audit.
+- Use `adjustsFontSizeToFit` — shrinks the text below the scale the user requested, defeating the purpose of Large Text.
+- Expand cell height with scale — each grid row's height would expand by up to 3× at maximum scale. A 6-row calendar month grid would be ~792pt tall (6 rows × 44pt × 3 scale), exceeding the screen height of any current device, making the month un-navigable without horizontal scrolling or a completely different calendar architecture.
 
-This order is the navigation route array from Expo Router's tab state. It must not be reversed.
+**Why layout flexibility alone is insufficient:** The touch-target requirement (44pt min) is non-negotiable for accessibility. The grid row height cannot expand beyond approximately 88pt (2× scale) without exceeding visible screen height for a 6-row month. There is no flexible alternative that simultaneously respects touch targets, avoids clipping, and keeps the month grid navigable.
 
-### 17.2 LTR Visual Order
+**Why 2.0 is the least-restrictive safe cap:** At 2× scale (32pt for 16pt base), the Gregorian number at 32pt fits within a cell of `~64pt height` (which is ~88pt with padding) without clipping the Hijri sub-number. At 2.5× (40pt), the Gregorian number starts crowding the Hijri sub-number into the task dot area. At 3× (48pt), overflow is certain. `maxFontSizeMultiplier={2}` is the maximum that preserves the three-element vertical stack (Gregorian / Hijri / dot) within the cell.
 
-Today | Calendar | + | Journal | Settings (left to right)
+**What remains readable at 2×:** A 32pt day number is highly legible. The cell dimensions at 2× are approximately 88×88pt — spacious for a numeric label.
 
-### 17.3 RTL Visual Order
+**Automated test:** `F-2` — render `CalendarDayCell` with `PixelRatio.getFontScale()` = 3; assert Gregorian number Text has `maxFontSizeMultiplier={2}` and effective font size caps at 32pt.
 
-In RTL, `flexDirection: 'row'` naturally reverses:
+**Native M23 QA:** Same as Node 1.
 
-Settings | Journal | + | Calendar | Today (left to right in RTL device)
+### 10.4 Node 3 — CalendarDayCell Hijri sub-number ("1"–"30")
 
-Reading direction in RTL: Today (rightmost) → Calendar → + → Journal → Settings (leftmost). The navigation hierarchy reads from primary (Today) to secondary (Settings) in reading direction — this is semantically correct.
+**Exact Text node:** `CalendarDayCell.tsx` Hijri day number Text, lines ~70–82. Typography: `typography.caption` with explicit `fontSize: 10, lineHeight: 12`.
 
-### 17.4 Add Button (Center Button)
+**Why unrestricted scaling breaks essential usability:** The Hijri sub-number is visually subordinate to the Gregorian number and is constrained within the same 44pt-min-height cell. At 3× font scale, `fontSize: 10` becomes 30pt with `lineHeight: 36`. The Gregorian number (32pt at 2× cap, 48pt uncapped) occupies the top portion of the cell. The Hijri sub-number at 30pt would require an additional 36pt of vertical space, exceeding what remains after the Gregorian number. The `dotContainer` (task presence indicator) at 6pt height would be pushed off the bottom of the cell.
 
-The Add button (`index 2`) is at the center of 5 items. In LTR: items 0,1,[2],3,4 → Add is center. In RTL: items reversed visually → [4,3,2,1,0] visually → Add (`index 2`) remains at visual center. ✅
+**Flexible alternatives considered:**
+- Hide Hijri sub-number at large scales — loses meaningful dual-date context that is important for the Islamic planning use case. Unacceptable product regression.
+- Move Hijri sub-number to a tooltip — requires interaction, defeating the purpose of at-a-glance dual-date display.
+- Increase cell height for Hijri row — same argument as Node 2: the fixed-grid layout cannot expand row height without breaking the month view navigability.
 
-**The center position is direction-agnostic.** The `isAdd` logic in `BottomNavBar.tsx` (checking `route.name === 'add'`) is unchanged.
+**Why layout flexibility alone is insufficient:** The cell is geometrically constrained by the touch target minimum and the fixed-grid layout. Three vertical elements (Gregorian number, Hijri sub-number, task dot) must fit in ~44–88pt. The Hijri sub-number at 10pt base is the smallest element; scaling it to 30pt at 3× makes it larger than the Gregorian number was at 1× scale, inverting the intended visual hierarchy.
 
-### 17.5 Active State Semantics
+**Why 2.0 is the least-restrictive safe cap:** At 2× scale, `fontSize: 10` becomes 20pt with `lineHeight: 24`. Combined with the Gregorian number at 32pt, the three-element stack occupies approximately 32pt + 24pt + 6pt = 62pt, which fits within a cell of 88pt height (44pt min + 4pt paddingVertical × 2). At 2.5× (25pt Hijri, 40pt Gregorian), the stack exceeds 72pt, causing tighter fit. At 3× (30pt Hijri), overflow occurs.
 
-`activeIndex` from `props.state?.index` maps to the route by index, not by visual position. `accessibilityState={{ selected: isFocused }}` (where `isFocused = activeIndex === index`) remains correct in both LTR and RTL — it is index-based, not position-based.
+**What remains readable at 2×:** A 20pt Hijri sub-number is highly legible. The visual hierarchy (Gregorian > Hijri) is preserved at 32pt vs. 20pt.
 
-### 17.6 Frozen Decision
+**Automated test:** `F-3` — same as F-2 but for the Hijri Text node.
 
-**Allow natural RTL flip for BottomNavBar** — same rationale as PrayerTabBar §16. Canonical route indices never change. `flexDirection: 'row'` mirrors naturally. Active state semantics are index-based and unaffected. No code changes needed specifically for RTL ordering.
+**Native M23 QA:** Same as Node 1.
 
-**M22 change to BottomNavBar.tsx:** Tab icons and Add button icon should receive `decorative` prop (A-2 fix). Tab icons are inside labeled Pressables. Add button icon is inside labeled Pressable.
+### 10.5 No Other maxFontSizeMultiplier Uses Authorized in M22
+
+**All other Text nodes in the 82-file scope use unrestricted scaling.** This includes all settings rows, task cards, journal text, prayer headers (where text can expand freely), onboarding screens, and navigation headers. No additional caps are authorized.
 
 ---
 
-## 18. Calendar RTL Contract — FROZEN
+## 11. Screen-Reader Live Region Contract
 
-### 18.1 Underlying Data Order (unchanging)
-
-**Weekday array:** `['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']` — always in this logical order.
-
-**Calendar day cells:** Populated left-to-right by date number in LTR. First day of the month at visual-start.
-
-### 18.2 LTR Physical Rendering
-
-Sunday at leftmost column, Saturday at rightmost.
-Date 1 at start (leftmost) of its row.
-
-### 18.3 RTL Physical Rendering
-
-In RTL, `flexDirection: 'row'` reverses the visual presentation:
-- Saturday at leftmost column, Sunday at rightmost.
-- Date 1 at rightmost of its row (logical start = physical right in RTL).
-
-This is the correct Gregorian/Hijri calendar rendering for RTL locales (Arabic-language Islamic calendars conventionally show Sunday at the right).
-
-**Screen reader reading order:** Always Sunday → ... → Saturday (DOM order), regardless of visual direction.
-
-### 18.4 Previous/Next Month Button Semantics
-
-**Critical invariant:** The button callbacks MUST remain semantic:
-- Previous month button → always calls `onPreviousMonth()`
-- Next month button → always calls `onNextMonth()`
-- The callback meaning does NOT swap when layout mirrors.
-
-In LTR: Previous button (chevron-left) visually on the left, Next (chevron-right) visually on the right.
-In RTL: With natural flip, Previous button visually on the right, Next visually on the left. The chevron icons mirror too (left chevron becomes right-pointing in RTL visual). But the semantic — "this button goes to the previous month" — is unchanged.
-
-**Icon direction in RTL:**
-- Previous month: `chevron-left` icon in LTR, `chevron-right` icon in RTL (or mirrored via `scaleX(-1)`). Since M22 is layout-readiness only, the icon will appear in the correct mirrored side due to `flexDirection: 'row'` reversal, but the glyph itself won't flip. This is acceptable in M22 (no runtime RTL activation means the exact glyph mismatch is a future RTL activation milestone concern).
-
-### 18.5 Frozen Decision
-
-**Calendar follows natural RTL mirroring.** No forced direction on calendar container. Callbacks always semantic. Grid data array unchanged.
+| Trigger | Element | `accessibilityLiveRegion` |
+|---|---|---|
+| Countdown updates every second (PrayerHeader) | countdown Text | **NONE** — suppress from traversal; include in composite label on demand |
+| Autosave status (JournalSaveStatus) | status Text | `"polite"` ✅ already present |
+| Prayer transition (PrayerTransitionBanner) | banner Text | `"polite"` ✅ already present |
+| Error appearing (SetupRequiredState, today.tsx, journal.tsx) | error Text | `"assertive"` |
 
 ---
 
-## 19. Icon Mirroring Matrix (Validated Against Actual Icon Names)
+## 12. Prayer Tab RTL Order (FROZEN)
 
-All icon names verified against `Icon.tsx` and callsites.
+See ADR-030 §C.
 
-| Icon name | Semantic Meaning | LTR Glyph | RTL glyph (future milestone) | Mirror in RTL? | Decorative in labeled Pressable? | Consumer files |
-|---|---|---|---|---|---|---|
-| `chevron-left` | Navigate back / calendar previous | ← | → | YES | YES (inside labeled Pressable) | `SettingsScreenHeader`, `CalendarHeader`, `JournalHistory` |
-| `chevron-right` | Navigate forward / disclosure / expand | → | ← | YES (navigation) / NO (collapse indicator) | YES | `SettingsRow`, `JournalHistoryRow`, `CompletedSection` (expand), `AnytimeTodaySection` (expand) |
-| `chevron-down` | Expand downward | ↓ | ↓ | NO | YES | `CompletedSection`, `AnytimeTodaySection`, `ReflectionSection` |
-| `sun` | Today tab / anytime section | — | — | NO | YES | `BottomNavBar`, `AnytimeTodaySection` |
-| `calendar` | Calendar tab / date | — | — | NO | YES | `BottomNavBar`, `CalendarHeader`, `UpcomingSection`, `JournalHistory` empty, `EmptyPrayerState` |
-| `plus` | Add task | — | — | NO | YES | `BottomNavBar` Add button |
-| `journal` | Journal tab | — | — | NO | YES | `BottomNavBar` |
-| `settings` | Settings tab | — | — | NO | YES | `BottomNavBar` |
-| `close` | Dismiss/close | — | — | NO (symmetric) | NO (close buttons have their own Pressable label) | `CustomRecurrenceModal`, `EditScopeSheet`, various |
-| `check` | Checkbox checked / all done | — | — | NO (symmetric) | YES | `TaskCheckbox`, `AllDoneState` |
-| `bell` | Notifications | — | — | NO | YES | Settings |
-| `lock` | Lock / privacy | — | — | NO | YES | `JournalLockedState`, `PremiumBadge`, `PremiumLockedInfo` |
-| `lock-closed-outline` | Lock (outline variant) | — | — | NO | YES | Journal screens |
-| `moon-outline` | Dark theme | — | — | NO | YES | Appearance settings |
-| `sunny-outline` | Light theme | — | — | NO | YES | Appearance settings |
-| `clock` | Time / schedule | — | — | NO | YES | `TaskCard`, `UpcomingSection` |
-| `time-outline` | Time (outline) | — | — | NO | YES | Various |
-| `location-outline` | Location | — | — | NO | YES | `SetupRequiredState` |
-| `alert` | Warning | — | — | NO | NO (standalone in non-interactive container) | `PartialSuccessView` |
-| `alert-circle-outline` | Alert circle | — | — | NO | YES | Various |
-| `information-circle-outline` | Info | — | — | NO | YES | `SettingsInfoCard` |
-| `star` | Important / star | — | — | NO | YES | `SettingsRow` (notifications) |
-| `trash-outline` | Delete | — | — | NO | NO (has own Pressable label) | `JournalDeleteDialog` |
-| `search-outline` | Search | — | — | NO | YES | Onboarding city search |
-| `person-outline` | User/avatar | — | — | NO | YES | Settings |
-| `compass-outline` | Prayer direction | — | — | NO | YES | `PrayerHeader` |
-
-**Directional icons requiring future RTL mirroring:** `chevron-left` and `chevron-right` (navigation usage only). Both should receive a `mirror?: boolean` prop in the future RTL milestone that applies `transform: [{ scaleX: -1 }]`.
-
-**M22 action for icons:** Add `decorative` prop to Icon (per A-2). Decorative callsites pass `decorative`. No runtime RTL mirroring in M22.
+**Canonical array:** `[FAJR, DHUHR, ASR, MAGHRIB, ISHA]` — never changes, never reversed.
+**Container:** No `direction: 'ltr'` forced. Natural flex mirroring.
+**LTR:** Fajr left → Isha right. **RTL:** Fajr right → Isha left. RTL users read Fajr → Isha (chronologically correct).
+**Screen reader order:** Always Fajr → Isha (DOM order), both directions.
 
 ---
 
-## 20. Accessibility Grouping — Remaining Components
+## 13. BottomNavBar RTL Order (FROZEN)
 
-### SettingsRow
-`Pressable` with label — already groups all children. Add `decorative` to chevron Icon.
+See ADR-030 §D.
 
-### Journal cards/headers
-`JournalHeader` has labeled Pressable buttons. Logical margin fixes only.
-
-### Premium dialogs
-`PremiumLockedInfo` is a Modal — fixes in §4.
-
-### CalendarDayCell
-Already grouped with composite `accessibilityLabel`. COMPLIANT.
+**Canonical route indices:** `[today=0, calendar=1, add=2, journal=3, settings=4]` — never changes.
+**Active state:** Index-based, not position-based — unaffected by visual direction.
+**Add button (index 2):** Remains at visual center in both LTR and RTL (5 items, center is always index 2).
 
 ---
 
-## 21. Static Audit Design
+## 14. Calendar RTL (FROZEN)
 
-Static tests must be narrow and behavioral, not brittle grep-style lint.
+See ADR-030 §E.
 
-### Allowed static tests
-
-**Group H (RTL Logical Styles):**
-- Render each component from the 43-file change list using RNTL.
-- Assert that `StyleSheet.flatten(component.props.style)` does NOT contain `marginLeft`/`marginRight`/`paddingLeft`/`paddingRight` in icon-text spacing contexts.
-- Allowlist: `marginLeft: 'auto'` in TaskCard badge containers — explicitly excluded from assertion.
-- Expected: ~44 instances across 43 files to catch.
-- False-positive prevention: Only assert on named style references that correspond to icon-text spacing (e.g., `contentContainer`, `iconWrapper`, `textContainer` in StyleSheet) — not on all styles.
-
-**Group M (Static A11y Audit):**
-- Assert `PremiumBadge` rendered View does NOT have `accessibilityRole="text"`.
-- Assert all 6 Modal content views have `accessibilityViewIsModal={true}` prop set.
-- Assert `SettingsSectionHeader` renders a Text with `accessibilityRole="header"`.
-- Assert `CalendarMonthGrid` weekday labels do NOT have `accessibilityRole="text"`.
-- Scope: targeted to known violations found in audit. No broad-spectrum scanning.
-
-### Disallowed static tests
-
-- "Every Pressable must have `accessibilityLabel`" — too broad; a Pressable with a visible Text child may have an implicit accessible name.
-- Grep-based file scanning without component rendering.
+**Weekday array:** `['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']` — never changes.
+**Previous/Next callbacks:** `onPreviousMonth` / `onNextMonth` — semantic meaning never swaps.
+**CalendarHeader chevron glyphs:** Mirror via `directional` prop (§3) — the glyph flips, the callback does not.
 
 ---
 
-## 22. Test Matrix
+## 15. Exact Planned Production File Change List
 
-### Test groups, files, and estimates
+**Total: 44 production files**
 
-| Group | Description | Test File (new) | Est. Tests |
+1. `src/components/common/Icon.tsx` — decorative + directional props
+2. `src/components/common/Button.tsx` — logical margins
+3. `src/components/common/Toggle.tsx` — logical margin
+4. `src/components/layout/BottomNavBar.tsx` — decorative icons
+5. `src/components/prayer/PrayerTabBar.tsx` — indicator dot suppressed; tab icons decorative
+6. `src/components/prayer/PrayerHeader.tsx` — grouping; composite label; decorative suppression; logical margins
+7. `src/components/prayer/PrayerTransitionBanner.tsx` — logical margins
+8. `src/components/task/TaskCard.tsx` — informational grouping; composite label; logical margins
+9. `src/components/task/CompletedSection.tsx` — decorative expand chevron
+10. `src/components/task/AnytimeTodaySection.tsx` — decorative icons; logical margin
+11. `src/components/journal/JournalDeleteDialog.tsx` — modal isolation; header role; backdrop accessible={false}; logical margin
+12. `src/components/journal/JournalPrivacySheet.tsx` — modal isolation; header role; backdrop accessible={false}; logical replacements
+13. `src/components/journal/JournalHeader.tsx` — logical margins
+14. `src/components/journal/JournalHistory.tsx` — directional back icon; logical margin
+15. `src/components/journal/JournalHistoryRow.tsx` — decorative disclosure chevron
+16. `src/components/journal/ReflectionSection.tsx` — logical margin
+17. `src/components/calendar/CalendarHeader.tsx` — directional prev/next icons; decorative on both
+18. `src/components/calendar/CalendarDayCell.tsx` — maxFontSizeMultiplier on day/Hijri numbers
+19. `src/components/calendar/CalendarMonthGrid.tsx` — remove invalid role; maxFontSizeMultiplier on weekday labels
+20. `src/components/calendar/DayDetailTaskList.tsx` — Arabic name suppressed; logical margin
+21. `src/components/calendar/UpcomingSection.tsx` — logical margins
+22. `src/components/settings/SettingsSectionHeader.tsx` — header role
+23. `src/components/settings/SettingsRow.tsx` — decorative disclosure chevron; logical margins
+24. `src/components/settings/SettingsToggle.tsx` — double-announcement suppression; logical replacements
+25. `src/components/settings/SettingsSelectOption.tsx` — logical padding
+26. `src/components/settings/SettingsInfoCard.tsx` — logical margin
+27. `src/components/settings/SettingsScreenHeader.tsx` — decorative + directional back icon
+28. `src/components/premium/PremiumBadge.tsx` — remove invalid role; decorative lock icon; logical margin
+29. `src/components/premium/PremiumLockedInfo.tsx` — modal isolation; remove accessible group (expose OK button); header role; backdrop accessible={false}; logical margin
+30. `src/components/task-form/CustomRecurrenceModal.tsx` — modal isolation; header role; fix radio state key (A-24)
+31. `src/components/task-form/EditScopeSheet.tsx` — modal isolation; header role
+32. `src/components/task-form/DateTimePickerInput.tsx` — logical margins
+33. `src/components/task-form/MoreOptionsSection.tsx` — logical margins
+34. `src/components/task-form/RecurrenceSection.tsx` — logical margin
+35. `src/components/task-form/ScheduleModeCards.tsx` — logical margins
+36. `src/components/task-form/SuccessScreen.tsx` — logical margins
+37. `src/components/task-form/TaskFormScreen.tsx` — logical margin
+38. `src/components/today/SetupRequiredState.tsx` — logical margins; live region
+39. `app/(tabs)/today.tsx` — error live region
+40. `app/(tabs)/journal.tsx` — logical margins; error live region
+41. `app/(tabs)/settings/hijri-calendar.tsx` — modal isolation; header role; logical margins
+42. `app/(tabs)/settings/notifications.tsx` — logical margins
+43. `app/(tabs)/settings/planning-day.tsx` — logical margins
+44. `app/(tabs)/settings/prayer-location.tsx` — logical margins
+
+> `app/onboarding/index.tsx` is file #45 — included in count: **total = 45 production files.**
+
+45. `app/onboarding/index.tsx` — radio roles; radio states (checked); city result labels
+
+---
+
+## 16. Test Matrix
+
+| Group | Description | Test File | Est. Tests |
 |---|---|---|---|
 | A | Accessible Names & Traversal | `src/__tests__/m22/AccessibleNames.test.tsx` | 22 |
-| B | Roles | `src/__tests__/m22/AccessibilityRoles.test.tsx` | 14 |
-| C | States & Live Regions | `src/__tests__/m22/AccessibilityStates.test.tsx` | 12 |
-| D | Touch Targets | (documented verified; no new tests) | 0 |
+| B | Roles | `src/__tests__/m22/AccessibilityRoles.test.tsx` | 16 |
+| C | States & Live Regions | `src/__tests__/m22/AccessibilityStates.test.tsx` | 14 |
 | E | Modal Accessibility Isolation | `src/__tests__/m22/ModalAccessibility.test.tsx` | 18 |
 | F | Text Scaling | `src/__tests__/m22/TextScaling.test.tsx` | 6 |
-| G | Non-Color Cues | (existing suite covers) | 0 |
 | H | RTL Logical Styles | `src/__tests__/m22/RTLLogicalStyles.test.tsx` | 26 |
-| I | RTL Icon Direction | `src/__tests__/m22/RTLIcons.test.tsx` | 8 |
+| I | RTL Directional Icons | `src/__tests__/m22/RTLIcons.test.tsx` | 8 |
 | J | Prayer Tab RTL Order | `src/__tests__/m22/PrayerTabRTL.test.tsx` | 8 |
 | K | Calendar RTL | `src/__tests__/m22/CalendarRTL.test.tsx` | 8 |
-| L | Arabic/Bidi Text | `src/__tests__/m22/ArabicBidi.test.tsx` | 6 |
+| L | Arabic/Bidi Text Suppression | `src/__tests__/m22/ArabicBidi.test.tsx` | 6 |
 | M | Static A11y Audit | `src/__tests__/m22/StaticA11yAudit.test.tsx` | 10 |
-| **Total** | | | **138** |
+| **Total** | | | **142** |
 
-**Baseline:** 1404 tests (121 suites)
-**Estimated M22 additions:** 138 new tests across 11 new test files
-**Expected M22 total:** ~1542 tests (~132 suites)
-**Minimum acceptable:** ≥ 1504 (i.e., ≥ 100 new tests)
-
-> [!NOTE]
-> The minimum ≥ 1504 and the estimated ~1542 are now consistent. The prior draft had an inconsistency (it said "~127 new" but claimed target ≥ 1504 meaning ≥ 100). This document fixes both: the floor is ≥ 100 new tests; the estimate is 138 new tests based on the hardened scope.
+**Baseline:** 1404 tests / 121 suites
+**Estimated M22 additions:** 142 new tests / 11 new test suites
+**Expected M22 total:** ~1546 tests / ~132 suites
+**Minimum acceptable:** ≥ 1504 total tests (≥ 100 new)
 
 ---
 
-## 23. Native QA Carry-Forward
+## 17. Native QA Carry-Forward (M23)
 
-| Item | Target |
-|---|---|
-| VoiceOver (iOS) focus order through Today, PrayerHeader, TaskCard | M23 |
-| TalkBack (Android) focus order through Today, PrayerHeader, TaskCard | M23 |
-| VoiceOver — modal focus trapping for all 6 modal consumers | M23 |
-| TalkBack — modal focus trapping for all 6 modal consumers | M23 |
-| Prayer tab visual order on device set to Arabic/Hebrew locale | M23 |
-| BottomNavBar visual order in device RTL locale | M23 |
-| Calendar grid mirroring in device RTL locale | M23 |
-| Large Accessibility Text (≥ 300% iOS / Android) — calendar layout | M23 |
-| `maxFontSizeMultiplier` cap behavior at iOS max text size | M23 |
-| Widget accessibility (iOS, Android) | M23/M24 |
-| VoiceOver reading of Arabic prayer names in PrayerHeader | M23 |
-| Hardware keyboard navigation | Deferred (not primary mobile target) |
-
----
-
-## 24. Dependencies
-
-**0 new dependencies.** All changes use existing React Native APIs.
+| Item |
+|---|
+| VoiceOver focus order — Today, PrayerHeader, TaskCard |
+| TalkBack focus order — Today, PrayerHeader, TaskCard |
+| VoiceOver — modal focus trapping for all 6 modals |
+| TalkBack — modal focus trapping for all 6 modals |
+| TalkBack — `accessibilityViewIsModal` effectiveness on Android API levels 29–34 |
+| Prayer tab visual order on device with Arabic/Hebrew system locale |
+| BottomNavBar visual order on device with RTL locale |
+| Calendar grid mirroring on device with RTL locale |
+| Directional icon glyph flip on device with RTL locale (back chevron, prev/next month) |
+| Large Accessibility Text (iOS max / Android largest) — calendar weekday labels |
+| Large Accessibility Text (iOS max / Android largest) — calendar day cell numbers |
+| Widget accessibility (M23/M24) |
 
 ---
 
-## 25. Migrations
+## 18. Verification Gates (Pre-Implementation-Review)
 
-**0 migrations.** No database changes.
-
----
-
-## 26. Subsystem Isolation
-
-M22 must not modify:
-- `src/domain/**`
-- `src/data/schema.ts`
-- `src/data/migrations/**`
-- `src/services/**` (except read-only reference to `PRAYER_ARABIC_NAMES`)
-- `widgets/**`
-- `package.json` / `package-lock.json`
-- `app.json`
-
----
-
-## 27. Risks
-
-| Risk | Severity | Mitigation |
-|---|---|---|
-| `accessibilityViewIsModal` effectiveness varies by Android version | MEDIUM | Native QA carry-forward; Jest assertion at minimum |
-| `importantForAccessibility="no-hide-descendants"` on TaskCard contentContainer hides children from SR while keeping TaskCheckbox accessible | LOW | Verified: Pressable sibling not inside grouped container |
-| PrayerHeader composite label update frequency — 1-second countdown | MEDIUM | Throttle label to ≤1/minute change |
-| Icon `decorative` prop coverage — 20+ callsites | LOW | Group M static audit catches omissions |
-| Prayer tab RTL visual flip may confuse LTR developers | LOW | Documented in §16; test in Group J |
-
----
-
-## 28. Implementation Order
-
-1. **`Icon.tsx`** — `decorative` prop (prerequisite for all icon fixes)
-2. **6 Modal consumers** — `accessibilityViewIsModal` + header role
-3. **`SettingsSectionHeader.tsx`** — header role (one-liner)
-4. **`PremiumBadge.tsx`** — remove invalid role
-5. **`SettingsToggle.tsx`** — double-announcement suppression
-6. **`PrayerHeader.tsx`** — grouping + composite label (most complex; must throttle label updates)
-7. **`TaskCard.tsx`** — composite grouping + composite label
-8. **`app/onboarding/index.tsx`** — theme options, method options, city results
-9. **Error live regions** — SetupRequiredState, today.tsx, journal.tsx
-10. **All logical margin/padding replacements** — all 43 files (mechanical pass)
-11. **`CalendarMonthGrid.tsx` / `CalendarDayCell.tsx`** — remove invalid role; add `maxFontSizeMultiplier`
-12. **`PrayerTabBar.tsx`** — indicator dot hidden; tab Icons decorative
-13. **`DayDetailTaskList.tsx` / `PrayerHeader.tsx`** — Arabic name suppression
-14. **LOW items** — decorative Icon callsites (CompletedSection, JournalHistoryRow, BottomNavBar, etc.)
-15. **All 11 test files** — test groups A–M
-
----
-
-## 29. Verification Gates
-
-Before M22 can be submitted for independent review:
-
-1. `npx tsc --noEmit` — 0 errors
-2. `npx eslint . --ext ts,tsx --max-warnings=0` — 0 errors, 0 warnings
-3. `npx jest --passWithNoTests` — 0 failures; all existing 1404 tests pass; all new M22 tests pass
-4. New test count ≥ 100 (estimate: 138)
-5. Total test count ≥ 1504 (estimate: ~1542)
-6. `git diff --stat origin/main HEAD` — 0 changes to domain, schema, migrations, services, widgets, package files
-7. `git diff --check` — no whitespace errors
+1. `npx tsc --noEmit` → 0 errors
+2. `npx eslint . --ext ts,tsx --max-warnings=0` → 0 errors, 0 warnings
+3. `npx jest --passWithNoTests` → 0 failures; all 1404 existing tests pass; all 142 M22 tests pass
+4. New test count ≥ 100
+5. Total test count ≥ 1504
+6. `git diff --stat origin/main HEAD` → 0 changes to domain, schema, migrations, services, widgets, package files
+7. `git diff --check` → no whitespace errors
 8. `git rev-parse origin/main` → `a8c837c6ef6c27d3bc81a48b6e1d12e6489874f1`
-9. Architecture commits local, NOT pushed
+9. M22 architecture commits local — NOT pushed until closure
 10. Implementation commits NOT pushed until formal closure
 
 ---
 
-## 30. Closure Criteria
+## 19. Closure Criteria
 
-M22 is closed when:
-
-1. All HIGH findings resolved (A-1, A-3, A-4, A-5, A-13, A-14)
-2. All MEDIUM findings resolved or explicitly documented carry-forward
+1. All HIGH findings resolved (A-1, A-3, A-4, A-5, A-13, A-14, RTL-3)
+2. All MEDIUM findings resolved or documented carry-forward
 3. 0 TypeScript errors
 4. 0 ESLint errors/warnings
-5. All M22 tests passing
-6. Total test count ≥ 1504
-7. 0 new dependencies
-8. 0 new migrations
-9. Independent review: APPROVED
-10. Supporting docs updated (CURRENT_MILESTONE, IMPLEMENTATION_STATUS, ARCHITECTURE_INDEX, DECISIONS, AI_PROJECT_CONSTITUTION)
-11. ONE authorized push to `origin/main`
+5. All M22 tests passing; total ≥ 1504
+6. 0 new dependencies
+7. 0 new migrations
+8. Independent review: APPROVED
+9. Supporting docs updated
+10. ONE authorized push to `origin/main`
+
+---
+
+## 20. Scope Exclusions
+
+- Arabic app translation
+- Runtime `I18nManager.forceRTL()` call
+- Locale/language selector
+- Widget accessibility
+- Any domain, scheduling, database, or notification changes
+- New dependencies
+- New migrations
 
 ---
 
 ## ADR-030 — Accessibility Semantics and RTL Layout Contract
 
-**Status:** AUTHORIZED AND FROZEN in M22.
+**Status:** AUTHORIZED AND FINALIZED in M22.
+**Supersedes:** Draft in c79cdaf.
 
-**Decisions recorded as durable project-wide architectural rules:**
+See `docs/DECISIONS.md` for the complete binding ADR-030 text. Summary of durable rules:
 
-1. **Accessibility semantic contract** — roles, states, modal isolation pattern (§7, §4)
-2. **RTL product scope** — layout readiness only; no runtime activation without locale system (§13)
-3. **Prayer tab order** — canonical array never changes; natural RTL flex mirroring is correct; DO NOT force LTR (§16)
-4. **BottomNavBar order** — canonical route indices never change; natural RTL mirroring correct (§17)
-5. **Calendar RTL** — natural mirroring; callback semantics never swap (§18)
-6. **Icon mirroring matrix** — chevron-left/right are directional; all others non-directional (§19)
-7. **Logical-style convention** — `marginStart`/`marginEnd`/`paddingStart`/`paddingEnd` mandate for icon-text spacing (§14)
-8. **`maxFontSizeMultiplier` policy** — calendar cells only; 2× cap with full justification required (§10)
-9. **`decorative` Icon prop pattern** — suppresses icon traversal when inside labeled Pressable (§7.1)
-10. **Radio state key** — `accessibilityRole="radio"` requires `accessibilityState={{ checked }}` not `selected` (§7.2)
-11. **Grouping policy** — informational container grouping must never hide interactive sibling descendants (§15)
-
-ADR-030 will be recorded in `docs/DECISIONS.md`.
+1. `radio` → `accessibilityState.checked`; `tab` → `accessibilityState.selected`
+2. All `<Modal>` consumers: `accessibilityViewIsModal={true}` on innermost content View
+3. Modal titles + section headers: `accessibilityRole="header"` on Text node
+4. Backdrop Pressables in modals with explicit dismiss buttons: `accessible={false}`
+5. `decorative` prop on `Icon` suppresses traversal
+6. `directional` prop on `Icon` flips glyph in RTL (reads `I18nManager.isRTL`, never calls `forceRTL`)
+7. Prayer tab order: canonical array unchanged; no forced LTR; natural flex mirroring
+8. BottomNavBar: canonical route indices unchanged; natural flex mirroring
+9. Calendar: `onPreviousMonth`/`onNextMonth` semantics never swap
+10. Disclosure icons (chevron-right in SettingsRow, JournalHistoryRow, expand-collapse): NOT directional
+11. Navigation icons (chevron-left back, chevron-left/right prev/next month): ARE directional
+12. `maxFontSizeMultiplier` authorized only for 3 calendar cell Text nodes, cap={2}, with per-node justification
+13. `marginStart`/`marginEnd`/`paddingStart`/`paddingEnd` mandate for icon-text row spacing
+14. `PremiumLockedInfo` card: do NOT use `accessible` on the card wrapper — OK button must be individually traversable
