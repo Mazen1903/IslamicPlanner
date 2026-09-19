@@ -1,7 +1,7 @@
 # Architecture Decision Log
 
 **Status:** Living document  
-**Updated:** 2026-09-18 (Rev 6 — M20 ADR-028 added)  
+**Updated:** 2026-09-18 (Rev 7 — M20 ADR-028 hardened)  
 **Purpose:** Record every major architectural decision, the alternatives considered, and the rationale.
 
 ---
@@ -679,13 +679,13 @@ The root `app/_layout.tsx` reads `onboardingCompleted` via a Zustand store (`use
 
 `useOnboardingStore.markComplete()` is called synchronously (Zustand update) **before** `router.replace()` in the onboarding screen. This eliminates the gate redirect-back race condition that would otherwise occur if the gate re-evaluated before the DB write was visible.
 
-Fail-open: a DB read failure during `initialize()` resolves to `PENDING` (re-shows onboarding), not to `COMPLETE` (which would silently bypass setup for a user who has never set location or calculation method). This is the opposite of the entitlement fail-closed pattern (ADR-027) and is intentional — the two failure semantics reflect different risk profiles.
+DB read failure resolution: a DB infrastructure failure during `initialize()` resolves to `ERROR`, not `PENDING` and not `COMPLETE`. `ERROR` renders a controlled recovery surface with a `retry()` call. This is distinct from a missing user_settings row (fresh install), which correctly resolves to `PENDING`. Silently showing onboarding on a DB failure (treating ERROR as PENDING) would allow the user to submit completion against a broken database, leaving `onboardingCompleted` unwritten and causing an infinite loop. The `ERROR` state makes the failure explicit and recoverable. Contrast with the entitlement fail-closed pattern (ADR-027): the two failure semantics reflect different risk profiles and are both intentional.
 
 **Sub-decision B — `OnboardingCoordinator` Bypasses `SettingsMutationCoordinator`**
 
 `OnboardingCoordinator.complete()` writes `{ onboardingCompleted: true }` directly via `UserSettingsRepository.upsert()`. It does NOT go through `SettingsMutationCoordinator`.
 
-Reason: `SettingsMutationCoordinator` is a general-purpose settings coordinator for user-facing preference mutations. It calls `PlannerRefreshCoordinator.fullRefresh()` on every temporal change. During Step 3 (calculation method selection), the user has not yet confirmed completion. A premature full refresh before `onboardingCompleted = true` would trigger the Today pipeline with a partially-configured app. `OnboardingCoordinator.complete()` is the single, authoritative refresh trigger for all settings committed during onboarding — Step 3's `calculationMethod` write also bypasses `SettingsMutationCoordinator` for the same reason. `FORBIDDEN_PATCH_KEYS` in `SettingsMutationCoordinator` already lists `onboardingCompleted`, which correctly blocks general-purpose mutation of the lifecycle flag.
+Reason: `SettingsMutationCoordinator` is a general-purpose settings coordinator for user-facing preference mutations. It calls `PlannerRefreshCoordinator.fullRefresh()` on every temporal change. Screen 3 (PRAYER_SETUP) does not write calculationMethod directly from React. The draft is passed to `OnboardingCoordinator.complete()` at Screen 4, which performs the single authoritative persistence + refresh. This avoids premature full refresh before `onboardingCompleted = true` and keeps the coordinator as the sole completion boundary. Location writes via `useLocation.requestAutoLocation()` and `useLocation.setManualLocation()` are acceptable exceptions — they go through the existing canonical mutation path. `FORBIDDEN_PATCH_KEYS` in `SettingsMutationCoordinator` already lists `onboardingCompleted`, which correctly blocks general-purpose mutation of the lifecycle flag.
 
 **Alternatives considered:**
 

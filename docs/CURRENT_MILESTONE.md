@@ -1,9 +1,9 @@
 # Current Milestone: M20 — Onboarding
 
-> **Current State:** M20 PENDING — ARCHITECTURE FROZEN
+> **Current State:** M20 PENDING — ARCHITECTURE HARDENED
 > **Previous Milestone:** M19 CLOSED / SONNET APPROVED
-> **Milestone Status:** M20 — ARCHITECTURE FROZEN / PENDING IMPLEMENTATION
-> **Architecture Status:** FROZEN — `docs/M20_ARCHITECTURE.md` authored and committed (2026-09-18)
+> **Milestone Status:** M20 — ARCHITECTURE HARDENED / PENDING IMPLEMENTATION
+> **Architecture Status:** HARDENED — `docs/M20_ARCHITECTURE.md` hardened (2026-09-18). All 18 consistency issues resolved.
 
 ---
 
@@ -127,7 +127,7 @@ M19 did **NOT** implement:
 ```
 M18 — Widgets (dev build required)            ✅ CLOSED / SONNET APPROVED
 M19 — Premium Entitlement Scaffolding          ✅ CLOSED / SONNET APPROVED
-M20 — Onboarding                               ← CURRENT / ARCHITECTURE FROZEN (implementation pending)
+M20 — Onboarding                               ← CURRENT / ARCHITECTURE HARDENED (implementation pending)
 M21 — Dark Mode Polish
 M22 — Accessibility / RTL
 M23 — QA + Edge Cases
@@ -141,16 +141,16 @@ Worship Suggestions remain **DEFERRED** (not deleted). May be re-introduced post
 ## M20 Overview & Scope
 
 **M20 — Onboarding**
-- **Status:** ARCHITECTURE FROZEN — implementation pending independent architecture review
+- **Status:** ARCHITECTURE HARDENED — ready for implementation
 - **Architecture doc:** `docs/M20_ARCHITECTURE.md`
 - **ADR:** ADR-028
 - **Prerequisites:** M1 (Design System), M2 (Prayer Calculation), M12 (Location), M17 (Settings)
 - **Scope:** First-run onboarding flow — four steps: Welcome, Location (GPS/manual/skip), Calculation Method, Ready.
 - **New files:** `src/stores/useOnboardingStore.ts`, `src/services/onboarding/OnboardingCoordinator.ts`, `src/services/onboarding/index.ts`, 4 test files.
 - **Modified files:** `app/_layout.tsx` (gate), `app/onboarding/index.tsx` (4-step screen).
-- **Constraints:** No GPS on mount · No silent mutation · No new deps · No new migrations · Zero entitlement/journal involvement.
-- **Estimated new tests:** ~59 (OS-01..OS-10, OC-01..OC-14, SCR-01..SCR-23, OI-01..OI-12).
-- **Rule:** DO NOT start implementation until M20 architecture receives independent review and is approved.
+- **Constraints:** Location REQUIRED (GPS optional) · No GPS on mount · No silent mutation · No direct repo writes from React · No new deps · No new migrations · Zero entitlement/journal involvement.
+- **Estimated new tests:** ~85 (B-01..B-12, F-01..F-10, L-01..L-11, C-01..C-09, P-01..P-06, OC-01..OC-11, ISO-01..ISO-16).
+- **Rule:** Architecture is hardened. All 18 consistency issues are resolved. Implementation may proceed.
 
 ---
 

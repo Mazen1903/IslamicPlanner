@@ -1,4 +1,4 @@
-**Current Milestone:** M20 — Onboarding (PENDING — ARCHITECTURE NOT YET FROZEN)
+**Current Milestone:** M20 — Onboarding (PENDING — ARCHITECTURE HARDENED)
 **Last Updated:** 2026-09-18 (M19 closed / SONNET APPROVED; M20 pending)  
 **Project:** Islamic Prayer-Centered Planner  
 
@@ -28,7 +28,7 @@
 | **M17** | Settings | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `00891c2`, hardening `a2af7a3`, implementation `76ac716`. 1171/1171 tests (102 suites). 0 migrations. 0 dependencies. ADR-025 (prayer adjustment ±60 bound). Full Settings experience: prayer config, planning day (Fajr), Hijri calendar, appearance, journal privacy, about, hub. `SettingsMutationCoordinator` non-React orchestration. `HijriAdjustmentConfigLoader` dynamic Hijri config. Sonnet independent review APPROVED. Native device QA pending (does not reopen M17). |
 | **M18** | Widgets (dev build required) | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `4128c93`, implementation `3cd5980`, WorkManager fix `bc3b37c`. 1230/1230 tests (104 suites). 0 migrations. 3 runtime deps: `expo-widgets ~57.0.20`, `@expo/ui ~57.0.19`, `react-native-android-widget ^0.22.1`. Android prebuild PASS, assembleDebug PASS. iOS native QA pending macOS/EAS. Android physical-runtime QA pending. WorkManager conflict resolved via tracked CNG-compatible plugin. ADR-026 + ADR-026-H. Sonnet independent review APPROVED. |
 | **M19** | Premium entitlement scaffolding | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `fa3c664`, hardening `29cd586`, implementation `26e403f`. 1296/1296 tests (113 suites). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies added. `EntitlementService` (fail-closed), `PlanningDayMutationCoordinator`, `usePlanningDayMutation`, MIDNIGHT/CUSTOM gating, read-only `EntitlementRepository`, strict isolation. Sonnet independent review APPROVED. |
-| **M20** | Onboarding | **PENDING — ARCHITECTURE NOT YET FROZEN** | — | Prerequisites: M1, M12, M2, M17 |
+| **M20** | Onboarding | **PENDING — ARCHITECTURE HARDENED** | — | Prerequisites: M1, M12, M2, M17 |
 | **M21** | Dark mode polish | Not Started | — | Prerequisites: M1, M7, M14, M16, M17 |
 | **M22** | Accessibility/RTL | Not Started | — | Prerequisites: All UI milestones |
 | **M23** | QA + edge cases | Not Started | — | Opus review required |
