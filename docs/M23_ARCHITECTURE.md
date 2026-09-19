@@ -1,11 +1,12 @@
 # M23 — QA + Edge Cases Architecture
 
-**Status:** CURRENT — ARCHITECTURE HARDENED LOCALLY — PENDING OPUS SPECIALIST REVIEW / LEAD APPROVAL
+**Status:** CURRENT — ARCHITECTURE INTEGRATED (Opus + Lead) — AWAITING CHATGPT TECHNICAL LEAD FINAL GATE
 **Milestone:** M23 — QA + Edge Cases
 **Baseline HEAD:** `5b1d913c2b4ed6b6a3ea5ff5ee059df937c6be11`
 **Baseline origin/main:** `5b1d913c2b4ed6b6a3ea5ff5ee059df937c6be11` (synchronized ✓)
 **Architecture authored:** 2026-09-19
 **Architecture hardened:** 2026-09-19 (post Lead review — 16 hardening items applied)
+**Architecture integrated:** 2026-09-19 (Opus specialist review + ChatGPT Lead review integrated by Sonnet)
 **Author role:** Software Architect / Technical Reviewer (Sonnet)
 **Working tree at freeze:** CLEAN — 0 uncommitted files
 **Baseline tests:** 1556 / 1556 — 132 / 132 suites — 0 failures — 0 skipped
@@ -13,6 +14,8 @@
 **ESLint:** 0 errors / 0 warnings
 **Dependencies added since M22:** 0
 **Migrations added since M22:** 0
+**Planned M23 tests:** 97 (across 12 new suites)
+**Expected post-M23 total:** 1653 tests / 144 suites
 
 ---
 
@@ -38,6 +41,36 @@ This architecture was hardened after Lead review. The following corrections were
 | H-14 | Test classification | Re-evaluated test classes. Recurrence/materialization integration tests reclassified to INTEGRATION where applicable. |
 | H-15 | M23/M24 carry-forward policy | Clarified: BLOCKED/NOT EXECUTED != PASS != RESOLVED. M24 carry-forward gates become release blockers. |
 | H-16 | Test count | Recomputed exactly. See §8.3. |
+
+### Integration Pass — Opus Specialist Review + ChatGPT Lead Review (2026-09-19)
+
+| # | Item | Change |
+|---|---|---|
+| I-1 | ADR-031 authored | "RecurringHorizonSync Result Semantics: Propagate Rejection; Continue on Resolved SyncIssues" — added to DECISIONS.md. Distinguishes rejection (fullRefresh throws) from resolved HorizonSyncResult with issues (coordinator continues normally). |
+| I-2 | HorizonSync result semantics — precise distinction | Architecture now explicitly states: sync() rejection ≠ HorizonSyncResult with issues.length > 0. The latter is NOT treated as a thrown failure. Corrects ambiguous Opus wording. |
+| I-3 | EXECUTE phase atomicity corrected | Architecture no longer describes the overall syncSeries EXECUTE phase as transactional. Corrected to: non-transactional at the overall-series level; per-occurrence operations may be atomic via runInTransaction; partial mutations can occur; state-convergent on retry. |
+| I-4 | REC-13 added | Integration test for partial EXECUTE retry convergence. Proves that after a mid-EXECUTE failure, repeated sync converges to the correct desired PENDING set. |
+| I-5 | TSE-08 added | Integration test: stale PENDING delete vs. concurrent terminal transition. Proves cleanup operation does NOT delete a concurrently terminal row (requires SQL guard: DELETE WHERE id=? AND status='PENDING'). |
+| I-6 | RISK-H8 added | HIGH risk: stale PENDING cleanup can delete a concurrently terminal occurrence. Requires narrow production fix (atomic guarded delete). OPEN. |
+| I-7 | useLocation token-settlement defect confirmed | Source-verified: `requestAutoLocation` snapshot fallback paths (lines 124–134 and 151–160) call `startRefresh()` but the outer catch does NOT settle the token. SETUP_REQUIRED case in these paths is also unsettled. `setManualLocation` outer catch (line 234–237) does not settle started token either. CONFIRMED defect. |
+| I-8 | RISK-M13 added | MEDIUM risk: useLocation refresh-token settlement defect. Confirmed from source. Requires narrow production fix. |
+| I-9 | LE-09 added | UNIT test proving useLocation token settlement on fullRefresh rejection. |
+| I-10 | RISK-H3 reopened | Notification terminal-state race is NOT fully resolved. `cancelOccurrenceReminder()` does not itself request a follow-up reconciliation. A stale notification can survive until an unrelated later reconcile event. OPEN/HIGH. |
+| I-11 | NE-07 tightened | NE-07 must test the production terminal-transition path that requests a follow-up reconcile — not merely a manually triggered external call. |
+| I-12 | PRC-02 outcome locked | Locked to actual rejection case (Option A): inject sync rejection → fullRefresh throws → no READY result → downstream steps not invoked. |
+| I-13 | PRC-09 added | UNIT test proving resolved HorizonSyncResult with issues does NOT abort fullRefresh. Normal downstream behavior continues. READY may be returned. |
+| I-14 | DST-05, DST-06 reclassified | UNIT → INTEGRATION. Must exercise real materialization + DB UNIQUE constraint to prove no missing/duplicate occurrences. |
+| I-15 | REC-05, REC-06, REC-07, REC-10, REC-11, REC-12 reclassified | UNIT → INTEGRATION. Require real DB to prove idempotency, terminal preservation, and CANCELLED blocking. |
+| I-16 | PRC-06 classification confirmed | INTEGRATION (already was). Confirmed. |
+| I-17 | TSE-07 confirmed INTEGRATION | Already classified correctly. Confirmed. |
+| I-18 | PBR-01 location resolved | Belongs in `src/stores/__tests__/useTodayStore.concurrency.test.ts`. Classification changed to UNIT (tests Zustand token mechanism only; no DB needed). |
+| I-19 | TransactionLock scope clarified | rootLock serializes runInTransaction calls only. Plain repository operations outside runInTransaction are NOT automatically protected by the root transaction lock. |
+| I-20 | Temporal test fixtures locked | `America/Chicago` (DST spring/fall), `UTC` (baseline), `Asia/Riyadh` (non-DST, timezone-change tests). |
+| I-21 | Repeated-sync terminology corrected | "state-convergent / logically idempotent" — may issue SQL updates even when derived values are equivalent. Not zero-write idempotent. |
+| I-22 | RISK-H1, RISK-H2, RISK-H7 resolved | Per Opus + Lead verification. See §15 updated risk table. |
+| I-23 | Test counts updated | 93 + 4 Lead additions (PRC-09, REC-13, TSE-08, LE-09) = 97 planned M23 tests. Post-M23 total: 1556 + 97 = 1653. |
+| I-24 | Three production changes expected | Atomic PENDING cleanup guard; useLocation token settlement; terminal-transition notification reconciliation. See §17. |
+| I-25 | Notification remediation architecture | Terminal transition must: (1) perform targeted deterministic cancellation; (2) request best-effort full reconciliation. Both are event-driven; no background polling. |
 
 ---
 
@@ -252,13 +285,97 @@ The following product invariants are immutable in M23. Any change that violates 
 
 ---
 
-## 7. Opus Specialist Review — REQUIRED BEFORE IMPLEMENTATION
+## 7. Specialist Reviews — COMPLETE
 
-> **Status: OPUS REVIEW REQUIRED BEFORE IMPLEMENTATION BEGINS.**
+> **Status: OPUS SPECIALIST REVIEW COMPLETE. CHATGPT TECHNICAL LEAD REVIEW COMPLETE. INTEGRATED BY SONNET. AWAITING CHATGPT TECHNICAL LEAD FINAL GATE.**
 >
-> This is NOT a request to route all M23 work to Opus. Opus scope is limited to the high-risk temporal and synchronization questions below. Automated test suites and native QA checklists may begin scoping in parallel with Opus review, but NO production code changes and NO new test files may be committed until Opus review is complete and its answers are incorporated into this architecture document.
+> Opus completed a narrow specialist architecture review covering Q1–Q5. The ChatGPT Technical Lead independently inspected production source and provided corrections that override portions of the Opus conclusions. Both reviews have been integrated into this document by Sonnet. The architecture is NOT automatically approved for Gemini — it requires the final ChatGPT Technical Lead gate before implementation begins.
 
-### Specialist Questions for Opus
+### 7.1 PlannerRefreshCoordinator Failure Semantics (Opus Q1 + Lead Decision 1)
+
+**Resolved. ADR-031 authored.**
+
+The architecture must distinguish two distinct cases:
+
+**Case A — `recurringHorizonSync.sync()` rejects / throws:**
+- `PlannerRefreshCoordinator.fullRefresh()` rejects (throws).
+- No READY result is produced.
+- No lifecycle sweep executes.
+- No notification reconciliation executes.
+- No widget sync executes.
+- All callers handle this via their individual try/catch → `PERSISTED_REFRESH_FAILED` or `setError()`.
+- **This is the current source behavior at `PlannerRefreshCoordinator.ts:87` (no surrounding try/catch). Zero production change required.**
+
+**Case B — `recurringHorizonSync.sync()` resolves successfully with `HorizonSyncResult` containing `issues.length > 0`:**
+- This is NOT treated as a thrown failure.
+- `PlannerRefreshCoordinator` continues its normal pipeline.
+- READY may be returned with the HorizonSyncResult (including its issues).
+- Downstream steps (lifecycle sweep, notifications, widget sync) execute normally.
+- **`issues.length > 0` does NOT equal sync rejection.**
+- The coordinator MUST NOT silently reinterpret resolved issues as a full-refresh failure without a separate architectural decision.
+
+The distinction preserves the existing separation between exception/rejection semantics and best-effort issue-reporting semantics.
+
+> **REJECTED alternatives:** Option B (typed DEGRADED result — high blast radius, ~10 call sites); Option C (warn + continue with false READY — violates data integrity, stale downstream steps).
+
+### 7.2 EXECUTE Phase Atomicity (Lead Decision 2)
+
+**Resolved.**
+
+`RecurringHorizonSync.syncSeries()` has a two-phase structure:
+
+**PLAN phase (pure read):** Failure before any mutation. If any step fails, returns with zero mutations. The plan-before-delete invariant holds.
+
+**EXECUTE phase (non-transactional at overall-series level):** Individual deletes and materializations are executed per-occurrence. Many execution failures are caught into `SyncIssue[]` rather than thrown. Therefore:
+- A resolved sync may represent a **partial mutation**.
+- Per-occurrence `materializeOne` calls run inside their own `runInTransaction` (per-occurrence atomic), but the overall series-level EXECUTE is NOT one transaction.
+- `TransactionLock` (rootLock) serializes `runInTransaction` calls only. **Plain repository operations outside `runInTransaction` (including standalone `occRepo.delete()` calls) are NOT automatically protected by the root transaction lock.**
+- Partial mutations converge on retry: next `fullRefresh` re-runs `sync()` over the same horizon; PLAN detects gaps and EXECUTE fills them. This is **state-convergent / logically idempotent**, NOT zero-write idempotent (a re-sync may issue SQL updates even when the resulting derived values are equivalent).
+
+### 7.3 DST / Timezone Materialization (Opus Q3)
+
+**Resolved.**
+
+- **Recurrence identity:** `(seriesId, localDate)` — civil date, timezone-independent.
+- **DB uniqueness:** `UNIQUE(series_id, local_date)` + `UNIQUE(task_definition_id, local_date)` prevent duplicate occurrences.
+- **DST spring-forward:** `SPRING_FORWARD_SHIFTED` — deterministic binary search to first valid instant after gap. One occurrence per seed. No missing occurrence.
+- **DST fall-back:** `FALL_BACK_FIRST` — earlier absolute offset selected. Deterministic. One occurrence per seed. No duplicate.
+- **Timezone change:** PENDING occurrences retain civil recurrence identity. Derived placement (`calculatedStartTime`, `planningDayKey`, `timezone`, `wallClockResolution`, `windowStart`/`windowEnd`) is recalculated on next `sync()`. Terminal occurrences remain historically frozen — terminal short-circuit runs before temporal context access.
+- **planningDayKey staleness:** Stale between syncs after a timezone change. Corrected on next fullRefresh. Not a data-integrity issue; no active remediation needed.
+- **Repeated sync:** State-convergent / logically idempotent. Same desired seeds → same materializeOne calls.
+- **±7 day horizon:** Civil-date-based, timezone-independent. Sufficient for recurrence identity purposes.
+- **Primary test fixtures:** `America/Chicago` (DST), `UTC` (baseline), `Asia/Riyadh` (non-DST timezone-change tests).
+
+### 7.4 Concurrent fullRefresh (Opus Q4 + Lead Decision 6)
+
+**Resolved. No PRC-wide serialization added.**
+
+Concurrent `fullRefresh()` calls CAN execute. Existing mechanisms provide correctness:
+
+| Mechanism | What it protects |
+|---|---|
+| `TransactionLock` rootLock | Serializes `runInTransaction` root DB transactions. Does NOT protect standalone repo operations outside `runInTransaction`. |
+| `UNIQUE(series_id, local_date)` constraint + MaterializationEngine race handler | Prevents duplicate occurrence rows even under concurrent materialize attempts. |
+| `requestGeneration` in `useTodayStore` | Protects Zustand state assignment only — stale `commitRefresh()` calls are rejected. Does NOT protect notification or widget side effects. |
+| Notification drain loop | `reconcile()` calls coalesce; fresh DB read ensures self-correcting behavior. |
+| Widget sync | Reads fresh DB state at execution time. Self-correcting. |
+
+**No PRC-level mutex, queue, or single-flight mechanism is warranted.** The demonstrated correctness problems belong to narrower ownership layers (addressed by RISK-H3, RISK-M13, RISK-H8 fixes).
+
+### 7.5 UNIT vs INTEGRATION Classification (Opus Q5 + Lead)
+
+**Resolved.** See §9.3 for final classification. Key changes from initial plan:
+
+| Tests | Classification | Reason |
+|---|---|---|
+| DST-05, DST-06 | **INTEGRATION** | Must prove no missing/duplicate occurrence via real materialization + DB UNIQUE constraint |
+| REC-05, REC-06, REC-07 | **INTEGRATION** | Idempotent re-sync and DST boundary re-sync require real DB |
+| REC-10, REC-11, REC-12 | **INTEGRATION** | Terminal preservation / CANCELLED blocking require real materializeOne short-circuit against real DB |
+| PRC-06 | **INTEGRATION** | Real DB to prove no duplicates under rapid fullRefresh |
+| TSE-07 | **INTEGRATION** | Rapid completeTask concurrency requires real DB |
+| TSE-08 | **INTEGRATION** | Proves SQL guard (DELETE WHERE status='PENDING') against real DB |
+| REC-13 | **INTEGRATION** | Partial EXECUTE convergence requires real sync + real DB |
+| PBR-01 | **UNIT** | Pure Zustand token test; no DB needed |
 
 **Q1 — RecurringHorizonSync failure in fullRefresh**
 
@@ -405,53 +522,59 @@ M23 covers 19 edge-case families:
 #### Domain 3: Recurrence Boundaries and Re-Sync Idempotency
 
 **New suite:** `src/domain/recurrence/__tests__/RecurrenceEdgeCases.test.ts`
-**Classification:** UNIT for REC-01..REC-04. UNIT or INTEGRATION for REC-05..REC-12 (subject to Opus Q5).
+**Classification:** UNIT for REC-01..REC-04, REC-08, REC-09. INTEGRATION for REC-05..REC-07, REC-10..REC-13.
 
-| Test ID | Description |
-|---|---|
-| REC-01 | MONTHLY anchor on 31st clamps correctly in 28-day Feb (non-leap) |
-| REC-02 | MONTHLY anchor on 31st clamps correctly in 29-day leap Feb |
-| REC-03 | MONTHLY anchor on 31st clamps correctly in 30-day month |
-| REC-04 | MONTHLY anchor on Feb 29 (non-leap year): clamps to Feb 28, not Feb 28+1 |
-| REC-05 | Re-sync with same +/-7 window produces no duplicate pending occurrences (idempotent) |
-| REC-06 | Re-sync after DST spring-forward: no missing occurrence at DST boundary |
-| REC-07 | Re-sync after DST fall-back: no duplicate occurrence at DST boundary |
-| REC-08 | Series split: pending occurrences before split date are NOT deleted |
-| REC-09 | Series split: pending occurrences on/after split date ARE deleted |
-| REC-10 | COMPLETED occurrence is preserved through re-sync (status not overwritten) |
-| REC-11 | MISSED occurrence is preserved through re-sync |
-| REC-12 | CANCELLED (tombstone) occurrence blocks regeneration of that local_date |
+| Test ID | Class | Description |
+|---|---|---|
+| REC-01 | UNIT | MONTHLY anchor on 31st clamps correctly in 28-day Feb (non-leap) |
+| REC-02 | UNIT | MONTHLY anchor on 31st clamps correctly in 29-day leap Feb |
+| REC-03 | UNIT | MONTHLY anchor on 31st clamps correctly in 30-day month |
+| REC-04 | UNIT | MONTHLY anchor on Feb 29 (non-leap year): clamps to Feb 28, not Feb 28+1 |
+| REC-05 | INTEGRATION | Re-sync with same +/-7 window produces no duplicate pending occurrences (state-convergent) |
+| REC-06 | INTEGRATION | Re-sync after DST spring-forward: no missing occurrence at DST boundary |
+| REC-07 | INTEGRATION | Re-sync after DST fall-back: no duplicate occurrence at DST boundary |
+| REC-08 | UNIT | Series split: pending occurrences before split date are NOT deleted |
+| REC-09 | UNIT | Series split: pending occurrences on/after split date ARE deleted |
+| REC-10 | INTEGRATION | COMPLETED occurrence is preserved through re-sync (status not overwritten; terminal short-circuit verified) |
+| REC-11 | INTEGRATION | MISSED occurrence is preserved through re-sync |
+| REC-12 | INTEGRATION | CANCELLED (tombstone) occurrence blocks regeneration of that local_date |
+| REC-13 | INTEGRATION | Partial EXECUTE retry convergence: (1) create recurring series needing multiple EXECUTE operations; (2) inject genuine failure mid-EXECUTE; (3) allow earlier mutations to succeed; (4) verify sync resolves with SyncIssue (does not pretend entire op was atomic); (5) verify partial state exists after failed item; (6) restore failing dependency; (7) re-run sync; (8) verify final desired PENDING set exactly converges; (9) verify no duplicate recurrence identities; (10) verify coherent counts; (11) verify terminal historical occurrences untouched |
 
-*Count: 12 tests*
+*Count: 13 tests*
 
 #### Domain 4: PlannerRefreshCoordinator Failure Injection
 
 **New suite:** `src/services/__tests__/PlannerRefreshCoordinator.edgeCases.test.ts`
-**Classification:** INTEGRATION
+**Classification:** UNIT (PRC-01..PRC-05, PRC-07..PRC-09) / INTEGRATION (PRC-06)
 
-| Test ID | Description | Depends on Opus |
+| Test ID | Description | Classification |
 |---|---|---|
-| PRC-01 | SETUP_REQUIRED on first step: returns SETUP_REQUIRED without running subsequent steps | No |
-| PRC-02 | RecurringHorizonSync failure: locks in the Opus-approved behavior (A/B/C) | **YES — Q1** |
-| PRC-03 | TodayOrchestrator.refreshToday failure: propagates up (steps beyond sync succeeded) | No |
-| PRC-04 | Notification reconcile failure: fullRefresh returns READY (non-fatal) | No |
-| PRC-05 | Widget sync failure: fullRefresh returns READY (non-fatal) | No |
-| PRC-06 | Repeated rapid fullRefresh: second call returns fresh result; no duplicate occurrences | **YES — Q4** |
-| PRC-07 | Lifecycle sweep mutates 0 rows: reuses refreshToday viewModel (no second DB query) | No |
-| PRC-08 | Lifecycle sweep mutates >= 1 row: fires queryAndProject | No |
+| PRC-01 | SETUP_REQUIRED on first step: returns SETUP_REQUIRED without running subsequent steps | UNIT |
+| PRC-02 | RecurringHorizonSync **rejection** (throws / `Promise.reject`): fullRefresh rejects; TodayOrchestrator NOT invoked; lifecycle sweep NOT invoked; notification reconciliation NOT invoked; widget sync NOT invoked; no READY result | UNIT |
+| PRC-03 | TodayOrchestrator.refreshToday failure: propagates up | UNIT |
+| PRC-04 | Notification reconcile failure: fullRefresh returns READY (non-fatal) | UNIT |
+| PRC-05 | Widget sync failure: fullRefresh returns READY (non-fatal, fire-and-forget) | UNIT |
+| PRC-06 | Repeated rapid fullRefresh: second call returns fresh result; no duplicate occurrences in DB | INTEGRATION |
+| PRC-07 | Lifecycle sweep mutates 0 rows: reuses refreshToday viewModel (no second DB query) | UNIT |
+| PRC-08 | Lifecycle sweep mutates >= 1 row: fires queryAndProject | UNIT |
+| PRC-09 | RecurringHorizonSync resolves with `HorizonSyncResult` containing `issues.length > 0`: fullRefresh does NOT abort; normal downstream behavior continues; READY may be returned; returned `horizonSync` retains issue information | UNIT |
 
-*Count: 8 tests*
+**PRC-02 semantics:** Inject `recurringHorizonSync.sync()` → `Promise.reject(new Error('injected'))`. Verify: (1) fullRefresh rejects, (2) TodayOrchestrator.refreshToday was not called, (3) lifecycle sweep was not called, (4) notification reconciliation was not called, (5) widget sync was not called, (6) no READY result produced. This locks Option A behavior.
+
+**PRC-09 semantics:** Inject `recurringHorizonSync.sync()` → resolves with `{ seriesProcessed: 1, created: 0, retained: 1, deleted: 0, issues: [{ stage: 'MATERIALIZE', seriesId: 'x', seedDate: '2026-09-20', message: 'partial failure' }] }`. Verify: (1) fullRefresh does not throw, (2) downstream steps execute normally, (3) result.status may be 'READY', (4) result.horizonSync.issues contains the issue.
+
+*Count: 9 tests*
 
 #### Domain 5: Planning-Day Boundary Async Race
 
-**New test (location TBD — see note):** `PBR-01`
-**Classification:** INTEGRATION (store concurrency)
+**Suite:** `src/stores/__tests__/useTodayStore.concurrency.test.ts`
+**Classification:** UNIT
 
 | Test ID | Description |
 |---|---|
-| PBR-01 | fullRefresh generation A starts immediately before planning-day boundary; clock advances across boundary; generation B starts and completes; generation A is released — verify stale generation A result cannot overwrite generation B's committed state in the Today store |
+| PBR-01 | Token race: `startRefresh()` → token A; `startRefresh()` → token B (A is stale); `commitRefresh(B, freshResult)` → returns true; `commitRefresh(A, staleResult)` → returns false; assert: store.viewModel === freshResult.viewModel; store.status === 'ready'; store not `refreshInFlight` |
 
-**Location note:** If the race-prevention behavior (`requestGeneration` guard) lives in `useTodayStore`, this test belongs in `src/stores/__tests__/useTodayStore.concurrency.test.ts`. If it belongs at the coordinator level, it belongs in `PlannerRefreshCoordinator.edgeCases.test.ts` as PRC-09. Architecture decision pending Opus Q4.
+**Note:** PBR-01 tests the `requestGeneration` token mechanism in `useTodayStore`. No DB is required. The invariant being tested lives in `useTodayStore.commitRefresh()`, not in `PlannerRefreshCoordinator`. The test simulates the async race without a real coordinator or real DB.
 
 *Count: 1 test*
 
@@ -468,8 +591,9 @@ M23 covers 19 edge-case families:
 | TSE-05 | UNIT | Terminal occurrence in recurrence re-sync: status not overwritten |
 | TSE-06 | UNIT | Stale view-model action on terminal occurrence: handled gracefully (no crash) |
 | TSE-07 | INTEGRATION | Rapid repeated `completeTask` calls (concurrent): exactly one COMPLETED row; no duplicate timestamps |
+| TSE-08 | INTEGRATION | Stale PENDING delete vs. concurrent terminal transition: (1) cleanup identifies occurrence as PENDING; (2) before destructive delete completes, another operation transitions occurrence to terminal; (3) cleanup MUST NOT delete the terminal row; (4) terminal history survives; (5) cleanup result reports row was not deleted because it was no longer PENDING (inspected via affected-row count from guarded DELETE WHERE id=? AND status='PENDING') |
 
-*Count: 7 tests*
+*Count: 8 tests*
 
 #### Domain 7: Notification Idempotency and Race Conditions
 
@@ -479,11 +603,18 @@ M23 covers 19 edge-case families:
 **Audited race window for RISK-H3:**
 `NotificationReconciliationService.executeReconcile()` queries PENDING occurrences at step 3 (`findAllMaterializedPending()`). Notifications are scheduled at steps 10-11 (diff + schedule). The race window is:
 
-- **Window A (pre-query):** Task transitions to terminal BEFORE `findAllMaterializedPending()` runs. Already handled — terminal rows are not returned as PENDING by the repository. The next full reconcile will be correct. NE-01 tests this scenario.
-- **Window B (post-query):** Task transitions to terminal AFTER `findAllMaterializedPending()` returns but BEFORE notifications are scheduled for it (step 10). In this window, the occurrence was PENDING at query time but is now terminal. A notification would be incorrectly scheduled. On the NEXT reconcile, the notification would be cancelled (occurrence not in PENDING set). Risk: one incorrect notification delivery window until next reconcile.
-- **Window C (during scheduling):** `adapter.scheduleNotification()` completes for a now-terminal occurrence; the `cancelOccurrenceReminder()` fast-path (called at task completion) may have already run before `scheduleNotification()` completed, so the cancellation is lost.
+- **Window A (pre-query):** Task transitions to terminal BEFORE `findAllMaterializedPending()` runs. Already handled — terminal rows are not returned as PENDING. NE-01 tests this.
+- **Window B (post-query):** Task transitions to terminal AFTER `findAllMaterializedPending()` returns but BEFORE notifications are scheduled. A notification would be incorrectly scheduled for a now-terminal occurrence.
+- **Window C (during scheduling):** `adapter.scheduleNotification()` completes for a now-terminal occurrence; `cancelOccurrenceReminder()` may have already run (cancel is lost), so the stale notification remains scheduled.
 
-NE-01 covers Window A. NE-07 addresses Window B/C by testing that `cancelOccurrenceReminder()` is durable under concurrent reconcile activity.
+**Current deficiency (RISK-H3):** `cancelOccurrenceReminder()` does NOT itself request a follow-up reconciliation. A stale notification can survive until an unrelated later reconcile event and may fire before then. **This is a real correctness issue, not merely transient.**
+
+**Required remediation (narrow production fix):** After a terminal transition, the production terminal-transition path must:
+1. Perform targeted deterministic cancellation (immediate, fast-path).
+2. Request a best-effort full notification reconciliation (via `reconcile()`).
+If a drain is already active, `rerunRequested = true` ensures a fresh follow-up pass. If no drain is active, a new pass begins. Final notification state derives from fresh DB state. No background polling introduced.
+
+**NE-07 requirement (tightened):** NE-07 must test the PRODUCTION terminal-transition path that requests the follow-up reconciliation — not merely a manually triggered external call. The test must demonstrate that the production path itself causes the drain loop to run a fresh pass, and that the final scheduled-notification state contains no reminder for the terminal occurrence.
 
 | Test ID | Description |
 |---|---|
@@ -493,7 +624,7 @@ NE-01 covers Window A. NE-07 addresses Window B/C by testing that `cancelOccurre
 | NE-04 | Empty PENDING set: reconcile cancels all existing app-owned notifications |
 | NE-05 | Concurrent reconcile calls: drain loop coalesces; no duplicate notifications scheduled |
 | NE-06 | Partial scheduling failure: next reconcile re-schedules missing notifications |
-| NE-07 | `cancelOccurrenceReminder()` called on occurrence that is concurrently being scheduled: net result is occurrence has no scheduled notification after both operations complete |
+| NE-07 | Terminal transition path requests follow-up reconcile: (1) reconcile reads occurrence X as PENDING; (2) X transitions terminal; (3) targeted cancellation runs; (4) stale schedule attempt completes; (5) production terminal path requests reconciliation; (6) drain loop runs fresh pass; (7) final state: no notification for X. Production behavior (not manually triggered external reconcile) must cause the fresh pass. |
 
 *Count: 7 tests*
 
@@ -501,6 +632,12 @@ NE-01 covers Window A. NE-07 addresses Window B/C by testing that `cancelOccurre
 
 **New suite:** `src/services/__tests__/LocationEdgeCases.test.ts`
 **Classification:** UNIT
+
+**useLocation token-settlement defect (RISK-M13 / Lead Decision 4):**
+
+Source inspection confirmed: `requestAutoLocation` at `useLocation.ts` lines 124–134 and 151–160 calls `startRefresh()` but the outer catch (lines 188–191) does NOT call any Today-store settlement (`setError(token, ...)`, `setSetupRequired(token)`, or `commitRefresh(token, ...)`). `refreshInFlight` remains `true` after fullRefresh rejection. Similarly, SETUP_REQUIRED results on the snapshot-fallback branches (lines 126 and 153) do not call `setSetupRequired(token)`. `setManualLocation` outer catch (lines 234–237) also does not settle started tokens.
+
+Required fix (narrow): every `useLocation` path that calls `startRefresh()` must deterministically settle the Today-store token through exactly one of: `commitRefresh(...)`, `setError(token, ...)`, or `setSetupRequired(token)`.
 
 | Test ID | Description |
 |---|---|
@@ -512,10 +649,11 @@ NE-01 covers Window A. NE-07 addresses Window B/C by testing that `cancelOccurre
 | LE-06 | Geocoding failure in manual city search: handled gracefully, no crash, typed error |
 | LE-07 | AUTO -> MANUAL mode switch: refresh uses manual location only |
 | LE-08 | MANUAL -> AUTO mode switch: refresh uses committed auto location only |
+| LE-09 | fullRefresh rejection settles Today-store token: (1) trigger a useLocation operation that calls `startRefresh()`; (2) make coordinator.fullRefresh() reject; (3) verify useLocation reports failure appropriately; (4) verify Today store is NOT `refreshInFlight`; (5) verify active refresh token is settled (via `setError` or equivalent); (6) stale-token protection remains intact |
 
 **Static audit (LE-STATIC):** `requestForegroundPermissionsAsync` is not called in any code path except explicit user-action handlers. Codified in `StaticA11yAudit.test.tsx` or a dedicated static audit test.
 
-*Count: 8 tests + 1 static audit*
+*Count: 9 tests + 1 static audit*
 
 #### Domain 9: Journal Privacy, Encryption, and Biometric Lock
 
@@ -590,28 +728,28 @@ NE-01 covers Window A. NE-07 addresses Window B/C by testing that `cancelOccurre
 
 ### 9.3 Planned Test Count
 
-| Suite | File Path | Class | Planned Tests |
+| Suite | File Path | Classification | Planned Tests |
 |---|---|---|---|
 | PlanningDayBoundary | `src/domain/planning-day/__tests__/PlanningDayBoundary.test.ts` | UNIT | 11 |
-| DSTEdgeCases | `src/domain/temporal/__tests__/DSTEdgeCases.test.ts` | UNIT/INTEGRATION* | 10 |
-| RecurrenceEdgeCases | `src/domain/recurrence/__tests__/RecurrenceEdgeCases.test.ts` | UNIT/INTEGRATION* | 12 |
-| PlannerRefreshCoordinator.edgeCases | `src/services/__tests__/PlannerRefreshCoordinator.edgeCases.test.ts` | INTEGRATION | 8 |
-| PBR-01 (race) | TBD (useTodayStore or PRC) | INTEGRATION | 1 |
-| TaskStateEdgeCases | `src/domain/task/__tests__/TaskStateEdgeCases.test.ts` | UNIT/INTEGRATION | 7 |
+| DSTEdgeCases | `src/domain/temporal/__tests__/DSTEdgeCases.test.ts` | UNIT (DST-01..04, 07..10) / INTEGRATION (DST-05, DST-06) | 10 |
+| RecurrenceEdgeCases | `src/domain/recurrence/__tests__/RecurrenceEdgeCases.test.ts` | UNIT (REC-01..04, 08..09) / INTEGRATION (REC-05..07, 10..13) | 13 |
+| PlannerRefreshCoordinator.edgeCases | `src/services/__tests__/PlannerRefreshCoordinator.edgeCases.test.ts` | UNIT (PRC-01..05, 07..09) / INTEGRATION (PRC-06) | 9 |
+| PBR-01 (race) | `src/stores/__tests__/useTodayStore.concurrency.test.ts` | UNIT | 1 |
+| TaskStateEdgeCases | `src/domain/task/__tests__/TaskStateEdgeCases.test.ts` | UNIT (TSE-01..06) / INTEGRATION (TSE-07, TSE-08) | 8 |
 | NotificationEdgeCases | `src/services/notification/__tests__/NotificationEdgeCases.test.ts` | UNIT | 7 |
-| LocationEdgeCases | `src/services/__tests__/LocationEdgeCases.test.ts` | UNIT | 8 |
+| LocationEdgeCases | `src/services/__tests__/LocationEdgeCases.test.ts` | UNIT | 9 |
 | JournalEdgeCases | `src/services/journal/__tests__/JournalEdgeCases.test.ts` | UNIT/STATIC | 8 |
 | CalendarEdgeCases | `src/domain/calendar/__tests__/CalendarEdgeCases.test.ts` | UNIT | 8 |
 | OnboardingEdgeCases | `src/services/onboarding/__tests__/OnboardingEdgeCases.test.ts` | UNIT | 5 |
 | SettingsEdgeCases | `src/services/__tests__/SettingsEdgeCases.test.ts` | UNIT | 8 |
-| **Total** | | | **93 tests** |
+| **Total** | | | **97 tests** |
 | **New suites** | | | **12 suites** |
 
-\* Classification of UNIT vs INTEGRATION for DST-05/06 and REC-05..REC-07 is pending Opus Q3/Q5 answers. The scenario count (10 and 12) is fixed.
+**Test count reconciliation:** 93 (original freeze) + 1 PRC-09 + 1 REC-13 + 1 TSE-08 + 1 LE-09 = **97 planned M23 tests**.
 
-**Post-M23 estimated total:** 1556 (baseline) + 93 (planned) = **1649 tests** across **144 suites**
+**Post-M23 estimated total:** 1556 (baseline) + 97 (planned) = **1653 tests** across **144 suites**
 
-Completion criterion: all 93 planned scenarios covered and passing. A numerically lower count (e.g., due to test consolidation discovered during implementation) is acceptable only if every named scenario above has explicit test coverage. No scenario may be silently dropped.
+Completion criterion: all 97 planned scenarios covered and passing. Every named scenario above has explicit test coverage. No scenario may be silently dropped.
 
 ---
 
@@ -816,17 +954,18 @@ These risks are critical to verify. They become confirmed defects only upon a FA
 | RISK-G2 | PrayerHeader TalkBack composite | AND-A1 (GATE-2) | Record evidence; if duplication confirmed, assess source-level fix for compositeLabel construction. |
 | RISK-G3 | Widget App Group (iOS): data delivery when app terminated | IOS-W3, IOS-W8 (GATE-5) | If FAIL: iOS App Group identifier must be configured as M18 §7.2 specified. Architecture amendment required before any further iOS widget native QA. |
 
-### HIGH Architecture Questions (Opus Required)
+### HIGH Architecture Risks
 
-| ID | Question | Status |
-|---|---|---|
-| RISK-H1 | DST recurrence duplicates at +/-7-day horizon boundary | Open — covered by DST-05/06, REC-06/07; classification pending Opus Q3/Q5 |
-| RISK-H2 | RecurringHorizonSync failure behavior in fullRefresh | Open — **Opus Q1 required before any production change** |
-| RISK-H3 | Notification race: terminal state during reconcile window B/C | Partially addressed by NE-01 (Window A), NE-07 (Window B/C). Opus Q4 may affect serialization approach. |
-| RISK-H4 | TalkBack modal trapping on Android API levels 29-34 | Open — GATE-3 (AND-A3) resolves |
-| RISK-H5 | Journal SecureStore failure path | Addressed by JE-01; no Opus needed |
-| RISK-H6 | Onboarding partial persistence | Addressed by OE-02; no Opus needed |
-| RISK-H7 | fullRefresh in-flight while planning-day boundary crossed | Addressed by PBR-01; Opus Q4 may affect which layer the test belongs to |
+| ID | Risk | Status | Mitigation / Required Fix | Test Coverage |
+|---|---|---|---|---|
+| RISK-H1 | DST recurrence duplicates at +/-7-day horizon boundary | **RESOLVED** — civil-date recurrence identity is timezone-independent; UNIQUE(series_id, local_date) prevents duplicates; deterministic DST resolution (SPRING_FORWARD_SHIFTED / FALL_BACK_FIRST) | Integration coverage retained | DST-05, DST-06, REC-05..REC-07 (INTEGRATION) |
+| RISK-H2 | RecurringHorizonSync failure semantics in fullRefresh | **RESOLVED** — ADR-031 authored; Option A (propagate rejection) is current behavior; Case B (resolved HorizonSyncResult with issues) does not abort coordinator | PRC-02 (locks rejection case), PRC-09 (locks resolved-issues case) | PRC-02, PRC-09 |
+| RISK-H3 | Notification terminal-state race: cancelOccurrenceReminder does not request follow-up reconcile | **OPEN / HIGH** — confirmed defect; targeted cancellation alone is insufficient; stale notification can survive until unrelated later reconcile event | Narrow production fix required: terminal-transition path must request best-effort reconcile after targeted cancel | NE-07 (tightened to test production path) |
+| RISK-H4 | TalkBack modal trapping on Android API levels 29-34 | Open | GATE-3 (AND-A3) resolves | — |
+| RISK-H5 | Journal SecureStore failure path | Addressed | JE-01 | JE-01 |
+| RISK-H6 | Onboarding partial persistence | Addressed | OE-02 | OE-02 |
+| RISK-H7 | fullRefresh in-flight while planning-day boundary crossed | **RESOLVED** — requestGeneration token in useTodayStore prevents stale Zustand commits; PBR-01 tests the invariant | PBR-01 (UNIT in useTodayStore) | PBR-01 |
+| RISK-H8 | Stale PENDING cleanup can delete a concurrently terminal occurrence | **OPEN / HIGH** — `RecurringHorizonSync.syncSeries()` EXECUTE phase reads PENDING occurrences in PLAN, then calls `occRepo.delete(id)` in EXECUTE without an atomic status guard. A concurrent lifecycle/user action can transition the occurrence to COMPLETED/MISSED/CANCELLED between PLAN read and EXECUTE delete. The un-guarded DELETE then physically removes terminal history, violating terminal-history immutability. | Narrow production fix required: destructive cleanup must use atomic guarded delete (`DELETE WHERE id=? AND status='PENDING'`) and inspect affected-row count. Exact repository API named by Sonnet per current conventions. | TSE-08 (INTEGRATION, proves SQL guard) |
 
 ### MEDIUM Risks
 
@@ -834,7 +973,7 @@ These risks are critical to verify. They become confirmed defects only upon a FA
 |---|---|---|---|
 | RISK-M1 | Feb 29 recurrence clamp idempotency | REC-04 | None required |
 | RISK-M2 | Month-end 31st re-sync idempotency | REC-01..REC-03, REC-05 | None required |
-| RISK-M3 | Timezone change between syncs: stale planningDayKey | DST-05, DST-06; Opus Q3 | Manual timezone change test |
+| RISK-M3 | Timezone change between syncs: stale planningDayKey | DST-05, DST-06 (INTEGRATION) | Manual timezone change test |
 | RISK-M4 | Hijri loader failure on calendar render | CAL-05 | None required |
 | RISK-M5 | Notification duplicate on rapid refresh | NE-05, drain-loop existing tests | None required |
 | RISK-M6 | Widget snapshot stale after location change | Existing WidgetSyncCoordinator tests | AND-W5 |
@@ -844,6 +983,7 @@ These risks are critical to verify. They become confirmed defects only upon a FA
 | RISK-M10 | Entitlement UNAVAILABLE cascading | SE-05, SE-08 | None required |
 | RISK-M11 | VoiceOver modal traversal 6 modals | ModalAccessibility.test.tsx | IOS-A3..A8 |
 | RISK-M12 | Android location permission revocation | LE-04 | AND-L1 |
+| RISK-M13 | useLocation refresh-token settlement defect | **OPEN** — confirmed from source inspection: `requestAutoLocation` snapshot-fallback paths (lines 124–134, 151–160) call `startRefresh()` but outer catch does not settle the token; SETUP_REQUIRED on these branches also unsettled; `setManualLocation` outer catch similarly unsettled. `refreshInFlight` remains `true` after fullRefresh rejection. | Narrow production fix required: every path that calls `startRefresh()` must settle the token. | LE-09 (UNIT) |
 
 ### LOW Risks
 
@@ -899,18 +1039,19 @@ M23 adds **0 new migrations**. Any proposed migration is an immediate escalation
 
 ## 17. Planned Production Changes
 
-No production changes are pre-authorized.
+Three narrow production changes are expected before M23 closure. They address confirmed architectural defects. Each requires a dedicated regression test and Lead review if the fix touches a frozen invariant.
 
-Any production change during M23 must:
-1. Identify a specific confirmed defect against a frozen contract.
-2. Propose a narrow fix with a dedicated test.
-3. Classify the defect.
-4. Require Lead review if the fix changes any frozen product semantic.
+| # | Fix Area | Required Change | Associated Test | Risk |
+|---|---|---|---|---|
+| PC-1 | Atomic PENDING cleanup guard | `TaskOccurrenceRepository` (or equivalent) must provide a guarded delete operation that atomically checks `status = 'PENDING'` before deleting (e.g., `DELETE WHERE id=? AND status='PENDING'`; return affected-row count). `RecurringHorizonSync` EXECUTE phase must use this guarded delete. Prevents stale cleanup from removing terminal history. Exact API named by Sonnet per current repository conventions. | TSE-08 | RISK-H8 |
+| PC-2 | useLocation Today-store refresh-token settlement | Every `useLocation` path that calls `startRefresh()` must deterministically settle the Today-store token through exactly one of: `commitRefresh(...)`, `setError(token, ...)`, or `setSetupRequired(token)`. The SETUP_REQUIRED and fullRefresh-rejection paths in `requestAutoLocation` snapshot-fallback branches and `setManualLocation` catch block are the confirmed unsettled paths. Fix must not double-settle. | LE-09 | RISK-M13 |
+| PC-3 | Terminal-transition notification reconciliation | After a terminal transition, the production terminal-transition owner/path must: (1) perform targeted deterministic cancellation (`cancelOccurrenceReminder(occurrenceId)`) for immediate cleanup; (2) request a best-effort full notification reconciliation (`notificationReconciliationService.reconcile()`). No background polling introduced. Fix is narrow and event-driven. | NE-07 (tightened) | RISK-H3 |
 
-The previous draft pre-authorized PC-C1 (TaskCard fix) and PC-C2 (PRC sync failure wrapping). Both have been removed:
+**General fix policy:** Any fix must identify a specific confirmed defect against a frozen contract, propose a narrow change (< 5 lines of production code per fix), and be accompanied by a dedicated regression test. Fixes that change product semantics, affect multiple systems, or require a migration require Lead escalation before proceeding.
 
-- **PC-C1 removed:** TaskCard TalkBack is a native QA gate, not a confirmed defect. No fix is pre-authorized. If GATE-1 returns FAIL, the fix must be designed based on evidence.
-- **PC-C2 removed:** Adding try/catch around `recurringHorizonSync.sync()` and continuing to READY changes failure propagation semantics, READY semantics, and downstream pipeline behavior. This is not a "hardening fix" — it is a semantic change requiring Opus Q1 evaluation.
+Previously removed non-authorizations:
+- **PC-C1 removed (M22 hardening):** TaskCard TalkBack is a native QA gate, not a confirmed defect. No fix pre-authorized. If GATE-1 returns FAIL, fix must be designed from native evidence.
+- **PC-C2 removed (M23 hardening):** Adding try/catch around `recurringHorizonSync.sync()` and continuing to READY would change failure propagation and READY semantics — now resolved as ADR-031 with zero production change.
 
 ---
 
@@ -1062,19 +1203,20 @@ All failure injection uses constructor injection (established pattern). No new t
 
 M23 is complete when ALL of the following are true:
 
-1. **All 93 planned test scenarios covered** and passing. Every named scenario in §9.2 has explicit coverage.
+1. **All 97 planned test scenarios covered** and passing. Every named scenario in §9.2 has explicit coverage (including PRC-09, REC-13, TSE-08, LE-09).
 2. **Zero regressions:** All 1556 baseline tests continue to pass.
 3. **TypeScript:** 0 errors.
 4. **ESLint:** 0 errors, 0 warnings.
-5. **Opus specialist review complete:** All five Opus questions answered; answers incorporated into this architecture document; test classifications and PRC-02 expected outcome updated accordingly.
-6. **GATE-1, GATE-2, GATE-3:** Status is PASS, FAIL (with defect resolution), or Lead-approved BLOCKED/NOT EXECUTED.
-7. **GATE-4, GATE-5 (iOS widget):** Status is PASS or Lead-approved M24 carry-forward.
-8. **All MEDIUM risks:** Either covered by planned tests, native QA, or documented with explicit Lead-approved M24 carry-forward.
-9. **No new dependencies** without explicit justification.
-10. **No new migrations.**
-11. **No confirmed BLOCKER defects outstanding** (confirmed BLOCKER = native QA FAIL against a critical invariant).
-12. **Independent review:** Required before closure.
-13. **Lead approval:** Required before closure.
+5. **Specialist reviews integrated:** Opus + ChatGPT Lead review answers incorporated (complete — this document). ADR-031 authored in DECISIONS.md.
+6. **Three narrow production fixes implemented:** PC-1 (atomic PENDING cleanup guard), PC-2 (useLocation token settlement), PC-3 (terminal-transition notification reconciliation). Each accompanied by a dedicated regression test.
+7. **GATE-1, GATE-2, GATE-3:** Status is PASS, FAIL (with defect resolution), or Lead-approved BLOCKED/NOT EXECUTED.
+8. **GATE-4, GATE-5 (iOS widget):** Status is PASS or Lead-approved M24 carry-forward.
+9. **All MEDIUM risks:** Either covered by planned tests, native QA, or documented with explicit Lead-approved M24 carry-forward.
+10. **No new dependencies** without explicit justification.
+11. **No new migrations.**
+12. **No confirmed BLOCKER defects outstanding** (confirmed BLOCKER = native QA FAIL against a critical invariant).
+13. **Independent review:** Required before closure.
+14. **Lead approval:** Required before closure.
 
 ---
 
@@ -1088,18 +1230,17 @@ M23 is complete when ALL of the following are true:
 
 ---
 
-## 23. Pre-Commit Verification Record (Architecture Hardening)
+## 23. Pre-Commit Verification Record
+
+### Pass 1 — Architecture Hardening (2026-09-19)
 
 ```
 git rev-parse HEAD         -> 5b1d913c2b4ed6b6a3ea5ff5ee059df937c6be11  PASS
 git rev-parse origin/main  -> 5b1d913c2b4ed6b6a3ea5ff5ee059df937c6be11  PASS
 git status                 -> clean working tree  PASS (pre-commit)
-git diff                   -> (empty)  PASS (pre-commit)
-git diff --check           -> (no whitespace errors)  PASS (pre-commit)
 
 Initial M23 architecture commit: NONE existed before this pass.
-Commit type: docs(m23): freeze QA and edge-case architecture
-  (No flawed draft commit exists; this is the first architecture commit.)
+Commit: docs(m23): freeze QA and edge-case architecture  [100c151]
 
 Docs changed:
   docs/M23_ARCHITECTURE.md — NEW (this document)
@@ -1107,12 +1248,38 @@ Docs changed:
   docs/IMPLEMENTATION_STATUS.md — M23 row update
   docs/ARCHITECTURE_INDEX.md — M23 entry
 
-ADR-031: NOT created. No durable architectural decision has been established
-  in this pass. The Opus review may produce decisions worth capturing in DECISIONS.md;
-  ADR-031 is deferred until those answers are in hand.
-
+ADR-031: Deferred — no durable decision established in hardening pass.
 New dependencies: 0
 New migrations: 0
+```
+
+### Pass 2 — Specialist Review Integration (2026-09-19)
+
+```
+git rev-parse HEAD         -> 100c151275b827bb67ad97f2f3d629f813e984a1  PASS
+git rev-parse origin/main  -> 5b1d913c2b4ed6b6a3ea5ff5ee059df937c6be11  PASS (unchanged — NOT PUSHED)
+git status                 -> clean working tree  PASS (pre-commit)
+
+Source files inspected (production — for Lead claim verification):
+  src/hooks/useLocation.ts                                    — Lead Decision 4 CONFIRMED
+  src/services/PlannerRefreshCoordinator.ts                   — Lead Decision 1 CONFIRMED (no try/catch at :87)
+  src/features/task-form/recurringHorizonSync.ts              — Lead Decision 2 CONFIRMED (non-transactional EXECUTE)
+  src/domain/materialization/MaterializationEngine.ts         — terminal short-circuit verified
+  src/data/schema.ts                                          — UNIQUE constraints verified
+  src/services/notification/NotificationReconciliationService.ts — RISK-H3 deficiency confirmed
+  src/data/db.ts                                              — TransactionLock scope confirmed
+  src/stores/useTodayStore.ts                                 — requestGeneration token verified
+
+Docs changed:
+  docs/M23_ARCHITECTURE.md — integration pass (this document) — §7, §9.2, §9.3, §15, §17, §21, §23, §24 updated
+  docs/DECISIONS.md        — ADR-031 authored
+  docs/CURRENT_MILESTONE.md — status update
+  docs/ARCHITECTURE_INDEX.md — M23 entry updated
+
+ADR-031: AUTHORED in DECISIONS.md.
+New dependencies: 0
+New migrations: 0
+Commit: docs(m23): integrate Lead review of Opus findings
 ```
 
 ---
@@ -1122,7 +1289,8 @@ New migrations: 0
 | Date | Author | Change |
 |---|---|---|
 | 2026-09-19 | Sonnet (Architect) | Initial freeze + hardening (combined: no flawed draft committed) — 16 Lead-review corrections applied |
+| 2026-09-19 | Sonnet (Architect) | Integration pass — Opus specialist review + ChatGPT Technical Lead review integrated. ADR-031 authored. RISK-H1/H2/H7 resolved; RISK-H3 reopened (HIGH); RISK-H8 added (HIGH); RISK-M13 added (MEDIUM). PRC-09, REC-13, TSE-08, LE-09 added. Test count 93 → 97. Three production changes expected. Status: AWAITING CHATGPT LEAD FINAL GATE. |
 
 ---
 
-*M23 ARCHITECTURE HARDENED LOCALLY — OPUS REVIEW REQUIRED BEFORE IMPLEMENTATION.*
+*M23 ARCHITECTURE INTEGRATED — AWAITING CHATGPT TECHNICAL LEAD FINAL GATE.*

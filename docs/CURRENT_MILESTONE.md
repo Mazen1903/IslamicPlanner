@@ -1,9 +1,9 @@
 # Current Milestone: M23 — QA + Edge Cases
 
-> **Current State:** M22 CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED — M23 ARCHITECTURE HARDENED LOCALLY — PENDING OPUS SPECIALIST REVIEW / LEAD APPROVAL
+> **Current State:** M22 CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED — M23 ARCHITECTURE INTEGRATED (Opus + Lead) — AWAITING CHATGPT TECHNICAL LEAD FINAL GATE
 > **Previous Milestone:** M22 CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED
-> **Milestone Status:** M23 — CURRENT — ARCHITECTURE HARDENED LOCALLY
-> **Architecture Status:** HARDENED — 16 Lead-review corrections applied (2026-09-19) — docs/M23_ARCHITECTURE.md created — Opus specialist review (Q1-Q5) required before implementation begins
+> **Milestone Status:** M23 — CURRENT — ARCHITECTURE INTEGRATED (Opus Specialist Review + ChatGPT Lead Review)
+> **Architecture Status:** INTEGRATED — ADR-031 authored — 97 planned tests / 12 suites — three narrow production changes expected — three HIGH/MEDIUM risks OPEN (RISK-H3, RISK-H8, RISK-M13) — RISK-H1/H2/H7 RESOLVED
 > **Implementation Status:** NOT STARTED — baseline 1556/1556 tests pass across 132 suites; 0 TS errors, 0 ESLint errors/warnings; 0 new dependencies, 0 migrations
 
 ---
@@ -300,10 +300,12 @@ The following native QA items are carried forward to M23 (physical device / emul
 
 ### M23 Status
 
-**CURRENT — ARCHITECTURE HARDENED LOCALLY — PENDING OPUS SPECIALIST REVIEW / LEAD APPROVAL.**
+**CURRENT — ARCHITECTURE INTEGRATED (Opus + Lead) — AWAITING CHATGPT TECHNICAL LEAD FINAL GATE.**
 - Milestone name: **QA + Edge Cases**
-- `docs/M23_ARCHITECTURE.md` created (2026-09-19). 16 Lead-review corrections applied.
-- **Required before implementation:** Opus specialist Q1-Q5 answers (see §7 of M23_ARCHITECTURE.md).
-- **93 planned new tests across 12 new suites.** Exact test scenarios locked.
+- `docs/M23_ARCHITECTURE.md` updated (2026-09-19). 16 Lead-review corrections + Opus+Lead integration pass applied.
+- **ADR-031 authored** in `docs/DECISIONS.md`: RecurringHorizonSync Result Semantics — Propagate Rejection; Continue on Resolved SyncIssues.
+- **97 planned new tests** across **12 new suites** (up from 93; +PRC-09, REC-13, TSE-08, LE-09).
 - **44 iOS QA checks + 39 Android QA checks.** Evidence levels defined.
-- **No production code changes until Opus review completes.**
+- **Three narrow production fixes expected:** PC-1 (atomic PENDING cleanup guard), PC-2 (useLocation token settlement), PC-3 (terminal-transition notification reconciliation).
+- **RISK-H1, RISK-H2, RISK-H7 RESOLVED.** RISK-H3 OPEN/HIGH (notification terminal-state race). RISK-H8 OPEN/HIGH (stale PENDING delete without atomic guard). RISK-M13 OPEN/MEDIUM (useLocation token settlement defect, source-confirmed).
+- **Implementation does NOT begin until ChatGPT Technical Lead Final Gate is passed.**

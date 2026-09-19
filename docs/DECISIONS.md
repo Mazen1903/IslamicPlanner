@@ -869,3 +869,61 @@ The codebase reached M22 with excellent structural accessibility scaffolding but
 - Actual +152 new tests; total 1556 (132 suites, 0 failures, 0 skipped)
 - 0 new dependencies, 0 migrations
 - ADR-030 durable rules apply to all subsequent milestones (M23, M24, post-release)
+
+---
+
+## ADR-031: RecurringHorizonSync Result Semantics — Propagate Rejection; Continue on Resolved SyncIssues
+
+**Date:** 2026-09-19
+**Milestone:** M23 — QA + Edge Cases
+**Status:** ACCEPTED
+**Authors:** Opus (Specialist Review), ChatGPT Technical Lead (ratification + correction), Sonnet (integration)
+
+### Context
+
+`PlannerRefreshCoordinator.fullRefresh()` calls `recurringHorizonSync.sync()` as the first pipeline step (line 87 of `PlannerRefreshCoordinator.ts`). There is no surrounding try/catch at the coordinator level around this call. The question arose: if `sync()` fails in some way, what should `fullRefresh()` do?
+
+Two distinct failure modes were conflated in early M23 review:
+
+1. **`sync()` rejects / throws** (Promise rejection or thrown exception).
+2. **`sync()` resolves successfully**, but the returned `HorizonSyncResult` carries a non-empty `issues` array (partial failures surfaced as best-effort reporting).
+
+Opus recommended propagating rejections (Option A) but did not fully separate these two cases. The ChatGPT Technical Lead review identified that the Opus answer needed a precise distinction between the two cases and confirmed the current source behavior.
+
+### Decision
+
+**Case A — `sync()` rejects (Promise rejects or throws):**
+
+`PlannerRefreshCoordinator.fullRefresh()` allows the rejection to propagate. The coordinator does NOT catch the rejection internally. As a result:
+
+- `fullRefresh()` rejects (throws).
+- No READY result is produced.
+- No lifecycle sweep (`OccurrenceLifecycleService.sweepExpired`) executes.
+- No notification reconciliation (`NotificationReconciliationService.reconcile()`) executes.
+- No widget sync (`WidgetSyncCoordinator.sync()`) executes.
+- All callers (`useToday`, `OnboardingCoordinator`, `useLocation`) handle the rejection via their own try/catch logic and surface the appropriate error state (e.g., `PERSISTED_REFRESH_FAILED`, `setError()`, `return false`).
+
+**This is the current source behavior. Zero production change is required to implement Case A.**
+
+**Case B — `sync()` resolves with `HorizonSyncResult` containing `issues.length > 0`:**
+
+- This is NOT treated as a thrown failure or rejection.
+- `PlannerRefreshCoordinator` continues its normal pipeline (lifecycle sweep, notification reconciliation, widget sync).
+- READY may be returned. The `HorizonSyncResult` (including its `issues` array) is carried into the result.
+- **`issues.length > 0` does NOT equal sync rejection.**
+- The coordinator MUST NOT silently reinterpret a resolved `HorizonSyncResult` with issues as a full-refresh failure. That would require a separate architecture decision.
+
+### Rejected Alternatives
+
+| Option | Description | Reason Rejected |
+|---|---|---|
+| Option B (typed DEGRADED result) | `fullRefresh()` returns a non-READY result type (e.g., `RECURRENCE_SYNC_FAILED`) on rejection | ~10 call-site blast radius; callers would need updates; not warranted for a case (full sync rejection) that is already well-handled as a thrown exception |
+| Option C (warn + continue with false READY) | Wrap sync rejection in try/catch at coordinator level; log a warning; continue to READY with existing occurrence set | Produces a false READY result backed by a potentially stale occurrence set; downstream steps (lifecycle sweep, notifications, widget) execute against incorrect state; violates data integrity and READY semantics |
+
+### Consequences
+
+- No production code change to `PlannerRefreshCoordinator.ts` required for Case A (already correct).
+- PRC-02 (integration test) locks the Case A behavior: inject rejection → verify fullRefresh rejects, no READY result, no downstream steps invoked.
+- PRC-09 (unit test) locks the Case B behavior: inject resolved HorizonSyncResult with issues → verify fullRefresh does NOT abort, downstream continues normally, READY may be returned.
+- This ADR does NOT authorize catching sync rejections and continuing. Any future change to Case A behavior requires a new ADR.
+- The PLAN/EXECUTE phase structure of `RecurringHorizonSync.syncSeries()` is non-transactional at the overall-series level (see M23_ARCHITECTURE.md §7.2). Partial mutations in EXECUTE phase produce `SyncIssue[]` in the resolved result (Case B), not a rejection. This is by design and does not trigger Case A handling.
