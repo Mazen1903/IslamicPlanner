@@ -90,7 +90,6 @@ const TEMPORAL_ALLOWED_KEYS: ReadonlySet<string> = new Set([
   'highLatitudeRule',
   'polarCircleResolution',
   'prayerAdjustments',
-  'planningDayStart',
 ]);
 
 const PRESENTATION_ALLOWED_KEYS: ReadonlySet<string> = new Set([
@@ -345,14 +344,6 @@ export class SettingsMutationCoordinator {
         validatedPatch.prayerAdjustments = validatePrayerAdjustments(patch.prayerAdjustments);
       }
 
-      if (patch.planningDayStart !== undefined) {
-        // M17 invariant: only FAJR is selectable in M17
-        if (patch.planningDayStart !== 'FAJR') {
-          throw new Error(
-            `In M17, only FAJR planning day start can be selected. Received: "${patch.planningDayStart}".`
-          );
-        }
-      }
 
       if (patch.themeMode !== undefined) {
         if (!VALID_THEME_MODES.has(patch.themeMode as ThemeMode)) {

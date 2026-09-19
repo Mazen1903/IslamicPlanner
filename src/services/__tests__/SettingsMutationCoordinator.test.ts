@@ -107,32 +107,20 @@ describe('SettingsMutationCoordinator', () => {
       }
     });
 
-    it('rejects non-FAJR planning day start in M17', async () => {
-      const resMidnight = await coordinator.applyTemporalSettings({
-        planningDayStart: 'MIDNIGHT' as any,
-      });
-      expect(resMidnight.status).toBe('FAILED');
-      if (resMidnight.status === 'FAILED') {
-        expect(resMidnight.stage).toBe('VALIDATION');
-        expect(resMidnight.error).toContain('only FAJR planning day start can be selected');
+    it('A-11: rejects planningDayStart in SettingsMutationCoordinator (delegated to PlanningDayMutationCoordinator)', async () => {
+      const modes = ['FAJR', 'MIDNIGHT', 'CUSTOM:04:00'];
+      for (const mode of modes) {
+        const res = await coordinator.applyTemporalSettings({
+          planningDayStart: mode as any,
+        });
+        expect(res.status).toBe('FAILED');
+        if (res.status === 'FAILED') {
+          expect(res.stage).toBe('VALIDATION');
+          expect(res.error).toContain('is not permitted in mutation category "TEMPORAL_FULL_REFRESH"');
+        }
       }
-
-      const resCustom = await coordinator.applyTemporalSettings({
-        planningDayStart: 'CUSTOM:04:00' as any,
-      });
-      expect(resCustom.status).toBe('FAILED');
-      if (resCustom.status === 'FAILED') {
-        expect(resCustom.stage).toBe('VALIDATION');
-      }
-    });
-
-    it('allows FAJR planning day start in M17', async () => {
-      const res = await coordinator.applyTemporalSettings({
-        planningDayStart: 'FAJR',
-      });
-      expect(res.status).toBe('SUCCESS');
-      expect(mockUserRepo.upsert).toHaveBeenCalledWith({ planningDayStart: 'FAJR' });
-      expect(mockPlannerRefresh.fullRefresh).toHaveBeenCalledTimes(1);
+      expect(mockUserRepo.upsert).not.toHaveBeenCalled();
+      expect(mockPlannerRefresh.fullRefresh).not.toHaveBeenCalled();
     });
 
     it('validates prayer adjustments properly', () => {

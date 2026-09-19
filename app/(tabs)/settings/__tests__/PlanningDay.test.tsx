@@ -4,7 +4,8 @@ import { Alert } from 'react-native';
 import { ThemeProvider } from '@/theme';
 import PlanningDayScreen from '../planning-day';
 import * as userSettingsHook from '@/hooks/useUserSettings';
-import * as settingsMutationHook from '@/hooks/useSettingsMutation';
+import * as entitlementHook from '@/hooks/useEntitlement';
+import * as planningDayMutationHook from '@/hooks/usePlanningDayMutation';
 
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(() => ({
@@ -14,30 +15,32 @@ jest.mock('expo-router', () => ({
 }));
 
 describe('PlanningDayScreen', () => {
-  let mockApplyTemporalSettings: jest.Mock;
+  let mockSetPlanningDayStart: jest.Mock;
   let mockReload: jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 
-    mockApplyTemporalSettings = jest.fn().mockResolvedValue({
+    mockSetPlanningDayStart = jest.fn().mockResolvedValue({
       status: 'SUCCESS',
-      category: 'TEMPORAL_FULL_REFRESH',
       refreshed: true,
     });
     mockReload = jest.fn().mockResolvedValue(undefined);
 
-    jest.spyOn(settingsMutationHook, 'useSettingsMutation').mockReturnValue({
+    jest.spyOn(planningDayMutationHook, 'usePlanningDayMutation').mockReturnValue({
       isSaving: false,
       error: null,
-      lastResult: null,
-      applyTemporalSettings: mockApplyTemporalSettings,
-      applyPresentationSettings: jest.fn(),
-      setHijriGlobalAdjustment: jest.fn(),
-      upsertHijriMonthOverride: jest.fn(),
-      deleteHijriMonthOverride: jest.fn(),
-      applySettingsChange: jest.fn(),
+      setPlanningDayStart: mockSetPlanningDayStart,
+    });
+
+    jest.spyOn(entitlementHook, 'useEntitlement').mockReturnValue({
+      isLoading: false,
+      isPremium: false,
+      tier: 'FREE',
+      hasFeature: () => false,
+      error: null,
+      reload: jest.fn(),
     });
   });
 
@@ -81,34 +84,31 @@ describe('PlanningDayScreen', () => {
     );
   };
 
-  it('renders FAJR as selected by default and does not render MIDNIGHT or CUSTOM as selectable options', async () => {
+  it('renders FAJR as selected by default, with MIDNIGHT and CUSTOM visible with Premium badges', async () => {
     await renderScreen('FAJR');
 
     expect(screen.getByTestId('planning-day-option-fajr')).toBeTruthy();
     expect(screen.getByText('Fajr (Default & Recommended)')).toBeTruthy();
 
-    // Invariant: MIDNIGHT and CUSTOM are not selectable options in M17
-    expect(screen.queryByTestId('planning-day-option-midnight')).toBeNull();
-    expect(screen.queryByTestId('planning-day-option-custom')).toBeNull();
-    expect(screen.queryByTestId('switch-to-fajr-button')).toBeNull();
-
-    // Future modes informational card is rendered
-    expect(screen.getByTestId('planning-day-future-modes-card')).toBeTruthy();
+    expect(screen.getByTestId('planning-day-option-midnight')).toBeTruthy();
+    expect(screen.getByTestId('planning-day-option-custom')).toBeTruthy();
+    expect(screen.getByTestId('premium-badge-midnight')).toBeTruthy();
+    expect(screen.getByTestId('premium-badge-custom')).toBeTruthy();
   });
 
   it('accurately displays existing MIDNIGHT setting and allows switching back to FAJR', async () => {
     await renderScreen('MIDNIGHT');
 
     expect(screen.getByTestId('planning-day-current-value')).toBeTruthy();
-    expect(screen.getByText('Current custom mode: MIDNIGHT')).toBeTruthy();
+    expect(screen.getByText('Current active mode: MIDNIGHT')).toBeTruthy();
 
-    const switchBtn = screen.getByTestId('switch-to-fajr-button');
-    expect(switchBtn).toBeTruthy();
+    const fajrOption = screen.getByTestId('planning-day-option-fajr');
+    expect(fajrOption).toBeTruthy();
 
-    fireEvent.press(switchBtn);
+    fireEvent.press(fajrOption);
 
     await waitFor(() => {
-      expect(mockApplyTemporalSettings).toHaveBeenCalledWith({ planningDayStart: 'FAJR' });
+      expect(mockSetPlanningDayStart).toHaveBeenCalledWith('FAJR');
     });
     expect(mockReload).toHaveBeenCalledTimes(1);
     expect(Alert.alert).toHaveBeenCalledWith(
@@ -122,26 +122,25 @@ describe('PlanningDayScreen', () => {
     await renderScreen('CUSTOM:03:00');
 
     expect(screen.getByTestId('planning-day-current-value')).toBeTruthy();
-    expect(screen.getByText('Current custom mode: CUSTOM:03:00')).toBeTruthy();
+    expect(screen.getByText('Current active mode: CUSTOM:03:00')).toBeTruthy();
 
-    const switchBtn = screen.getByTestId('switch-to-fajr-button');
-    fireEvent.press(switchBtn);
+    const fajrOption = screen.getByTestId('planning-day-option-fajr');
+    fireEvent.press(fajrOption);
 
     await waitFor(() => {
-      expect(mockApplyTemporalSettings).toHaveBeenCalledWith({ planningDayStart: 'FAJR' });
+      expect(mockSetPlanningDayStart).toHaveBeenCalledWith('FAJR');
     });
   });
 
   it('surfaces calm recoverable feedback if refresh fails after persisting FAJR', async () => {
-    mockApplyTemporalSettings.mockResolvedValue({
+    mockSetPlanningDayStart.mockResolvedValue({
       status: 'PERSISTED_REFRESH_FAILED',
-      category: 'TEMPORAL_FULL_REFRESH',
       error: 'Refresh timeout',
     });
 
     await renderScreen('MIDNIGHT');
 
-    fireEvent.press(screen.getByTestId('switch-to-fajr-button'));
+    fireEvent.press(screen.getByTestId('planning-day-option-fajr'));
 
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith(
