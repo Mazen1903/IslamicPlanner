@@ -1322,3 +1322,59 @@ The following require a physical device or simulator and do not reopen M18:
 ### M24 Carry-Forward Item
 
 - Gate `/demo` route behind `__DEV__` or remove from production build
+
+---
+
+## M21 Implementation & Closure Record
+
+- **Date:** 2026-09-19
+- **Milestone:** M21 - Dark Mode Polish
+- **Status:** **CLOSED / IMPLEMENTATION COMPLETE**
+- **Architecture Freeze Commit:** `d27e176` (docs: freeze M21 architecture)
+- **Implementation Commit:** `3c7bfc5` (feat(m21): implement dark mode polish)
+
+### Delivered Capabilities
+
+**Token Layer**
+- `dangerPressed` token: light `#962D22` (7.79:1), dark `#D95050` (4.69:1 vs textOnPrimary). Destructive button pressed state.
+- `dangerSurface` token: light `#FEE7E7` (4.61:1), dark `#2D1515` (4.63:1 vs danger). Error/danger banner background.
+- `textTertiary` light: `#8E99A8` → `#687483` (4.59:1 PASS on bg, 4.76:1 on surface).
+- `tabInactive` light: `#A0AAB8` → `#687483` (4.59:1 PASS on bg).
+- `textTertiary` dark: `#5F6B7A` → `#7E90A2` (5.15:1 PASS on surface).
+- `tabInactive` dark: `#5F6B7A` → `#7E90A2` (5.15:1 PASS on surface).
+- `danger`/`error` dark: `#E74C4C` → `#E85050` (4.58:1 PASS on surface).
+- `textMuted` dark: `#5F6B7A` preserved — intentional de-emphasis, WCAG 1.4.3 exempt.
+
+**Hydration Race Fix (ADR-029, Correction 1)**
+- `app/_layout.tsx`: `themeReady` gate — `RootGate` not mounted until persisted theme resolves via `.finally()`.
+- `ThemedStatusBar` component: status bar icons follow `isDark` dynamically.
+
+**Component Semantic Compliance (ADR-029)**
+- `Button.tsx`: destructive pressed → `dangerPressed`.
+- `Toggle.tsx`: off-track → `checkboxUnchecked` (removed `isDark` ternary + raw `#E2E8F0`).
+- `SettingsToggle.tsx`: off-track → `checkboxUnchecked` (removed `isDark` ternary + raw `#E2E8F0`).
+- `DateTimePickerInput.tsx`: `themeVariant` prop on both iOS pickers.
+- `SetupRequiredState.tsx`: error banner → `dangerSurface` (replaced raw `#FEE2E2`).
+- `JournalDeleteDialog.tsx`: confirm pressed → `dangerPressed` (replaced raw `#962D22`).
+- `app/(tabs)/settings/appearance.tsx`: Primary swatch text → `textOnPrimary` (replaced raw `#FFF`).
+- `app/demo.tsx`: 6x swatch text props → `textOnPrimary` (replaced raw `#FFF`).
+- `app/onboarding/index.tsx`: 3x raw literals → `divider`/`surfaceSecondary` (replaced `#E0E0E0`, `rgba(0,0,0,0.03)` x2).
+
+### Subsystem Isolation
+- Zero domain, data, service, or migration changes.
+- Zero new npm runtime or dev dependencies.
+- Zero SQLite schema changes.
+
+### Final Verification Results
+
+| Check | Result |
+|---|---|
+| Jest tests | **1374 / 1374** |
+| Test suites | **118 / 118** |
+| TypeScript errors | **0** (`tsc --noEmit`) |
+| ESLint errors | **0** |
+| ESLint warnings | **0** |
+| Working tree | **Clean** |
+
+### M24 Carry-Forward
+- Gate `/demo` route behind `__DEV__` or remove from production build.
