@@ -581,9 +581,9 @@ The persisted `PrayerAdjustments` domain shape is unchanged. If a future product
 
 ---
 
-## ADR-026: M18 Widget Architecture � Home-Screen Widgets as Read-Only Presentation Surfaces
+## ADR-026: M18 Widget Architecture — Home-Screen Widgets as Read-Only Presentation Surfaces
 
-**Status:** Accepted (2026-09-18)
+**Status:** Accepted (2026-09-18) — M18 CLOSED / SONNET APPROVED
 
 **Context:**
 

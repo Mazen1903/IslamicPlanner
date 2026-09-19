@@ -1,8 +1,13 @@
 # M18 - Widgets Architecture
 
-> **Status:** FROZEN - APPROVED FOR IMPLEMENTATION
+> **Status:** CLOSED / SONNET APPROVED
 > **Authored:** 2026-09-18
 > **Baseline commit:** 85902a5
+> **Architecture commit:** 4128c93
+> **Implementation commit:** 3cd5980
+> **Android WorkManager fix:** bc3b37c
+> **Closure commit:** See `docs: close M18 after independent review -- APPROVED`
+> **Independent review:** SONNET APPROVED — all BLOCKERs cleared
 
 ---
 

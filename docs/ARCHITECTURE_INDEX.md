@@ -391,8 +391,36 @@
 
 ---
 
-### 21. Widgets
-- **Authoritative Docs:** (Architecture not yet frozen — see `docs/CURRENT_MILESTONE.md`)
-- **Source Paths:** TBD (native dev build required; no M17 source changes)
+### 21. Home Screen Widgets
+- **Authoritative Docs:** `docs/M18_ARCHITECTURE.md` (Frozen — CLOSED)
+- **Source Paths:**
+  - `src/services/widget/types.ts` (`WidgetSnapshot`, `WidgetTaskEntry`, `WidgetPrayerEntry`)
+  - `src/services/widget/WidgetSnapshotBuilder.ts` (pure TypeScript, testable without native)
+  - `src/services/widget/WidgetSyncCoordinator.ts` (non-React singleton, best-effort iOS + Android push)
+  - `src/services/widget/index.ts`
+  - `widgets/tokens.ts` (literal design tokens — no `@/theme` in widget bundle)
+  - `widgets/ios/SmallWidget.tsx` (`'widget'` directive, `@expo/ui/swift-ui` only)
+  - `widgets/ios/MediumWidget.tsx` (`'widget'` directive, `@expo/ui/swift-ui` only)
+  - `widgets/android/SmallWidgetComponent.tsx` (React Native layout)
+  - `widgets/android/MediumWidgetComponent.tsx` (React Native layout)
+  - `widgets/android/widgetTaskHandler.ts` (headless Android AppWidget lifecycle handler)
+  - `index.ts` (custom app entry — `registerWidgetTaskHandler` before `expo-router/entry`)
+  - `plugins/withAndroidWorkManagerResolution.js` (CNG-compatible WorkManager alignment plugin)
+  - `src/__mocks__/expo-widgets.ts`
+  - `src/__mocks__/react-native-android-widget.ts`
+  - `app.json` (expo-widgets + react-native-android-widget plugin config)
+- **Relevant Tests:**
+  - `src/services/widget/__tests__/WidgetSnapshotBuilder.test.ts`
+  - `src/services/widget/__tests__/WidgetSyncCoordinator.test.ts` (SY, IOS, AND, CFG, PV groups)
+  - `src/hooks/__tests__/useTodayNotifications.test.ts` (widget sync wiring)
+- **Milestone Owner:** **M18 (CLOSED / SONNET APPROVED)**
+- **iOS Native QA:** Pending macOS/EAS (does not reopen M18)
+- **Android Physical-Runtime QA:** Pending physical device (does not reopen M18)
+
+---
+
+### 22. Premium Entitlement Scaffolding
+- **Authoritative Docs:** TBD (architecture not yet frozen)
+- **Source Paths:** TBD
 - **Relevant Tests:** TBD
-- **Milestone Owner:** **M18 (PENDING — ARCHITECTURE NOT YET FROZEN)**
+- **Milestone Owner:** **M19 (PENDING — ARCHITECTURE NOT YET FROZEN)**

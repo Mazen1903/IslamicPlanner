@@ -1,5 +1,5 @@
-**Current Milestone:** M18 — Widgets (PENDING — ARCHITECTURE NOT YET FROZEN)  
-**Last Updated:** 2026-09-18 (M17 closed / SONNET APPROVED; M18 pending)  
+**Current Milestone:** M19 — Premium Entitlement Scaffolding (PENDING — ARCHITECTURE NOT YET FROZEN)  
+**Last Updated:** 2026-09-18 (M18 closed / SONNET APPROVED; M19 pending)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -26,9 +26,9 @@
 | **M15** | Journal Core & Privacy | **CLOSED / SONNET APPROVED** | 2026-09-17 | Implementation commit: `71edcdf`. Closure commit: `5f3cb7a`. 1005/1005 tests (73 suites). AES-256-GCM field encryption via expo-crypto, planningDayKey ownership, revision-based stale-write protection, ciphertext-only repository boundary, hard-delete semantics. Worship schema dormant. See `docs/M15_ARCHITECTURE.md`. Native AES physical-device verification pending. |
 | **M16** | Journal Experience / UI | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture commit `a316b19`, implementation commit `b4e09c1`, test hardening `cb2428a`. 1092/1092 tests (89 suites). Zero migrations. Replaces Worship tab with full encrypted Journal experience, autosave, planningDayKey pinning, optional biometric lock (`expo-local-authentication` ~57.0.3). Native biometric verification pending. |
 | **M17** | Settings | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `00891c2`, hardening `a2af7a3`, implementation `76ac716`. 1171/1171 tests (102 suites). 0 migrations. 0 dependencies. ADR-025 (prayer adjustment ±60 bound). Full Settings experience: prayer config, planning day (Fajr), Hijri calendar, appearance, journal privacy, about, hub. `SettingsMutationCoordinator` non-React orchestration. `HijriAdjustmentConfigLoader` dynamic Hijri config. Sonnet independent review APPROVED. Native device QA pending (does not reopen M17). |
-| **M18** | Widgets (dev build required) | **PENDING** | — | ARCHITECTURE NOT YET FROZEN. Native dependencies installed at M18 only. |
+| **M18** | Widgets (dev build required) | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `4128c93`, implementation `3cd5980`, WorkManager fix `bc3b37c`. 1230/1230 tests (104 suites). 0 migrations. 3 runtime deps: `expo-widgets ~57.0.20`, `@expo/ui ~57.0.19`, `react-native-android-widget ^0.22.1`. Android prebuild PASS, assembleDebug PASS. iOS native QA pending macOS/EAS. Android physical-runtime QA pending. WorkManager conflict resolved via tracked CNG-compatible plugin. ADR-026 + ADR-026-H. Sonnet independent review APPROVED. |
 
-| **M19** | Premium entitlement scaffolding | Not Started | — | Opus review required |
+| **M19** | Premium entitlement scaffolding | **PENDING** | — | ARCHITECTURE NOT YET FROZEN. Opus review required. |
 | **M20** | Onboarding | Not Started | — | Prerequisites: M1, M12, M2 |
 | **M21** | Dark mode polish | Not Started | — | Prerequisites: M1, M7, M14, M16, M17 |
 | **M22** | Accessibility/RTL | Not Started | — | Prerequisites: All UI milestones |
@@ -1057,4 +1057,117 @@ The following require a physical device or simulator and do not reopen M17:
 ### H-09 Regression Test — M23 Carry-Forward
 
 `syncRange()` loader-failure non-destructive behavior verified by code analysis and M14 zero-deletion invariant. The dedicated H-09 regression test is deferred to M23 (QA/edge-case milestone). This does not reopen M17.
+
+---
+
+## M18 Completion Record
+
+- **Date:** 2026-09-18
+- **Status:** **M18 CLOSED / SONNET APPROVED**
+- **Review verdict:** APPROVED — READY TO CLOSE LOCALLY (independent Sonnet re-review, all BLOCKERs cleared)
+
+### Commit History
+
+| Commit Role | Hash | Message |
+|---|---|---|
+| Architecture freeze | `4128c93` | `docs: freeze M18 architecture - widgets implementation contract` |
+| Implementation | `3cd5980` | `feat(widgets): implement M18 home screen widgets` |
+| Android WorkManager fix | `bc3b37c` | `fix(widgets): align Android WorkManager dependencies` |
+| Closure | See closure commit | `docs: close M18 after independent review -- APPROVED` |
+
+### Scope Delivered
+
+**Widget Families:** Small (iOS + Android) + Medium (iOS + Android). Large deferred. Widgets are read-only presentation surfaces.
+
+**Shared Architecture:**
+- `src/services/widget/types.ts` — `WidgetSnapshot` schema (privacy-safe, serializable)
+- `src/services/widget/WidgetSnapshotBuilder.ts` — pure TypeScript builder, canonical planner reuse
+- `src/services/widget/WidgetSyncCoordinator.ts` — non-React singleton, best-effort push
+- `widgets/tokens.ts` — design token literals (no `@/theme` imports in widget bundle)
+- `src/__mocks__/expo-widgets.ts` + `src/__mocks__/react-native-android-widget.ts` — Jest mocks
+
+**iOS (`expo-widgets` + `@expo/ui/swift-ui`):**
+- `widgets/ios/SmallWidget.tsx` — `'widget'` directive, `@expo/ui/swift-ui` exclusively, native countdown timer (`dateStyle="timer"`)
+- `widgets/ios/MediumWidget.tsx` — `'widget'` directive, prayer panel + task list
+- No React Native `View`/`Text`/`StyleSheet` in widget files (architecture §4.1 enforced)
+- `createWidget()` + `updateTimeline()` with prayer-boundary timeline entries for OS-managed refresh
+
+**Android (`react-native-android-widget`):**
+- `widgets/android/SmallWidgetComponent.tsx` — React Native layout, light theme
+- `widgets/android/MediumWidgetComponent.tsx` — React Native layout, prayer + task columns
+- `widgets/android/widgetTaskHandler.ts` — handles all AppWidget lifecycle events
+- `index.ts` — custom entry point registering `widgetTaskHandler` before `expo-router/entry`
+- `requestWidgetUpdate` passes `React.createElement(WidgetComponent, snapshot)` — never null
+- `updatePeriodMillis: 1800000` on both Android widget entries
+
+**Sync Triggers:**
+- `PlannerRefreshCoordinator.fullRefresh()` (post-return, best-effort)
+- `useToday.ts` prayer transition
+- `useToday.completeTask()` (after task completion)
+- All triggers: `.sync().catch(...)` — never throws to caller
+
+**Privacy:** No Journal data, no task descriptions/notes/subtasks, no raw coordinates, no GPS requests from widget path.
+
+**SETUP_REQUIRED:** Calm neutral prompt across all platforms and paths.
+
+**WorkManager Dependency Resolution:**
+- `plugins/withAndroidWorkManagerResolution.js` — tracked CNG-compatible Expo config plugin
+- Aligns all `androidx.work` artifacts to `2.8.1`, resolving `react-native-android-widget` (2.8.1) vs `expo-widgets/glance` (2.7.1) duplicate class failure
+- No generated Android edits committed; CNG policy maintained (`android/` and `ios/` untracked)
+- Documented in ADR-026-H
+
+### Dependencies Added
+
+| Dependency | Version | Type |
+|---|---|---|
+| `expo-widgets` | `~57.0.20` | Runtime — iOS WidgetKit integration |
+| `@expo/ui` | `~57.0.19` | Runtime — SwiftUI native primitives |
+| `react-native-android-widget` | `^0.22.1` | Runtime — Android AppWidget |
+| `react-test-renderer` | `^1.3.0` | Dev — test-only (version alignment correction) |
+
+### Database Migrations
+- **0 new migrations.** Migrations 0000–0003 remain untouched. M15 crypto (AES-256-GCM, `JournalCryptoService`) unchanged.
+
+### Final Verification
+
+| Check | Result |
+|---|---|
+| Jest tests | **1230 / 1230** |
+| Test suites | **104 / 104** |
+| TypeScript errors | **0** |
+| ESLint errors | **0** |
+| ESLint warnings | **0** |
+| Android prebuild | **PASS** |
+| Android assembleDebug | **BUILD SUCCESSFUL** |
+| iOS prebuild | Not testable (macOS required) |
+| Working tree | **Clean** |
+
+### Native / Operational QA Carry-Forward (M18)
+
+The following require a physical device or simulator and do not reopen M18:
+
+**Android Physical Runtime:**
+- Install generated debug APK on Android device
+- Add Small widget from launcher/widget gallery
+- Add Medium widget from launcher/widget gallery
+- Resize behavior verification
+- Tap / deep-link (`islamic-planner://today`) behavior
+- 30-minute system-driven update cycle
+- App-driven task/prayer refresh propagation
+- Reboot / launcher persistence (if practical)
+
+**iOS Native:**
+- macOS / EAS native compilation required
+- WidgetKit target verification
+- Small widget render in widget gallery
+- Medium widget render
+- Native countdown timer behavior
+- App Group data propagation
+- Deep link behavior from widget tap
+
+**Windows Build Toolchain Note:**
+- Windows local Android native build required updating local `ninja.exe` to v1.12.1
+  to resolve `MAX_PATH` (260-character) filename length failures in the CMake/NDK build.
+- Host/toolchain operational item only — NOT an application runtime dependency.
+- `ninja.exe` must NOT be committed to the repository.
 
