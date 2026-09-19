@@ -1,13 +1,20 @@
 # M22 — Accessibility / RTL Architecture
 
-**Status:** ARCHITECTURE FROZEN LOCALLY — PENDING LEAD APPROVAL
+**Status:** CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED
 **Milestone:** M22 — Accessibility / RTL
 **React Native version:** 0.86.3
 **M21 baseline / origin/main:** `a8c837c6ef6c27d3bc81a48b6e1d12e6489874f1`
-**Initial freeze commit:** `20c68e2`
-**Hardening commit:** `c79cdaf`
-**Finalization commit:** *(this revision)*
-**Date finalized:** 2026-09-19
+**Initial freeze commit:** `20c68e2` (docs(m22): freeze M22 architecture - accessibility and RTL)
+**Hardening commit:** `c79cdaf` (docs(m22): harden accessibility and RTL architecture)
+**Finalization commit:** `598037a` (docs(m22): finalize accessibility and RTL contract)
+**Inventory correction commit:** `6f3ff9b` (docs(m22): correct final accessibility and RTL inventory)
+**Implementation commit:** `fb23dfe` (feat(m22): implement accessibility and RTL readiness)
+**Review corrective commit 1:** `346c84f` (fix(m22): correct accessibility audit and TaskCard review contract)
+**Review corrective commit 2:** `7af86fb` (fix(m22): finalize accessibility grouping contract)
+**Closure commit:** `docs(m22): close M22 after final accessibility review -- APPROVED`
+**Independent review verdict:** APPROVED — UNCONDITIONAL (Lead Approved)
+**Final test count:** 1556 / 1556 tests — 132 / 132 suites — 0 TS errors — 0 ESLint errors/warnings
+**Date finalized / closed:** 2026-09-19
 
 ---
 

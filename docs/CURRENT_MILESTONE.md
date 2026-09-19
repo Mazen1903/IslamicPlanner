@@ -1,10 +1,10 @@
-# Current Milestone: M22 — Accessibility / RTL
+# Current Milestone: M23 — QA + Edge Cases
 
-> **Current State:** M22 IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW
-> **Previous Milestone:** M21 CLOSED / SONNET APPROVED
-> **Milestone Status:** M22 — CURRENT — IMPLEMENTED LOCALLY, PENDING INDEPENDENT REVIEW
-> **M23 Status:** NOT STARTED
-> **Implementation Status:** COMPLETE — 45 production files modified; 1556/1556 tests pass across 132 suites (+152 tests, +11 suites); 0 TS errors, 0 ESLint errors/warnings; 0 new dependencies, 0 migrations
+> **Current State:** M22 CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED — M23 PENDING ARCHITECTURE
+> **Previous Milestone:** M22 CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED
+> **Milestone Status:** M23 — CURRENT — PENDING ARCHITECTURE
+> **Architecture Status:** NOT STARTED — Architecture doc and formal QA contract pending
+> **Implementation Status:** M22 CLOSED — 45 production files modified; 1556/1556 tests pass across 132 suites (+152 tests, +11 suites); 0 TS errors, 0 ESLint errors/warnings; 0 new dependencies, 0 migrations
 
 ---
 
@@ -142,10 +142,12 @@ M18 — Widgets (dev build required)            ✅ CLOSED / SONNET APPROVED
 M19 — Premium Entitlement Scaffolding          ✅ CLOSED / SONNET APPROVED
 M20 — Onboarding                               ✅ CLOSED / SONNET APPROVED
 M21 — Dark Mode Polish                         ✅ CLOSED / SONNET APPROVED
-M22 — Accessibility / RTL                      --> CURRENT — ARCHITECTURE HARDENED / FROZEN / PENDING LEAD REVIEW
-M23 — QA + Edge Cases                          --> NOT STARTED
+M22 — Accessibility / RTL                      ✅ CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED
+M23 — QA + Edge Cases                          --> CURRENT — PENDING ARCHITECTURE
 M24 — Release Preparation                      --> NOT STARTED
 ```
+
+Progress: M0–M22 = 23 of 25 milestones closed (92%).
 
 Worship Suggestions remain **DEFERRED** (not deleted). May be re-introduced post-M24.
 
@@ -215,9 +217,9 @@ The following checks require physical devices or simulators and are carried forw
 
 ---
 
-## M22 Implementation Summary
+## M22 Closure Summary
 
-**M22 — Accessibility / RTL** is IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW.
+**M22 — Accessibility / RTL** is CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED as of 2026-09-19.
 
 | Commit Role | Hash | Description |
 |---|---|---|
@@ -225,28 +227,35 @@ The following checks require physical devices or simulators and are carried forw
 | Architecture hardening | `c79cdaf` | docs(m22): harden accessibility and RTL architecture |
 | Architecture finalization | `598037a` | docs(m22): finalize accessibility and RTL contract |
 | Inventory correction | `6f3ff9b` | docs(m22): correct final accessibility and RTL inventory |
-| Implementation | *(current)* | feat(m22): implement accessibility and RTL readiness |
+| Implementation | `fb23dfe` | feat(m22): implement accessibility and RTL readiness |
+| Review correction 1 | `346c84f` | fix(m22): correct accessibility audit and TaskCard review contract |
+| Review correction 2 | `7af86fb` | fix(m22): finalize accessibility grouping contract |
+| Final closure | *(closure commit)* | docs(m22): close M22 after final accessibility review -- APPROVED |
 
-**Status:** IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW (M23: NOT STARTED)
+**Independent Review Verdict:** APPROVED — UNCONDITIONAL (Lead Approved)
+**Final Targeted Verification:** PASSED — UNCONDITIONAL
 
 ### Scope Delivered
 
 | Item | Expected | Actual |
 |---|---|---|
-| Production files audited | 82 | 82 |
-| Production files modified | 45 | **45** (Missing: 0, Unexpected: 0) |
+| Production files audited | 82 | **82** (complete audit) |
+| Initial planned production scope | 45 | **45** |
+| Cumulative M22 production scope | 45 | **45 production files modified** |
+| Final additional correction | PrayerHeader.tsx | **PrayerHeader.tsx only** (already part of frozen 45-file scope) |
 | Accessibility implementation findings resolved | 23 | **23** (A-1..A-24, A-19=OBS-1) |
 | RTL implementation findings resolved | 4 | **4** (RTL-1..RTL-4) |
 | Non-actionable observations verified | 3 | **3** (OBS-1..OBS-3) |
 | Total implementation findings resolved | 27 | **27** |
+| Observations / native QA carry-forward | Documented | **Documented for M23** |
 | Directional horizontal-chevron icon instances | 8 | **8** |
 | Directional icon consumer files | 7 | **7** |
 | Modal consumers verified | 6 | **6** |
 | maxFontSizeMultiplier capped nodes | 3 | **3** (CalendarMonthGrid weekdays, CalendarDayCell day & Hijri) |
 | New test suites added | 11 | **11** |
 | New tests added | ~146 | **+152** |
-| Total tests | ~1550 | **1556** (1556 passed, 0 failed, 0 skipped) |
-| Total test suites | ~132 | **132** (132 passed, 0 failed, 0 skipped) |
+| Total tests | 1556 | **1556** (1556 passed, 0 failed, 0 skipped) |
+| Total test suites | 132 | **132** (132 passed, 0 failed, 0 skipped) |
 | TypeScript errors | 0 | **0** |
 | ESLint errors / warnings | 0 | **0 errors, 0 warnings** |
 | New dependencies | 0 | **0** |
@@ -268,21 +277,30 @@ The following checks require physical devices or simulators and are carried forw
 - **Icon `decorative` prop:** Integrated on `Icon.tsx`; suppresses noise inside labeled Pressables.
 - **ADR-030:** Fully executed.
 - **Review Finding D-1 Resolution:** Reviewer flagged TaskCard descendant suppression; proposed `importantForAccessibility="no-hide-descendants"` fix on the composite parent was rejected after React Native 0.86 API verification (RN 0.86 defines `no-hide-descendants` as hiding the View itself AND all descendants, which would suppress the entire composite element from TalkBack). TaskCard implementation retained pending native TalkBack verification in M23.
+- **PrayerHeader Grouping Correction (7af86fb):** Corrected composite accessible View by removing `importantForAccessibility="no-hide-descendants"` so the View itself remains traversable by TalkBack with its composite label.
+- **Role="text" Terminology Correction:** Clarified that `accessibilityRole="text"` is redundant on static Text nodes rather than invalid per React Native specifications.
+- **Final Verification:** Unconditional pass across all regression gates.
 
 ### Native QA Carry-Forward (Deferred to M23)
 
-The following native QA items are carried forward to M23 (physical device / emulator verification; no M23 implementation starts now):
+The following native QA items are carried forward to M23 (physical device / emulator verification; none are marked as already physically verified):
+- **PrayerHeader VoiceOver/TalkBack composite announcement:** Verify composite label announcement on native screen readers.
 - **TaskCard TalkBack grouping / duplicate announcements:** Verify TaskCard composite announcement and absence of duplicate descendant announcements with Android TalkBack on a physical/emulated native build.
-- **VoiceOver TaskCard grouping:** Verify TaskCard composite announcement and checkbox navigation in VoiceOver on iOS device.
+- **TaskCard VoiceOver grouping:** Verify TaskCard composite announcement and checkbox navigation in VoiceOver on iOS device.
 - **Modal focus trapping:** VoiceOver and TalkBack modal focus trapping across all 6 native modals (`JournalDeleteDialog`, `JournalPrivacySheet`, `CustomRecurrenceModal`, `EditScopeSheet`, `PremiumLockedInfo`, `hijri-calendar`).
 - **TalkBack `accessibilityViewIsModal`:** Verify `accessibilityViewIsModal` effectiveness on Android API levels 29–34.
 - **Physical RTL rendering:** Physical RTL layout rendering across all screens on device with Arabic/Hebrew system locale.
-- **RTL navigation and tab order:** Prayer tab chronological order and BottomNavBar visual order on device with RTL locale.
-- **Calendar grid mirroring:** Calendar grid natural flex mirroring on device with RTL locale.
-- **Directional icon glyph flip:** Verify directional icon glyph flip on device with RTL locale (back chevrons, prev/next month chevrons).
+- **All 8 directional chevron visual flips in RTL:** Verify directional icon glyph flip on device with RTL locale (back chevrons, prev/next month chevrons, disclosure chevrons, expand-collapse chevrons).
+- **Prayer-tab physical RTL order:** Verify prayer tab chronological display (Fajr visually at right in RTL) and logical DOM order on device with RTL locale.
+- **BottomNavBar physical RTL placement:** Verify BottomNavBar visual mirroring while preserving canonical route indices on device with RTL locale.
+- **Calendar physical RTL layout and semantics:** Calendar grid natural flex mirroring, weekday header order, and previous/next month navigation semantics on device with RTL locale.
 - **Large accessibility text calendar behavior:** Large Accessibility Text (iOS max / Android largest) layout and wrapping on calendar weekday labels and day cell numbers.
-- **Widget accessibility:** Widget accessibility tree inspection (M23/M24).
+- **Native picker/accessibility behavior:** Native date/time picker interaction with screen readers as already documented.
+- **Widget accessibility:** Widget accessibility tree inspection and native accessibility items already carried forward where applicable (M23/M24).
 
 ### M23 Status
 
-**NOT STARTED.** Awaits independent re-review and formal closure of M22.
+**CURRENT — PENDING ARCHITECTURE.**
+- Milestone name: **QA + Edge Cases**
+- Awaits formal architecture design and test matrix definition.
+- No M23 architecture, design, or implementation has started.

@@ -1,5 +1,5 @@
-**Current Milestone:** M22 — Accessibility / RTL (IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW)
-**Last Updated:** 2026-09-19 (M22 Implemented Locally — 45 production files, 27 findings resolved, +152 tests, 11 new suites, 1556 total tests, 0 TS errors, 0 ESLint errors/warnings)
+**Current Milestone:** M23 — QA + Edge Cases (CURRENT — PENDING ARCHITECTURE)
+**Last Updated:** 2026-09-19 (M22 CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED — 45 production files, 27 findings resolved, +152 tests, 11 new suites, 1556 total tests, 0 TS errors, 0 ESLint errors/warnings)
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -30,8 +30,8 @@
 | **M19** | Premium entitlement scaffolding | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `fa3c664`, hardening `29cd586`, implementation `26e403f`. 1296/1296 tests (113 suites). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies added. `EntitlementService` (fail-closed), `PlanningDayMutationCoordinator`, `usePlanningDayMutation`, MIDNIGHT/CUSTOM gating, read-only `EntitlementRepository`, strict isolation. Sonnet independent review APPROVED. |
 | **M20** | Onboarding | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture freeze `54e03c0`, hardening `fde4f7e`, integration `966c5d6`, implementation `0c92614`. 1374/1374 tests (118 suites; 78 new M20 tests, 5 new suites). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies added. Root gate (zero-flash render-time auth), 4-screen flow, mode-aware location validation, calculation recommendation, ThemeProvider live switch, OnboardingCoordinator. Sonnet independent review APPROVED. |
 | **M21** | Dark mode polish | **CLOSED / SONNET APPROVED** | 2026-09-19 | Architecture `d27e176`, implementation `3c7bfc5`, review fix `326f0cc`. 1404/1404 tests (121 suites; +30 tests, +3 suites vs M20). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies. 16 production files. Semantic token compliance, WCAG AA contrast, themeReady hydration gate, ThemedStatusBar, PrayerTabBar contrast. ADR-029. Sonnet independent re-review APPROVED — UNCONDITIONAL. |
-| **M22** | Accessibility/RTL | **IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW** | — | 82-file audit; exactly 45 production files modified; 27 findings resolved (23 A + 4 RTL); 1556/1556 tests pass across 132 suites (+152 tests, +11 suites); ADR-030; TaskCard retained pending M23 native TalkBack QA (reviewer D-1 rejected per RN 0.86 API); 0 dependencies, 0 migrations |
-| **M23** | QA + edge cases | Not Started | — | Opus review required |
+| **M22** | Accessibility/RTL | **CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED** | 2026-09-19 | 82-file audit; exactly 45 production files modified; 27 findings resolved (23 A + 4 RTL); 1556/1556 tests pass across 132 suites (+152 tests, +11 suites); ADR-030; TaskCard retained pending M23 native TalkBack QA (reviewer D-1 rejected per RN 0.86 API); PrayerHeader composite grouping corrected (7af86fb); 0 dependencies, 0 migrations |
+| **M23** | QA + edge cases | **CURRENT — PENDING ARCHITECTURE** | — | Opus/Sonnet review required; comprehensive test matrix and native device QA carry-forward |
 | **M24** | Release preparation | Not Started | — | Final builds and release checklist |
 
 ---
@@ -1387,17 +1387,33 @@ The following require a physical device or simulator and do not reopen M18:
 
 ---
 
-## M22 Implementation Record
+## M22 Closure Record
 
 - **Date:** 2026-09-19
-- **Status:** IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW (M23: NOT STARTED)
+- **Status:** **CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED**
+- **Architecture Freeze Commit:** `20c68e2` (docs(m22): freeze M22 architecture - accessibility and RTL)
+- **Architecture Hardening Commit:** `c79cdaf` (docs(m22): harden accessibility and RTL architecture)
+- **Architecture Finalization Commit:** `598037a` (docs(m22): finalize accessibility and RTL contract)
+- **Inventory Correction Commit:** `6f3ff9b` (docs(m22): correct final accessibility and RTL inventory)
+- **Implementation Commit:** `fb23dfe` (feat(m22): implement accessibility and RTL readiness)
+- **Review Corrective Commit 1:** `346c84f` (fix(m22): correct accessibility audit and TaskCard review contract)
+- **Review Corrective Commit 2:** `7af86fb` (fix(m22): finalize accessibility grouping contract)
+- **Closure Commit:** `docs(m22): close M22 after final accessibility review -- APPROVED`
+- **Independent Review Verdict:** APPROVED — UNCONDITIONAL (Lead Approved)
+- **Targeted Final Verification:** PASSED — UNCONDITIONAL
 - **Scope:** Accessibility and RTL Readiness across audited 82-file scope (app/**, src/components/**)
-- **Production Files Modified:** EXACTLY 45 files (Missing: 0, Unexpected: 0)
+- **Production Files Modified:** Cumulative 45 production files (Initial planned scope: 45 files; final correction on PrayerHeader.tsx only, already within frozen 45-file scope)
 - **Implementation Findings Resolved:** 27 total (23 Accessibility [A-1..A-24, A-19=OBS-1] + 4 RTL [RTL-1..RTL-4] + 3 Non-Actionable Observations [OBS-1..OBS-3])
   - HIGH: 7 (A-1, A-3, A-4, A-5, A-13, A-14; RTL-3)
   - MEDIUM: 13 (A-2, A-6, A-7, A-8, A-10, A-15, A-17, A-18, A-20, A-22, A-24; RTL-1, RTL-2)
   - LOW: 7 (A-9, A-11, A-12, A-16, A-21, A-23; RTL-4)
   - Non-actionable observations: 3 (OBS-1, OBS-2, OBS-3)
+- **Review Findings & Corrections Preserved:**
+  - Initial implementation passed through independent review.
+  - Review Finding D-1 was reconsidered: reviewer proposed `importantForAccessibility="no-hide-descendants"` on TaskCard composite parent, which was rejected after React Native 0.86 API verification (RN 0.86 defines `no-hide-descendants` as hiding the View itself and all descendants, which would suppress the entire composite element from TalkBack). TaskCard implementation retained pending native TalkBack verification in M23.
+  - PrayerHeader grouping corrected in `7af86fb`: removed `importantForAccessibility="no-hide-descendants"` from composite accessible View so the View itself remains traversable by TalkBack with its composite label.
+  - `accessibilityRole="text"` terminology corrected to redundant rather than invalid per React Native specifications.
+  - Final verification was unconditional across all regression gates.
 - **Modal Contract:** All 6 native Modal consumers implement `accessibilityViewIsModal={true}` on innermost content View + `accessibilityRole="header"` on title. Backdrops in modals with explicit dismiss controls have `accessible={false}`.
 - **PremiumLockedInfo:** Removed `accessible` grouping and `accessibilityRole="alert"` from card View, exposing nested OK button for independent traversal.
 - **Radio State Contract (A-24):** All radio roles use `accessibilityState={{ checked: boolean }}` (replacing incorrect `{ selected }`).
@@ -1422,4 +1438,16 @@ The following require a physical device or simulator and do not reopen M18:
   - ESLint: 0 errors, 0 warnings (`npm run lint`)
   - Expo Config: Valid (`npx expo config --json`)
   - Expo Doctor: 20/21 pass (only known SDK 57 patch version advisory)
-- **Native QA Carry-Forward (M23):** VoiceOver/TalkBack traversal verification on device, physical modal focus trapping, native RTL device rendering, large accessibility font QA.
+- **Native QA Carry-Forward (Deferred to M23):**
+  - PrayerHeader VoiceOver/TalkBack composite announcement
+  - TaskCard VoiceOver/TalkBack composite grouping / duplicate-announcement check
+  - all 6 modal focus/trapping behavior on VoiceOver/TalkBack (`JournalDeleteDialog`, `JournalPrivacySheet`, `CustomRecurrenceModal`, `EditScopeSheet`, `PremiumLockedInfo`, `hijri-calendar`)
+  - physical RTL layout rendering across all screens on device with Arabic/Hebrew system locale
+  - all 8 directional chevron visual flips in RTL
+  - prayer-tab physical RTL order
+  - BottomNav physical RTL placement while preserving canonical indices
+  - calendar physical RTL layout and previous/next semantics
+  - large accessibility text calendar behavior
+  - native picker/accessibility behavior as already documented
+  - widget/native accessibility items already carried forward where applicable
+  *(None of these are marked as already physically verified).*

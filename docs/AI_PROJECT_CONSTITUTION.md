@@ -167,11 +167,13 @@
 | **M19** | Premium Entitlement Scaffolding | **CLOSED / SONNET APPROVED** | EntitlementService, PlanningDayMutationCoordinator, MIDNIGHT/CUSTOM gating, fail-closed reads, read-only EntitlementRepository, no billing SDK |
 | **M20** | Onboarding | **CLOSED / SONNET APPROVED** | First-run setup, root zero-flash gate, 4-screen flow, mode-aware location, method recommendation, ThemeProvider live theme, OnboardingCoordinator |
 | **M21** | Dark Mode Polish | **CLOSED / SONNET APPROVED** | 16 production files, semantic token compliance, WCAG AA contrast, themeReady hydration gate, ThemedStatusBar, PrayerTabBar accessibility. Architecture `d27e176`, implementation `3c7bfc5`, review fix `326f0cc`. 1404/1404 tests (121 suites). |
-| **M22** | Accessibility / RTL | *CURRENT — PENDING ARCHITECTURE* | RTL layout support, accessibility labels, screen reader compliance |
+| **M22** | Accessibility / RTL | **CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED** | 45 production files, 27 findings resolved (23 a11y + 4 RTL), 1556/1556 tests (132 suites), 0 TS/ESLint errors, 0 deps, 0 migrations. Architecture `20c68e2`..`6f3ff9b`, implementation `fb23dfe`, review fixes `346c84f`, `7af86fb`. ADR-030. |
+| **M23** | QA + Edge Cases | *CURRENT — PENDING ARCHITECTURE* | Comprehensive test matrix, edge cases, native QA, performance |
 
 ### Closed Milestone Trust Contract
 - Public interfaces and contracts established in **M1–M7 are CLOSED, VERIFIED, and TRUSTED**.
 - **M21 is CLOSED / SONNET APPROVED.** Theme semantic tokens, WCAG AA contrast values, and the themeReady hydration gate are production baselines. Do not alter token values, raw color usage rules, or hydration logic without explicit M22+ instructions.
+- **M22 is CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED.** Accessibility semantics, modal isolation, directional icon mirroring, and RTL layout readiness contracts (ADR-030) are production baselines. Do not alter accessibility properties or RTL styling without explicit instructions.
 - AI agents working on M8+ must treat M1–M7 behavior as authoritative baseline facts. Do not refactor, redesign, or reopen closed milestone contracts unless a user instruction explicitly directs changes to them.
 
 ---

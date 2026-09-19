@@ -1,7 +1,7 @@
 # Architecture Decision Log
 
 **Status:** Living document  
-**Updated:** 2026-09-19 (Rev 10 — M22 Architecture Hardened: ADR-030 authorized; 82-file audit, accessibility semantics + RTL layout contract)
+**Updated:** 2026-09-19 (Rev 11 — M22 CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED: ADR-030 finalized; 45 production files, accessibility semantics + RTL layout contract, 1556 tests)
 **Purpose:** Record every major architectural decision, the alternatives considered, and the rationale.
 
 ---
@@ -782,7 +782,7 @@ theme-hydration race condition in `app/_layout.tsx`.
 
 ## ADR-030: Accessibility Semantics and RTL Layout Contract
 
-**Status:** AUTHORIZED AND FINALIZED — M22 Architecture Finalized 2026-09-19
+**Status:** CLOSED AND AUTHORIZED — M22 Closed / Independent Review Approved / Lead Approved 2026-09-19
 
 **Decision:** Establish a permanent accessibility semantics contract and RTL layout readiness contract for the Islamic Planner application.
 
@@ -866,6 +866,6 @@ The codebase reached M22 with excellent structural accessibility scaffolding but
 
 - 45 production files modified in M22
 - 11 new test files created
-- Estimated +146 new tests; total ~1550
+- Actual +152 new tests; total 1556 (132 suites, 0 failures, 0 skipped)
 - 0 new dependencies, 0 migrations
 - ADR-030 durable rules apply to all subsequent milestones (M23, M24, post-release)
