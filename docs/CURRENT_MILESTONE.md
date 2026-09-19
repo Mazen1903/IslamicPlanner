@@ -1,8 +1,8 @@
 # Current Milestone: M20 — Onboarding
 
-> **Current State:** M20 PENDING — ARCHITECTURE FINALIZED
+> **Current State:** M20 IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW
 > **Previous Milestone:** M19 CLOSED / SONNET APPROVED
-> **Milestone Status:** M20 — ARCHITECTURE FINALIZED / PENDING IMPLEMENTATION
+> **Milestone Status:** M20 — IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW
 > **Architecture Status:** FINALIZED — `docs/M20_ARCHITECTURE.md` finalized (2026-09-18). All 21 consistency + integration issues resolved (18 hardening + 3 integration corrections: gate zero-flash, MANUAL location recommendation, theme persistence).
 
 ---
@@ -127,7 +127,7 @@ M19 did **NOT** implement:
 ```
 M18 — Widgets (dev build required)            ✅ CLOSED / SONNET APPROVED
 M19 — Premium Entitlement Scaffolding          ✅ CLOSED / SONNET APPROVED
-M20 — Onboarding                               ← CURRENT / ARCHITECTURE FINALIZED (implementation pending)
+M20 — Onboarding                               ← CURRENT / IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW
 M21 — Dark Mode Polish
 M22 — Accessibility / RTL
 M23 — QA + Edge Cases
@@ -141,7 +141,7 @@ Worship Suggestions remain **DEFERRED** (not deleted). May be re-introduced post
 ## M20 Overview & Scope
 
 **M20 — Onboarding**
-- **Status:** ARCHITECTURE FINALIZED — ready for implementation
+- **Status:** IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW
 - **Architecture doc:** `docs/M20_ARCHITECTURE.md`
 - **ADR:** ADR-028
 - **Prerequisites:** M1 (Design System), M2 (Prayer Calculation), M12 (Location), M17 (Settings)

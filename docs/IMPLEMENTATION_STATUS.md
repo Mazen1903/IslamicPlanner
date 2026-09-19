@@ -1,5 +1,5 @@
-**Current Milestone:** M20 — Onboarding (PENDING — ARCHITECTURE FINALIZED)
-**Last Updated:** 2026-09-18 (M19 closed / SONNET APPROVED; M20 pending)  
+**Current Milestone:** M20 — Onboarding (IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW)
+**Last Updated:** 2026-09-18 (M20 IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -28,7 +28,7 @@
 | **M17** | Settings | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `00891c2`, hardening `a2af7a3`, implementation `76ac716`. 1171/1171 tests (102 suites). 0 migrations. 0 dependencies. ADR-025 (prayer adjustment ±60 bound). Full Settings experience: prayer config, planning day (Fajr), Hijri calendar, appearance, journal privacy, about, hub. `SettingsMutationCoordinator` non-React orchestration. `HijriAdjustmentConfigLoader` dynamic Hijri config. Sonnet independent review APPROVED. Native device QA pending (does not reopen M17). |
 | **M18** | Widgets (dev build required) | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `4128c93`, implementation `3cd5980`, WorkManager fix `bc3b37c`. 1230/1230 tests (104 suites). 0 migrations. 3 runtime deps: `expo-widgets ~57.0.20`, `@expo/ui ~57.0.19`, `react-native-android-widget ^0.22.1`. Android prebuild PASS, assembleDebug PASS. iOS native QA pending macOS/EAS. Android physical-runtime QA pending. WorkManager conflict resolved via tracked CNG-compatible plugin. ADR-026 + ADR-026-H. Sonnet independent review APPROVED. |
 | **M19** | Premium entitlement scaffolding | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `fa3c664`, hardening `29cd586`, implementation `26e403f`. 1296/1296 tests (113 suites). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies added. `EntitlementService` (fail-closed), `PlanningDayMutationCoordinator`, `usePlanningDayMutation`, MIDNIGHT/CUSTOM gating, read-only `EntitlementRepository`, strict isolation. Sonnet independent review APPROVED. |
-| **M20** | Onboarding | **PENDING — ARCHITECTURE FINALIZED** | — | Prerequisites: M1, M12, M2, M17 |
+| **M20** | Onboarding | **IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW** | — | Prerequisites: M1, M12, M2, M17 |
 | **M21** | Dark mode polish | Not Started | — | Prerequisites: M1, M7, M14, M16, M17 |
 | **M22** | Accessibility/RTL | Not Started | — | Prerequisites: All UI milestones |
 | **M23** | QA + edge cases | Not Started | — | Opus review required |
@@ -1217,5 +1217,64 @@ The following require a physical device or simulator and do not reopen M18:
 | Expo config | **Valid** |
 | expo-doctor | **20/21** (known SDK 57 patch advisory only) |
 | Working tree | **Clean** |
+
+---
+
+## M20 Implementation Record
+
+- **Date:** 2026-09-18
+- **Milestone:** M20 — Onboarding
+- **Status:** **IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW**
+- **Architecture Commit:** `966c5d6` (docs: finalize M20 onboarding integration contract)
+- **ADR:** ADR-028 (Zero-Flash Render-Time Authorization Gate & 4-Step Onboarding Architecture)
+
+### Delivered Capabilities
+- **Root Authorization Gate (`app/_layout.tsx`):**
+  - Zero-flash synchronous render-time authorization.
+  - Strict mapping: `LOADING` renders `BootstrapLoadingView`, `ERROR` renders `BootstrapErrorView` with retry handler, `PENDING` allows only `/onboarding` (redirects all other routes to `/onboarding`), `COMPLETE` redirects `/onboarding` to `/(tabs)/today` and permits protected app routes.
+  - Zero `isRedirecting.current` ref; navigation controlled synchronously by Zustand store status.
+- **Onboarding Store (`src/stores/useOnboardingStore.ts`):**
+  - Zustand store with state `status: 'LOADING' | 'PENDING' | 'COMPLETE' | 'ERROR'`.
+  - Database read from `UserSettingsRepository` on `initialize()`.
+  - `retry()` resets to `LOADING` and re-reads.
+  - `markComplete()` synchronously transitions to `COMPLETE`.
+- **Onboarding Coordinator (`src/services/onboarding/OnboardingCoordinator.ts`):**
+  - Validates usable committed location (AUTO coordinates or MANUAL city).
+  - Validates calculation method against supported keys.
+  - Sequential persistence: persists `calculationMethod`, then persists `onboardingCompleted: true`.
+  - Triggers non-throwing `fullRefresh()` on `PlannerRefreshCoordinator`.
+  - Non-rollback persistence: refresh failure returns `PERSISTED_REFRESH_FAILED` without rolling back DB state.
+  - Strict isolation: `themeMode` is NOT in input/patch (handled by `ThemeProvider.setThemeMode()`).
+  - No entitlement, worship, prayer alerts, or widget parameters accepted or modified.
+- **Onboarding Flow Screen (`app/onboarding/index.tsx`):**
+  - Strict 4-screen flow:
+    1. Screen 1 (`SALAH_INTRO`): Educational copy, five prayers in canonical order (Fajr, Dhuhr, Asr, Maghrib, Isha). Zero DB writes, zero GPS calls.
+    2. Screen 2 (`SCHEDULE_EXAMPLE`): Static adaptive soccer scheduling illustration. Zero scheduling engine calls, zero materialization.
+    3. Screen 3 (`PRAYER_SETUP`): Dual Location and Calculation Method sections on one screen. GPS permission only prompted on explicit tap. Manual city search with lazy loading (length >= 2). Recommended method based on location, editable via list of 12 basic methods.
+    4. Screen 4 (`MAKE_IT_YOURS`): Theme selector (System / Light / Dark) applying immediately via `ThemeProvider`. Setup summary with committed location and calculation method. "Start Planning" completion CTA calling `OnboardingCoordinator.complete()` and `markComplete()` before routing to `/(tabs)/today`.
+  - Back navigation cycles strictly through internal onboarding steps (Screen 4 -> Screen 3 -> Screen 2 -> Screen 1) without exposing protected routes. Android hardware back handler handled safely.
+
+### Subsystem Isolation & Non-Goals
+- Zero entitlement code or queries.
+- Zero Journal code or dependencies.
+- Zero widget code or mutations.
+- Zero `expo-location` imports in UI screens (encapsulated via `useLocation` hook and `LocationService`).
+- Zero new migrations (0000–0003 untouched).
+- Zero new npm dependencies (`package.json` and `package-lock.json` untouched).
+- Zero push to GitHub.
+
+### Final Verification Results
+
+| Check | Result |
+|---|---|
+| Jest tests | **1374 / 1374** (78 new M20 tests + 1296 baseline) |
+| Test suites | **118 / 118** (5 new M20 suites + 113 baseline) |
+| TypeScript errors | **0** (`tsc --noEmit`) |
+| ESLint errors | **0** |
+| ESLint warnings | **0** |
+| Expo install check | **Valid** (clean package.json/lockfile) |
+| expo-doctor | **20/21** (known SDK 57 patch advisory only) |
+| Working tree | **Clean** (single implementation commit) |
+
 
 
