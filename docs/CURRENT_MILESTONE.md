@@ -1,9 +1,10 @@
-﻿# Current Milestone: M21 — Dark Mode Polish
+# Current Milestone: M21 — Dark Mode Polish
 
-> **Current State:** PENDING — ARCHITECTURE NOT YET FROZEN
+> **Current State:** IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW
 > **Previous Milestone:** M20 CLOSED / SONNET APPROVED
-> **Milestone Status:** M21 — PENDING — ARCHITECTURE NOT YET FROZEN
-> **Architecture Status:** NOT STARTED — Architecture doc and formal contract pending
+> **Milestone Status:** M21 — IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW
+> **Architecture Status:** ARCHITECTURE FROZEN (`d27e176`) / IMPLEMENTED LOCALLY (`3c7bfc5`, review fixes pending re-review)
+> **Note:** Commit `c49e17c` was a premature closure bookkeeping commit and has been superseded by the post-review correction state. M21 is NOT closed.
 
 ---
 
@@ -140,10 +141,10 @@ M20 strictly does **NOT** implement or expose:
 M18 — Widgets (dev build required)            ✅ CLOSED / SONNET APPROVED
 M19 — Premium Entitlement Scaffolding          ✅ CLOSED / SONNET APPROVED
 M20 — Onboarding                               ✅ CLOSED / SONNET APPROVED
-M21 - Dark Mode Polish                         --> CLOSED / IMPLEMENTATION COMPLETE
-M22 — Accessibility / RTL
-M23 — QA + Edge Cases
-M24 — Release Preparation
+M21 — Dark Mode Polish                         --> IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW
+M22 — Accessibility / RTL                      --> NOT STARTED
+M23 — QA + Edge Cases                          --> NOT STARTED
+M24 — Release Preparation                      --> NOT STARTED
 ```
 
 Worship Suggestions remain **DEFERRED** (not deleted). May be re-introduced post-M24.
@@ -153,10 +154,10 @@ Worship Suggestions remain **DEFERRED** (not deleted). May be re-introduced post
 ## M21 Overview & Scope
 
 **M21 — Dark Mode Polish**
-- **Status:** CLOSED / IMPLEMENTATION COMPLETE (2026-09-19)
+- **Status:** IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW (2026-09-19)
 - **Scope:** Full-fidelity dark mode review, contrast audit, and token polishing across all screens (Today, Calendar, Add/Edit Task, Journal, Settings, Onboarding) and primitives.
 - **Prerequisites:** M1 (Design System), M7 (Today), M14 (Calendar), M16 (Journal), M17 (Settings), M20 (Onboarding).
-- **Implementation:** COMPLETE. See `docs/M21_ARCHITECTURE.md` and `docs/IMPLEMENTATION_STATUS.md` for closure record.
+- **Implementation Status:** Review requirements implemented locally in corrective commit. Commit `c49e17c` was premature; M21 is awaiting independent re-review before closure. DO NOT advance to M22. M22 remains NOT STARTED.
 
 ---
 

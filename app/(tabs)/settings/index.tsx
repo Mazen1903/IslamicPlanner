@@ -77,7 +77,16 @@ export default function SettingsHubScreen() {
       style={[styles.safeArea, { backgroundColor: colors.background }]}
       edges={['top', 'left', 'right']}
     >
-      <View style={[styles.headerContainer, { paddingHorizontal: spacing.md, paddingVertical: spacing.md }]}>
+      <View
+        style={[
+          styles.headerContainer,
+          {
+            borderBottomColor: colors.divider,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.md,
+          },
+        ]}
+      >
         <Text style={[typography.headlineLarge, { color: colors.textPrimary }]}>Settings</Text>
       </View>
 
@@ -171,7 +180,6 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   scrollContent: {
     flexGrow: 1,

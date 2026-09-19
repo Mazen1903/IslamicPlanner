@@ -1,11 +1,13 @@
 # M21 - Dark Mode Polish: Architecture
 
-**Status:** FROZEN - READY FOR IMPLEMENTATION
-**Freeze commit:** TBD (set after local commit)
+**Status:** IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW
+**Freeze commit:** `d27e176` (docs(m21): freeze M21 architecture - dark mode polish)
+**Implementation commit:** `3c7bfc5` (feat(m21): implement dark mode polish - semantic token compliance)
+**Note:** `c49e17c` was a premature closure bookkeeping commit and has been superseded by the post-review correction state. M21 is NOT closed.
 **Authored by:** Gemini (architecture agent)
 **Independently reviewed and hardened by:** Sonnet (architecture reviewer)
-**Review date:** 2026-09-19 (Rev 2 - final hardening pass; all 7 corrections applied)
-**Baseline:** 97ceb444ac33b771adc04020d5e4537ca0e72543 (closed M20)
+**Review date:** 2026-09-19
+**Baseline:** `97ceb444ac33b771adc04020d5e4537ca0e72543` (closed M20)
 **Test baseline:** 1374 / 1374 tests - 118 / 118 suites - 0 TS errors - 0 ESLint errors
 
 ---
@@ -518,6 +520,12 @@ added; zero migrations; zero new dependencies.
 | app/(tabs)/settings/hijri-calendar.tsx | C-2: full shadow + overlay + bg fix |
 | app/(tabs)/settings/index.tsx | C-3: rgba(0,0,0,0.05) -> colors.divider |
 
+### Prayer Components (1 file)
+
+| File | Change |
+|---|---|
+| src/components/prayer/PrayerTabBar.tsx | Reviewer-mandated accessibility fix: past interactive prayer text -> colors.textTertiary instead of colors.textMuted |
+
 ### Onboarding (1 file)
 
 | File | Change |
@@ -541,7 +549,7 @@ DO NOT modify in M21:
 - src/services/**
 - src/theme/ThemeProvider.tsx
 - package.json / package-lock.json
-- Any file not in the 15-file inventory above
+- Any file not in the 16-file inventory above
 
 ---
 

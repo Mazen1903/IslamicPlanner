@@ -1,5 +1,5 @@
-**Current Milestone:** M21 — Dark Mode Polish (PENDING — ARCHITECTURE NOT YET FROZEN)
-**Last Updated:** 2026-09-18 (M20 CLOSED / SONNET APPROVED)
+**Current Milestone:** M21 — Dark Mode Polish (IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW)
+**Last Updated:** 2026-09-19 (M21 REVIEW REQUIREMENTS IMPLEMENTED LOCALLY)
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -29,7 +29,7 @@
 | **M18** | Widgets (dev build required) | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `4128c93`, implementation `3cd5980`, WorkManager fix `bc3b37c`. 1230/1230 tests (104 suites). 0 migrations. 3 runtime deps: `expo-widgets ~57.0.20`, `@expo/ui ~57.0.19`, `react-native-android-widget ^0.22.1`. Android prebuild PASS, assembleDebug PASS. iOS native QA pending macOS/EAS. Android physical-runtime QA pending. WorkManager conflict resolved via tracked CNG-compatible plugin. ADR-026 + ADR-026-H. Sonnet independent review APPROVED. |
 | **M19** | Premium entitlement scaffolding | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `fa3c664`, hardening `29cd586`, implementation `26e403f`. 1296/1296 tests (113 suites). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies added. `EntitlementService` (fail-closed), `PlanningDayMutationCoordinator`, `usePlanningDayMutation`, MIDNIGHT/CUSTOM gating, read-only `EntitlementRepository`, strict isolation. Sonnet independent review APPROVED. |
 | **M20** | Onboarding | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture freeze `54e03c0`, hardening `fde4f7e`, integration `966c5d6`, implementation `0c92614`. 1374/1374 tests (118 suites; 78 new M20 tests, 5 new suites). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies added. Root gate (zero-flash render-time auth), 4-screen flow, mode-aware location validation, calculation recommendation, ThemeProvider live switch, OnboardingCoordinator. Sonnet independent review APPROVED. |
-| **M21** | Dark mode polish | **PENDING — ARCHITECTURE NOT YET FROZEN** | — | Prerequisites: M1, M7, M14, M16, M17, M20 |
+| **M21** | Dark mode polish | **IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW** | — | Prerequisites: M1, M7, M14, M16, M17, M20 |
 | **M22** | Accessibility/RTL | Not Started | — | Prerequisites: All UI milestones |
 | **M23** | QA + edge cases | Not Started | — | Opus review required |
 | **M24** | Release preparation | Not Started | — | Final builds and release checklist |
@@ -1313,11 +1313,10 @@ The following require a physical device or simulator and do not reopen M18:
 1. Theme hydration race (CRITICAL) - themeReady gate added
 2. Dark dangerPressed contrast failure (CRITICAL) - #C0392B -> #D95050 (4.69:1)
 3. Light dangerSurface contrast failure (CRITICAL) - #FEE2E2 -> #FEE7E7 (4.61:1)
-4. Light textTertiary + tabInactive contrast failure - #8E99A8 -> #687483 (4.59:1)
 5. textMuted audit - EXEMPT; intentional de-emphasis confirmed
 5b. app/demo.tsx reclassified as shipped route; included in M21 scope
 6. Supporting documentation updated (ADR-029, ARCHITECTURE_INDEX, etc.)
-7. File inventory count corrected to 15 (includes app/demo.tsx)
+7. File inventory count updated to 16 production files (includes app/demo.tsx and reviewer-mandated prayer/PrayerTabBar.tsx)
 
 ### M24 Carry-Forward Item
 
@@ -1325,15 +1324,16 @@ The following require a physical device or simulator and do not reopen M18:
 
 ---
 
-## M21 Implementation & Closure Record
+## M21 Implementation & Review Fix Record
 
 - **Date:** 2026-09-19
 - **Milestone:** M21 - Dark Mode Polish
-- **Status:** **CLOSED / IMPLEMENTATION COMPLETE**
-- **Architecture Freeze Commit:** `d27e176` (docs: freeze M21 architecture)
-- **Implementation Commit:** `3c7bfc5` (feat(m21): implement dark mode polish)
+- **Status:** **IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW**
+- **Architecture Freeze Commit:** `d27e176` (docs(m21): freeze M21 architecture - dark mode polish)
+- **Implementation Commit:** `3c7bfc5` (feat(m21): implement dark mode polish - semantic token compliance)
+- **Premature Closure Note:** Commit `c49e17c` was a premature closure bookkeeping commit and has been superseded by the post-review correction state. M21 is NOT closed.
 
-### Delivered Capabilities
+### Delivered Capabilities & Review Fixes
 
 **Token Layer**
 - `dangerPressed` token: light `#962D22` (7.79:1), dark `#D95050` (4.69:1 vs textOnPrimary). Destructive button pressed state.
@@ -1349,7 +1349,7 @@ The following require a physical device or simulator and do not reopen M18:
 - `app/_layout.tsx`: `themeReady` gate — `RootGate` not mounted until persisted theme resolves via `.finally()`.
 - `ThemedStatusBar` component: status bar icons follow `isDark` dynamically.
 
-**Component Semantic Compliance (ADR-029)**
+**Component Semantic Compliance (16 production files total)**
 - `Button.tsx`: destructive pressed → `dangerPressed`.
 - `Toggle.tsx`: off-track → `checkboxUnchecked` (removed `isDark` ternary + raw `#E2E8F0`).
 - `SettingsToggle.tsx`: off-track → `checkboxUnchecked` (removed `isDark` ternary + raw `#E2E8F0`).
@@ -1359,6 +1359,9 @@ The following require a physical device or simulator and do not reopen M18:
 - `app/(tabs)/settings/appearance.tsx`: Primary swatch text → `textOnPrimary` (replaced raw `#FFF`).
 - `app/demo.tsx`: 6x swatch text props → `textOnPrimary` (replaced raw `#FFF`).
 - `app/onboarding/index.tsx`: 3x raw literals → `divider`/`surfaceSecondary` (replaced `#E0E0E0`, `rgba(0,0,0,0.03)` x2).
+- `app/(tabs)/settings/hijri-calendar.tsx`: overlay → `colors.overlay`, surface → `colors.surfaceElevated`, semantic shadow → `colors.shadowElevated` + `theme.shadows.elevated` (Review Fix 1).
+- `app/(tabs)/settings/index.tsx`: divider → `colors.divider` (Review Fix 2).
+- `src/components/prayer/PrayerTabBar.tsx`: past interactive prayer label and start time → `colors.textTertiary` (Review Fix 3).
 
 ### Subsystem Isolation
 - Zero domain, data, service, or migration changes.
@@ -1369,12 +1372,12 @@ The following require a physical device or simulator and do not reopen M18:
 
 | Check | Result |
 |---|---|
-| Jest tests | **1374 / 1374** |
-| Test suites | **118 / 118** |
+| Jest tests | **1404 / 1404** (0 failures, 0 skipped; +30 from M20 baseline) |
+| Test suites | **121 / 121** (+3 suites from M20 baseline) |
 | TypeScript errors | **0** (`tsc --noEmit`) |
 | ESLint errors | **0** |
 | ESLint warnings | **0** |
-| Working tree | **Clean** |
+| Working tree | **Clean** (after commit) |
 
 ### M24 Carry-Forward
 - Gate `/demo` route behind `__DEV__` or remove from production build.

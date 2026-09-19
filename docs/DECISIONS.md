@@ -740,11 +740,12 @@ theme-hydration race condition in `app/_layout.tsx`.
    are approved exceptions. They are documented in `M21_ARCHITECTURE.md` Section 3.
    No undocumented raw literals are permitted.
 
-5. **Intentional de-emphasis exemption:** `textMuted` and `disabledText` tokens may be
-   low-contrast. WCAG SC 1.4.3 permits reduced contrast for incidental, decorative, or
-   intentionally de-emphasized text where the semantic state (completed, past, disabled) is
-   the primary signal. Specifically: completed task titles (strikethrough) and past prayer
-   labels (textMuted), and disabled controls (disabledText).
+5. **Intentional de-emphasis exemption & interactive contrast:** `textMuted` and
+   `disabledText` tokens may be low-contrast for non-interactive / completed content
+   (e.g., completed task titles with strikethrough). However, reviewer-mandated
+   accessibility requirements established that interactive/selectable past prayer tabs
+   in `PrayerTabBar.tsx` must use `colors.textTertiary` for normal-size text (prayer name
+   and time caption) to satisfy WCAG AA >= 4.5:1 contrast against surface.
 
 6. **Switch/toggle off-state token:** The unchecked (off) state of a switch or toggle uses
    `colors.checkboxUnchecked`. `colors.disabledBackground` is semantically wrong for an
@@ -762,7 +763,7 @@ theme-hydration race condition in `app/_layout.tsx`.
 
 ### Consequences
 
-- 15 production files modified in M21
+- 16 production files modified in M21 (13 initial + `hijri-calendar.tsx` + `settings/index.tsx` + reviewer-mandated `PrayerTabBar.tsx`)
 - 2 new tokens added: `dangerPressed` and `dangerSurface`
 - 6 token values changed (see `M21_ARCHITECTURE.md` Section 6)
 - `themeReady` gate added to `app/_layout.tsx`

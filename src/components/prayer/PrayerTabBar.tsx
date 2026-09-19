@@ -76,7 +76,7 @@ export function PrayerTabBar({
                     : isCurrent
                     ? colors.textPrimary
                     : isPast
-                    ? colors.textMuted
+                    ? colors.textTertiary
                     : colors.textSecondary,
                   fontWeight: isSelected || isCurrent ? '700' : '500',
                 },
@@ -92,7 +92,7 @@ export function PrayerTabBar({
                   color: isSelected
                     ? colors.primaryDark
                     : isPast
-                    ? colors.textMuted
+                    ? colors.textTertiary
                     : colors.textTertiary,
                   marginTop: spacing.xxs,
                 },

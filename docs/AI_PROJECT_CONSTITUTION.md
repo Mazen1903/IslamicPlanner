@@ -1,4 +1,4 @@
-﻿# AI Project Constitution: Islamic Daily Planner
+# AI Project Constitution: Islamic Daily Planner
 
 > **Status:** PERMANENT ARCHITECTURAL INVARIANTS  
 > **Authority:** Supreme over AI agent implementation decisions  
@@ -166,7 +166,7 @@
 | **M18** | Widgets (dev build required) | **CLOSED / SONNET APPROVED** | Read-only home-screen widgets (Small/Medium), expo-widgets, react-native-android-widget, CNG WorkManager plugin |
 | **M19** | Premium Entitlement Scaffolding | **CLOSED / SONNET APPROVED** | EntitlementService, PlanningDayMutationCoordinator, MIDNIGHT/CUSTOM gating, fail-closed reads, read-only EntitlementRepository, no billing SDK |
 | **M20** | Onboarding | **CLOSED / SONNET APPROVED** | First-run setup, root zero-flash gate, 4-screen flow, mode-aware location, method recommendation, ThemeProvider live theme, OnboardingCoordinator |
-| **M21** | Dark Mode Polish | *PENDING — ARCHITECTURE NOT YET FROZEN* | Full-fidelity dark mode review, contrast audit, and token polishing across all screens and primitives |
+| **M21** | Dark Mode Polish | *IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW* | Full-fidelity dark mode review, contrast audit, and token polishing across all screens and primitives |
 
 ### Closed Milestone Trust Contract
 - Public interfaces and contracts established in **M1–M7 are CLOSED, VERIFIED, and TRUSTED**.

@@ -38,7 +38,7 @@ import {
 const defaultHijriService = new HijriService();
 
 export default function HijriCalendarScreen() {
-  const { colors, spacing, radii, typography, touchTargets } = useTheme();
+  const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
   const { settings, reload: reloadSettings } = useUserSettings();
   const {
     isSaving,
@@ -338,12 +338,14 @@ export default function HijriCalendarScreen() {
           transparent
           onRequestClose={() => setModalVisible(false)}
         >
-          <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+          <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
             <View
               style={[
                 styles.modalContent,
+                shadows.elevated,
                 {
-                  backgroundColor: colors.surface,
+                  backgroundColor: colors.surfaceElevated,
+                  shadowColor: colors.shadowElevated,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                 },
@@ -444,11 +446,6 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 400,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
   },
   modalActions: {
     flexDirection: 'row',

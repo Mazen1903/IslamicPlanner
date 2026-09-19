@@ -510,22 +510,23 @@
   - `src/components/task-form/DateTimePickerInput.tsx` (themeVariant)
   - `src/components/today/SetupRequiredState.tsx` (dangerSurface)
   - `src/components/journal/JournalDeleteDialog.tsx` (dangerPressed)
+  - `src/components/prayer/PrayerTabBar.tsx` (past interactive prayer text -> textTertiary)
   - `app/(tabs)/settings/appearance.tsx`, `hijri-calendar.tsx`, `index.tsx`
   - `app/onboarding/index.tsx`
   - `app/demo.tsx`
 - **Relevant Tests:**
-  - Token shape + contrast: `src/theme/__tests__/theme.test.ts`
-  - Hydration: `app/__tests__/_layout.test.tsx` (H-01..H-05)
-  - StatusBar: `app/__tests__/_layout.test.tsx`
-  - ThemeProvider: `src/theme/__tests__/ThemeProvider.test.tsx`
-  - Component: `src/components/common/__tests__/Button.test.tsx`, `Toggle.test.tsx`
+  - Token shape + contrast + ThemeProvider: `src/theme/__tests__/Theme.test.tsx`
+  - Static raw-color audit: `src/theme/__tests__/RawColorAudit.test.ts`
+  - Hydration (H-01..H-05) + StatusBar: `app/__tests__/_layout.test.tsx`
+  - Component compliance: `src/components/__tests__/DarkModePolishComponents.test.tsx`
 - **Key decisions:**
   - themeReady gate blocks RootGate mount until persisted theme resolves (Correction 1)
   - Dark dangerPressed = #D95050 (4.69:1 vs textOnPrimary) - Correction 2
   - Light dangerSurface = #FEE7E7 (4.61:1 vs danger) - Correction 3
   - Light textTertiary + tabInactive = #687483 (4.59:1 on bg) - Correction 4
-  - textMuted exempt (intentional de-emphasis) - Correction 5a
+  - Reviewer-mandated fix: past-prayer interactive tab text uses textTertiary for contrast compliance
   - app/demo.tsx is shipped route; semantic tokens applied in M21 - Correction 5b
   - /demo __DEV__ gate deferred to M24
-- **Milestone Owner:** **M21 (ARCHITECTURE FROZEN / READY FOR IMPLEMENTATION)**
+  - Premature closure commit c49e17c superseded by post-review correction state
+- **Milestone Owner:** **M21 (IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW)**
 - **ADR:** ADR-029
