@@ -1,7 +1,7 @@
 # Architecture Decision Log
 
 **Status:** Living document  
-**Updated:** 2026-09-18 (Rev 4 — M17 ADR-025 added)  
+**Updated:** 2026-09-18 (Rev 5 — M19 ADR-027 added)  
 **Purpose:** Record every major architectural decision, the alternatives considered, and the rationale.
 
 ---
@@ -595,7 +595,7 @@ Widgets are PRESENTATION SURFACES. All widget content derives from the canonical
 
 **Key sub-decisions:**
 
-1. **ADR-026-A (Library selection):** expo-widgets for iOS (WidgetKit-native timeline API); eact-native-android-widget for Android.
+1. **ADR-026-A (Library selection):** expo-widgets for iOS (WidgetKit-native timeline API); react-native-android-widget for Android.
 
 2. **ADR-026-B (No GPS in widgets):** Widget refresh MUST NOT trigger GPS location permission requests. WidgetSnapshotBuilder reads from LocationAwareTodayTemporalInputProvider which only accesses committed location snapshots in SQLite. getCurrentPosition() is never called from widget code paths.
 
@@ -625,4 +625,37 @@ Widgets are PRESENTATION SURFACES. All widget content derives from the canonical
 | Standalone mini-planner in widget process | Violates Single Source of Truth; duplicates domain logic |
 | Polling timer in widget (JS setTimeout) | Platform will kill headless process; native scheduler required |
 | GPS-triggered widget refresh | Would require Always-On location permission; rejected per user consent philosophy |
+
+
+
+---
+
+## ADR-027: Feature Code Consumes EntitlementService, Not user_settings.isPremium Directly
+
+**Status:** Accepted (2026-09-18) — M19 ARCHITECTURE FROZEN
+
+**Context:**
+
+`user_settings.isPremium` stores the current local entitlement state. Prior to M19, no feature code read this field (it was in `FORBIDDEN_PATCH_KEYS` for writes, and unread in production UI). M19 introduces the first two Premium-gated features (MIDNIGHT and CUSTOM planning-day modes) and must establish the entitlement boundary pattern for all future milestones.
+
+**Decision:**
+
+1. All feature code that needs to check Premium access queries `EntitlementService.hasFeature()` or `EntitlementService.getSnapshot()`. Direct reads of `user_settings.isPremium` from feature screens, hooks, or planner services are forbidden.
+2. `user_settings.isPremium` is read exclusively by `EntitlementRepository`, which is the sole data-layer adapter for entitlement resolution.
+3. Entitlement gates **authorization to change** Premium settings. It does NOT affect how the temporal engine interprets already-persisted values. `planningDayStart = 'MIDNIGHT'` continues to mean MIDNIGHT regardless of current entitlement snapshot.
+4. On entitlement read failure, all Premium features default to denied (fail-closed). `catch { return false }` is the required pattern. `catch { return true }` is a forbidden fail-open pattern.
+5. `user_settings.isPremium` mutation is reserved for a future billing adapter. It is not exposed through `SettingsMutationCoordinator` or any general-purpose settings UI (which would constitute a fake developer toggle).
+6. `PlanningDayMutationCoordinator` is the sole authorized path for changing `planningDayStart`. `SettingsMutationCoordinator` rejects `planningDayStart` mutations (field removed from `TEMPORAL_ALLOWED_KEYS`).
+7. `PlanningDayEngine.ts`, `TodayTemporalInputProvider.ts`, `temporalSettingsHelper.ts`, `SchedulingEngine.ts`, and `MaterializationEngine.ts` MUST NOT import or reference the entitlement domain.
+
+**Supersedes:** The M17 temporary FAJR-only guard in `SettingsMutationCoordinator` (which is removed in M19 implementation).
+
+**Alternatives considered:**
+
+| Alternative | Reason not chosen |
+|---|---|
+| Inject `EntitlementService` into `SettingsMutationCoordinator` (Approach A) | Makes a general-purpose coordinator entitlement-aware; harder to test; mixing authorization concerns with general settings validation |
+| Read `settings.isPremium` directly in Planning Day screen | Breaks the abstraction seam; future billing adapter would require UI rewrite |
+| Auto-downgrade persisted planningDayStart on isPremium → false | Temporal mutation requiring explicit occurrence reconciliation; deferred to billing milestone |
+| Global React Context for entitlement | Not needed in M19 (no purchase events); adds complexity without benefit until billing is introduced |
 

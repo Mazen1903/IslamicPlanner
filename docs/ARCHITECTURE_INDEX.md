@@ -420,7 +420,24 @@
 ---
 
 ### 22. Premium Entitlement Scaffolding
-- **Authoritative Docs:** TBD (architecture not yet frozen)
-- **Source Paths:** TBD
-- **Relevant Tests:** TBD
-- **Milestone Owner:** **M19 (PENDING — ARCHITECTURE NOT YET FROZEN)**
+- **Authoritative Docs:** `docs/M19_ARCHITECTURE.md` (FROZEN — pending Opus independent review)
+- **Source Paths (planned):**
+  - `src/domain/entitlement/types.ts` (`EntitlementTier`, `PremiumFeature`, `EntitlementSnapshot`, `EntitlementService` interface)
+  - `src/domain/entitlement/EntitlementService.ts` (`LocalEntitlementService` + singleton)
+  - `src/data/repositories/EntitlementRepository.ts` (read-only `readIsPremium()` adapter)
+  - `src/services/PlanningDayMutationCoordinator.ts` (authorization + mutation + refresh)
+  - `src/hooks/useEntitlement.ts` (thin React hook, fail-closed)
+  - `src/components/premium/PremiumBadge.tsx`
+  - `src/components/premium/PremiumLockedInfo.tsx`
+  - `src/components/premium/index.ts`
+  - `app/(tabs)/settings/planning-day.tsx` (M19 rewrite)
+- **Key invariants:**
+  - Fail-closed: entitlement read failure → UNAVAILABLE → all Premium features denied
+  - EntitlementRepository is the ONLY code reading `user_settings.isPremium`
+  - No feature screen reads `isPremium` directly
+  - Temporal engine (PlanningDayEngine, TodayTemporalInputProvider, temporalSettingsHelper) has NO entitlement checks
+  - Zero new migrations; zero new runtime dependencies
+  - No purchase flow; no billing SDK; no fake upgrade button
+- **Relevant Tests (planned):** E/A/P/S/UI/I series (50+ tests) — see `docs/M19_ARCHITECTURE.md §28`
+- **Milestone Owner:** **M19 (ARCHITECTURE FROZEN — PENDING OPUS INDEPENDENT REVIEW)**
+

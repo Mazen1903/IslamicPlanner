@@ -1,9 +1,9 @@
 # Current Milestone: M19 — Premium Entitlement Scaffolding
 
-> **Current State:** M19 PENDING — ARCHITECTURE NOT YET FROZEN
+> **Current State:** M19 ARCHITECTURE FROZEN — PENDING OPUS INDEPENDENT REVIEW
 > **Previous Milestone:** M18 CLOSED / SONNET APPROVED
-> **Milestone Status:** M19 — PENDING — ARCHITECTURE NOT YET FROZEN
-> **Architecture Status:** NOT YET STARTED — Architecture must be authored and frozen before implementation begins
+> **Milestone Status:** M19 — ARCHITECTURE FROZEN — PENDING OPUS INDEPENDENT REVIEW
+> **Architecture Status:** FROZEN — Authored 2026-09-18 — see docs/M19_ARCHITECTURE.md
 
 ---
 

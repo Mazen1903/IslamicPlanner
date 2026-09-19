@@ -161,8 +161,10 @@
 | **M13** | Notification Engine | **CLOSED** | Local notifications, prayer alerts, task reminders |
 | **M14** | Calendar UI Screen | **CLOSED** | Monthly grid, dual Gregorian/Hijri date display |
 | **M15** | Journal Core & Privacy | **CLOSED / SONNET APPROVED** | Encrypted private journal, planningDayKey ownership, AES-256-GCM, expo-crypto, ciphertext-only repository boundary. Implementation commit: `71edcdf`. Final HEAD: `9752921`. |
-| **M16** | Journal Experience / UI | *PENDING* | Compose view, history, biometric lock, tab replacement |
-| **M17** | Settings & Preferences UI | *PENDING* | Method picker, juristic switch, Hijri adjustment |
+| **M16** | Journal Experience / UI | **CLOSED / SONNET APPROVED** | Compose view, history, biometric lock, tab replacement |
+| **M17** | Settings & Preferences UI | **CLOSED / SONNET APPROVED** | Method picker, juristic switch, Hijri adjustment, planning-day (FAJR-only guard), appearance, notifications, journal privacy |
+| **M18** | Home Screen Widgets | **CLOSED / SONNET APPROVED** | Small + Medium iOS/Android widgets; WidgetSnapshotBuilder; WidgetSyncCoordinator; read-only presentation surface; WorkManager dependency alignment |
+| **M19** | Premium Entitlement Scaffolding | *ARCHITECTURE FROZEN — PENDING OPUS REVIEW* | EntitlementService, PlanningDayMutationCoordinator, MIDNIGHT/CUSTOM gating, fail-closed reads, no billing SDK |
 
 ### Closed Milestone Trust Contract
 - Public interfaces and contracts established in **M1–M7 are CLOSED, VERIFIED, and TRUSTED**.

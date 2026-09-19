@@ -1,5 +1,5 @@
-**Current Milestone:** M19 — Premium Entitlement Scaffolding (PENDING — ARCHITECTURE NOT YET FROZEN)  
-**Last Updated:** 2026-09-18 (M18 closed / SONNET APPROVED; M19 pending)  
+**Current Milestone:** M19 — Premium Entitlement Scaffolding (ARCHITECTURE FROZEN — PENDING OPUS INDEPENDENT REVIEW)
+**Last Updated:** 2026-09-18 (M18 closed / SONNET APPROVED; M19 architecture frozen)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -28,7 +28,7 @@
 | **M17** | Settings | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `00891c2`, hardening `a2af7a3`, implementation `76ac716`. 1171/1171 tests (102 suites). 0 migrations. 0 dependencies. ADR-025 (prayer adjustment ±60 bound). Full Settings experience: prayer config, planning day (Fajr), Hijri calendar, appearance, journal privacy, about, hub. `SettingsMutationCoordinator` non-React orchestration. `HijriAdjustmentConfigLoader` dynamic Hijri config. Sonnet independent review APPROVED. Native device QA pending (does not reopen M17). |
 | **M18** | Widgets (dev build required) | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `4128c93`, implementation `3cd5980`, WorkManager fix `bc3b37c`. 1230/1230 tests (104 suites). 0 migrations. 3 runtime deps: `expo-widgets ~57.0.20`, `@expo/ui ~57.0.19`, `react-native-android-widget ^0.22.1`. Android prebuild PASS, assembleDebug PASS. iOS native QA pending macOS/EAS. Android physical-runtime QA pending. WorkManager conflict resolved via tracked CNG-compatible plugin. ADR-026 + ADR-026-H. Sonnet independent review APPROVED. |
 
-| **M19** | Premium entitlement scaffolding | **PENDING** | — | ARCHITECTURE NOT YET FROZEN. Opus review required. |
+| **M19** | Premium entitlement scaffolding | **ARCHITECTURE FROZEN — PENDING OPUS REVIEW** | — | Architecture frozen 2026-09-18. `EntitlementService` (fail-closed), `PlanningDayMutationCoordinator`, MIDNIGHT/CUSTOM gating. Zero migrations. Zero runtime deps. No billing SDK. See `docs/M19_ARCHITECTURE.md`. |
 | **M20** | Onboarding | Not Started | — | Prerequisites: M1, M12, M2 |
 | **M21** | Dark mode polish | Not Started | — | Prerequisites: M1, M7, M14, M16, M17 |
 | **M22** | Accessibility/RTL | Not Started | — | Prerequisites: All UI milestones |
