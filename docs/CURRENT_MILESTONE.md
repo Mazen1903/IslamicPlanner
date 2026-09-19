@@ -1,10 +1,9 @@
-# Current Milestone: M21 — Dark Mode Polish
+# Current Milestone: M22 — Accessibility / RTL
 
-> **Current State:** IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW
-> **Previous Milestone:** M20 CLOSED / SONNET APPROVED
-> **Milestone Status:** M21 — IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW
-> **Architecture Status:** ARCHITECTURE FROZEN (`d27e176`) / IMPLEMENTED LOCALLY (`3c7bfc5`, review fixes pending re-review)
-> **Note:** Commit `c49e17c` was a premature closure bookkeeping commit and has been superseded by the post-review correction state. M21 is NOT closed.
+> **Current State:** M21 CLOSED / SONNET APPROVED — M22 PENDING ARCHITECTURE
+> **Previous Milestone:** M21 CLOSED / SONNET APPROVED
+> **Milestone Status:** M22 — CURRENT — PENDING ARCHITECTURE
+> **Architecture Status:** NOT STARTED — Architecture doc and formal contract pending
 
 ---
 
@@ -141,8 +140,8 @@ M20 strictly does **NOT** implement or expose:
 M18 — Widgets (dev build required)            ✅ CLOSED / SONNET APPROVED
 M19 — Premium Entitlement Scaffolding          ✅ CLOSED / SONNET APPROVED
 M20 — Onboarding                               ✅ CLOSED / SONNET APPROVED
-M21 — Dark Mode Polish                         --> IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW
-M22 — Accessibility / RTL                      --> NOT STARTED
+M21 — Dark Mode Polish                         ✅ CLOSED / SONNET APPROVED
+M22 — Accessibility / RTL                      --> CURRENT — PENDING ARCHITECTURE
 M23 — QA + Edge Cases                          --> NOT STARTED
 M24 — Release Preparation                      --> NOT STARTED
 ```
@@ -151,13 +150,21 @@ Worship Suggestions remain **DEFERRED** (not deleted). May be re-introduced post
 
 ---
 
-## M21 Overview & Scope
+## M21 Closure Summary
 
-**M21 — Dark Mode Polish**
-- **Status:** IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW (2026-09-19)
-- **Scope:** Full-fidelity dark mode review, contrast audit, and token polishing across all screens (Today, Calendar, Add/Edit Task, Journal, Settings, Onboarding) and primitives.
+**M21 — Dark Mode Polish** is CLOSED / SONNET APPROVED as of 2026-09-19.
+
+| Commit Role | Hash | Description |
+|---|---|---|
+| Architecture freeze | `d27e176` | docs(m21): freeze M21 architecture - dark mode polish |
+| Implementation | `3c7bfc5` | feat(m21): implement dark mode polish - semantic token compliance |
+| Premature bookkeeping | `c49e17c` | docs(m21): record M21 closure (premature; superseded) |
+| Review corrective implementation | `326f0cc` | fix(m21): complete dark mode polish review requirements |
+| Final closure | *(closure commit)* | docs(m21): close M21 after independent review -- APPROVED |
+
+**Independent Review Verdict:** APPROVED — UNCONDITIONAL (Sonnet)
+**Scope:** 16 production files, full semantic token compliance, WCAG AA contrast, themeReady hydration gate, ThemedStatusBar
 - **Prerequisites:** M1 (Design System), M7 (Today), M14 (Calendar), M16 (Journal), M17 (Settings), M20 (Onboarding).
-- **Implementation Status:** Review requirements implemented locally in corrective commit. Commit `c49e17c` was premature; M21 is awaiting independent re-review before closure. DO NOT advance to M22. M22 remains NOT STARTED.
 
 ---
 

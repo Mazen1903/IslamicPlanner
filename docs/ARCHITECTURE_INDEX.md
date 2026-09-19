@@ -521,12 +521,13 @@
   - Component compliance: `src/components/__tests__/DarkModePolishComponents.test.tsx`
 - **Key decisions:**
   - themeReady gate blocks RootGate mount until persisted theme resolves (Correction 1)
-  - Dark dangerPressed = #D95050 (4.69:1 vs textOnPrimary) - Correction 2
-  - Light dangerSurface = #FEE7E7 (4.61:1 vs danger) - Correction 3
-  - Light textTertiary + tabInactive = #687483 (4.59:1 on bg) - Correction 4
+  - Dark dangerPressed = #D95050 (4.6945:1 vs textOnPrimary #0F1114) - Correction 2
+  - Light dangerSurface = #FEE7E7 (4.6093:1 vs danger #C0392B) - Correction 3
+  - Light textTertiary + tabInactive = #687483 (4.5915:1 on bg #FAFBFC, 4.7570:1 on surface #FFFFFF) - Correction 4
+  - Dark textTertiary = #7E90A2 (5.7610:1 on bg, 5.1483:1 on surface, 4.5019:1 on surfaceElevated)
   - Reviewer-mandated fix: past-prayer interactive tab text uses textTertiary for contrast compliance
   - app/demo.tsx is shipped route; semantic tokens applied in M21 - Correction 5b
   - /demo __DEV__ gate deferred to M24
-  - Premature closure commit c49e17c superseded by post-review correction state
-- **Milestone Owner:** **M21 (IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW)**
+  - c49e17c was premature bookkeeping; corrected by 326f0cc; final re-review APPROVED
+- **Milestone Owner:** **M21 (CLOSED / SONNET APPROVED)**
 - **ADR:** ADR-029

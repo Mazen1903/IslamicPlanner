@@ -1,5 +1,5 @@
-**Current Milestone:** M21 — Dark Mode Polish (IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW)
-**Last Updated:** 2026-09-19 (M21 REVIEW REQUIREMENTS IMPLEMENTED LOCALLY)
+**Current Milestone:** M22 — Accessibility / RTL (PENDING ARCHITECTURE)
+**Last Updated:** 2026-09-19 (M21 CLOSED / SONNET APPROVED)
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -29,8 +29,8 @@
 | **M18** | Widgets (dev build required) | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `4128c93`, implementation `3cd5980`, WorkManager fix `bc3b37c`. 1230/1230 tests (104 suites). 0 migrations. 3 runtime deps: `expo-widgets ~57.0.20`, `@expo/ui ~57.0.19`, `react-native-android-widget ^0.22.1`. Android prebuild PASS, assembleDebug PASS. iOS native QA pending macOS/EAS. Android physical-runtime QA pending. WorkManager conflict resolved via tracked CNG-compatible plugin. ADR-026 + ADR-026-H. Sonnet independent review APPROVED. |
 | **M19** | Premium entitlement scaffolding | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `fa3c664`, hardening `29cd586`, implementation `26e403f`. 1296/1296 tests (113 suites). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies added. `EntitlementService` (fail-closed), `PlanningDayMutationCoordinator`, `usePlanningDayMutation`, MIDNIGHT/CUSTOM gating, read-only `EntitlementRepository`, strict isolation. Sonnet independent review APPROVED. |
 | **M20** | Onboarding | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture freeze `54e03c0`, hardening `fde4f7e`, integration `966c5d6`, implementation `0c92614`. 1374/1374 tests (118 suites; 78 new M20 tests, 5 new suites). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies added. Root gate (zero-flash render-time auth), 4-screen flow, mode-aware location validation, calculation recommendation, ThemeProvider live switch, OnboardingCoordinator. Sonnet independent review APPROVED. |
-| **M21** | Dark mode polish | **IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW** | — | Prerequisites: M1, M7, M14, M16, M17, M20 |
-| **M22** | Accessibility/RTL | Not Started | — | Prerequisites: All UI milestones |
+| **M21** | Dark mode polish | **CLOSED / SONNET APPROVED** | 2026-09-19 | Architecture `d27e176`, implementation `3c7bfc5`, review fix `326f0cc`. 1404/1404 tests (121 suites; +30 tests, +3 suites vs M20). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies. 16 production files. Semantic token compliance, WCAG AA contrast, themeReady hydration gate, ThemedStatusBar, PrayerTabBar contrast. ADR-029. Sonnet independent re-review APPROVED — UNCONDITIONAL. |
+| **M22** | Accessibility/RTL | **CURRENT — PENDING ARCHITECTURE** | — | Prerequisites: All UI milestones |
 | **M23** | QA + edge cases | Not Started | — | Opus review required |
 | **M24** | Release preparation | Not Started | — | Final builds and release checklist |
 
@@ -1324,25 +1324,28 @@ The following require a physical device or simulator and do not reopen M18:
 
 ---
 
-## M21 Implementation & Review Fix Record
+## M21 Closure Record
 
 - **Date:** 2026-09-19
 - **Milestone:** M21 - Dark Mode Polish
-- **Status:** **IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW**
+- **Status:** **CLOSED / SONNET APPROVED**
 - **Architecture Freeze Commit:** `d27e176` (docs(m21): freeze M21 architecture - dark mode polish)
 - **Implementation Commit:** `3c7bfc5` (feat(m21): implement dark mode polish - semantic token compliance)
-- **Premature Closure Note:** Commit `c49e17c` was a premature closure bookkeeping commit and has been superseded by the post-review correction state. M21 is NOT closed.
+- **Premature Bookkeeping Commit:** `c49e17c` (superseded; independent review required fixes)
+- **Review Corrective Commit:** `326f0cc` (fix(m21): complete dark mode polish review requirements)
+- **Closure Commit:** `docs(m21): close M21 after independent review -- APPROVED`
+- **Independent Re-Review Verdict:** APPROVED — UNCONDITIONAL (Sonnet)
 
 ### Delivered Capabilities & Review Fixes
 
 **Token Layer**
-- `dangerPressed` token: light `#962D22` (7.79:1), dark `#D95050` (4.69:1 vs textOnPrimary). Destructive button pressed state.
-- `dangerSurface` token: light `#FEE7E7` (4.61:1), dark `#2D1515` (4.63:1 vs danger). Error/danger banner background.
-- `textTertiary` light: `#8E99A8` → `#687483` (4.59:1 PASS on bg, 4.76:1 on surface).
-- `tabInactive` light: `#A0AAB8` → `#687483` (4.59:1 PASS on bg).
-- `textTertiary` dark: `#5F6B7A` → `#7E90A2` (5.15:1 PASS on surface).
-- `tabInactive` dark: `#5F6B7A` → `#7E90A2` (5.15:1 PASS on surface).
-- `danger`/`error` dark: `#E74C4C` → `#E85050` (4.58:1 PASS on surface).
+- `dangerPressed` token: light `#962D22` (7.7915:1 vs textOnPrimary `#FFFFFF`), dark `#D95050` (4.6945:1 vs textOnPrimary `#0F1114`). Destructive button pressed state.
+- `dangerSurface` token: light `#FEE7E7` (4.6093:1 vs danger `#C0392B`), dark `#2D1515` (4.6309:1 vs danger `#E85050`). Error/danger banner background.
+- `textTertiary` light: `#8E99A8` → `#687483` (4.5915:1 on background `#FAFBFC`, 4.7570:1 on surface `#FFFFFF`).
+- `tabInactive` light: `#A0AAB8` → `#687483` (4.7570:1 on surface `#FFFFFF`).
+- `textTertiary` dark: `#5F6B7A` → `#7E90A2` (5.7610:1 on bg `#0F1114`, 5.1483:1 on surface `#1A1D22`, 5.3680:1 on surfaceSecondary `#16191E`, 4.5019:1 on surfaceElevated `#242830`).
+- `tabInactive` dark: `#5F6B7A` → `#7E90A2` (5.1483:1 on surface `#1A1D22`).
+- `danger`/`error` dark: `#E74C4C` → `#E85050` (4.5821:1 on surface `#1A1D22`).
 - `textMuted` dark: `#5F6B7A` preserved — intentional de-emphasis, WCAG 1.4.3 exempt.
 
 **Hydration Race Fix (ADR-029, Correction 1)**

@@ -166,10 +166,12 @@
 | **M18** | Widgets (dev build required) | **CLOSED / SONNET APPROVED** | Read-only home-screen widgets (Small/Medium), expo-widgets, react-native-android-widget, CNG WorkManager plugin |
 | **M19** | Premium Entitlement Scaffolding | **CLOSED / SONNET APPROVED** | EntitlementService, PlanningDayMutationCoordinator, MIDNIGHT/CUSTOM gating, fail-closed reads, read-only EntitlementRepository, no billing SDK |
 | **M20** | Onboarding | **CLOSED / SONNET APPROVED** | First-run setup, root zero-flash gate, 4-screen flow, mode-aware location, method recommendation, ThemeProvider live theme, OnboardingCoordinator |
-| **M21** | Dark Mode Polish | *IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW* | Full-fidelity dark mode review, contrast audit, and token polishing across all screens and primitives |
+| **M21** | Dark Mode Polish | **CLOSED / SONNET APPROVED** | 16 production files, semantic token compliance, WCAG AA contrast, themeReady hydration gate, ThemedStatusBar, PrayerTabBar accessibility. Architecture `d27e176`, implementation `3c7bfc5`, review fix `326f0cc`. 1404/1404 tests (121 suites). |
+| **M22** | Accessibility / RTL | *CURRENT — PENDING ARCHITECTURE* | RTL layout support, accessibility labels, screen reader compliance |
 
 ### Closed Milestone Trust Contract
 - Public interfaces and contracts established in **M1–M7 are CLOSED, VERIFIED, and TRUSTED**.
+- **M21 is CLOSED / SONNET APPROVED.** Theme semantic tokens, WCAG AA contrast values, and the themeReady hydration gate are production baselines. Do not alter token values, raw color usage rules, or hydration logic without explicit M22+ instructions.
 - AI agents working on M8+ must treat M1–M7 behavior as authoritative baseline facts. Do not refactor, redesign, or reopen closed milestone contracts unless a user instruction explicitly directs changes to them.
 
 ---

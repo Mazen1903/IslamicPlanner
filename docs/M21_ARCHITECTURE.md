@@ -1,14 +1,16 @@
 # M21 - Dark Mode Polish: Architecture
 
-**Status:** IMPLEMENTED LOCALLY — PENDING INDEPENDENT RE-REVIEW
+**Status:** CLOSED / SONNET APPROVED
 **Freeze commit:** `d27e176` (docs(m21): freeze M21 architecture - dark mode polish)
 **Implementation commit:** `3c7bfc5` (feat(m21): implement dark mode polish - semantic token compliance)
-**Note:** `c49e17c` was a premature closure bookkeeping commit and has been superseded by the post-review correction state. M21 is NOT closed.
+**Review corrective commit:** `326f0cc` (fix(m21): complete dark mode polish review requirements)
+**Closure commit:** `docs(m21): close M21 after independent review -- APPROVED`
+**Note:** `c49e17c` was a premature bookkeeping commit; independent review subsequently required fixes; corrective implementation landed in `326f0cc`; final re-review APPROVED unconditionally.
 **Authored by:** Gemini (architecture agent)
 **Independently reviewed and hardened by:** Sonnet (architecture reviewer)
 **Review date:** 2026-09-19
 **Baseline:** `97ceb444ac33b771adc04020d5e4537ca0e72543` (closed M20)
-**Test baseline:** 1374 / 1374 tests - 118 / 118 suites - 0 TS errors - 0 ESLint errors
+**Final test count:** 1404 / 1404 tests - 121 / 121 suites - 0 TS errors - 0 ESLint errors
 
 ---
 

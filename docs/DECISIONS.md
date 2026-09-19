@@ -1,7 +1,7 @@
 # Architecture Decision Log
 
 **Status:** Living document  
-**Updated:** 2026-09-18 (Rev 8 — M20 ADR-028 finalized: gate, MANUAL recommendation, theme)  
+**Updated:** 2026-09-19 (Rev 9 — M21 CLOSED / SONNET APPROVED: ADR-029 finalized; 16 files, WCAG AA, hydration gate)
 **Purpose:** Record every major architectural decision, the alternatives considered, and the rationale.
 
 ---
