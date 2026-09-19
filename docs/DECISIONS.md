@@ -1,7 +1,7 @@
 # Architecture Decision Log
 
 **Status:** Living document  
-**Updated:** 2026-09-18 (Rev 5 — M19 ADR-027 added)  
+**Updated:** 2026-09-18 (Rev 6 — M20 ADR-028 added)  
 **Purpose:** Record every major architectural decision, the alternatives considered, and the rationale.
 
 ---
@@ -658,4 +658,43 @@ Widgets are PRESENTATION SURFACES. All widget content derives from the canonical
 | Read `settings.isPremium` directly in Planning Day screen | Breaks the abstraction seam; future billing adapter would require UI rewrite |
 | Auto-downgrade persisted planningDayStart on isPremium → false | Temporal mutation requiring explicit occurrence reconciliation; deferred to billing milestone |
 | Global React Context for entitlement | Not needed in M19 (no purchase events); adds complexity without benefit until billing is introduced |
+
+---
+
+## ADR-028: M20 Onboarding — Root Zustand Gate + Direct-Upsert Bypass Pattern
+
+**Status:** Accepted (2026-09-18) — M20 ARCHITECTURE FROZEN
+
+**Context:**
+
+M20 introduces first-run onboarding. Two independent decisions needed architectural justification: (1) how the root gate prevents app-shell rendering for uninitiated users without causing route flash, and (2) why `OnboardingCoordinator` writes directly to `UserSettingsRepository` rather than going through `SettingsMutationCoordinator`.
+
+**Decision:**
+
+**Sub-decision A — Gate Strategy: `useOnboardingStore` (Zustand) + `useSegments` + `router.replace`**
+
+The root `app/_layout.tsx` reads `onboardingCompleted` via a Zustand store (`useOnboardingStore`) initialized on mount. The gate effect fires using `useSegments()` + `router.replace()` — the standard Expo Router auth/onboarding gate pattern.
+
+`<Slot />` is always rendered (not conditionally suppressed). All routing is purely navigational via `router.replace()`. This prevents blank-screen flash states and is consistent with Expo Router's `<Slot>`-based architecture.
+
+`useOnboardingStore.markComplete()` is called synchronously (Zustand update) **before** `router.replace()` in the onboarding screen. This eliminates the gate redirect-back race condition that would otherwise occur if the gate re-evaluated before the DB write was visible.
+
+Fail-open: a DB read failure during `initialize()` resolves to `PENDING` (re-shows onboarding), not to `COMPLETE` (which would silently bypass setup for a user who has never set location or calculation method). This is the opposite of the entitlement fail-closed pattern (ADR-027) and is intentional — the two failure semantics reflect different risk profiles.
+
+**Sub-decision B — `OnboardingCoordinator` Bypasses `SettingsMutationCoordinator`**
+
+`OnboardingCoordinator.complete()` writes `{ onboardingCompleted: true }` directly via `UserSettingsRepository.upsert()`. It does NOT go through `SettingsMutationCoordinator`.
+
+Reason: `SettingsMutationCoordinator` is a general-purpose settings coordinator for user-facing preference mutations. It calls `PlannerRefreshCoordinator.fullRefresh()` on every temporal change. During Step 3 (calculation method selection), the user has not yet confirmed completion. A premature full refresh before `onboardingCompleted = true` would trigger the Today pipeline with a partially-configured app. `OnboardingCoordinator.complete()` is the single, authoritative refresh trigger for all settings committed during onboarding — Step 3's `calculationMethod` write also bypasses `SettingsMutationCoordinator` for the same reason. `FORBIDDEN_PATCH_KEYS` in `SettingsMutationCoordinator` already lists `onboardingCompleted`, which correctly blocks general-purpose mutation of the lifecycle flag.
+
+**Alternatives considered:**
+
+| Alternative | Reason not chosen |
+|---|---|
+| Conditional `<Slot />` suppression (render-blocking gate) | Causes blank-screen state during DB load; inconsistent with Expo Router `<Slot>` architecture |
+| Separate Expo Router file routes per onboarding step | Route flash between steps; unnecessary deep-link surface; no benefit for a linear one-time flow |
+| Module-level singleton callback (non-Zustand) | Fragile; singleton callbacks in React create unmount/remount lifecycle hazards |
+| React Context for onboarding status | Adds Provider wrapper boilerplate; less ergonomic than Zustand for imperative `getState().markComplete()` calls in non-React coordinators |
+| `SettingsMutationCoordinator` path for `calculationMethod` in Step 3 | Would trigger premature `fullRefresh()` before onboarding is complete; violates single-refresh-at-completion principle |
+| AsyncStorage flag instead of DB for `onboardingCompleted` | DB is already the project's single source of truth for user state; a second persistence layer adds inconsistency |
 

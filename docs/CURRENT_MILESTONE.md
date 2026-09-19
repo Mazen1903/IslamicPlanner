@@ -1,9 +1,9 @@
 # Current Milestone: M20 — Onboarding
 
-> **Current State:** M20 PENDING — ARCHITECTURE NOT YET FROZEN
+> **Current State:** M20 PENDING — ARCHITECTURE FROZEN
 > **Previous Milestone:** M19 CLOSED / SONNET APPROVED
-> **Milestone Status:** M20 — NOT STARTED
-> **Architecture Status:** PENDING — ARCHITECTURE NOT YET FROZEN
+> **Milestone Status:** M20 — ARCHITECTURE FROZEN / PENDING IMPLEMENTATION
+> **Architecture Status:** FROZEN — `docs/M20_ARCHITECTURE.md` authored and committed (2026-09-18)
 
 ---
 
@@ -127,7 +127,7 @@ M19 did **NOT** implement:
 ```
 M18 — Widgets (dev build required)            ✅ CLOSED / SONNET APPROVED
 M19 — Premium Entitlement Scaffolding          ✅ CLOSED / SONNET APPROVED
-M20 — Onboarding                               ← CURRENT / PENDING (ARCHITECTURE NOT YET FROZEN)
+M20 — Onboarding                               ← CURRENT / ARCHITECTURE FROZEN (implementation pending)
 M21 — Dark Mode Polish
 M22 — Accessibility / RTL
 M23 — QA + Edge Cases
@@ -138,13 +138,19 @@ Worship Suggestions remain **DEFERRED** (not deleted). May be re-introduced post
 
 ---
 
-## M20 Overview & Scope (Not Started)
+## M20 Overview & Scope
 
 **M20 — Onboarding**
-- **Status:** PENDING — ARCHITECTURE NOT YET FROZEN
+- **Status:** ARCHITECTURE FROZEN — implementation pending independent architecture review
+- **Architecture doc:** `docs/M20_ARCHITECTURE.md`
+- **ADR:** ADR-028
 - **Prerequisites:** M1 (Design System), M2 (Prayer Calculation), M12 (Location), M17 (Settings)
-- **Scope:** First-run onboarding flow introducing prayer calculations, location detection/selection, calculation method selection, and core preferences.
-- **Rule:** DO NOT start implementation until M20 architecture is formally authored, reviewed, and frozen.
+- **Scope:** First-run onboarding flow — four steps: Welcome, Location (GPS/manual/skip), Calculation Method, Ready.
+- **New files:** `src/stores/useOnboardingStore.ts`, `src/services/onboarding/OnboardingCoordinator.ts`, `src/services/onboarding/index.ts`, 4 test files.
+- **Modified files:** `app/_layout.tsx` (gate), `app/onboarding/index.tsx` (4-step screen).
+- **Constraints:** No GPS on mount · No silent mutation · No new deps · No new migrations · Zero entitlement/journal involvement.
+- **Estimated new tests:** ~59 (OS-01..OS-10, OC-01..OC-14, SCR-01..SCR-23, OI-01..OI-12).
+- **Rule:** DO NOT start implementation until M20 architecture receives independent review and is approved.
 
 ---
 

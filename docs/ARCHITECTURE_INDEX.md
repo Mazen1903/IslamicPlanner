@@ -454,4 +454,36 @@
   - `app/(tabs)/settings/__tests__/PlanningDay.test.tsx`
 - **Milestone Owner:** **M19 (CLOSED / SONNET APPROVED)**
 
+---
 
+### 23. Onboarding
+- **Authoritative Docs:** `docs/M20_ARCHITECTURE.md` (ARCHITECTURE FROZEN — pending implementation)
+- **Source Paths (new):**
+  - `src/stores/useOnboardingStore.ts` (Zustand store: `status`, `initialize()`, `markComplete()`)
+  - `src/services/onboarding/OnboardingCoordinator.ts` (writes `onboardingCompleted: true` + triggers `fullRefresh()`)
+  - `src/services/onboarding/index.ts` (barrel export)
+- **Source Paths (modified):**
+  - `app/_layout.tsx` (adds `useOnboardingStore` init + `useSegments`/`router.replace` gate effect)
+  - `app/onboarding/index.tsx` (replaces placeholder with 4-step linear flow)
+- **Key invariants:**
+  - `onboardingCompleted` in `user_settings` is the canonical flag; no new schema columns or migrations required
+  - Gate is fail-open: DB read failure resolves to `PENDING` (re-shows onboarding), never `COMPLETE`
+  - No GPS call on mount: `requestForegroundPermissionsAsync()` invoked only from "Use My Location" button's `onPress` handler
+  - No silent mutation: data written only on explicit button tap (write-on-tap constraint)
+  - `OnboardingCoordinator` bypasses `SettingsMutationCoordinator` (which correctly forbids `onboardingCompleted` writes); direct upsert to `UserSettingsRepository`
+  - `markComplete()` called synchronously BEFORE `router.replace()` to prevent gate redirect-back race
+  - Zero entitlement involvement; zero Journal involvement; zero Worship involvement
+  - Zero new runtime npm dependencies; zero new migrations
+  - Single full refresh at Step 4 completion (`OnboardingCoordinator.complete()` → `fullRefresh()`)
+- **Step machine:**
+  - `WELCOME` → `LOCATION` → `CALCULATION` → `READY` → (Today)
+  - Step 2 LOCATION: auto GPS or manual city search (lazy-loaded ≥2 chars) or skip
+  - Step 3 CALCULATION: local state only; written to DB on "Continue" tap via direct `upsert()`
+  - Step 4 READY: `OnboardingCoordinator.complete()` writes `onboardingCompleted: true` + triggers `fullRefresh()`
+- **Relevant Tests:**
+  - `src/stores/__tests__/useOnboardingStore.test.ts` (OS-01..OS-10)
+  - `src/services/onboarding/__tests__/OnboardingCoordinator.test.ts` (OC-01..OC-14)
+  - `app/onboarding/__tests__/OnboardingScreen.test.tsx` (SCR-01..SCR-23)
+  - `src/domain/onboarding/__tests__/OnboardingIsolation.test.ts` (OI-01..OI-12)
+- **Milestone Owner:** **M20 (ARCHITECTURE FROZEN — implementation pending)**
+- **ADR:** ADR-028
