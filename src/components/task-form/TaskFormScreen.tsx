@@ -323,7 +323,7 @@ export function TaskFormScreen({
           />
           {state.validationErrors.title && (
             <Text
-              style={[typography.caption, { color: colors.danger, marginTop: spacing.xs, marginLeft: spacing.xs }]}
+              style={[typography.caption, { color: colors.danger, marginTop: spacing.xs, marginStart: spacing.xs }]}
               testID="title-validation-error"
             >
               {state.validationErrors.title}

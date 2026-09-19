@@ -51,10 +51,11 @@ export function SettingsToggle({
     >
       {icon && (
         <View
+          importantForAccessibility="no"
           style={[
             styles.iconWrapper,
             {
-              marginRight: spacing.md,
+              marginEnd: spacing.md,
               backgroundColor: colors.surfaceSecondary,
               borderRadius: radii.sm,
               width: 32,
@@ -62,11 +63,11 @@ export function SettingsToggle({
             },
           ]}
         >
-          <Icon name={icon} size={18} color={colors.primary} />
+          <Icon name={icon} size={18} color={colors.primary} decorative />
         </View>
       )}
 
-      <View style={styles.textContainer}>
+      <View style={styles.textContainer} importantForAccessibility="no">
         <Text
           style={[
             typography.bodyMedium,
@@ -114,6 +115,6 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
-    paddingRight: 12,
+    paddingEnd: 12,
   },
 });

@@ -52,7 +52,7 @@ export function PrayerTransitionBanner({
             },
           ]}
         >
-          <Icon name="bell" size={20} color={colors.primary} />
+          <Icon name="bell" size={20} color={colors.primary} decorative />
         </View>
 
         <View style={styles.textContainer}>
@@ -66,7 +66,7 @@ export function PrayerTransitionBanner({
           </Text>
         </View>
 
-        <Icon name="chevron-right" size={20} color={colors.primary} />
+        <Icon name="chevron-right" size={20} color={colors.primary} decorative />
       </Pressable>
 
       {onDismissPress && (
@@ -76,7 +76,7 @@ export function PrayerTransitionBanner({
           accessibilityRole="button"
           accessibilityLabel="Dismiss prayer transition banner"
         >
-          <Icon name="close" size={18} color={colors.textTertiary} />
+          <Icon name="close" size={18} color={colors.textTertiary} decorative />
         </Pressable>
       )}
     </View>
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginEnd: 12,
   },
   textContainer: {
     flex: 1,
@@ -106,6 +106,6 @@ const styles = StyleSheet.create({
   dismissButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
+    marginStart: 8,
   },
 });

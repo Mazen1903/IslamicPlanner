@@ -70,7 +70,7 @@ export function CalendarHeader({
               accessibilityLabel="Previous month"
               testID="calendar-prev-month-button"
             >
-              <Icon name="chevron-left" size={20} color={colors.textPrimary} />
+              <Icon name="chevron-left" size={20} color={colors.textPrimary} decorative directional />
             </Pressable>
 
             <Pressable
@@ -88,7 +88,7 @@ export function CalendarHeader({
               accessibilityLabel="Next month"
               testID="calendar-next-month-button"
             >
-              <Icon name="chevron-right" size={20} color={colors.textPrimary} />
+              <Icon name="chevron-right" size={20} color={colors.textPrimary} decorative directional />
             </Pressable>
           </View>
         </View>

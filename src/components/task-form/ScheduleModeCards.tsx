@@ -102,6 +102,7 @@ export function ScheduleModeCards({
                     name={item.icon}
                     size={16}
                     color={isSelected ? colors.textOnPrimary : colors.textSecondary}
+                    decorative
                   />
                 </View>
                 <Text
@@ -110,7 +111,7 @@ export function ScheduleModeCards({
                     {
                       color: isSelected ? colors.primaryDark : colors.textPrimary,
                       fontWeight: isSelected ? '700' : '600',
-                      marginLeft: spacing.sm,
+                      marginStart: spacing.sm,
                       flex: 1,
                     },
                   ]}
@@ -398,7 +399,7 @@ export function ScheduleModeCards({
               This task has no fixed time. It will appear in the Anytime Today section for your active planning day.
             </Text>
             <View style={[styles.infoBanner, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md, marginTop: spacing.md, padding: spacing.md }]}>
-              <Icon name="info" size={16} color={colors.primary} style={{ marginRight: spacing.sm }} />
+              <Icon name="info" size={16} color={colors.primary} style={{ marginEnd: spacing.sm }} decorative />
               <Text style={[typography.caption, { color: colors.textSecondary, flex: 1 }]}>
                 Planning day date: {state.planningDayDate}
               </Text>
@@ -422,7 +423,7 @@ export function ScheduleModeCards({
             testID="schedule-preview-banner"
           >
             <View style={styles.previewHeader}>
-              <Icon name="clock" size={16} color={colors.primary} style={{ marginRight: spacing.xs }} />
+              <Icon name="clock" size={16} color={colors.primary} style={{ marginEnd: spacing.xs }} decorative />
               <Text style={[typography.labelMedium, { color: colors.primaryDark, fontWeight: '700' }]}>
                 Schedule Preview
               </Text>

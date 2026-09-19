@@ -89,7 +89,7 @@ export function BottomNavBar(props: BottomNavBarProps) {
                 ]}
                 testID="bottom-nav-add"
               >
-                <Icon name="plus" size={24} color={colors.textOnPrimary} />
+                <Icon name="plus" size={24} color={colors.textOnPrimary} decorative />
               </Pressable>
             </View>
           );
@@ -115,6 +115,7 @@ export function BottomNavBar(props: BottomNavBarProps) {
               name={config.icon}
               size={22}
               color={isFocused ? colors.tabActive : colors.tabInactive}
+              decorative
             />
             <Text
               style={[

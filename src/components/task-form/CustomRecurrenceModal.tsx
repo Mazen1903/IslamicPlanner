@@ -95,6 +95,7 @@ export function CustomRecurrenceModal({
     >
       <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
         <View
+          accessibilityViewIsModal={true}
           style={[
             styles.modalContent,
             {
@@ -108,7 +109,10 @@ export function CustomRecurrenceModal({
         >
           {/* Header */}
           <View style={styles.headerRow}>
-            <Text style={[typography.headlineMedium, { color: colors.textPrimary }]}>
+            <Text
+              accessibilityRole="header"
+              style={[typography.headlineMedium, { color: colors.textPrimary }]}
+            >
               Custom Repeat
             </Text>
             <Pressable
@@ -134,7 +138,7 @@ export function CustomRecurrenceModal({
                     key={cal}
                     onPress={() => dispatch({ type: 'SET_RECURRENCE_CALENDAR', payload: cal })}
                     accessibilityRole="radio"
-                    accessibilityState={{ selected: isSelected }}
+                    accessibilityState={{ checked: isSelected }}
                     accessibilityLabel={`${cal === 'GREGORIAN' ? 'Gregorian' : 'Islamic / Hijri'} calendar`}
                     testID={`calendar-${cal.toLowerCase()}`}
                     style={[

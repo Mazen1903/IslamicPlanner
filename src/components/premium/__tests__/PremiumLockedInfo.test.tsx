@@ -53,7 +53,9 @@ describe('PremiumLockedInfo', () => {
       </ThemeProvider>
     );
 
-    const backdrop = screen.getByTestId('premium-locked-info-backdrop');
+    const backdrop = screen.getByTestId('premium-locked-info-backdrop', {
+      includeHiddenElements: true,
+    });
     fireEvent.press(backdrop);
 
     expect(handleClose).toHaveBeenCalledTimes(1);

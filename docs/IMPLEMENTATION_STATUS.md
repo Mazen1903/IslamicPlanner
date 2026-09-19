@@ -1,5 +1,5 @@
-**Current Milestone:** M22 — Accessibility / RTL (ARCHITECTURE CORRECTED / FROZEN — PENDING LEAD APPROVAL)
-**Last Updated:** 2026-09-19 (M22 Architecture Corrected — A-count reconciled to 23; all 8 horizontal chevrons directional; 7 consumer files; 146 estimated tests)
+**Current Milestone:** M22 — Accessibility / RTL (IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW)
+**Last Updated:** 2026-09-19 (M22 Implemented Locally — 45 production files, 27 findings resolved, +152 tests, 11 new suites, 1556 total tests, 0 TS errors, 0 ESLint errors/warnings)
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -30,7 +30,7 @@
 | **M19** | Premium entitlement scaffolding | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `fa3c664`, hardening `29cd586`, implementation `26e403f`. 1296/1296 tests (113 suites). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies added. `EntitlementService` (fail-closed), `PlanningDayMutationCoordinator`, `usePlanningDayMutation`, MIDNIGHT/CUSTOM gating, read-only `EntitlementRepository`, strict isolation. Sonnet independent review APPROVED. |
 | **M20** | Onboarding | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture freeze `54e03c0`, hardening `fde4f7e`, integration `966c5d6`, implementation `0c92614`. 1374/1374 tests (118 suites; 78 new M20 tests, 5 new suites). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies added. Root gate (zero-flash render-time auth), 4-screen flow, mode-aware location validation, calculation recommendation, ThemeProvider live switch, OnboardingCoordinator. Sonnet independent review APPROVED. |
 | **M21** | Dark mode polish | **CLOSED / SONNET APPROVED** | 2026-09-19 | Architecture `d27e176`, implementation `3c7bfc5`, review fix `326f0cc`. 1404/1404 tests (121 suites; +30 tests, +3 suites vs M20). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies. 16 production files. Semantic token compliance, WCAG AA contrast, themeReady hydration gate, ThemedStatusBar, PrayerTabBar contrast. ADR-029. Sonnet independent re-review APPROVED — UNCONDITIONAL. |
-| **M22** | Accessibility/RTL | **ARCHITECTURE HARDENED / FROZEN — PENDING LEAD REVIEW** | — | 82-file audit; 43 production files planned to change; 23 A + 6 RTL findings; ADR-030; 0 dependencies, 0 migrations; estimate +138 tests |
+| **M22** | Accessibility/RTL | **IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW** | — | 82-file audit; exactly 45 production files modified; 27 findings resolved (23 A + 4 RTL); 1556/1556 tests pass across 132 suites (+152 tests, +11 suites); ADR-030; 0 dependencies, 0 migrations |
 | **M23** | QA + edge cases | Not Started | — | Opus review required |
 | **M24** | Release preparation | Not Started | — | Final builds and release checklist |
 
@@ -1384,3 +1384,42 @@ The following require a physical device or simulator and do not reopen M18:
 
 ### M24 Carry-Forward
 - Gate `/demo` route behind `__DEV__` or remove from production build.
+
+---
+
+## M22 Implementation Record
+
+- **Date:** 2026-09-19
+- **Status:** IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW (M23: NOT STARTED)
+- **Scope:** Accessibility and RTL Readiness across audited 82-file scope (app/**, src/components/**)
+- **Production Files Modified:** EXACTLY 45 files (Missing: 0, Unexpected: 0)
+- **Implementation Findings Resolved:** 27 total (23 Accessibility [A-1..A-24, A-19=OBS-1] + 4 RTL [RTL-1..RTL-4] + 3 Non-Actionable Observations [OBS-1..OBS-3])
+  - HIGH: 7 (A-1, A-3, A-4, A-5, A-13, A-14; RTL-3)
+  - MEDIUM: 13 (A-2, A-6, A-7, A-8, A-10, A-15, A-17, A-18, A-20, A-22, A-24; RTL-1, RTL-2)
+  - LOW: 7 (A-9, A-11, A-12, A-16, A-21, A-23; RTL-4)
+  - Non-actionable observations: 3 (OBS-1, OBS-2, OBS-3)
+- **Modal Contract:** All 6 native Modal consumers implement `accessibilityViewIsModal={true}` on innermost content View + `accessibilityRole="header"` on title. Backdrops in modals with explicit dismiss controls have `accessible={false}`.
+- **PremiumLockedInfo:** Removed `accessible` grouping and `accessibilityRole="alert"` from card View, exposing nested OK button for independent traversal.
+- **Radio State Contract (A-24):** All radio roles use `accessibilityState={{ checked: boolean }}` (replacing incorrect `{ selected }`).
+- **Touch Targets:** Interactive controls enforce `>= 44 x 44` logical points/dp via `touchTargets.min` or `hitSlop`.
+- **Text Scaling:** `allowFontScaling={true}` default preserved across entire app; strictly 3 authorized calendar cell Text nodes use `maxFontSizeMultiplier={2}` with architectural justification.
+- **Live Regions:** Dynamic errors in `SetupRequiredState.tsx`, `today.tsx`, `journal.tsx` use `accessibilityLiveRegion="assertive"`. Autosave in `JournalSaveStatus` uses `"polite"`. Prayer countdown updates remain non-live composite.
+- **RTL Logical Layout:** 24+ files converted physical margins/paddings (`marginLeft`/`marginRight`) to logical equivalents (`marginStart`/`marginEnd`/`paddingEnd`).
+- **Directional Icons:** `directional` prop implemented on `Icon.tsx`, reading read-only `I18nManager.isRTL` to apply `transform: [{ scaleX: -1 }]`. All 8 horizontal directional chevrons across 7 consumer files opt into `directional={true}`. Vertical `chevron-down` is never mirrored.
+- **Prayer Tab & Calendar RTL:** Canonical array orders preserved; natural flex layout directionality mirrors correctly without reversing arrays or changing callbacks.
+- **Subsystem Isolation:**
+  - 0 changes to `src/domain/**`
+  - 0 changes to `src/data/schema.ts`
+  - 0 changes to `src/data/migrations/**`
+  - 0 changes to `src/services/**`
+  - 0 changes to `widgets/**`
+  - 0 new npm dependencies (`package.json` untouched)
+  - 0 new database migrations
+- **Test Suite Results:**
+  - 1556 / 1556 tests pass across 132 suites (0 failures, 0 skipped)
+  - Net additions: +152 tests, +11 suites under `src/__tests__/m22/`
+  - TypeScript: 0 errors (`npm run typecheck`)
+  - ESLint: 0 errors, 0 warnings (`npm run lint`)
+  - Expo Config: Valid (`npx expo config --json`)
+  - Expo Doctor: 20/21 pass (only known SDK 57 patch version advisory)
+- **Native QA Carry-Forward (M23):** VoiceOver/TalkBack traversal verification on device, physical modal focus trapping, native RTL device rendering, large accessibility font QA.

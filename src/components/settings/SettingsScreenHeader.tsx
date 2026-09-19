@@ -42,7 +42,7 @@ export function SettingsScreenHeader({
         testID={backTestID}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Icon name="chevron-left" size={24} color={colors.textPrimary} />
+        <Icon name="chevron-left" size={24} color={colors.textPrimary} decorative directional />
       </Pressable>
       <Text
         style={[styles.title, typography.headlineMedium, { color: colors.textPrimary }]}

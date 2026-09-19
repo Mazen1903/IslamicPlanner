@@ -71,6 +71,8 @@ export function JournalHistoryRow({
           name="chevron-right"
           size={18}
           color={isSelected ? colors.primary : colors.textTertiary}
+          decorative
+          directional
         />
       </View>
     </Pressable>

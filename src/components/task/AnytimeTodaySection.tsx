@@ -40,10 +40,11 @@ export function AnytimeTodaySection({
         ]}
         accessibilityRole="button"
         accessibilityLabel={`Anytime Today, ${tasks.length} items, ${collapsed ? 'collapsed' : 'expanded'}`}
+        accessibilityState={{ expanded: !collapsed }}
         testID="anytime-section-header"
       >
         <View style={styles.headerLeft}>
-          <Icon name="sun" size={16} color={colors.primary} style={{ marginRight: 6 }} />
+          <Icon name="sun" size={16} color={colors.primary} style={{ marginEnd: 6 }} decorative />
           <Text style={[typography.labelMedium, { color: colors.textPrimary, fontWeight: '700' }]}>
             Anytime Today ({tasks.length})
           </Text>
@@ -52,6 +53,8 @@ export function AnytimeTodaySection({
           name={collapsed ? 'chevron-right' : 'chevron-down'}
           size={18}
           color={colors.textTertiary}
+          decorative
+          directional={collapsed}
         />
       </Pressable>
 

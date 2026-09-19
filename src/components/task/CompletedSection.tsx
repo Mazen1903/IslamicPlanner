@@ -36,6 +36,7 @@ export function CompletedSection({
         ]}
         accessibilityRole="button"
         accessibilityLabel={`Completed tasks, ${tasks.length} items, ${collapsed ? 'collapsed' : 'expanded'}`}
+        accessibilityState={{ expanded: !collapsed }}
         testID="completed-section-header"
       >
         <Text style={[typography.labelMedium, { color: colors.textSecondary, fontWeight: '700' }]}>
@@ -45,6 +46,8 @@ export function CompletedSection({
           name={collapsed ? 'chevron-right' : 'chevron-down'}
           size={18}
           color={colors.textTertiary}
+          decorative
+          directional={collapsed}
         />
       </Pressable>
 

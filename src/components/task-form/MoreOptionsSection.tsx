@@ -77,7 +77,7 @@ export function MoreOptionsSection({
           },
         ]}
       >
-        <Icon name="settings" size={18} color={colors.primary} style={{ marginRight: spacing.sm }} />
+        <Icon name="settings" size={18} color={colors.primary} style={{ marginEnd: spacing.sm }} decorative />
         <Text style={[typography.bodyLarge, { color: colors.textPrimary, flex: 1, fontWeight: '600' }]}>
           More Options
         </Text>
@@ -85,6 +85,7 @@ export function MoreOptionsSection({
           name={isExpanded ? 'chevron-down' : 'chevron-right'}
           size={18}
           color={colors.textSecondary}
+          decorative
         />
       </Pressable>
 
@@ -290,7 +291,7 @@ export function MoreOptionsSection({
           </Text>
           {state.subtasks.map(sub => (
             <View key={sub.id} style={styles.subtaskItemRow}>
-              <Icon name="check" size={16} color={colors.primary} style={{ marginRight: spacing.xs }} />
+              <Icon name="check" size={16} color={colors.primary} style={{ marginEnd: spacing.xs }} decorative />
               <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
                 {sub.title}
               </Text>
@@ -301,7 +302,7 @@ export function MoreOptionsSection({
                 testID={`remove-subtask-${sub.id}`}
                 style={[styles.removeButton, { minHeight: touchTargets.min, minWidth: touchTargets.min }]}
               >
-                <Icon name="trash" size={16} color={colors.textTertiary} />
+                <Icon name="trash" size={16} color={colors.textTertiary} decorative />
               </Pressable>
             </View>
           ))}
@@ -375,9 +376,9 @@ export function MoreOptionsSection({
                   onPress={() => handleRemoveTag(tag)}
                   accessibilityRole="button"
                   accessibilityLabel={`Remove tag ${tag}`}
-                  style={{ marginLeft: 4 }}
+                  style={{ marginStart: 4 }}
                 >
-                  <Icon name="close" size={12} color={colors.primaryDark} />
+                  <Icon name="close" size={12} color={colors.primaryDark} decorative />
                 </Pressable>
               </View>
             ))}

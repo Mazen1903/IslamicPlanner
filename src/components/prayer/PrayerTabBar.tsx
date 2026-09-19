@@ -59,6 +59,8 @@ export function PrayerTabBar({
           >
             {isCurrent && (
               <View
+                importantForAccessibility="no"
+                accessible={false}
                 style={[
                   styles.currentIndicator,
                   {

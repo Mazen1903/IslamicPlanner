@@ -1,9 +1,10 @@
 # Current Milestone: M22 — Accessibility / RTL
 
-> **Current State:** M22 ARCHITECTURE FINALIZED LOCALLY — PENDING LEAD APPROVAL
+> **Current State:** M22 IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW
 > **Previous Milestone:** M21 CLOSED / SONNET APPROVED
-> **Milestone Status:** M22 — CURRENT — ARCHITECTURE FINALIZED, IMPLEMENTATION NOT STARTED
-> **Architecture Status:** FINALIZED AND FROZEN LOCALLY — 82-file audit complete; all Lead corrections applied; ADR-030 authorized and finalized
+> **Milestone Status:** M22 — CURRENT — IMPLEMENTED LOCALLY, PENDING INDEPENDENT REVIEW
+> **M23 Status:** NOT STARTED
+> **Implementation Status:** COMPLETE — 45 production files modified; 1556/1556 tests pass across 132 suites (+152 tests, +11 suites); 0 TS errors, 0 ESLint errors/warnings; 0 new dependencies, 0 migrations
 
 ---
 
@@ -214,72 +215,63 @@ The following checks require physical devices or simulators and are carried forw
 
 ---
 
-## M22 Architecture Summary
+## M22 Implementation Summary
 
-**M22 — Accessibility / RTL** architecture is FINALIZED AND FROZEN LOCALLY — PENDING LEAD APPROVAL.
+**M22 — Accessibility / RTL** is IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW.
 
 | Commit Role | Hash | Description |
 |---|---|---|
 | Architecture freeze | `20c68e2` | docs(m22): freeze M22 architecture - accessibility and RTL |
 | Architecture hardening | `c79cdaf` | docs(m22): harden accessibility and RTL architecture |
-| Architecture finalization | *(finalization commit)* | docs(m22): finalize accessibility and RTL contract |
+| Architecture finalization | `598037a` | docs(m22): finalize accessibility and RTL contract |
+| Inventory correction | `6f3ff9b` | docs(m22): correct final accessibility and RTL inventory |
+| Implementation | *(current)* | feat(m22): implement accessibility and RTL readiness |
 
-**Architecture Status:** FINALIZED / FROZEN LOCALLY — PENDING LEAD APPROVAL
+**Status:** IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW (M23: NOT STARTED)
 
-### Scope
+### Scope Delivered
 
-| Item | Count |
-|---|---|
-| Production files audited | 82 |
-| Production files with planned changes | **45** |
-| Accessibility implementation findings (A-1..A-23 implementation, A-19=OBS-1) | **23** |
-| RTL implementation findings (RTL-1..RTL-4) | **4** |
-| Non-actionable observations (OBS-1..OBS-3) | **3** |
-| Total implementation findings | **27** |
-| HIGH severity | **7** |
-| MEDIUM severity | **13** |
-| LOW severity | **7** |
-| Directional horizontal-chevron icon instances | **8** |
-| Directional icon consumer files | **7** |
-| Modal consumers | **6** |
+| Item | Expected | Actual |
+|---|---|---|
+| Production files audited | 82 | 82 |
+| Production files modified | 45 | **45** (Missing: 0, Unexpected: 0) |
+| Accessibility implementation findings resolved | 23 | **23** (A-1..A-24, A-19=OBS-1) |
+| RTL implementation findings resolved | 4 | **4** (RTL-1..RTL-4) |
+| Non-actionable observations verified | 3 | **3** (OBS-1..OBS-3) |
+| Total implementation findings resolved | 27 | **27** |
+| Directional horizontal-chevron icon instances | 8 | **8** |
+| Directional icon consumer files | 7 | **7** |
+| Modal consumers verified | 6 | **6** |
+| maxFontSizeMultiplier capped nodes | 3 | **3** (CalendarMonthGrid weekdays, CalendarDayCell day & Hijri) |
+| New test suites added | 11 | **11** |
+| New tests added | ~146 | **+152** |
+| Total tests | ~1550 | **1556** (1556 passed, 0 failed, 0 skipped) |
+| Total test suites | ~132 | **132** (132 passed, 0 failed, 0 skipped) |
+| TypeScript errors | 0 | **0** |
+| ESLint errors / warnings | 0 | **0 errors, 0 warnings** |
+| New dependencies | 0 | **0** |
+| New database migrations | 0 | **0** |
+| Subsystem isolation | 0 diffs in domain/data/services/widgets | **VERIFIED CLEAN** |
 
-### Key Decisions Frozen
+### Key Architectural Contracts Delivered
 
-- **RTL scope:** Layout readiness + directional glyph correction — no `I18nManager.forceRTL`, no locale system
-- **Directional icon RTL:** `directional` prop on `Icon.tsx`; reads `I18nManager.isRTL` (read-only); **8 horizontal-chevron instances** across **7 consumer files**
-- **All horizontal chevrons are directional:** back chevrons, prev/next month chevrons, disclosure chevrons (SettingsRow, JournalHistoryRow), and expand-collapse chevrons (CompletedSection, AnytimeTodaySection) — all mirror in RTL. `chevron-down` is NOT mirrored (vertical direction is invariant)
-- **Callback / action semantics unchanged:** `onPreviousMonth` always means previous month; disclosure always navigates same destination; expand-collapse always toggles same state. Only the visual glyph adapts.
-- **Prayer tab RTL:** Natural flex mirroring (Fajr at logical start, reads chronologically in both LTR and RTL)
-- **BottomNavBar RTL:** Natural flex mirroring; canonical route indices unchanged
-- **Calendar RTL:** Natural flex mirroring; callback semantics (onPreviousMonth/onNextMonth) unchanged
-- **Modal isolation:** All 6 Modals require `accessibilityViewIsModal={true}` + `accessibilityRole="header"` on title
-- **Modal backdrop:** `accessible={false}` on backdrop Pressable when explicit dismiss button exists (no duplicate screen-reader control)
-- **PremiumLockedInfo:** Remove `accessible` from card View — OK button must be individually traversable
-- **Radio state:** `accessibilityRole="radio"` requires `accessibilityState={{ checked }}` (not `selected`) — includes CustomRecurrenceModal calendar-switcher (A-24)
-- **`maxFontSizeMultiplier={2}`:** 3 calendar cell Text nodes only — per-node justification in §10 of M22_ARCHITECTURE.md
-- **Icon `decorative` prop:** New prop on `Icon.tsx`; all labeled-Pressable icon callsites pass `decorative`
-- **Icon `directional` prop:** New prop on `Icon.tsx`; back/prev/next navigation icons pass `directional`
-- **ADR-030:** AUTHORIZED AND FINALIZED
+- **RTL scope:** Layout readiness + directional glyph correction — zero `I18nManager.forceRTL` runtime mutations, zero locale system additions.
+- **Directional icon RTL:** `directional` prop on `Icon.tsx`; reads `I18nManager.isRTL` (read-only); mirrors horizontally with `transform: [{ scaleX: -1 }]` across all 8 horizontal-chevron instances in 7 consumer files. Vertical `chevron-down` is NOT mirrored.
+- **Prayer tab RTL:** Natural flex mirroring (Fajr at logical start, reads chronologically in both LTR and RTL; canonical array never reversed).
+- **BottomNavBar RTL:** Natural flex mirroring; canonical route indices unchanged; Add button centered.
+- **Calendar RTL:** Natural flex mirroring; callback semantics (`onPreviousMonth`/`onNextMonth`) never swap; chevrons adapt visually.
+- **Modal isolation:** All 6 native Modal consumers implement `accessibilityViewIsModal={true}` on innermost content View + `accessibilityRole="header"` on title.
+- **Modal backdrop:** `accessible={false}` on backdrop Pressable when explicit dismiss button exists (no duplicate screen-reader control).
+- **PremiumLockedInfo:** Removed `accessible` grouping from card View — OK button is individually reachable in accessibility tree.
+- **Radio state:** `accessibilityRole="radio"` requires `accessibilityState={{ checked: boolean }}` (not `selected`), correcting CustomRecurrenceModal (A-24) and Onboarding options (A-13, A-14).
+- **`maxFontSizeMultiplier={2}`:** Strictly limited to the 3 authorized calendar cell Text nodes with per-node justification.
+- **Icon `decorative` prop:** Integrated on `Icon.tsx`; suppresses noise inside labeled Pressables.
+- **ADR-030:** Fully executed.
 
-### Unresolved Blocking Items
+### Native QA Carry-Forward (Deferred to M23)
 
-**0 unresolved blocking architecture items.**
+VoiceOver/TalkBack focus order, modal focus trapping on physical devices, RTL visual layout on physical devices, directional icon glyph verification on RTL device, large text calendar layout on physical devices — explicitly carried forward to M23.
 
-### Test Estimates
+### M23 Status
 
-| Metric | Value |
-|---|---|
-| Test baseline | 1404 / 121 suites |
-| Estimated new tests | **146** |
-| Expected total | **~1550** |
-| Minimum acceptable | ≥ 1504 |
-
-### Native QA Carry-Forward
-
-VoiceOver/TalkBack focus order, modal focus trapping on device, RTL visual layout on device, directional icon glyph verification on RTL device, large text calendar layout — all carried to M23.
-
-### Prerequisites for Implementation
-
-- Lead review approval of this document
-- No code changes before Lead approval
-- 0 new dependencies, 0 migrations
+**NOT STARTED.** Awaits independent review and formal closure of M22.

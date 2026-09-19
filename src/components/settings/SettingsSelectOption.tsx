@@ -64,7 +64,7 @@ export function SettingsSelectOption({
 
       <View style={styles.checkWrapper}>
         {selected ? (
-          <Icon name="check" size={20} color={colors.primary} />
+          <Icon name="check" size={20} color={colors.primary} decorative />
         ) : (
           <View style={{ width: 20 }} />
         )}
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
-    paddingRight: 12,
+    paddingEnd: 12,
   },
   checkWrapper: {
     width: 24,

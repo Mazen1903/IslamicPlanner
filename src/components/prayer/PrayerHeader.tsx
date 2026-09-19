@@ -22,6 +22,10 @@ export function PrayerHeader({
   const currentArabicName = PRAYER_ARABIC_NAMES[currentPrayer] ?? '';
   const nextPrayerName = nextPrayer ? PRAYER_NAMES[nextPrayer.prayer] : null;
 
+  const compositeLabel = `Current prayer: ${currentPrayerName}.${
+    nextPrayerName && countdownDisplay ? ` Next: ${nextPrayerName} in ${countdownDisplay}` : ''
+  }`;
+
   return (
     <View
       style={[
@@ -38,7 +42,11 @@ export function PrayerHeader({
       testID="prayer-header"
     >
       {/* Decorative background visual elements */}
-      <View style={styles.ornamentRow}>
+      <View
+        style={styles.ornamentRow}
+        importantForAccessibility="no"
+        accessibilityElementsHidden={true}
+      >
         <View
           style={[
             styles.archMotif,
@@ -47,62 +55,70 @@ export function PrayerHeader({
         />
       </View>
 
-      <View style={styles.topRow}>
-        <View style={styles.prayerTitleGroup}>
-          <View style={styles.currentBadge}>
-            <Text style={[typography.caption, { color: colors.primaryLight, fontWeight: '700' }]}>
-              CURRENT PRAYER
-            </Text>
+      <View
+        accessible={true}
+        accessibilityLabel={compositeLabel}
+        importantForAccessibility="no-hide-descendants"
+      >
+        <View style={styles.topRow}>
+          <View style={styles.prayerTitleGroup}>
+            <View style={styles.currentBadge}>
+              <Text style={[typography.caption, { color: colors.primaryLight, fontWeight: '700' }]}>
+                CURRENT PRAYER
+              </Text>
+            </View>
+            <View style={styles.titleWithArabic}>
+              <Text style={[typography.displaySmall, { color: colors.textOnPrimary, fontWeight: '700' }]}>
+                {currentPrayerName}
+              </Text>
+              <Text
+                importantForAccessibility="no"
+                accessibilityElementsHidden={true}
+                style={[
+                  typography.headlineMedium,
+                  { color: 'rgba(255, 255, 255, 0.75)', marginStart: spacing.md },
+                ]}
+              >
+                {currentArabicName}
+              </Text>
+            </View>
           </View>
-          <View style={styles.titleWithArabic}>
-            <Text style={[typography.displaySmall, { color: colors.textOnPrimary, fontWeight: '700' }]}>
-              {currentPrayerName}
-            </Text>
-            <Text
-              style={[
-                typography.headlineMedium,
-                { color: 'rgba(255, 255, 255, 0.75)', marginLeft: spacing.md },
-              ]}
-            >
-              {currentArabicName}
-            </Text>
+
+          <View
+            style={[
+              styles.iconWrapper,
+              { backgroundColor: 'rgba(255, 255, 255, 0.15)', borderRadius: radii.pill },
+            ]}
+          >
+            <Icon name="prayer" size={28} color={colors.textOnPrimary} decorative />
           </View>
         </View>
 
-        <View
-          style={[
-            styles.iconWrapper,
-            { backgroundColor: 'rgba(255, 255, 255, 0.15)', borderRadius: radii.pill },
-          ]}
-        >
-          <Icon name="prayer" size={28} color={colors.textOnPrimary} />
-        </View>
+        {/* Countdown row */}
+        {nextPrayerName && countdownDisplay ? (
+          <View
+            style={[
+              styles.countdownContainer,
+              {
+                backgroundColor: 'rgba(0, 0, 0, 0.15)',
+                borderRadius: radii.sm,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.xs,
+                marginTop: spacing.md,
+              },
+            ]}
+            testID="prayer-countdown"
+          >
+            <Icon name="clock" size={16} color={colors.primaryLight} style={{ marginEnd: spacing.xs }} decorative />
+            <Text style={[typography.bodySmall, { color: colors.textOnPrimary }]}>
+              {nextPrayerName} in{' '}
+              <Text style={{ fontWeight: '700', color: colors.primaryLight }}>
+                {countdownDisplay}
+              </Text>
+            </Text>
+          </View>
+        ) : null}
       </View>
-
-      {/* Countdown row */}
-      {nextPrayerName && countdownDisplay ? (
-        <View
-          style={[
-            styles.countdownContainer,
-            {
-              backgroundColor: 'rgba(0, 0, 0, 0.15)',
-              borderRadius: radii.sm,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.xs,
-              marginTop: spacing.md,
-            },
-          ]}
-          testID="prayer-countdown"
-        >
-          <Icon name="clock" size={16} color={colors.primaryLight} style={{ marginRight: spacing.xs }} />
-          <Text style={[typography.bodySmall, { color: colors.textOnPrimary }]}>
-            {nextPrayerName} in{' '}
-            <Text style={{ fontWeight: '700', color: colors.primaryLight }}>
-              {countdownDisplay}
-            </Text>
-          </Text>
-        </View>
-      ) : null}
     </View>
   );
 }

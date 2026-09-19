@@ -51,6 +51,7 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
       <View style={styles.content}>
         {/* Gregorian day number */}
         <Text
+          maxFontSizeMultiplier={2}
           style={[
             typography.bodyMedium,
             {
@@ -68,6 +69,7 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
 
         {/* Hijri day number */}
         <Text
+          maxFontSizeMultiplier={2}
           style={[
             typography.caption,
             {

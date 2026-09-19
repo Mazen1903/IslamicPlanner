@@ -17,6 +17,7 @@ export function SettingsSectionHeader({
 
   return (
     <Text
+      accessibilityRole="header"
       style={[
         styles.header,
         typography.labelSmall,

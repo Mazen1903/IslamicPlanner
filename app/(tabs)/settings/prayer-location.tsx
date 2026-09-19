@@ -91,7 +91,7 @@ export default function PrayerLocationScreen() {
           accessibilityLabel="Go back"
           testID="location-back-button"
         >
-          <Icon name="chevron-left" size={24} color={colors.textPrimary} />
+          <Icon name="chevron-left" size={24} color={colors.textPrimary} decorative directional />
         </Pressable>
         <Text style={[typography.headlineMedium, { color: colors.textPrimary }]}>Prayer Location</Text>
         <View style={{ width: touchTargets.min }} />
@@ -178,7 +178,7 @@ export default function PrayerLocationScreen() {
             <ActivityIndicator size="small" color={colors.textOnPrimary} />
           ) : (
             <>
-              <Icon name="location" size={20} color={colors.textOnPrimary} style={{ marginRight: spacing.xs }} />
+              <Icon name="location" size={20} color={colors.textOnPrimary} style={{ marginEnd: spacing.xs }} decorative />
               <Text style={[typography.labelLarge, { color: colors.textOnPrimary }]}>
                 {locationMode === 'AUTO' ? 'Update Current Location' : 'Switch to Automatic Location'}
               </Text>
@@ -206,7 +206,7 @@ export default function PrayerLocationScreen() {
             },
           ]}
         >
-          <Icon name="search" size={20} color={colors.textSecondary} style={{ marginRight: spacing.sm }} />
+          <Icon name="search" size={20} color={colors.textSecondary} style={{ marginEnd: spacing.sm }} decorative />
           <TextInput
             style={[styles.searchInput, typography.bodyMedium, { color: colors.textPrimary }]}
             placeholder="Type city name (e.g. Makkah, London, Chicago)"
@@ -223,7 +223,7 @@ export default function PrayerLocationScreen() {
         {!datasetLoaded && (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md }}>
             <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={[typography.bodySmall, { color: colors.textSecondary, marginLeft: spacing.sm }]}>
+            <Text style={[typography.bodySmall, { color: colors.textSecondary, marginStart: spacing.sm }]}>
               Loading offline city database...
             </Text>
           </View>
@@ -258,7 +258,7 @@ export default function PrayerLocationScreen() {
                 {item.timezone} • {item.latitude.toFixed(2)}°, {item.longitude.toFixed(2)}°
               </Text>
             </View>
-            <Icon name="chevron-right" size={20} color={colors.textSecondary} />
+            <Icon name="chevron-right" size={20} color={colors.textSecondary} decorative />
           </Pressable>
         )}
         ListEmptyComponent={

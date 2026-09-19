@@ -28,7 +28,6 @@ export function PremiumBadge({
         style,
       ]}
       accessible
-      accessibilityRole="text"
       accessibilityLabel="Premium feature"
       testID={testID}
     >
@@ -36,7 +35,8 @@ export function PremiumBadge({
         name="lock"
         size={11}
         color={colors.textSecondary}
-        style={{ marginRight: 3 }}
+        style={{ marginEnd: 3 }}
+        decorative
       />
       <Text
         style={[

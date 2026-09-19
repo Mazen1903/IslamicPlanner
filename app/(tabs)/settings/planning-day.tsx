@@ -194,7 +194,7 @@ export default function PlanningDayScreen() {
             </View>
             <View style={styles.checkWrapper}>
               {isFajr ? (
-                <Icon name="check" size={20} color={colors.primary} />
+                <Icon name="check" size={20} color={colors.primary} decorative />
               ) : (
                 <View style={{ width: 20 }} />
               )}
@@ -228,7 +228,7 @@ export default function PlanningDayScreen() {
                     {
                       color: isMidnight ? colors.primary : colors.textPrimary,
                       fontWeight: isMidnight ? '600' : '400',
-                      marginRight: spacing.sm,
+                      marginEnd: spacing.sm,
                     },
                   ]}
                 >
@@ -242,7 +242,7 @@ export default function PlanningDayScreen() {
             </View>
             <View style={styles.checkWrapper}>
               {isMidnight ? (
-                <Icon name="check" size={20} color={colors.primary} />
+                <Icon name="check" size={20} color={colors.primary} decorative />
               ) : (
                 <View style={{ width: 20 }} />
               )}
@@ -276,7 +276,7 @@ export default function PlanningDayScreen() {
                     {
                       color: isCustom ? colors.primary : colors.textPrimary,
                       fontWeight: isCustom ? '600' : '400',
-                      marginRight: spacing.sm,
+                      marginEnd: spacing.sm,
                     },
                   ]}
                 >
@@ -290,7 +290,7 @@ export default function PlanningDayScreen() {
             </View>
             <View style={styles.checkWrapper}>
               {isCustom ? (
-                <Icon name="check" size={20} color={colors.primary} />
+                <Icon name="check" size={20} color={colors.primary} decorative />
               ) : (
                 <View style={{ width: 20 }} />
               )}
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
-    paddingRight: 12,
+    paddingEnd: 12,
   },
   titleRow: {
     flexDirection: 'row',

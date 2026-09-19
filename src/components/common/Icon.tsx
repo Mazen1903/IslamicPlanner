@@ -1,5 +1,5 @@
 import React from 'react';
-import { type StyleProp, type TextStyle } from 'react-native';
+import { I18nManager, type StyleProp, type TextStyle } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type IconSizeKey } from '@/theme';
 
@@ -34,6 +34,10 @@ export interface IconProps {
   style?: StyleProp<TextStyle>;
   accessibilityLabel?: string;
   testID?: string;
+  /** When true: suppresses icon from accessibility traversal (use inside labeled Pressables) */
+  decorative?: boolean;
+  /** When true: applies horizontal flip in RTL layouts to correct directional glyph orientation */
+  directional?: boolean;
 }
 
 /**
@@ -71,6 +75,8 @@ export function Icon({
   style,
   accessibilityLabel,
   testID,
+  decorative,
+  directional,
 }: IconProps) {
   const theme = useTheme();
 
@@ -78,15 +84,20 @@ export function Icon({
   const resolvedColor = color ?? theme.colors.textPrimary;
   const ioniconName = ICON_MAP[name] ?? 'help-circle-outline';
 
+  const rtlStyle = directional && I18nManager.isRTL
+    ? { transform: [{ scaleX: -1 }] }
+    : undefined;
+
   return (
     <Ionicons
       testID={testID}
       name={ioniconName}
       size={resolvedSize}
       color={resolvedColor}
-      style={style}
-      accessibilityLabel={accessibilityLabel ?? name}
-      accessibilityRole="image"
+      style={[style, rtlStyle]}
+      accessibilityLabel={decorative ? '' : (accessibilityLabel ?? name)}
+      accessibilityRole={decorative ? 'none' : 'image'}
+      importantForAccessibility={decorative ? 'no' : undefined}
     />
   );
 }

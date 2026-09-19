@@ -38,12 +38,12 @@ export function PremiumLockedInfo({
         <Pressable
           style={styles.backdrop}
           onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="Close dialog backdrop"
+          accessible={false}
           testID={`${testID}-backdrop`}
         />
 
         <View
+          accessibilityViewIsModal={true}
           style={[
             styles.card,
             shadows.elevated,
@@ -53,8 +53,6 @@ export function PremiumLockedInfo({
               padding: spacing.xl,
             },
           ]}
-          accessible
-          accessibilityRole="alert"
           testID={`${testID}-content`}
         >
           <View style={styles.headerRow}>
@@ -64,13 +62,14 @@ export function PremiumLockedInfo({
                 {
                   backgroundColor: colors.surfaceSecondary,
                   borderRadius: radii.pill,
-                  marginRight: spacing.sm,
+                  marginEnd: spacing.sm,
                 },
               ]}
             >
               <Icon name="lock" size={20} color={colors.primary} />
             </View>
             <Text
+              accessibilityRole="header"
               style={[
                 typography.headlineLarge,
                 { color: colors.textPrimary, flex: 1 },

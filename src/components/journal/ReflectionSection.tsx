@@ -56,7 +56,7 @@ export function ReflectionSection({
           <Text style={[typography.headlineMedium, { color: colors.textPrimary }]}>
             Reflections
           </Text>
-          <Text style={[typography.caption, { color: colors.textTertiary, marginLeft: spacing.sm }]}>
+          <Text style={[typography.caption, { color: colors.textTertiary, marginStart: spacing.sm }]}>
             (Optional)
           </Text>
         </View>
@@ -65,6 +65,7 @@ export function ReflectionSection({
           name={expanded ? 'chevron-down' : 'chevron-right'}
           size={18}
           color={colors.textSecondary}
+          decorative
         />
       </Pressable>
 

@@ -24,6 +24,23 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
   const now = useMemo(() => DateTime.fromMillis(nowMs), [nowMs]);
   const overdueState = deriveOverdueState(task, now);
 
+  const compositeLabel = useMemo(() => {
+    let label = task.title;
+    if (task.priority === 'IMPORTANT') {
+      label += '. Important.';
+    }
+    if (isPending && overdueState.isOverdue) {
+      label += overdueState.overdueMinutes >= 1
+        ? `. ${overdueState.overdueMinutes} min overdue.`
+        : '. Overdue.';
+    } else if (isMissed) {
+      label += '. Missed.';
+    } else if (isCompleted) {
+      label += '. Completed.';
+    }
+    return label;
+  }, [task.title, task.priority, isPending, overdueState, isMissed, isCompleted]);
+
   return (
     <View
       style={[
@@ -53,7 +70,11 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
           testID={`checkbox-${task.occurrenceId}`}
         />
 
-        <View style={styles.contentContainer}>
+        <View
+          style={styles.contentContainer}
+          accessible={true}
+          accessibilityLabel={compositeLabel}
+        >
           <View style={styles.titleRow}>
             <Text
               style={[
@@ -80,7 +101,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
                     borderRadius: radii.pill,
                     borderWidth: 1,
                     paddingHorizontal: spacing.xs,
-                    marginLeft: spacing.xs,
+                    marginStart: spacing.xs,
                   },
                 ]}
               >
@@ -94,7 +115,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
           <View style={styles.metaRow}>
             {task.scheduleLabel ? (
               <View style={styles.metaItem}>
-                <Icon name="clock" size={12} color={colors.textTertiary} style={{ marginRight: 4 }} />
+                <Icon name="clock" size={12} color={colors.textTertiary} style={{ marginEnd: 4 }} decorative />
                 <Text style={[typography.caption, { color: colors.textSecondary }]}>
                   {task.scheduleLabel}
                 </Text>
@@ -102,7 +123,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
             ) : null}
 
             {task.estimatedMinutes ? (
-              <View style={[styles.metaItem, { marginLeft: spacing.md }]}>
+              <View style={[styles.metaItem, { marginStart: spacing.md }]}>
                 <Text style={[typography.caption, { color: colors.textTertiary }]}>
                   {task.estimatedMinutes}m
                 </Text>
@@ -188,7 +209,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    marginLeft: 8,
+    marginStart: 8,
   },
   titleRow: {
     flexDirection: 'row',

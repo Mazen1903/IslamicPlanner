@@ -51,6 +51,7 @@ export function EditScopeSheet({
     >
       <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
         <View
+          accessibilityViewIsModal={true}
           style={[
             styles.sheetContainer,
             shadows.elevated,
@@ -63,7 +64,10 @@ export function EditScopeSheet({
           testID="edit-scope-sheet"
         >
           <View style={styles.headerRow}>
-            <Text style={[typography.headlineMedium, { color: colors.textPrimary }]}>
+            <Text
+              accessibilityRole="header"
+              style={[typography.headlineMedium, { color: colors.textPrimary }]}
+            >
               Edit Recurring Task
             </Text>
             <Pressable

@@ -164,8 +164,8 @@ export function Button({
                 styles.text,
                 {
                   color: colors.text,
-                  marginLeft: leftIcon ? theme.spacing.xs : 0,
-                  marginRight: rightIcon ? theme.spacing.xs : 0,
+                  marginStart: leftIcon ? theme.spacing.xs : 0,
+                  marginEnd: rightIcon ? theme.spacing.xs : 0,
                 },
                 textStyle,
               ]}

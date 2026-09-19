@@ -104,7 +104,7 @@ export default function NotificationSettingsScreen({
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <View style={[styles.content, { padding: spacing.lg }]}>
         <View style={styles.headerRow}>
-          <Icon name="bell" size={28} color={colors.primary} style={{ marginRight: spacing.sm }} />
+          <Icon name="bell" size={28} color={colors.primary} style={{ marginEnd: spacing.sm }} decorative />
           <Text style={[typography.headlineMedium, { color: colors.textPrimary }]}>
             Reminders & Notifications
           </Text>
@@ -134,7 +134,7 @@ export default function NotificationSettingsScreen({
 
             {permission?.canSchedule ? (
               <View style={styles.statusRow} testID="notifications-enabled-container">
-                <Icon name="check" size={20} color={colors.primary} style={{ marginRight: spacing.xs }} />
+                <Icon name="check" size={20} color={colors.primary} style={{ marginEnd: spacing.xs }} decorative />
                 <Text
                   style={[typography.bodyLarge, { color: colors.primary, fontWeight: '700' }]}
                   testID="notifications-enabled-label"
@@ -163,7 +163,7 @@ export default function NotificationSettingsScreen({
                     },
                   ]}
                 >
-                  <Icon name="settings" size={18} color={colors.textPrimary} style={{ marginRight: spacing.sm }} />
+                  <Icon name="settings" size={18} color={colors.textPrimary} style={{ marginEnd: spacing.sm }} decorative />
                   <Text style={[typography.labelMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
                     Open Settings
                   </Text>
@@ -195,7 +195,7 @@ export default function NotificationSettingsScreen({
                     <ActivityIndicator color={colors.textOnPrimary} size="small" />
                   ) : (
                     <>
-                      <Icon name="bell" size={18} color={colors.textOnPrimary} style={{ marginRight: spacing.sm }} />
+                      <Icon name="bell" size={18} color={colors.textOnPrimary} style={{ marginEnd: spacing.sm }} decorative />
                       <Text style={[typography.labelMedium, { color: colors.textOnPrimary, fontWeight: '600' }]}>
                         Enable Notifications
                       </Text>

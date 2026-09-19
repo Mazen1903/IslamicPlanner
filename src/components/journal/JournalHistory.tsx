@@ -48,8 +48,8 @@ export function JournalHistory({
           ]}
           testID="journal-history-back-btn"
         >
-          <Icon name="chevron-left" size={18} color={colors.primary} />
-          <Text style={[typography.labelMedium, { color: colors.primary, marginLeft: spacing.xs }]}>
+          <Icon name="chevron-left" size={18} color={colors.primary} decorative directional />
+          <Text style={[typography.labelMedium, { color: colors.primary, marginStart: spacing.xs }]}>
             Back to Today
           </Text>
         </Pressable>
@@ -62,7 +62,7 @@ export function JournalHistory({
       {/* FlatList */}
       {entries.length === 0 ? (
         <View style={[styles.emptyContainer, { padding: spacing.xl }]} testID="journal-history-empty">
-          <Icon name="calendar" size={36} color={colors.textTertiary} />
+          <Icon name="calendar" size={36} color={colors.textTertiary} decorative />
           <Text style={[typography.bodyMedium, { color: colors.textSecondary, marginTop: spacing.md, textAlign: 'center' }]}>
             No previous journal entries yet.
           </Text>

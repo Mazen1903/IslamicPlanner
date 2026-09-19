@@ -52,7 +52,7 @@ export function SettingsRow({
           style={[
             styles.iconWrapper,
             {
-              marginRight: spacing.md,
+              marginEnd: spacing.md,
               backgroundColor: colors.surfaceSecondary,
               borderRadius: radii.sm,
               width: 32,
@@ -64,6 +64,7 @@ export function SettingsRow({
             name={icon}
             size={18}
             color={destructive ? colors.error : colors.primary}
+            decorative
           />
         </View>
       )}
@@ -100,7 +101,7 @@ export function SettingsRow({
             typography.bodySmall,
             {
               color: colors.textSecondary,
-              marginRight: showChevron && isInteractive ? spacing.xs : 0,
+              marginEnd: showChevron && isInteractive ? spacing.xs : 0,
               maxWidth: 160,
             },
           ]}
@@ -111,7 +112,7 @@ export function SettingsRow({
       )}
 
       {showChevron && isInteractive && (
-        <Icon name="chevron-right" size={18} color={colors.textTertiary} />
+        <Icon name="chevron-right" size={18} color={colors.textTertiary} decorative directional />
       )}
     </Pressable>
   );

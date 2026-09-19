@@ -32,6 +32,7 @@ export function CalendarMonthGrid({
         {WEEKDAYS.map((day, idx) => (
           <View key={day} style={styles.weekdayHeaderCell}>
             <Text
+              maxFontSizeMultiplier={2}
               style={[
                 typography.caption,
                 {
@@ -40,7 +41,6 @@ export function CalendarMonthGrid({
                   textAlign: 'center',
                 },
               ]}
-              accessibilityRole="text"
             >
               {day}
             </Text>

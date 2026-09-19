@@ -340,6 +340,7 @@ export default function HijriCalendarScreen() {
         >
           <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
             <View
+              accessibilityViewIsModal={true}
               style={[
                 styles.modalContent,
                 shadows.elevated,
@@ -352,7 +353,10 @@ export default function HijriCalendarScreen() {
               ]}
               testID="add-override-modal"
             >
-              <Text style={[typography.headlineMedium, { color: colors.textPrimary, marginBottom: spacing.md }]}>
+              <Text
+                accessibilityRole="header"
+                style={[typography.headlineMedium, { color: colors.textPrimary, marginBottom: spacing.md }]}
+              >
                 Add Month Override
               </Text>
 
@@ -389,7 +393,7 @@ export default function HijriCalendarScreen() {
               />
 
               <View style={[styles.modalActions, { marginTop: spacing.lg }]}>
-                <View style={{ flex: 1, marginRight: spacing.sm }}>
+                <View style={{ flex: 1, marginEnd: spacing.sm }}>
                   <Button
                     title="Cancel"
                     variant="secondary"
@@ -397,7 +401,7 @@ export default function HijriCalendarScreen() {
                     testID="modal-cancel-button"
                   />
                 </View>
-                <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                <View style={{ flex: 1, marginStart: spacing.sm }}>
                   <Button
                     title={isSaving ? 'Saving...' : 'Save Override'}
                     onPress={handleSaveOverride}

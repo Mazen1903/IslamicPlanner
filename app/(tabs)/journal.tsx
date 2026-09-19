@@ -114,10 +114,16 @@ export default function JournalScreen() {
         edges={['top', 'left', 'right']}
         testID="journal-error-state"
       >
-        <Text style={[typography.headlineMedium, { color: colors.danger, marginBottom: spacing.sm }]}>
+        <Text
+          accessibilityLiveRegion="assertive"
+          style={[typography.headlineMedium, { color: colors.danger, marginBottom: spacing.sm }]}
+        >
           Unable to load Journal
         </Text>
-        <Text style={[typography.bodyMedium, { color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.lg }]}>
+        <Text
+          accessibilityLiveRegion="assertive"
+          style={[typography.bodyMedium, { color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.lg }]}
+        >
           {loadError ?? 'An unexpected error occurred while decrypting your journal entry.'}
         </Text>
         <Pressable
@@ -249,8 +255,8 @@ export default function JournalScreen() {
               ]}
               testID="journal-delete-btn"
             >
-              <Icon name="trash" size={16} color={colors.textTertiary} />
-              <Text style={[typography.labelSmall, { color: colors.textTertiary, marginLeft: spacing.xs }]}>
+              <Icon name="trash" size={16} color={colors.textTertiary} decorative />
+              <Text style={[typography.labelSmall, { color: colors.textTertiary, marginStart: spacing.xs }]}>
                 Delete Entry
               </Text>
             </Pressable>
@@ -309,7 +315,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   rolloverButton: {
-    marginLeft: 12,
+    marginStart: 12,
   },
   deleteContainer: {
     alignItems: 'center',

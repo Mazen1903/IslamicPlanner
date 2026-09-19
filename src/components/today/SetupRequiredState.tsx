@@ -108,7 +108,10 @@ export function SetupRequiredState({
           ]}
           testID="setup-error-banner"
         >
-          <Text style={[typography.bodySmall, { color: colors.danger, textAlign: 'center' }]}>
+          <Text
+            accessibilityLiveRegion="assertive"
+            style={[typography.bodySmall, { color: colors.danger, textAlign: 'center' }]}
+          >
             {errorMessage}
           </Text>
         </View>
@@ -137,7 +140,7 @@ export function SetupRequiredState({
           <ActivityIndicator size="small" color={colors.textOnPrimary} />
         ) : (
           <>
-            <Icon name="location" size={20} color={colors.textOnPrimary} style={{ marginRight: spacing.xs }} />
+            <Icon name="location" size={20} color={colors.textOnPrimary} style={{ marginEnd: spacing.xs }} decorative />
             <Text style={[typography.labelLarge, { color: colors.textOnPrimary }]}>
               Use my current location
             </Text>
@@ -167,7 +170,7 @@ export function SetupRequiredState({
         <Text style={[typography.labelLarge, { color: colors.textPrimary }]}>
           Set location manually
         </Text>
-        <Icon name="chevron-right" size={20} color={colors.textSecondary} style={{ marginLeft: spacing.xs }} />
+        <Icon name="chevron-right" size={20} color={colors.textSecondary} style={{ marginStart: spacing.xs }} decorative />
       </Pressable>
     </View>
   );

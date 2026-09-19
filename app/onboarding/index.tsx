@@ -485,6 +485,8 @@ export default function OnboardingScreen({
                       <Pressable
                         key={city.id}
                         testID={`city-result-${city.id}`}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${city.name}, ${city.countryCode}${city.adminCode ? ` (${city.adminCode})` : ''}, ${city.timezone}`}
                         style={({ pressed }) => [
                           styles.cityResultItem,
                           {
@@ -566,6 +568,9 @@ export default function OnboardingScreen({
                     <Pressable
                       key={methodKey}
                       testID={`calc-method-option-${methodKey}`}
+                      accessibilityRole="radio"
+                      accessibilityLabel={CALCULATION_METHOD_LABELS[methodKey].label}
+                      accessibilityState={{ checked: isSelected }}
                       style={({ pressed }) => [
                         styles.methodOptionItem,
                         {
@@ -645,6 +650,9 @@ export default function OnboardingScreen({
           <View style={styles.themeOptionsRow}>
             <Pressable
               testID="theme-option-system"
+              accessibilityRole="radio"
+              accessibilityLabel="System theme"
+              accessibilityState={{ checked: activeThemeMode === 'SYSTEM' }}
               style={[
                 styles.themeOptionButton,
                 {
@@ -669,6 +677,9 @@ export default function OnboardingScreen({
 
             <Pressable
               testID="theme-option-light"
+              accessibilityRole="radio"
+              accessibilityLabel="Light theme"
+              accessibilityState={{ checked: activeThemeMode === 'LIGHT' }}
               style={[
                 styles.themeOptionButton,
                 {
@@ -693,6 +704,9 @@ export default function OnboardingScreen({
 
             <Pressable
               testID="theme-option-dark"
+              accessibilityRole="radio"
+              accessibilityLabel="Dark theme"
+              accessibilityState={{ checked: activeThemeMode === 'DARK' }}
               style={[
                 styles.themeOptionButton,
                 {

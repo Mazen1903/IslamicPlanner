@@ -141,6 +141,6 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
-    marginRight: 16,
+    marginEnd: 16,
   },
 });

@@ -34,8 +34,8 @@ export function SettingsInfoCard({
       testID={testID}
     >
       <View style={styles.content}>
-        <View style={[styles.iconWrapper, { marginRight: spacing.sm, marginTop: 2 }]}>
-          <Icon name={icon} size={18} color={colors.primary} />
+        <View style={[styles.iconWrapper, { marginEnd: spacing.sm, marginTop: 2 }]}>
+          <Icon name={icon} size={18} color={colors.primary} decorative />
         </View>
         <View style={styles.textWrapper}>
           {title && (

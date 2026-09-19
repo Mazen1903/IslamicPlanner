@@ -62,6 +62,7 @@ export function JournalHeader({
                 name="lock"
                 size={20}
                 color={lockEnabled ? colors.primary : colors.textSecondary}
+                decorative
               />
             </Pressable>
           )}
@@ -82,7 +83,7 @@ export function JournalHeader({
               ]}
               testID="journal-history-btn"
             >
-              <Icon name="clock" size={20} color={colors.textSecondary} />
+              <Icon name="clock" size={20} color={colors.textSecondary} decorative />
             </Pressable>
           )}
         </View>
@@ -124,8 +125,8 @@ export function JournalHeader({
             ]}
             testID="journal-back-to-today"
           >
-            <Icon name="chevron-left" size={16} color={colors.primary} />
-            <Text style={[typography.labelMedium, { color: colors.primary, marginLeft: spacing.xs }]}>
+            <Icon name="chevron-left" size={16} color={colors.primary} decorative directional />
+            <Text style={[typography.labelMedium, { color: colors.primary, marginStart: spacing.xs }]}>
               Back to Today
             </Text>
           </Pressable>
@@ -151,7 +152,7 @@ const styles = StyleSheet.create({
   iconButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 4,
+    marginStart: 4,
   },
   dateRow: {
     flexDirection: 'row',

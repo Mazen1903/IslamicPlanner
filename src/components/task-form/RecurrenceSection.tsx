@@ -185,13 +185,13 @@ export function RecurrenceSection({
               },
             ]}
           >
-            <Icon name="settings" size={16} color={colors.primaryDark} style={{ marginRight: spacing.sm }} />
+            <Icon name="settings" size={16} color={colors.primaryDark} style={{ marginEnd: spacing.sm }} decorative />
             <Text style={[typography.labelMedium, { color: colors.primaryDark, flex: 1, fontWeight: '600' }]}>
               {state.recurrenceCalendar === 'HIJRI'
                 ? `Hijri Repeat: ${state.customHijriDraft.selectedDays.length} days, ${state.customHijriDraft.selectedMonths.length || 'all'} months`
                 : `Every ${state.customGregorianDraft.interval} ${state.customGregorianDraft.frequency.toLowerCase()}`}
             </Text>
-            <Icon name="chevron-right" size={16} color={colors.primaryDark} />
+            <Icon name="chevron-right" size={16} color={colors.primaryDark} decorative />
           </Pressable>
         )}
       </View>

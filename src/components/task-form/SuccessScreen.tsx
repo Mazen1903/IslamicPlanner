@@ -86,7 +86,7 @@ export function SuccessScreen({
         </Text>
 
         <View style={styles.summaryRow}>
-          <Icon name="clock" size={14} color={colors.primary} style={{ marginRight: 6 }} />
+          <Icon name="clock" size={14} color={colors.primary} style={{ marginEnd: 6 }} decorative />
           <Text style={[typography.bodyMedium, { color: colors.textSecondary }]}>
             {scheduleSummary}
           </Text>
@@ -94,7 +94,7 @@ export function SuccessScreen({
 
         {repeatSummary ? (
           <View style={[styles.summaryRow, { marginTop: 6 }]}>
-            <Icon name="calendar" size={14} color={colors.primary} style={{ marginRight: 6 }} />
+            <Icon name="calendar" size={14} color={colors.primary} style={{ marginEnd: 6 }} decorative />
             <Text style={[typography.bodyMedium, { color: colors.textSecondary }]}>
               {repeatSummary}
             </Text>

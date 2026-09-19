@@ -80,11 +80,11 @@ export function DatePickerInput({
           },
         ]}
       >
-        <Icon name="calendar" size={18} color={colors.primary} style={{ marginRight: spacing.sm }} />
+        <Icon name="calendar" size={18} color={colors.primary} style={{ marginEnd: spacing.sm }} decorative />
         <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
           {formattedDate}
         </Text>
-        <Icon name="chevron-down" size={16} color={colors.textTertiary} />
+        <Icon name="chevron-down" size={16} color={colors.textTertiary} decorative />
       </Pressable>
 
       {showPicker && (
@@ -168,11 +168,11 @@ export function TimePickerInput({
           },
         ]}
       >
-        <Icon name="clock" size={18} color={colors.primary} style={{ marginRight: spacing.sm }} />
+        <Icon name="clock" size={18} color={colors.primary} style={{ marginEnd: spacing.sm }} decorative />
         <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
           {formattedTime}
         </Text>
-        <Icon name="chevron-down" size={16} color={colors.textTertiary} />
+        <Icon name="chevron-down" size={16} color={colors.textTertiary} decorative />
       </Pressable>
 
       {showPicker && (

@@ -35,9 +35,10 @@ export function JournalDeleteDialog({
       testID={testID}
     >
       <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
-        <Pressable style={styles.backdrop} onPress={onCancel} />
+        <Pressable style={styles.backdrop} onPress={onCancel} accessible={false} />
 
         <View
+          accessibilityViewIsModal={true}
           style={[
             styles.card,
             shadows.elevated,
@@ -49,7 +50,10 @@ export function JournalDeleteDialog({
           ]}
           testID="journal-delete-dialog-content"
         >
-          <Text style={[typography.headlineMedium, { color: colors.textPrimary }]}>
+          <Text
+            accessibilityRole="header"
+            style={[typography.headlineMedium, { color: colors.textPrimary }]}
+          >
             Delete this journal entry?
           </Text>
 
@@ -75,7 +79,7 @@ export function JournalDeleteDialog({
                   borderColor: colors.border,
                   borderRadius: radii.sm,
                   minHeight: touchTargets.min,
-                  marginRight: spacing.sm,
+                  marginEnd: spacing.sm,
                 },
               ]}
               testID="journal-delete-cancel-btn"

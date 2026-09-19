@@ -23,7 +23,7 @@ export function UpcomingSection({
       {/* Section Header */}
       <View style={[styles.headerRow, { marginBottom: spacing.md }]}>
         <View style={styles.titleWithIcon}>
-          <Icon name="calendar" size={20} color={colors.primary} style={{ marginRight: spacing.xs }} />
+          <Icon name="calendar" size={20} color={colors.primary} style={{ marginEnd: spacing.xs }} decorative />
           <Text style={[typography.headlineMedium, { color: colors.textPrimary, fontWeight: '700' }]}>
             Upcoming This Month
           </Text>
@@ -104,7 +104,7 @@ export function UpcomingSection({
                   {/* Schedule label */}
                   {item.scheduleLabel ? (
                     <View style={styles.scheduleInfo}>
-                      <Icon name="clock" size={12} color={colors.textTertiary} style={{ marginRight: 4 }} />
+                      <Icon name="clock" size={12} color={colors.textTertiary} style={{ marginEnd: 4 }} decorative />
                       <Text style={[typography.caption, { color: colors.textSecondary }]}>
                         {item.scheduleLabel}
                       </Text>

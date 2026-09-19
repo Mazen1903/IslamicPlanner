@@ -41,9 +41,10 @@ export function JournalPrivacySheet({
       testID={testID}
     >
       <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
-        <Pressable style={styles.backdrop} onPress={onClose} />
+        <Pressable style={styles.backdrop} onPress={onClose} accessible={false} />
 
         <View
+          accessibilityViewIsModal={true}
           style={[
             styles.sheetCard,
             shadows.elevated,
@@ -60,8 +61,11 @@ export function JournalPrivacySheet({
             <View style={[styles.iconCircle, { backgroundColor: colors.primaryLight, borderRadius: radii.pill }]}>
               <Icon name="lock" size={24} color={colors.primary} />
             </View>
-            <View style={[styles.titleContainer, { marginLeft: spacing.md }]}>
-              <Text style={[typography.headlineMedium, { color: colors.textPrimary }]}>
+            <View style={[styles.titleContainer, { marginStart: spacing.md }]}>
+              <Text
+                accessibilityRole="header"
+                style={[typography.headlineMedium, { color: colors.textPrimary }]}
+              >
                 Journal Privacy
               </Text>
               <Text style={[typography.bodySmall, { color: colors.textSecondary }]}>
@@ -199,7 +203,7 @@ const styles = StyleSheet.create({
   },
   toggleLabelContainer: {
     flex: 1,
-    paddingRight: 12,
+    paddingEnd: 12,
   },
   doneButton: {
     alignItems: 'center',

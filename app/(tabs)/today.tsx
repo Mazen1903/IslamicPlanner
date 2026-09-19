@@ -56,10 +56,16 @@ export default function TodayScreen() {
         edges={['top', 'left', 'right']}
         testID="today-error-state"
       >
-        <Text style={[typography.headlineMedium, { color: colors.danger, marginBottom: spacing.sm }]}>
+        <Text
+          accessibilityLiveRegion="assertive"
+          style={[typography.headlineMedium, { color: colors.danger, marginBottom: spacing.sm }]}
+        >
           Unable to load Today
         </Text>
-        <Text style={[typography.bodyMedium, { color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.lg }]}>
+        <Text
+          accessibilityLiveRegion="assertive"
+          style={[typography.bodyMedium, { color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.lg }]}
+        >
           {error ?? 'An unexpected error occurred while loading your schedule.'}
         </Text>
         <Pressable
