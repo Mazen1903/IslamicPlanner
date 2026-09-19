@@ -90,13 +90,29 @@ export function useLocation(options: UseLocationOptions = {}) {
     };
   }, [userSettingsRepo]);
 
+  const runCanonicalRefreshAfterLocationChange = useCallback(async (): Promise<void> => {
+    const token = useTodayStore.getState().startRefresh();
+    try {
+      const result = await coordinator.fullRefresh(DateTime.now());
+      if (result.status === 'READY') {
+        useTodayStore.getState().commitRefresh(
+          token,
+          { viewModel: result.viewModel, runtime: result.runtime },
+          true
+        );
+      } else {
+        useTodayStore.getState().setSetupRequired(token);
+      }
+    } catch (err: any) {
+      useTodayStore.getState().setError(token, err?.message ?? 'Refresh failed');
+      throw err;
+    }
+  }, [coordinator]);
+
   /**
-   * Explicit user action: Request auto location.
-   * Prompts for permission, acquires GPS coordinates and device timezone,
-   * commits AUTO snapshot to repository, and runs one canonical full refresh.
+   * Explicit user action: Request automatic location.
    *
-   * SAFEGUARD 3 (AUTO Mode Switching Determinism):
-   * - Request permission only because this is an explicit user action
+   * Invariants (M8 ADR-014):
    * - If permission granted and GPS succeeds: resolve/commit candidate
    * - If GPS fails but committed AUTO snapshot exists: use committed snapshot
    * - If permission denied but committed AUTO snapshot exists: AUTO uses committed snapshot
@@ -121,15 +137,7 @@ export function useLocation(options: UseLocationOptions = {}) {
           await userSettingsRepo.upsert({ locationMode: 'AUTO' });
           await loadCurrentSettings();
 
-          const token = useTodayStore.getState().startRefresh();
-          const result = await coordinator.fullRefresh(DateTime.now());
-          if (result.status === 'READY') {
-            useTodayStore.getState().commitRefresh(
-              token,
-              { viewModel: result.viewModel, runtime: result.runtime },
-              true
-            );
-          }
+          await runCanonicalRefreshAfterLocationChange();
           setIsLoading(false);
           return true;
         }
@@ -148,15 +156,7 @@ export function useLocation(options: UseLocationOptions = {}) {
           await userSettingsRepo.upsert({ locationMode: 'AUTO' });
           await loadCurrentSettings();
 
-          const token = useTodayStore.getState().startRefresh();
-          const result = await coordinator.fullRefresh(DateTime.now());
-          if (result.status === 'READY') {
-            useTodayStore.getState().commitRefresh(
-              token,
-              { viewModel: result.viewModel, runtime: result.runtime },
-              true
-            );
-          }
+          await runCanonicalRefreshAfterLocationChange();
           setIsLoading(false);
           return true;
         }
@@ -171,18 +171,7 @@ export function useLocation(options: UseLocationOptions = {}) {
       await loadCurrentSettings();
 
       // Canonical full refresh
-      const token = useTodayStore.getState().startRefresh();
-      const result = await coordinator.fullRefresh(DateTime.now());
-      if (result.status === 'READY') {
-        useTodayStore.getState().commitRefresh(
-          token,
-          { viewModel: result.viewModel, runtime: result.runtime },
-          true
-        );
-      } else {
-        useTodayStore.getState().setSetupRequired(token);
-      }
-
+      await runCanonicalRefreshAfterLocationChange();
       setIsLoading(false);
       return true;
     } catch (err: any) {
@@ -190,7 +179,7 @@ export function useLocation(options: UseLocationOptions = {}) {
       setIsLoading(false);
       return false;
     }
-  }, [coordinator, locationService, userSettingsRepo, loadCurrentSettings]);
+  }, [locationService, userSettingsRepo, loadCurrentSettings, runCanonicalRefreshAfterLocationChange]);
 
   /**
    * Explicit user action: Select a manual city.
@@ -217,18 +206,7 @@ export function useLocation(options: UseLocationOptions = {}) {
         await loadCurrentSettings();
 
         // Canonical full refresh
-        const token = useTodayStore.getState().startRefresh();
-        const result = await coordinator.fullRefresh(DateTime.now());
-        if (result.status === 'READY') {
-          useTodayStore.getState().commitRefresh(
-            token,
-            { viewModel: result.viewModel, runtime: result.runtime },
-            true
-          );
-        } else {
-          useTodayStore.getState().setSetupRequired(token);
-        }
-
+        await runCanonicalRefreshAfterLocationChange();
         setIsLoading(false);
         return true;
       } catch (err: any) {
@@ -237,7 +215,7 @@ export function useLocation(options: UseLocationOptions = {}) {
         return false;
       }
     },
-    [userSettingsRepo, coordinator, loadCurrentSettings]
+    [userSettingsRepo, loadCurrentSettings, runCanonicalRefreshAfterLocationChange]
   );
 
   return {

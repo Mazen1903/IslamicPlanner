@@ -238,11 +238,20 @@ export class RecurringHorizonSync {
     // PHASE: EXECUTE (PLAN succeeded; execute changes)
     // ==========================================
 
-    // 1. Delete obsolete PENDING occurrences
+    // 1. Delete obsolete PENDING occurrences with atomic status guard
     for (const occ of toDelete) {
       try {
-        await this.occRepo.delete(occ.id);
-        deleted++;
+        if (typeof this.occRepo.deleteIfPending === 'function') {
+          const res = await this.occRepo.deleteIfPending(occ.id);
+          if (res.outcome === 'DELETED') {
+            deleted++;
+          }
+          // If NOT_PENDING: concurrent terminal transition won the race.
+          // Terminal occurrence is preserved; deleted counter is not incremented.
+        } else {
+          await this.occRepo.delete(occ.id);
+          deleted++;
+        }
       } catch (err: any) {
         issues.push({
           stage: 'DELETE',

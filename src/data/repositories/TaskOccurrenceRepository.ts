@@ -29,6 +29,12 @@ export type PlacementUpdateResult =
   | { outcome: 'NOT_PENDING'; occurrence: TaskOccurrence }
   | { outcome: 'NOT_FOUND' };
 
+export type PendingDeleteResult =
+  | { outcome: 'DELETED' }
+  | { outcome: 'NOT_PENDING'; occurrence: TaskOccurrence }
+  | { outcome: 'NOT_FOUND' };
+
+
 function getDb(tx?: any): AppDatabase {
   return tx ?? getDatabase();
 }
@@ -844,25 +850,63 @@ export class TaskOccurrenceRepository {
   }
 
   /**
-   * Guarded delete: permanently deletes a TaskOccurrence ONLY if status is PENDING.
-   * Strictly throws TaskValidationError if the occurrence is COMPLETED, MISSED, or CANCELLED.
+   * Atomic guarded delete: permanently deletes a TaskOccurrence ONLY if status is PENDING.
+   *
+   * Invariants:
+   * 1. Uses atomic SQL condition: WHERE id = ? AND status = 'PENDING'
+   * 2. If affected row count > 0: returns { outcome: 'DELETED' }
+   * 3. If affected row count === 0: re-reads by id
+   * 4. If row no longer exists: returns { outcome: 'NOT_FOUND' }
+   * 5. If row exists and is terminal (COMPLETED, MISSED, CANCELLED):
+   *    returns { outcome: 'NOT_PENDING', occurrence }
+   * 6. If row exists and is somehow still PENDING (anomaly): throws DataIntegrityError
    */
-  async delete(id: string, tx?: any): Promise<void> {
-    const existing = await this.findById(id, tx);
-    if (!existing) return;
+  async deleteIfPending(id: string, tx?: any): Promise<PendingDeleteResult> {
+    const client = getDb(tx);
+    const deleteResult = client
+      .delete(taskOccurrences)
+      .where(
+        and(
+          eq(taskOccurrences.id, id),
+          eq(taskOccurrences.status, 'PENDING')
+        )
+      )
+      .run() as { changes?: number };
 
-    if (
-      existing.status === 'COMPLETED' ||
-      existing.status === 'MISSED' ||
-      existing.status === 'CANCELLED'
-    ) {
-      throw new TaskValidationError(
-        `Cannot hard-delete terminal historical occurrence ${id} (${existing.status}). Historical records are immutable.`
-      );
+    const changes = deleteResult?.changes ?? 0;
+    if (changes > 0) {
+      return { outcome: 'DELETED' };
     }
 
-    const client = getDb(tx);
-    client.delete(taskOccurrences).where(eq(taskOccurrences.id, id)).run();
+    const existing = await this.findById(id, tx);
+    if (!existing) {
+      return { outcome: 'NOT_FOUND' };
+    }
+
+    if (existing.status !== 'PENDING') {
+      return { outcome: 'NOT_PENDING', occurrence: existing };
+    }
+
+    throw new DataIntegrityError(
+      `Atomic guarded delete affected 0 rows for PENDING occurrence ${id}`
+    );
+  }
+
+  /**
+   * Guarded delete: permanently deletes a TaskOccurrence ONLY if status is PENDING.
+   * Strictly throws TaskValidationError if the occurrence is COMPLETED, MISSED, or CANCELLED.
+   * Delegates to atomic deleteIfPending.
+   */
+  async delete(id: string, tx?: any): Promise<void> {
+    const res = await this.deleteIfPending(id, tx);
+    if (res.outcome === 'NOT_FOUND') {
+      return;
+    }
+    if (res.outcome === 'NOT_PENDING') {
+      throw new TaskValidationError(
+        `Cannot hard-delete terminal historical occurrence ${id} (${res.occurrence.status}). Historical records are immutable.`
+      );
+    }
   }
 
   /**

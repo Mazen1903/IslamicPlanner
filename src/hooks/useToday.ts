@@ -161,8 +161,15 @@ export function useToday(options: UseTodayOptions = {}) {
   // Task completion action
   const completeTask = useCallback(async (occurrenceId: string) => {
     await engineRef.current.completeTask(occurrenceId);
-    // M13: Targeted cancellation of completed task reminder (best-effort)
-    notificationServiceRef.current.cancelOccurrenceReminder(occurrenceId).catch(() => {});
+    // M13/M23: Targeted cancellation of completed task reminder (best-effort),
+    // followed by best-effort full notification reconciliation to guarantee
+    // drain-loop fresh pass if a concurrent stale reconciliation scheduled the occurrence.
+    notificationServiceRef.current
+      .cancelOccurrenceReminder(occurrenceId)
+      .catch(() => {})
+      .finally(() => {
+        notificationServiceRef.current.reconcile().catch(() => {});
+      });
 
     const runtime = useTodayStore.getState().runtime;
     if (runtime) {
