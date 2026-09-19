@@ -163,8 +163,10 @@
 | **M15** | Journal Core & Privacy | **CLOSED / SONNET APPROVED** | Encrypted private journal, planningDayKey ownership, AES-256-GCM, expo-crypto, ciphertext-only repository boundary. Implementation commit: `71edcdf`. Final HEAD: `9752921`. |
 | **M16** | Journal Experience / UI | **CLOSED / SONNET APPROVED** | Compose view, history, biometric lock, tab replacement |
 | **M17** | Settings & Preferences UI | **CLOSED / SONNET APPROVED** | Method picker, juristic switch, Hijri adjustment, planning-day (FAJR-only guard), appearance, notifications, journal privacy |
+| **M18** | Widgets (dev build required) | **CLOSED / SONNET APPROVED** | Read-only home-screen widgets (Small/Medium), expo-widgets, react-native-android-widget, CNG WorkManager plugin |
 | **M19** | Premium Entitlement Scaffolding | **CLOSED / SONNET APPROVED** | EntitlementService, PlanningDayMutationCoordinator, MIDNIGHT/CUSTOM gating, fail-closed reads, read-only EntitlementRepository, no billing SDK |
-| **M20** | Onboarding | *PENDING — ARCHITECTURE FINALIZED* | First-run setup, prayer & location configuration, method selection, core preferences |
+| **M20** | Onboarding | **CLOSED / SONNET APPROVED** | First-run setup, root zero-flash gate, 4-screen flow, mode-aware location, method recommendation, ThemeProvider live theme, OnboardingCoordinator |
+| **M21** | Dark Mode Polish | *PENDING — ARCHITECTURE NOT YET FROZEN* | Full-fidelity dark mode review, contrast audit, and token polishing across all screens and primitives |
 
 ### Closed Milestone Trust Contract
 - Public interfaces and contracts established in **M1–M7 are CLOSED, VERIFIED, and TRUSTED**.

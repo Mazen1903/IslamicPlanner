@@ -1,11 +1,14 @@
 # M20 — Onboarding Architecture
 
-> **Status:** ARCHITECTURE FINALIZED — READY FOR IMPLEMENTATION
+> **Status:** CLOSED / SONNET APPROVED
 > **Authored:** 2026-09-18
 > **Architecture freeze commit:** `54e03c0`
 > **Header bookkeeping commit:** `2351859`
 > **Hardening commit:** `fde4f7e`
-> **Integration-hardening commit:** see `git log --oneline -1`
+> **Integration-hardening commit:** `966c5d6`
+> **Implementation commit:** `0c92614`
+> **Independent review:** APPROVED — UNCONDITIONAL
+> **Targeted final verification:** PASSED
 > **Baseline commit:** `f787191` (M19 CLOSED — f78719113e3d8ec3272cfb50fdc292ada04d4145)
 > **Milestone:** M20 — Onboarding
 > **Prerequisite milestones:** M1 (Design System), M2 (Prayer Calculation), M12 (Location), M17 (Settings/UserSettingsRepository)
@@ -939,4 +942,28 @@ These are resolved by the implementer and do not require architecture re-review.
 
 *Hardening performed against: Issues 1-18 from the independent consistency review.*
 *Integration hardening: gate zero-flash algorithm corrected, existing MANUAL recommendation corrected, theme persistence decoupled from coordinator.*
-*Hardening commit: `fde4f7e` | Integration-hardening commit: see `git log --oneline -1`*
+*Hardening commit: `fde4f7e` | Integration-hardening commit: `966c5d6`*
+
+---
+
+## 20. Milestone Closure Record
+
+- **Milestone:** M20 — Onboarding
+- **Status:** CLOSED / SONNET APPROVED
+- **Architecture Freeze:** `54e03c0`
+- **Bookkeeping:** `2351859`
+- **Architecture Hardening:** `fde4f7e`
+- **Integration Hardening:** `966c5d6`
+- **Implementation:** `0c92614`
+- **Independent Review:** APPROVED — UNCONDITIONAL
+- **Targeted Final Verification:** PASSED
+
+### Verification Summary
+- **Tests / Suites:** 1374 / 1374 tests passing (118 / 118 suites)
+- **M20 Test Delta:** 78 new tests across 5 new suites (M19 baseline: 1296 tests / 113 suites)
+- **TypeScript:** 0 errors (`tsc --noEmit`)
+- **ESLint:** 0 errors, 0 warnings (`eslint src/ app/ --max-warnings=0`)
+- **Expo Config:** Valid (`npx expo config --json`)
+- **Expo Doctor:** 20/21 (known Expo SDK 57 patch advisory only)
+- **Migrations:** 0 new migrations (0000–0003 untouched)
+- **Dependencies:** 0 new npm dependencies (`package.json` and `package-lock.json` untouched)

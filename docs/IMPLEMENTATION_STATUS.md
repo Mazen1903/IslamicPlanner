@@ -1,5 +1,5 @@
-**Current Milestone:** M20 — Onboarding (IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW)
-**Last Updated:** 2026-09-18 (M20 IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW)  
+**Current Milestone:** M21 — Dark Mode Polish (PENDING — ARCHITECTURE NOT YET FROZEN)
+**Last Updated:** 2026-09-18 (M20 CLOSED / SONNET APPROVED)
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -28,8 +28,8 @@
 | **M17** | Settings | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `00891c2`, hardening `a2af7a3`, implementation `76ac716`. 1171/1171 tests (102 suites). 0 migrations. 0 dependencies. ADR-025 (prayer adjustment ±60 bound). Full Settings experience: prayer config, planning day (Fajr), Hijri calendar, appearance, journal privacy, about, hub. `SettingsMutationCoordinator` non-React orchestration. `HijriAdjustmentConfigLoader` dynamic Hijri config. Sonnet independent review APPROVED. Native device QA pending (does not reopen M17). |
 | **M18** | Widgets (dev build required) | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `4128c93`, implementation `3cd5980`, WorkManager fix `bc3b37c`. 1230/1230 tests (104 suites). 0 migrations. 3 runtime deps: `expo-widgets ~57.0.20`, `@expo/ui ~57.0.19`, `react-native-android-widget ^0.22.1`. Android prebuild PASS, assembleDebug PASS. iOS native QA pending macOS/EAS. Android physical-runtime QA pending. WorkManager conflict resolved via tracked CNG-compatible plugin. ADR-026 + ADR-026-H. Sonnet independent review APPROVED. |
 | **M19** | Premium entitlement scaffolding | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `fa3c664`, hardening `29cd586`, implementation `26e403f`. 1296/1296 tests (113 suites). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies added. `EntitlementService` (fail-closed), `PlanningDayMutationCoordinator`, `usePlanningDayMutation`, MIDNIGHT/CUSTOM gating, read-only `EntitlementRepository`, strict isolation. Sonnet independent review APPROVED. |
-| **M20** | Onboarding | **IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW** | — | Prerequisites: M1, M12, M2, M17 |
-| **M21** | Dark mode polish | Not Started | — | Prerequisites: M1, M7, M14, M16, M17 |
+| **M20** | Onboarding | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture freeze `54e03c0`, hardening `fde4f7e`, integration `966c5d6`, implementation `0c92614`. 1374/1374 tests (118 suites; 78 new M20 tests, 5 new suites). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies added. Root gate (zero-flash render-time auth), 4-screen flow, mode-aware location validation, calculation recommendation, ThemeProvider live switch, OnboardingCoordinator. Sonnet independent review APPROVED. |
+| **M21** | Dark mode polish | **PENDING — ARCHITECTURE NOT YET FROZEN** | — | Prerequisites: M1, M7, M14, M16, M17, M20 |
 | **M22** | Accessibility/RTL | Not Started | — | Prerequisites: All UI milestones |
 | **M23** | QA + edge cases | Not Started | — | Opus review required |
 | **M24** | Release preparation | Not Started | — | Final builds and release checklist |
@@ -1220,12 +1220,15 @@ The following require a physical device or simulator and do not reopen M18:
 
 ---
 
-## M20 Implementation Record
+## M20 Implementation & Closure Record
 
 - **Date:** 2026-09-18
 - **Milestone:** M20 — Onboarding
-- **Status:** **IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW**
-- **Architecture Commit:** `966c5d6` (docs: finalize M20 onboarding integration contract)
+- **Status:** **CLOSED / SONNET APPROVED**
+- **Architecture Commits:** `54e03c0` (freeze), `2351859` (bookkeeping), `fde4f7e` (hardening), `966c5d6` (integration hardening)
+- **Implementation Commit:** `0c92614` (feat(onboarding): implement M20 first-run onboarding)
+- **Independent Review:** APPROVED — UNCONDITIONAL
+- **Targeted Final Verification:** PASSED
 - **ADR:** ADR-028 (Zero-Flash Render-Time Authorization Gate & 4-Step Onboarding Architecture)
 
 ### Delivered Capabilities

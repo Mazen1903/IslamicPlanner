@@ -457,7 +457,7 @@
 ---
 
 ### 23. Onboarding
-- **Authoritative Docs:** `docs/M20_ARCHITECTURE.md` (ARCHITECTURE FINALIZED — ready for implementation)
+- **Authoritative Docs:** `docs/M20_ARCHITECTURE.md` (CLOSED / SONNET APPROVED)
 - **Source Paths (new):**
   - `src/stores/useOnboardingStore.ts` (Zustand store: `status`, `initialize()`, `retry()`, `markComplete()`)
   - `src/services/onboarding/OnboardingCoordinator.ts` (validates prerequisites + persists final fields + `onboardingCompleted: true` + triggers `fullRefresh()`)
@@ -486,11 +486,11 @@
   - Screen 1 (SALAH_INTRO): educational only; five prayers listed; no writes
   - Screen 2 (SCHEDULE_EXAMPLE): static adaptive-schedule illustration; zero scheduling/task engine calls
   - Screen 3 (PRAYER_SETUP): location + calculation method together; location REQUIRED to advance
-  - Screen 4 (MAKE_IT_YOURS): theme selection; `OnboardingCoordinator.complete()` writes `{ calculationMethod, themeMode, onboardingCompleted: true }` + triggers `fullRefresh()`
+  - Screen 4 (MAKE_IT_YOURS): theme selection; `OnboardingCoordinator.complete()` writes `{ calculationMethod, onboardingCompleted: true }` + triggers `fullRefresh()` (themeMode persisted via ThemeProvider)
 - **Relevant Tests:**
   - `src/stores/__tests__/useOnboardingStore.test.ts` (B-01..B-13)
   - `src/services/onboarding/__tests__/OnboardingCoordinator.test.ts` (OC-01..OC-11)
   - `app/onboarding/__tests__/OnboardingScreen.test.tsx` (F-*, L-*, C-01..C-12, P-01..P-06 + P-02b/P-02c groups)
   - `src/domain/onboarding/__tests__/OnboardingIsolation.test.ts` (ISO-01..ISO-17)
-- **Milestone Owner:** **M20 (ARCHITECTURE FINALIZED — ready for implementation)**
+- **Milestone Owner:** **M20 (CLOSED / SONNET APPROVED)**
 - **ADR:** ADR-028

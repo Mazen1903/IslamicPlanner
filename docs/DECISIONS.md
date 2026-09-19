@@ -663,7 +663,7 @@ Widgets are PRESENTATION SURFACES. All widget content derives from the canonical
 
 ## ADR-028: M20 Onboarding — Root Zustand Gate + Direct-Upsert Bypass Pattern
 
-**Status:** Accepted (2026-09-18) — M20 ARCHITECTURE FROZEN
+**Status:** Accepted (2026-09-18) — M20 CLOSED / SONNET APPROVED
 
 **Context:**
 
@@ -671,11 +671,13 @@ M20 introduces first-run onboarding. Two independent decisions needed architectu
 
 **Decision:**
 
-**Sub-decision A — Gate Strategy: `useOnboardingStore` (Zustand) + `useSegments` + `router.replace`**
+**Sub-decision A — Gate Strategy: `useOnboardingStore` (Zustand) + Controlled Render-Time Authorization**
 
-The root `app/_layout.tsx` reads `onboardingCompleted` via a Zustand store (`useOnboardingStore`) initialized on mount. The gate effect fires using `useSegments()` + `router.replace()` — the standard Expo Router auth/onboarding gate pattern.
-
-`<Slot />` is always rendered (not conditionally suppressed). All routing is purely navigational via `router.replace()`. This prevents blank-screen flash states and is consistent with Expo Router's `<Slot>`-based architecture.
+The root `app/_layout.tsx` reads `onboardingCompleted` via a Zustand store (`useOnboardingStore`) initialized on mount. Zero-flash authorization is achieved through controlled rendering:
+- During `LOADING`: renders `BootstrapLoadingView` (no naked `<Slot />` or premature app routes).
+- During `ERROR`: renders `BootstrapErrorView` with `retry()` action.
+- During `PENDING`: renders `<Slot />` only when on `/onboarding`; all other routes render `BootstrapLoadingView` while `useEffect` fires `router.replace('/onboarding')`.
+- During `COMPLETE`: renders `<Slot />` for all app routes; if on `/onboarding`, renders `BootstrapLoadingView` while `useEffect` fires `router.replace('/(tabs)/today')`.
 
 `useOnboardingStore.markComplete()` is called synchronously (Zustand update) **before** `router.replace()` in the onboarding screen. This eliminates the gate redirect-back race condition that would otherwise occur if the gate re-evaluated before the DB write was visible.
 

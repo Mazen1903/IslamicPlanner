@@ -1,25 +1,32 @@
-# Current Milestone: M20 — Onboarding
+# Current Milestone: M21 — Dark Mode Polish
 
-> **Current State:** M20 IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW
-> **Previous Milestone:** M19 CLOSED / SONNET APPROVED
-> **Milestone Status:** M20 — IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW
-> **Architecture Status:** FINALIZED — `docs/M20_ARCHITECTURE.md` finalized (2026-09-18). All 21 consistency + integration issues resolved (18 hardening + 3 integration corrections: gate zero-flash, MANUAL location recommendation, theme persistence).
+> **Current State:** PENDING — ARCHITECTURE NOT YET FROZEN
+> **Previous Milestone:** M20 CLOSED / SONNET APPROVED
+> **Milestone Status:** M21 — PENDING — ARCHITECTURE NOT YET FROZEN
+> **Architecture Status:** NOT STARTED — Architecture doc and formal contract pending
 
 ---
 
-## M19 Closure Summary
+## M20 Closure Summary
 
-**M19 — Premium Entitlement Scaffolding** is CLOSED / SONNET APPROVED as of 2026-09-18.
+**M20 — Onboarding** is CLOSED / SONNET APPROVED as of 2026-09-18.
 
 | Commit Role | Hash | Description |
 |---|---|---|
-| Architecture freeze | `fa3c664` | docs: freeze M19 architecture - premium entitlement scaffolding contract |
-| Opus architecture hardening | `29cd586` | docs: harden M19 entitlement architecture after Opus review |
-| Implementation | `26e403f` | feat(premium): implement M19 entitlement scaffolding |
-| Closure | See closure commit | docs: close M19 after independent review -- APPROVED |
+| Architecture freeze | `54e03c0` | docs: freeze M20 architecture - onboarding gate + 4-step flow contract |
+| Architecture bookkeeping | `2351859` | docs: record M20 architecture freeze commit hash in header |
+| Architecture hardening | `fde4f7e` | docs: harden M20 onboarding architecture - resolve all 18 consistency issues |
+| Final integration hardening | `966c5d6` | docs: finalize M20 onboarding integration contract |
+| Implementation | `0c92614` | feat(onboarding): implement M20 first-run onboarding |
+| Closure | See closure commit | docs: close M20 after independent review -- APPROVED |
+**Independent Review Verdict:** APPROVED — UNCONDITIONAL
+**Targeted Final Verification:** PASSED
 
 **Final Verification:**
-- 1296 / 1296 tests passing (113 / 113 suites)
+- 1374 / 1374 tests passing (118 / 118 suites)
+- 0 failures, 0 skipped
+- M19 baseline: 1296 tests / 113 suites
+- Actual M20 delta: 78 new tests across 5 new test suites
 - 0 TypeScript errors (`tsc --noEmit`)
 - 0 ESLint errors, 0 ESLint warnings (`eslint src/ app/ --max-warnings=0`)
 - Expo config valid (`npx expo config --json`)
@@ -29,96 +36,101 @@
 
 ---
 
-## M19 Delivered Capabilities
+## M20 Delivered Capabilities
 
-### Entitlement Model
-- Typed `FREE` and `PREMIUM` tiers.
-- Active Premium feature registry contains exactly:
-  - `PLANNING_DAY_MIDNIGHT`
-  - `PLANNING_DAY_CUSTOM`
+### Four-Screen Flow
+1. **Screen 1 — YOUR DAY, CENTERED AROUND SALAH**: Educational intro presenting the five ordained prayers in canonical order (Fajr, Dhuhr, Asr, Maghrib, Isha). Zero DB writes, zero GPS prompts.
+2. **Screen 2 — YOUR SCHEDULE ADAPTS AUTOMATICALLY**: Educational illustration demonstrating prayer-anchored adaptive scheduling with a soccer practice example. Zero scheduling engine calls, zero materialization.
+3. **Screen 3 — SET YOUR PRAYER TIMES**: Functional location and calculation method setup on a single screen. Uses canonical `useLocation` hook and existing `LocationService`. Location is REQUIRED before proceeding; GPS is OPTIONAL with manual city fallback always available.
+4. **Screen 4 — MAKE IT YOURS**: Theme selection (System / Light / Dark), setup summary displaying committed location and calculation method, and final "Start Planning" CTA that executes completion.
 
-### Entitlement Source
-- `user_settings.isPremium` is the temporary local entitlement snapshot.
-- Feature code queries `EntitlementService` (`hasFeature()`, `getSnapshot()`).
-- `EntitlementRepository` is the sole data-layer adapter and is strictly read-only.
-- Missing row (e.g. fresh install) resolves to `READY / FREE`.
-- Real database failure resolves to `UNAVAILABLE`.
+### Root Onboarding Gate
+- `onboardingCompleted` column in `user_settings` is canonical single source of truth.
+- Zero-flash synchronous render-time authorization:
+  - Missing row (`null`) -> `PENDING`
+  - `false` -> `PENDING`
+  - `true` -> `COMPLETE`
+  - DB failure -> `ERROR` (renders controlled `BootstrapErrorView` with `retry()`)
+- In `LOADING` state, renders controlled `BootstrapLoadingView` (no naked `<Slot />`).
+- Protected app routes (`/(tabs)/*`, etc.) never render before authorization is confirmed.
+- Completed user visiting `/onboarding` is redirected to Today (`/(tabs)/today`).
+- Uninitiated user on any route is redirected to `/onboarding`.
 
-### Fail-Closed Security
-- Entitlement errors never grant Premium.
-- `hasFeature()` strictly returns `false` on `UNAVAILABLE` state.
-- Premium coordinator differentiates:
-  - `PREMIUM_REQUIRED` (user is FREE)
-  - `ENTITLEMENT_UNAVAILABLE` (read failed)
+### Location
+- Usable location is strictly required before onboarding can be completed.
+- GPS is optional; manual city selection is always available.
+- GPS permission is requested ONLY after an explicit user tap on "Use My Location".
+- Zero GPS prompts on component mount.
+- Active `locationMode` strictly determines usable location:
+  - If `AUTO`: valid `lastAutoLatitude`, `lastAutoLongitude`, `lastKnownTimezone` required. Stale MANUAL snapshot cannot authorize completion.
+  - If `MANUAL`: valid `manualLatitude`, `manualLongitude`, `manualTimezone`, `manualCityName` required. Stale AUTO snapshot cannot authorize completion.
+- Existing valid location snapshot in SQLite can be reused.
+- No Makkah/0,0/UTC fake fallback: a genuine location is always required.
 
-### Planning Day
-- `FAJR` remains universally free without entitlement query.
-- `MIDNIGHT` requires Premium.
-- `CUSTOM:HH:mm` requires Premium (persisted in canonical 24-hour representation).
-- No auto-downgrade: existing Premium mode remains operational if entitlement becomes FREE.
-- Entitlement controls authorization to CHANGE state, not how stored temporal state is interpreted.
+### Calculation Method
+- Newly selected MANUAL city recommends method via `REGION_METHOD_MAP[countryCode] ?? MWL`.
+- AUTO location uses `recommendCalculationMethod()` (honestly falls back to MWL).
+- Existing MANUAL location preserves `settings.calculationMethod` (does not overwrite user selection).
+- Explicit user method selection is never automatically overridden.
+- Advanced prayer calculation controls (high-latitude rules, juristic schools, minute adjustments) remain in Settings.
 
-### Mutation Boundary
-- `PlanningDayMutationCoordinator` is the sole authorized path for mutating `planningDayStart`.
-- `SettingsMutationCoordinator` explicitly rejects `planningDayStart` (removed from `TEMPORAL_ALLOWED_KEYS`).
-- `SettingsMutationCoordinator` still strictly forbids `isPremium`.
-- Strict pipeline: `validate` → `authorize` → `persist` → `fullRefresh`.
-- Persistence success + refresh failure does not roll back persisted state.
+### Theme
+- System / Light / Dark modes exposed on Screen 4.
+- Explicit theme tap triggers `ThemeProvider.setThemeMode()`, changing live theme immediately and persisting via `RootLayout`.
+- `OnboardingCoordinator` does not persist `themeMode`.
 
-### React Boundary
-- `useEntitlement` hook (unmount-safe, fail-closed default).
-- `usePlanningDayMutation` hook wrapping `PlanningDayMutationCoordinator`.
-- No entitlement authorization logic in React presentation screens.
-- No entitlement Context or background polling required in M19.
+### Completion
+- Dedicated `OnboardingCoordinator.complete()` service:
+  - Validates active usable location.
+  - Validates calculation method.
+  - Persists `calculationMethod` to `UserSettingsRepository`.
+  - Persists `onboardingCompleted: true` to `UserSettingsRepository`.
+  - Triggers `PlannerRefreshCoordinator.fullRefresh()`.
+  - Refresh failure after persistence returns `PERSISTED_REFRESH_FAILED` without rolling back completed state.
+- `useOnboardingStore.markComplete()` is invoked synchronously before navigation to prevent gate redirect-back races.
 
-### Premium UI
-- `PremiumBadge` and `PremiumLockedInfo` components.
-- FREE users see locked Midnight/Custom with badge and info banner.
-- Premium users can select Midnight and Custom directly.
-- No pricing, checkout, fake upgrade button, or developer Premium toggle in UI.
-
-### Subsystem Isolation
-- Zero entitlement logic in temporal engines (`PlanningDayEngine`, `TodayTemporalInputProvider`, `temporalSettingsHelper`, `SchedulingEngine`).
-- Zero entitlement logic in home screen widgets (M18 Small and Medium widgets remain free).
-- Zero entitlement logic in Journal (encryption and privacy remain untouched).
-
----
-
-## M19 Non-Goals / Future Billing Seam
-
-M19 did **NOT** implement:
-- StoreKit (iOS)
-- Google Play Billing (Android)
-- RevenueCat, Stripe, or any payment SDK
-- Subscriptions, pricing, trials, or restore purchases
-- User accounts, login, or cloud verification
-- Server-side entitlement validation
-- Subscription expiry behavior or automatic downgrade reconciliation
-
-**Future billing seam:** Future billing integrations will replace the entitlement source behind the existing `EntitlementService` boundary without altering feature screens or freezing a one-time-purchase-only API.
+### Back Navigation
+- Screen 2 -> Screen 1
+- Screen 3 -> Screen 2
+- Screen 4 -> Screen 3
+- Incomplete onboarding cannot escape into the normal app shell via back navigation.
 
 ---
 
-## M19 Test Coverage
+## M20 Non-Goals & Subsystem Isolation
 
-- **66 new tests** added in M19 across 7 test suites.
-- **1296 total tests** across **113 test suites** project-wide.
-- Coverage includes:
-  - Fresh install entitlement resolution (`READY / FREE`)
-  - `FREE`, `PREMIUM`, and `UNAVAILABLE` states
-  - Fail-closed behavior on database error
-  - `FAJR` authorization bypass (free without DB query)
-  - `MIDNIGHT` and `CUSTOM` Premium authorization checks
-  - Malformed `CUSTOM` format validation (`CUSTOM:25:00`, `CUSTOM:08:5`, etc.)
-  - Persistence isolation
-  - Refresh failure non-rollback semantics
-  - `SettingsMutationCoordinator` bypass prevention (`planningDayStart` and `isPremium` rejected)
-  - `useEntitlement` unmount safety and tier propagation
-  - `usePlanningDayMutation` hook lifecycle and state transitions
-  - `PremiumBadge` and `PremiumLockedInfo` rendering
-  - Existing Premium stored-mode operational persistence (no-auto-downgrade)
-  - Subsystem isolation guards (`EntitlementIsolation.test.ts`)
-  - Full M18 widget and core regression suite
+M20 strictly does **NOT** implement or expose:
+- Premium upsell, pricing, or checkout
+- `isPremium` modifications or queries
+- Worship Suggestions toggle or logic (`worshipSuggestionsEnabled` untouched)
+- Prayer Alerts toggle (`prayerAlertsEnabled` untouched)
+- Notification permission onboarding
+- Account creation, login, or cloud sync
+- Journal encryption or privacy setup
+- New widget types or widget-specific onboarding logic
+- New temporal engine or materialization logic
+- Reverse geocoding or external network calls
+- New SQLite schema columns or database migrations
+- New npm runtime or dev dependencies
+
+### Subsystem Isolation Invariants
+- **Entitlement remains isolated:** Zero entitlement imports or calls in onboarding screens, store, or coordinator.
+- **Journal remains isolated:** Zero Journal crypto or repository imports.
+- **Widgets remain isolated:** M18 widget snapshots unaffected.
+- **Temporal engines remain untouched:** SchedulingEngine, MaterializationEngine, and RecurrenceEngine are never called from onboarding.
+- **SettingsMutationCoordinator boundary maintained:** `SettingsMutationCoordinator` still explicitly forbids `onboardingCompleted` mutation; `OnboardingCoordinator` operates as the sole completion authority.
+
+---
+
+## M20 Test Coverage
+
+- **78 new tests** added in M20 across **5 new test suites**:
+  - `src/stores/__tests__/useOnboardingStore.test.ts` (13 tests: B-01..B-13)
+  - `src/services/onboarding/__tests__/OnboardingCoordinator.test.ts` (11 tests: OC-01..OC-11)
+  - `src/domain/onboarding/__tests__/OnboardingIsolation.test.ts` (17 tests: ISO-01..ISO-17)
+  - `app/onboarding/__tests__/OnboardingScreen.test.tsx` (36 tests: F-*, L-*, C-*, P-*)
+  - Regression suite compatibility confirmed across all previous milestone test suites
+- **1374 total tests** across **118 test suites** project-wide (0 failures, 0 skipped).
 
 ---
 
@@ -127,8 +139,8 @@ M19 did **NOT** implement:
 ```
 M18 — Widgets (dev build required)            ✅ CLOSED / SONNET APPROVED
 M19 — Premium Entitlement Scaffolding          ✅ CLOSED / SONNET APPROVED
-M20 — Onboarding                               ← CURRENT / IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW
-M21 — Dark Mode Polish
+M20 — Onboarding                               ✅ CLOSED / SONNET APPROVED
+M21 — Dark Mode Polish                         ← CURRENT / PENDING — ARCHITECTURE NOT YET FROZEN
 M22 — Accessibility / RTL
 M23 — QA + Edge Cases
 M24 — Release Preparation
@@ -138,19 +150,13 @@ Worship Suggestions remain **DEFERRED** (not deleted). May be re-introduced post
 
 ---
 
-## M20 Overview & Scope
+## M21 Overview & Scope
 
-**M20 — Onboarding**
-- **Status:** IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW
-- **Architecture doc:** `docs/M20_ARCHITECTURE.md`
-- **ADR:** ADR-028
-- **Prerequisites:** M1 (Design System), M2 (Prayer Calculation), M12 (Location), M17 (Settings)
-- **Scope:** First-run onboarding flow — four steps: Welcome, Location (GPS/manual/skip), Calculation Method, Ready.
-- **New files:** `src/stores/useOnboardingStore.ts`, `src/services/onboarding/OnboardingCoordinator.ts`, `src/services/onboarding/index.ts`, 4 test files.
-- **Modified files:** `app/_layout.tsx` (gate), `app/onboarding/index.tsx` (4-step screen).
-- **Constraints:** Location REQUIRED (GPS optional) · No GPS on mount · No silent mutation · No direct repo writes from React · No new deps · No new migrations · Zero entitlement/journal involvement.
-- **Estimated new tests:** ~95 (B-01..B-13, F-01..F-10, L-01..L-11, C-01..C-12, P-01..P-06 + P-02b/P-02c, OC-01..OC-11, ISO-01..ISO-17).
-- **Rule:** Architecture is finalized. All 21 consistency + integration issues are resolved. Implementation may proceed.
+**M21 — Dark Mode Polish**
+- **Status:** PENDING — ARCHITECTURE NOT YET FROZEN
+- **Scope:** Full-fidelity dark mode review, contrast audit, and token polishing across all screens (Today, Calendar, Add/Edit Task, Journal, Settings, Onboarding) and primitives.
+- **Prerequisites:** M1 (Design System), M7 (Today), M14 (Calendar), M16 (Journal), M17 (Settings), M20 (Onboarding).
+- **Rule:** DO NOT start M21 implementation. Architecture must be authored, reviewed, and frozen before implementation begins.
 
 ---
 
