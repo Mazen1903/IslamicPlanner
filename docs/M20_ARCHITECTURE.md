@@ -1,9 +1,9 @@
-﻿# M20 — Onboarding Architecture
+# M20 — Onboarding Architecture
 
 > **Status:** ARCHITECTURE FROZEN — PENDING INDEPENDENT REVIEW
 > **Authored:** 2026-09-18
 > **Baseline commit:** 26e403f (M19 CLOSED)
-> **Architecture freeze commit:** TBD
+> **Architecture freeze commit:** `54e03c0`
 > **Milestone:** M20 — Onboarding
 > **Prerequisite milestones:** M1 (Design System), M2 (Prayer Calculation), M12 (Location), M17 (Settings/UserSettingsRepository)
 
