@@ -420,24 +420,27 @@
 ---
 
 ### 22. Premium Entitlement Scaffolding
-- **Authoritative Docs:** `docs/M19_ARCHITECTURE.md` (FROZEN — pending Opus independent review)
+- **Authoritative Docs:** `docs/M19_ARCHITECTURE.md` (FROZEN — OPUS REVIEW APPROVED — AMENDMENTS APPLIED)
 - **Source Paths (planned):**
   - `src/domain/entitlement/types.ts` (`EntitlementTier`, `PremiumFeature`, `EntitlementSnapshot`, `EntitlementService` interface)
   - `src/domain/entitlement/EntitlementService.ts` (`LocalEntitlementService` + singleton)
   - `src/data/repositories/EntitlementRepository.ts` (read-only `readIsPremium()` adapter)
   - `src/services/PlanningDayMutationCoordinator.ts` (authorization + mutation + refresh)
   - `src/hooks/useEntitlement.ts` (thin React hook, fail-closed)
+  - `src/hooks/usePlanningDayMutation.ts` (thin React hook wrapping `PlanningDayMutationCoordinator`)
   - `src/components/premium/PremiumBadge.tsx`
   - `src/components/premium/PremiumLockedInfo.tsx`
   - `src/components/premium/index.ts`
-  - `app/(tabs)/settings/planning-day.tsx` (M19 rewrite)
+  - `app/(tabs)/settings/planning-day.tsx` (M19 rewrite; uses `usePlanningDayMutation`, not `useSettingsMutation`)
 - **Key invariants:**
   - Fail-closed: entitlement read failure → UNAVAILABLE → all Premium features denied
+  - Missing row (fresh install) → READY / FREE (not UNAVAILABLE)
   - EntitlementRepository is the ONLY code reading `user_settings.isPremium`
   - No feature screen reads `isPremium` directly
   - Temporal engine (PlanningDayEngine, TodayTemporalInputProvider, temporalSettingsHelper) has NO entitlement checks
+  - FAJR always allowed regardless of entitlement state (authorization step skipped)
   - Zero new migrations; zero new runtime dependencies
   - No purchase flow; no billing SDK; no fake upgrade button
 - **Relevant Tests (planned):** E/A/P/S/UI/I series (50+ tests) — see `docs/M19_ARCHITECTURE.md §28`
-- **Milestone Owner:** **M19 (ARCHITECTURE FROZEN — PENDING OPUS INDEPENDENT REVIEW)**
+- **Milestone Owner:** **M19 (ARCHITECTURE FROZEN — OPUS REVIEW APPROVED — AMENDMENTS APPLIED — READY FOR GEMINI IMPLEMENTATION)**
 

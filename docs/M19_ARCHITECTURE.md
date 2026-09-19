@@ -1,4 +1,4 @@
-﻿# M19 — Premium Entitlement Scaffolding Architecture
+# M19 — Premium Entitlement Scaffolding Architecture
 
 > **Status:** FROZEN — PENDING OPUS INDEPENDENT REVIEW
 > **Authored:** 2026-09-18
@@ -66,11 +66,14 @@ M19 replaces the temporary M17 FAJR-only guard in `SettingsMutationCoordinator` 
 
 For M19, the local entitlement snapshot is `user_settings.isPremium` (BOOLEAN, existing schema column).
 
-| `isPremium` value | Tier |
+| Condition | Result |
 |---|---|
-| `true` | `PREMIUM` |
-| `false` | `FREE` |
-| Row missing / DB error | `UNAVAILABLE` → fail-closed |
+| `readIsPremium()` returns `null` (row absent — fresh install) | `READY / FREE` |
+| `readIsPremium()` returns `false` | `READY / FREE` |
+| `readIsPremium()` returns `true` | `READY / PREMIUM` |
+| `readIsPremium()` throws (actual DB/query failure) | `UNAVAILABLE` → fail-closed |
+
+**Critical distinction:** A missing `user_settings` row is the normal fresh-install state. No row ≠ DB error. Only a thrown exception (infrastructure failure) produces `UNAVAILABLE`. This matches `EntitlementRepository.readIsPremium(): Promise<boolean | null>` — `null` means no row, and `LocalEntitlementService.getSnapshot()` maps `null → READY / FREE`. Fail-closed behavior applies only when the read itself fails (throws).
 
 The `EntitlementService` interface is the only surface that future billing adapters need to implement. When StoreKit / Google Play / RevenueCat replaces the local DB source, `LocalEntitlementService` is swapped for a `StoreEntitlementService`. No feature screens change.
 
@@ -357,6 +360,28 @@ When `isPremium` is false but `planningDayStart` is `'MIDNIGHT'` or `'CUSTOM:*'`
 
 Opening the Planning Day screen causes ZERO writes.
 
+### 19a. Active Premium Mode No-Op Rule (Frozen by Opus Review)
+
+**Scenario:** `isPremium=false` and `planningDayStart='MIDNIGHT'` (or any CUSTOM value). User taps the already-active locked Premium mode.
+
+**Service-layer rule:** `PlanningDayMutationCoordinator.setPlanningDayStart()` ALWAYS enforces authorization. Calling it with a value that is already stored while FREE still returns:
+
+```
+FAILED
+  stage: AUTHORIZATION
+  reason: PREMIUM_REQUIRED
+```
+
+There is **no service-level same-value bypass**. The service does not short-circuit for "already stored value" — authorization is unconditional for MIDNIGHT/CUSTOM regardless of current stored state.
+
+**UI-layer optimization:** `planning-day.tsx` MAY short-circuit before calling the mutation hook:
+
+```typescript
+if (requestedValue === currentStoredValue) return; // presentation only
+```
+
+This is a **presentation convenience only**, not an authorization rule. The service contract remains strict. See test UI-12.
+
 ---
 
 ## 20. Critical Distinction — Entitlement vs. Planner Runtime
@@ -424,17 +449,44 @@ New migrations: **Zero.** `user_settings.isPremium` already exists.
 | `src/domain/entitlement/EntitlementService.ts` | `LocalEntitlementService` + singleton |
 | `src/data/repositories/EntitlementRepository.ts` | Read-only `readIsPremium()` adapter |
 | `src/services/PlanningDayMutationCoordinator.ts` | Auth + mutation + refresh coordinator |
-| `src/hooks/useEntitlement.ts` | Thin React hook |
+| `src/hooks/useEntitlement.ts` | Thin React hook for entitlement state |
+| `src/hooks/usePlanningDayMutation.ts` | Thin React hook wrapping `PlanningDayMutationCoordinator` |
 | `src/components/premium/PremiumBadge.tsx` | Premium indicator component |
 | `src/components/premium/PremiumLockedInfo.tsx` | Informational bottom sheet/modal |
 | `src/components/premium/index.ts` | Barrel export |
-| `src/domain/entitlement/__tests__/EntitlementService.test.ts` | E-01–E-10 |
+| `src/domain/entitlement/__tests__/EntitlementService.test.ts` | E-01–E-11 |
 | `src/data/repositories/__tests__/EntitlementRepository.test.ts` | Data layer tests |
 | `src/services/__tests__/PlanningDayMutationCoordinator.test.ts` | A/P/S series |
 | `src/hooks/__tests__/useEntitlement.test.ts` | Hook tests |
+| `src/hooks/__tests__/usePlanningDayMutation.test.ts` | Hook tests (isSaving, error, delegation, unmount safety) |
 | `src/components/premium/__tests__/PremiumBadge.test.tsx` | Component tests |
 | `src/components/premium/__tests__/PremiumLockedInfo.test.tsx` | Copy + component tests |
-| `app/(tabs)/settings/__tests__/PlanningDayM19.test.tsx` | UI-01–UI-11 |
+| `app/(tabs)/settings/__tests__/PlanningDayM19.test.tsx` | UI-01–UI-12 |
+
+### usePlanningDayMutation Hook Contract
+
+```typescript
+// src/hooks/usePlanningDayMutation.ts
+
+export interface UsePlanningDayMutationResult {
+  isSaving: boolean;
+  error: string | null;
+  setPlanningDayStart(value: string): Promise<PlanningDayMutationResult>;
+}
+
+export function usePlanningDayMutation(
+  coordinator: PlanningDayMutationCoordinator = planningDayMutationCoordinator
+): UsePlanningDayMutationResult
+```
+
+Responsibilities:
+- React loading/error state (`isSaving`, `error`) only
+- Delegates directly to `PlanningDayMutationCoordinator.setPlanningDayStart()`
+- No authorization logic in hook
+- No validation logic in hook
+- No direct repository access in hook
+
+`planning-day.tsx` calls `usePlanningDayMutation()`, **not** `useSettingsMutation()`, for `planningDayStart` changes.
 
 ---
 
@@ -458,24 +510,26 @@ New migrations: **Zero.** `user_settings.isPremium` already exists.
 
 `PlanningDayEngine.ts`, `TodayTemporalInputProvider.ts`, `temporalSettingsHelper.ts`, `SchedulingEngine.ts`, `MaterializationEngine.ts`, `WallClockResolver.ts`, `PlannerRefreshCoordinator.ts`, `schema.ts`, `migrations/`, `UserSettingsRepository.ts`, all of `src/services/journal/`, all of `src/services/widget/`, all of `widgets/`, `useToday.ts`, `useUserSettings.ts`, `useSettingsMutation.ts`.
 
+**`useSettingsMutation.ts` is explicitly unchanged.** `planning-day.tsx` uses the new `usePlanningDayMutation` hook for planning-day mutations, not the existing `useSettingsMutation`.
+
 ---
 
 ## 28. Test Matrix
 
 ### E-series (Entitlement Service)
-E-01: No row → FREE. E-02: isPremium=false → FREE. E-03: isPremium=true → PREMIUM. E-04: DB failure → UNAVAILABLE. E-05/07: hasFeature() → false for FREE. E-06/08: hasFeature() → true for PREMIUM. E-09: UNAVAILABLE → false (fail-closed). E-10: getSnapshot() never throws.
+E-01: No row (`null`) → FREE (fresh-install default). E-02: isPremium=false → FREE. E-03: isPremium=true → PREMIUM. E-04: DB failure (throw) → UNAVAILABLE. E-05/07: hasFeature() → false for FREE. E-06/08: hasFeature() → true for PREMIUM. E-09: UNAVAILABLE → false (fail-closed). E-10: getSnapshot() never throws. E-11: Hook unmount — async entitlement load completes after unmount → no React setState called on unmounted component.
 
 ### A-series (Authorization)
-A-01: FREE+FAJR → ALLOW. A-02: FREE+MIDNIGHT → PREMIUM_REQUIRED. A-03: FREE+CUSTOM:04:00 → PREMIUM_REQUIRED. A-04: PREMIUM+MIDNIGHT → ALLOW. A-05: PREMIUM+CUSTOM:19:30 → ALLOW. A-06: CUSTOM:25:00 → VALIDATION_FAILED. A-07: CUSTOM: → VALIDATION_FAILED. A-08: UNAVAILABLE+MIDNIGHT → ENTITLEMENT_UNAVAILABLE. A-09: UNAVAILABLE+FAJR → ALLOW. A-10: isPremium cannot be set via SettingsMutationCoordinator. A-11: planningDayStart rejected by SettingsMutationCoordinator.
+A-01: FREE+FAJR → ALLOW (entitlement service NOT called). A-02: FREE+MIDNIGHT → PREMIUM_REQUIRED. A-03: FREE+CUSTOM:04:00 → PREMIUM_REQUIRED. A-04: PREMIUM+MIDNIGHT → ALLOW. A-05: PREMIUM+CUSTOM:19:30 → ALLOW. A-06: CUSTOM:25:00 → VALIDATION_FAILED (validation rejected before entitlement lookup). A-07: CUSTOM: → VALIDATION_FAILED (validation rejected before entitlement lookup). A-08: UNAVAILABLE+MIDNIGHT → ENTITLEMENT_UNAVAILABLE. A-09: UNAVAILABLE+FAJR → ALLOW (entitlement service NOT called). A-10: isPremium cannot be set via SettingsMutationCoordinator. A-11: planningDayStart rejected by SettingsMutationCoordinator. A-12: Authorization failure (PREMIUM_REQUIRED or ENTITLEMENT_UNAVAILABLE) → ZERO persistence calls and ZERO fullRefresh calls.
 
 ### P-series (Persistence)
-P-01: MIDNIGHT persists `'MIDNIGHT'`. P-02: CUSTOM:04:00 persists `'CUSTOM:04:00'`. P-03: Success calls exactly one fullRefresh(). P-04: Persistence failure → no refresh. P-05: Persist success + refresh failure → PERSISTED_REFRESH_FAILED. P-06: FAJR always succeeds. P-07: upsert patch contains ONLY planningDayStart.
+P-01: MIDNIGHT persists `'MIDNIGHT'`. P-02: CUSTOM:04:00 persists `'CUSTOM:04:00'`. P-03: Success calls exactly one fullRefresh(). P-04: Persistence failure → no refresh. P-05: Persist success + refresh failure → PERSISTED_REFRESH_FAILED. P-06: FAJR always succeeds. P-07: upsert patch contains ONLY planningDayStart. P-08: Validation failure → ZERO fullRefresh calls.
 
 ### S-series (Planner Safety)
 S-01: Entitlement failure does NOT rewrite planningDayStart. S-02: Opening screen causes zero DB writes. S-03: Existing MIDNIGHT displayed when FREE, no downgrade. S-04: Existing CUSTOM displayed when FREE, no downgrade. S-05: FAJR switch succeeds regardless of tier. S-06/07/08: Terminal COMPLETED/MISSED/CANCELLED occurrences unchanged.
 
 ### UI-series
-UI-01: FREE: FAJR selectable, others locked. UI-02/03: No purchase navigation on locked tap. UI-04: PREMIUM+MIDNIGHT calls setPlanningDayStart. UI-05: PREMIUM+CUSTOM shows time picker. UI-06: Time picker validates HH:mm. UI-07: No fake checkout UI. UI-08: No price/subscription text. UI-09: No toggle writes isPremium. UI-10: PremiumLockedInfo copy is calm. UI-11: Existing Premium mode shown when FREE.
+UI-01: FREE: FAJR selectable, others locked. UI-02/03: No purchase navigation on locked tap. UI-04: PREMIUM+MIDNIGHT calls setPlanningDayStart. UI-05: PREMIUM+CUSTOM shows time picker. UI-06: Time picker validates HH:mm (24-hour canonical, no UTC conversion). UI-07: No fake checkout UI. UI-08: No price/subscription text. UI-09: No toggle writes isPremium. UI-10: PremiumLockedInfo copy is calm. UI-11: Existing Premium mode shown when FREE. UI-12: FREE user tapping already-active locked Premium mode (e.g., stored MIDNIGHT, taps MIDNIGHT) → ZERO mutation calls to coordinator (UI short-circuit).
 
 ### I-series (Integration)
 I-01: Premium mutation updates Today via fullRefresh(). I-02/03: Notifications/widgets still integrated. I-04: No entitlement check in widget path. I-05: No entitlement import in journal services. I-06: M15 crypto tests still pass.
@@ -503,31 +557,39 @@ All 1230 M18 baseline tests remain green.
 To add real billing:
 1. Implement `StoreEntitlementService` implementing `EntitlementService`.
 2. Replace `localEntitlementService` singleton.
-3. Add `EntitlementRepository.commitPurchase()` to persist verified entitlement.
-4. Optionally add Context provider for real-time events.
+3. Add a verified entitlement persistence method to the entitlement persistence boundary. Its API shape will be determined by the future billing model (one-time purchase, subscription, restored entitlement, or other verified store state). Do not define this API in M19.
+4. Optionally add a Context provider or event bus for real-time entitlement state changes.
 
 No feature screens, planner engine, or widget code requires changes.
 
+**M19 introduces no purchase, subscription, expiry, receipt, restore, or billing SDK contract.** The billing seam is the `EntitlementService` interface only.
+
 ---
 
-## 31. Unresolved BLOCKER Items for Opus Review
+## 31. Opus Independent Review — Resolution
 
-| # | Item | Type |
+**Opus review verdict:** APPROVED WITH REQUIRED ARCHITECTURE AMENDMENTS (2026-09-18)
+
+All BLOCKER items resolved:
+
+| # | Item | Resolution |
 |---|---|---|
-| B-01 | Approach B (PlanningDayMutationCoordinator) vs Approach A (inject into SettingsMutationCoordinator) — confirm analysis | ARCHITECTURE |
-| B-02 | planningDayStart removal from TEMPORAL_ALLOWED_KEYS — confirm no other callers besides planning-day.tsx | ARCHITECTURE |
-| B-03 | Fail-open audit — confirm all catch blocks return false/UNAVAILABLE | SECURITY |
-| B-04 | FAJR always free rule — confirm no scenario blocks FAJR | SECURITY |
-| B-05 | Re-selecting active Premium mode: UI-level no-op vs. service-layer no-op | ARCHITECTURE |
-| B-06 | Custom time picker dependency — confirm existing picker is reusable | DEPENDENCY |
+| B-01 | Approach B vs Approach A | ✅ APPROVED — Approach B confirmed correct |
+| B-02 | planningDayStart removal — no other callers | ✅ APPROVED — only planning-day.tsx caller, safely removable |
+| B-03 | Fail-open audit | ✅ APPROVED — all paths fail-closed |
+| B-04 | FAJR always free | ✅ APPROVED — authorization step skipped for FAJR |
+| B-05 | Active Premium mode no-op semantics | ✅ APPROVED — service always enforces; see §19a |
+| B-06 | Custom time picker | ✅ APPROVED — `@react-native-community/datetimepicker` v9.1.0 already installed |
+
+Amendments applied per Opus review: Amendment 1 (§4 fresh-install semantics), Amendment 2 (§19a active-mode no-op rule), Amendment 3 (§25/27 usePlanningDayMutation hook), Amendment 4 (§30 billing seam language). Test matrix hardened with A-12, P-08, UI-12, E-11.
 
 ---
 
-## Appendix A — ADR-027 (Proposed)
+## Appendix A — ADR-027
 
 **ADR-027: Feature Code Consumes EntitlementService, Not user_settings.isPremium Directly**
 
-**Status:** Proposed (2026-09-18) — pending Opus review
+**Status:** Adopted (2026-09-18) — Opus review APPROVED
 
 **Decision:**
 1. All feature code queries `EntitlementService.hasFeature()` or `getSnapshot()`. Direct reads of `user_settings.isPremium` from feature code are forbidden.

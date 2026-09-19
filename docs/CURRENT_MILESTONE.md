@@ -1,9 +1,9 @@
 # Current Milestone: M19 — Premium Entitlement Scaffolding
 
-> **Current State:** M19 ARCHITECTURE FROZEN — PENDING OPUS INDEPENDENT REVIEW
+> **Current State:** M19 ARCHITECTURE FROZEN — OPUS REVIEW APPROVED — READY FOR IMPLEMENTATION
 > **Previous Milestone:** M18 CLOSED / SONNET APPROVED
-> **Milestone Status:** M19 — ARCHITECTURE FROZEN — PENDING OPUS INDEPENDENT REVIEW
-> **Architecture Status:** FROZEN — Authored 2026-09-18 — see docs/M19_ARCHITECTURE.md
+> **Milestone Status:** M19 — ARCHITECTURE FROZEN — OPUS REVIEW APPROVED — AMENDMENTS APPLIED
+> **Architecture Status:** FROZEN — Authored 2026-09-18 — Opus-reviewed 2026-09-18 — see docs/M19_ARCHITECTURE.md
 
 ---
 
@@ -117,7 +117,7 @@ M15 — Journal Core & Privacy       ✅ CLOSED / SONNET APPROVED
 M16 — Journal Experience / UI      ✅ CLOSED / SONNET APPROVED
 M17 — Settings                     ✅ CLOSED / SONNET APPROVED
 M18 — Widgets (dev build required) ✅ CLOSED / SONNET APPROVED
-M19 — Premium entitlement scaffolding  ← CURRENT (PENDING — ARCHITECTURE NOT YET FROZEN)
+M19 — Premium Entitlement Scaffolding  ← CURRENT (ARCHITECTURE FROZEN — OPUS APPROVED — AMENDMENTS APPLIED — READY FOR GEMINI IMPLEMENTATION)
 M20 — Onboarding
 M21 — Dark mode polish
 M22 — Accessibility / RTL
