@@ -107,6 +107,9 @@ describe('Group A: Accessible Names & Traversal Noise', () => {
 
   // A-10
   it('A-10: TaskCard groups contentContainer with composite label and keeps checkbox outside group', async () => {
+    // M23 native QA carry-forward:
+    // "Verify TaskCard composite announcement and absence of duplicate descendant
+    // announcements with Android TalkBack on a physical/emulated native build."
     const sampleTask: TaskCardViewModel = {
       occurrenceId: 'occ-1',
       taskDefinitionId: 'def-1',
@@ -138,6 +141,12 @@ describe('Group A: Accessible Names & Traversal Noise', () => {
     // Composite label on content container
     const contentGroup = screen.getByLabelText('Read Quran. Important.');
     expect(contentGroup).toBeTruthy();
+    expect(contentGroup.props.accessible).toBe(true);
+    expect(contentGroup.props.accessibilityLabel).toBe('Read Quran. Important.');
+
+    // Composite container does NOT use importantForAccessibility="no-hide-descendants"
+    // (RN 0.86 defines no-hide-descendants as hiding the view itself AND all descendants)
+    expect(contentGroup.props.importantForAccessibility).not.toBe('no-hide-descendants');
   });
 
   // A-11

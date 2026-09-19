@@ -131,7 +131,7 @@ describe('Group F: Text Scaling Contract', () => {
     }
   });
 
-  it('F-6: CalendarMonthGrid weekday labels do not contain invalid accessibilityRole="text" (A-12)', async () => {
+  it('F-6: CalendarMonthGrid weekday labels do not contain redundant accessibilityRole="text" (A-12)', async () => {
     await render(
       <ThemeProvider>
         <CalendarMonthGrid grid={grid} onCellTap={jest.fn()} />

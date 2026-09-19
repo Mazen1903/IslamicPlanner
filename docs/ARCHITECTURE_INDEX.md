@@ -560,7 +560,7 @@
   - `src/components/journal/JournalHistoryRow.tsx` — decorative chevron icon
   - `src/components/journal/ReflectionSection.tsx` — logical margin
   - `src/components/calendar/CalendarDayCell.tsx` — maxFontSizeMultiplier={2} on day numbers
-  - `src/components/calendar/CalendarMonthGrid.tsx` — remove invalid role; maxFontSizeMultiplier on weekday labels
+  - `src/components/calendar/CalendarMonthGrid.tsx` — remove redundant text role; maxFontSizeMultiplier on weekday labels
   - `src/components/calendar/DayDetailTaskList.tsx` — Arabic name suppression; logical margin
   - `src/components/calendar/UpcomingSection.tsx` — logical margins
   - `src/components/settings/SettingsSectionHeader.tsx` — header role
@@ -569,7 +569,7 @@
   - `src/components/settings/SettingsSelectOption.tsx` — logical padding
   - `src/components/settings/SettingsInfoCard.tsx` — logical margin
   - `src/components/settings/SettingsScreenHeader.tsx` — decorative chevron icon
-  - `src/components/premium/PremiumBadge.tsx` — remove invalid role; decorative icon
+  - `src/components/premium/PremiumBadge.tsx` — remove redundant text role; decorative icon
   - `src/components/premium/PremiumLockedInfo.tsx` — modal isolation; header role; logical margin
   - `src/components/task-form/CustomRecurrenceModal.tsx` — modal isolation; header role
   - `src/components/task-form/EditScopeSheet.tsx` — modal isolation; header role

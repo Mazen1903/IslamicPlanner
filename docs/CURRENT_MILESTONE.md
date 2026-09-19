@@ -267,11 +267,22 @@ The following checks require physical devices or simulators and are carried forw
 - **`maxFontSizeMultiplier={2}`:** Strictly limited to the 3 authorized calendar cell Text nodes with per-node justification.
 - **Icon `decorative` prop:** Integrated on `Icon.tsx`; suppresses noise inside labeled Pressables.
 - **ADR-030:** Fully executed.
+- **Review Finding D-1 Resolution:** Reviewer flagged TaskCard descendant suppression; proposed `importantForAccessibility="no-hide-descendants"` fix on the composite parent was rejected after React Native 0.86 API verification (RN 0.86 defines `no-hide-descendants` as hiding the View itself AND all descendants, which would suppress the entire composite element from TalkBack). TaskCard implementation retained pending native TalkBack verification in M23.
 
 ### Native QA Carry-Forward (Deferred to M23)
 
-VoiceOver/TalkBack focus order, modal focus trapping on physical devices, RTL visual layout on physical devices, directional icon glyph verification on RTL device, large text calendar layout on physical devices — explicitly carried forward to M23.
+The following native QA items are carried forward to M23 (physical device / emulator verification; no M23 implementation starts now):
+- **TaskCard TalkBack grouping / duplicate announcements:** Verify TaskCard composite announcement and absence of duplicate descendant announcements with Android TalkBack on a physical/emulated native build.
+- **VoiceOver TaskCard grouping:** Verify TaskCard composite announcement and checkbox navigation in VoiceOver on iOS device.
+- **Modal focus trapping:** VoiceOver and TalkBack modal focus trapping across all 6 native modals (`JournalDeleteDialog`, `JournalPrivacySheet`, `CustomRecurrenceModal`, `EditScopeSheet`, `PremiumLockedInfo`, `hijri-calendar`).
+- **TalkBack `accessibilityViewIsModal`:** Verify `accessibilityViewIsModal` effectiveness on Android API levels 29–34.
+- **Physical RTL rendering:** Physical RTL layout rendering across all screens on device with Arabic/Hebrew system locale.
+- **RTL navigation and tab order:** Prayer tab chronological order and BottomNavBar visual order on device with RTL locale.
+- **Calendar grid mirroring:** Calendar grid natural flex mirroring on device with RTL locale.
+- **Directional icon glyph flip:** Verify directional icon glyph flip on device with RTL locale (back chevrons, prev/next month chevrons).
+- **Large accessibility text calendar behavior:** Large Accessibility Text (iOS max / Android largest) layout and wrapping on calendar weekday labels and day cell numbers.
+- **Widget accessibility:** Widget accessibility tree inspection (M23/M24).
 
 ### M23 Status
 
-**NOT STARTED.** Awaits independent review and formal closure of M22.
+**NOT STARTED.** Awaits independent re-review and formal closure of M22.

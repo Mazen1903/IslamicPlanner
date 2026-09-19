@@ -857,7 +857,7 @@ The codebase reached M22 with excellent structural accessibility scaffolding but
 | Force LTR on PrayerTabBar and BottomNavBar | Anti-chronological for RTL readers; physical forced direction violates accessibility expectations for RTL users |
 | Runtime `I18nManager.forceRTL` in M22 | No locale system exists; activation without translation system creates a broken bilingual experience |
 | `maxFontSizeMultiplier={1.0}` globally | Disables user's accessibility settings; violates WCAG and Apple/Google accessibility guidelines |
-| Keep `accessibilityRole="text"` on PremiumBadge | Not a valid React Native role; silently ignored by screen readers but incorrect in spec |
+| Keep `accessibilityRole="text"` on PremiumBadge | Redundant/unnecessary role in this specific component; static text is naturally announced without explicit role annotation |
 | `selected` state for radio buttons | Incorrect — VoiceOver/TalkBack announce `selected` as selection, not checked state; radio must use `checked` |
 | Accessible backdrop Pressable with label when explicit dismiss button exists | Creates duplicate screen-reader control; modal has one dismiss path, not two |
 | `accessible` group on PremiumLockedInfo card | Hides nested OK Pressable from individual screen-reader traversal; explicit control must be independently accessible |

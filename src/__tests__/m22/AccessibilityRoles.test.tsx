@@ -28,7 +28,7 @@ describe('Group B: Accessibility Roles Contract (§6.1)', () => {
   const grid = buildCalendarMonthGrid(2026, 9, '2026-09-15', '2026-09-15', hijriService);
 
   // B-1
-  it('B-1: CalendarMonthGrid weekday labels do not have invalid accessibilityRole="text" (A-12)', async () => {
+  it('B-1: CalendarMonthGrid weekday labels do not have redundant accessibilityRole="text" (A-12)', async () => {
     await render(
       <ThemeProvider>
         <CalendarMonthGrid grid={grid} onCellTap={jest.fn()} />
@@ -39,7 +39,7 @@ describe('Group B: Accessibility Roles Contract (§6.1)', () => {
   });
 
   // B-2
-  it('B-2: PremiumBadge removes invalid accessibilityRole="text" (A-23)', async () => {
+  it('B-2: PremiumBadge removes redundant accessibilityRole="text" (A-23)', async () => {
     await render(
       <ThemeProvider>
         <PremiumBadge />

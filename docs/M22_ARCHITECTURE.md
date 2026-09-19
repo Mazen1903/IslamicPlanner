@@ -62,7 +62,7 @@ M22 must not change domain logic, scheduling behavior, database schema, or plann
 | 20 | `app/task/add.tsx` | COMPLIANT | Delegates to TaskFormScreen; no direct a11y/RTL gaps |
 | 21 | `src/components/calendar/CalendarDayCell.tsx` | **CHANGE** | `maxFontSizeMultiplier={2}` on day number and Hijri sub-number (justified per §10) |
 | 22 | `src/components/calendar/CalendarHeader.tsx` | **CHANGE** | `chevron-left`/`chevron-right` navigation icons require `directional` prop (per §3); no accessibility gaps |
-| 23 | `src/components/calendar/CalendarMonthGrid.tsx` | **CHANGE** | `accessibilityRole="text"` on weekday labels is invalid (remove); `maxFontSizeMultiplier={2}` on weekday labels (justified per §10) |
+| 23 | `src/components/calendar/CalendarMonthGrid.tsx` | **CHANGE** | `accessibilityRole="text"` on weekday labels is redundant/unnecessary (remove); `maxFontSizeMultiplier={2}` on weekday labels (justified per §10) |
 | 24 | `src/components/calendar/DayDetailTaskList.tsx` | **CHANGE** | Arabic name Text (L67–69) lacks `importantForAccessibility="no"`; physical `marginLeft` (L67) |
 | 25 | `src/components/calendar/UpcomingSection.tsx` | **CHANGE** | Icon `marginRight` L26: physical → `marginEnd`; icon `marginRight` L107: physical → `marginEnd` |
 | 26 | `src/components/common/BottomSheet.tsx` | PLACEHOLDER | Stub; no production UI |
@@ -93,7 +93,7 @@ M22 must not change domain logic, scheduling behavior, database schema, or plann
 | 51 | `src/components/prayer/PrayerTabBar.tsx` | **CHANGE** | Indicator dot not suppressed (A-16); tab Icons → `decorative` prop |
 | 52 | `src/components/prayer/PrayerTransitionBanner.tsx` | **CHANGE** | Physical `marginRight: 12` (L101), physical `marginLeft: 8` (L109) |
 | 53 | `src/components/premium/index.ts` | BARREL | Re-export barrel |
-| 54 | `src/components/premium/PremiumBadge.tsx` | **CHANGE** | `accessibilityRole="text"` invalid (remove); physical `marginRight: 3`; lock icon → `decorative` |
+| 54 | `src/components/premium/PremiumBadge.tsx` | **CHANGE** | redundant/unnecessary `accessibilityRole="text"` removed; physical `marginRight: 3`; lock icon → `decorative` |
 | 55 | `src/components/premium/PremiumLockedInfo.tsx` | **CHANGE** | `accessibilityViewIsModal={true}` on content View; remove `accessible` from content View (hides OK button); title `Text` → `accessibilityRole="header"`; backdrop accessibility per §4; physical `marginRight: spacing.sm` (L67) |
 | 56 | `src/components/settings/index.ts` | BARREL | Re-export barrel |
 | 57 | `src/components/settings/SettingsInfoCard.tsx` | **CHANGE** | Physical `marginRight: spacing.sm` on icon (L37) |
@@ -362,7 +362,7 @@ Findings are divided into two categories:
 | A-9 | Traversal / Noise | LOW | `SettingsRow.tsx` | Pass `decorative` to chevron Icon (via A-2) | A |
 | A-10 | Grouping | MEDIUM | `TaskCard.tsx` | Group informational `contentContainer View`; composite label; interactive checkbox stays outside group | A, B |
 | A-11 | Traversal / Noise | LOW | `DayDetailTaskList.tsx` | `importantForAccessibility="no"` on Arabic name Text | A |
-| A-12 | Role | LOW | `CalendarMonthGrid.tsx` | Remove invalid `accessibilityRole="text"` from weekday header labels | B |
+| A-12 | Role | LOW | `CalendarMonthGrid.tsx` | Remove redundant/unnecessary `accessibilityRole="text"` from weekday header labels | B |
 | A-13 | Role / State | HIGH | `app/onboarding/index.tsx` | Theme-select Pressables: `accessibilityRole="radio"`, `accessibilityLabel`, `accessibilityState={{ checked: isSelected }}` | A, B, C |
 | A-14 | Role / State | HIGH | `app/onboarding/index.tsx` | Method-select Pressables: same as A-13 | A, B, C |
 | A-15 | Label | MEDIUM | `app/onboarding/index.tsx` | City result Pressables: `accessibilityRole="button"`, `accessibilityLabel` (city+country+timezone) | A |
@@ -372,10 +372,12 @@ Findings are divided into two categories:
 | A-20 | Text Scaling | MEDIUM | `CalendarMonthGrid.tsx`, `CalendarDayCell.tsx` | `maxFontSizeMultiplier={2}` on calendar weekday labels and day cell numbers (§10) | F |
 | A-21 | Label | LOW | `JournalHistory.tsx` | Back button already has role/label ✅; `chevron-left` needs `directional` prop (per §3); physical margin fix only | A |
 | A-22 | Modal Isolation | MEDIUM | `PremiumLockedInfo.tsx` | `accessibilityViewIsModal={true}`; remove `accessible`/`accessibilityRole="alert"` from card View (hides OK button); title → `accessibilityRole="header"` | E |
-| A-23 | Role | LOW | `PremiumBadge.tsx` | Remove `accessibilityRole="text"` (invalid role); `accessible + accessibilityLabel` retained | B |
+| A-23 | Role | LOW | `PremiumBadge.tsx` | Remove redundant/unnecessary `accessibilityRole="text"`; `accessible + accessibilityLabel` retained | B |
 | A-24 | Role / State | MEDIUM | `CustomRecurrenceModal.tsx` | Calendar-switcher Pressables already have `accessibilityRole="radio"` but wrong state key: change `{ selected }` → `{ checked }` (L137 in modal) | B, C |
 
 > **A-19 is reclassified as OBS-1 (non-actionable observation). See §5.4.**
+
+> **Review Finding D-1 Resolution (TaskCard Descendant Suppression):** The independent reviewer flagged TaskCard descendant suppression and proposed adding `importantForAccessibility="no-hide-descendants"` to the composite parent `contentContainer` View. However, the Lead rejected that proposed implementation after checking React Native 0.86's actual accessibility API: RN 0.86 defines `importantForAccessibility="no-hide-descendants"` as making that View itself AND all descendants not important to accessibility. Putting it on the composite accessible `contentContainer` View (which has `accessible={true}` and `accessibilityLabel={compositeLabel}`) could suppress the entire composite element from TalkBack. Therefore, the reviewer's proposed single-line fix was rejected. TaskCard implementation retained pending native TalkBack verification in M23. (Note: Android duplicate announcement was not confirmed via physical testing; verification deferred to native QA).
 
 **Accessibility implementation finding count: 23 (A-1..A-24 numbering, minus A-19=OBS-1 = 23 implementation findings)**
 
@@ -742,7 +744,7 @@ See ADR-030 §E.
 16. `src/components/journal/ReflectionSection.tsx` — logical margin
 17. `src/components/calendar/CalendarHeader.tsx` — directional prev/next icons; decorative on both
 18. `src/components/calendar/CalendarDayCell.tsx` — maxFontSizeMultiplier on day/Hijri numbers
-19. `src/components/calendar/CalendarMonthGrid.tsx` — remove invalid role; maxFontSizeMultiplier on weekday labels
+19. `src/components/calendar/CalendarMonthGrid.tsx` — remove redundant text role; maxFontSizeMultiplier on weekday labels
 20. `src/components/calendar/DayDetailTaskList.tsx` — Arabic name suppressed; logical margin
 21. `src/components/calendar/UpcomingSection.tsx` — logical margins
 22. `src/components/settings/SettingsSectionHeader.tsx` — header role
@@ -751,7 +753,7 @@ See ADR-030 §E.
 25. `src/components/settings/SettingsSelectOption.tsx` — logical padding
 26. `src/components/settings/SettingsInfoCard.tsx` — logical margin
 27. `src/components/settings/SettingsScreenHeader.tsx` — decorative + directional back icon
-28. `src/components/premium/PremiumBadge.tsx` — remove invalid role; decorative lock icon; logical margin
+28. `src/components/premium/PremiumBadge.tsx` — remove redundant text role; decorative lock icon; logical margin
 29. `src/components/premium/PremiumLockedInfo.tsx` — modal isolation; remove accessible group (expose OK button); header role; backdrop accessible={false}; logical margin
 30. `src/components/task-form/CustomRecurrenceModal.tsx` — modal isolation; header role; fix radio state key (A-24)
 31. `src/components/task-form/EditScopeSheet.tsx` — modal isolation; header role
@@ -801,20 +803,18 @@ See ADR-030 §E.
 
 ## 17. Native QA Carry-Forward (M23)
 
-| Item |
-|---|
-| VoiceOver focus order — Today, PrayerHeader, TaskCard |
-| TalkBack focus order — Today, PrayerHeader, TaskCard |
-| VoiceOver — modal focus trapping for all 6 modals |
-| TalkBack — modal focus trapping for all 6 modals |
-| TalkBack — `accessibilityViewIsModal` effectiveness on Android API levels 29–34 |
-| Prayer tab visual order on device with Arabic/Hebrew system locale |
-| BottomNavBar visual order on device with RTL locale |
-| Calendar grid mirroring on device with RTL locale |
-| Directional icon glyph flip on device with RTL locale (back chevrons, prev/next month chevrons, disclosure chevrons, expand-collapse chevrons) |
-| Large Accessibility Text (iOS max / Android largest) — calendar weekday labels |
-| Large Accessibility Text (iOS max / Android largest) — calendar day cell numbers |
-| Widget accessibility (M23/M24) |
+| Item | Description |
+|---|---|
+| TaskCard TalkBack grouping / duplicate announcements | Verify TaskCard composite announcement and absence of duplicate descendant announcements with Android TalkBack on a physical/emulated native build |
+| VoiceOver TaskCard grouping | Verify TaskCard composite announcement and checkbox navigation in VoiceOver on iOS device |
+| Modal focus trapping | VoiceOver and TalkBack modal focus trapping across all 6 native modals (`JournalDeleteDialog`, `JournalPrivacySheet`, `CustomRecurrenceModal`, `EditScopeSheet`, `PremiumLockedInfo`, `hijri-calendar`) |
+| TalkBack `accessibilityViewIsModal` | Verify `accessibilityViewIsModal` effectiveness on Android API levels 29–34 |
+| Physical RTL rendering | Physical RTL layout rendering across all screens on device with Arabic/Hebrew system locale |
+| RTL navigation and tab order | Prayer tab chronological order and BottomNavBar visual order on device with RTL locale |
+| Calendar grid mirroring | Calendar grid natural flex mirroring on device with RTL locale |
+| Directional icon glyph flip | Verify directional icon glyph flip on device with RTL locale (back chevrons, prev/next month chevrons) |
+| Large accessibility text calendar behavior | Large Accessibility Text (iOS max / Android largest) layout and wrapping on calendar weekday labels and day cell numbers |
+| Widget accessibility | Widget accessibility tree inspection (M23/M24) |
 
 ---
 
