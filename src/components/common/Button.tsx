@@ -98,7 +98,7 @@ export function Button({
         };
       case 'destructive':
         return {
-          background: isPressed ? theme.colors.danger : theme.colors.danger,
+          background: isPressed ? theme.colors.dangerPressed : theme.colors.danger,
           text: theme.colors.textOnPrimary,
           border: 'transparent',
         };

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme, type ThemeMode } from '@/theme';
@@ -50,6 +51,15 @@ export function BootstrapErrorView({ onRetry }: { onRetry: () => void }) {
   );
 }
 
+/**
+ * Renders the native status bar with the correct icon style for the active theme.
+ * Must be rendered inside ThemeProvider.
+ */
+export function ThemedStatusBar() {
+  const { isDark } = useTheme();
+  return <StatusBar style={isDark ? 'light' : 'dark'} />;
+}
+
 export function RootGate() {
   const status = useOnboardingStore(s => s.status);
   const segments = useSegments();
@@ -95,6 +105,9 @@ export function RootGate() {
 
 export default function RootLayout() {
   const [themeMode, setThemeMode] = useState<ThemeMode>('SYSTEM');
+  // themeReady gates RootGate mount: persisted theme must resolve before normal
+  // content renders. Eliminates the hydration race (ADR-029, M21 Correction 1).
+  const [themeReady, setThemeReady] = useState(false);
 
   useEffect(() => {
     initNotificationHandler();
@@ -107,6 +120,10 @@ export default function RootLayout() {
       })
       .catch(err => {
         console.warn('[RootLayout] Failed to load persisted theme mode:', err);
+        // Non-fatal: app falls back to SYSTEM mode
+      })
+      .finally(() => {
+        setThemeReady(true);
       });
   }, []);
 
@@ -122,7 +139,8 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ThemeProvider mode={themeMode} onModeChange={handleModeChange}>
-        <RootGate />
+        <ThemedStatusBar />
+        {themeReady ? <RootGate /> : <BootstrapLoadingView />}
       </ThemeProvider>
     </SafeAreaProvider>
   );

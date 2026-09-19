@@ -77,7 +77,7 @@ export default function AppearanceScreen() {
                 { backgroundColor: colors.primary, borderRadius: radii.sm },
               ]}
             >
-              <Text style={styles.swatchText}>Primary</Text>
+              <Text style={[styles.swatchText, { color: colors.textOnPrimary }]}>Primary</Text>
             </View>
             <View
               style={[
@@ -135,6 +135,6 @@ const styles = StyleSheet.create({
   swatchText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#FFF',
+    // color intentionally omitted: each swatch sets color inline via theme tokens (M21)
   },
 });

@@ -349,7 +349,7 @@ export default function OnboardingScreen({
               <Text style={[theme.typography.headlineLarge, { color: theme.colors.textPrimary, textAlign: 'center' }]}>
                 Soccer — 6:00 PM
               </Text>
-              <View style={styles.exampleDivider} />
+              <View style={[styles.exampleDivider, { backgroundColor: theme.colors.divider }]} />
               <View style={styles.exampleSeasonRow}>
                 <View style={styles.seasonItem}>
                   <Text style={[theme.typography.labelMedium, { color: theme.colors.textSecondary }]}>SUMMER</Text>
@@ -415,7 +415,7 @@ export default function OnboardingScreen({
             </Text>
 
             {hasUsableLocation ? (
-              <View style={styles.currentLocationBox}>
+              <View style={[styles.currentLocationBox, { backgroundColor: theme.colors.surfaceSecondary }]}>
                 <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>
                   {locationHook.locationMode === 'AUTO' ? 'Automatic Location' : 'Selected Location'}
                 </Text>
@@ -518,7 +518,7 @@ export default function OnboardingScreen({
               Prayer Calculation
             </Text>
 
-            <View style={styles.methodInfoBox}>
+            <View style={[styles.methodInfoBox, { backgroundColor: theme.colors.surfaceSecondary }]}>
               {methodRecommendationSource === 'RECOMMENDED' ? (
                 <>
                   <Text style={[theme.typography.labelLarge, { color: theme.colors.primary }]}>
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
   },
   exampleDivider: {
     height: 1,
-    backgroundColor: '#E0E0E0',
+    // backgroundColor: set inline via theme.colors.divider (M21)
     marginVertical: 16,
   },
   exampleSeasonRow: {
@@ -815,7 +815,7 @@ const styles = StyleSheet.create({
   currentLocationBox: {
     padding: 12,
     borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.03)',
+    // backgroundColor: set inline via theme.colors.surfaceSecondary (M21)
     marginBottom: 12,
   },
   locationActions: {
@@ -843,7 +843,7 @@ const styles = StyleSheet.create({
   methodInfoBox: {
     padding: 12,
     borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.03)',
+    // backgroundColor: set inline via theme.colors.surfaceSecondary (M21)
     marginBottom: 4,
   },
   methodsList: {

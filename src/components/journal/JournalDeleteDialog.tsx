@@ -93,7 +93,7 @@ export function JournalDeleteDialog({
               style={({ pressed }) => [
                 styles.button,
                 {
-                  backgroundColor: pressed ? '#962D22' : colors.danger,
+                  backgroundColor: pressed ? colors.dangerPressed : colors.danger,
                   borderRadius: radii.sm,
                   minHeight: touchTargets.min,
                 },

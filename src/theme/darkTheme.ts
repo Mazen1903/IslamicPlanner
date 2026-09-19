@@ -17,15 +17,17 @@ export const darkColors: ThemeColors = {
   // Text
   textPrimary: '#E8ECF0',
   textSecondary: '#8E99A8',
-  textTertiary: '#5F6B7A',
-  textMuted: '#5F6B7A',
+  textTertiary: '#7E90A2', // WCAG AA: 5.76:1 on bg, 5.15:1 on surface, 4.50:1 on surfaceElevated (M21)
+  textMuted: '#5F6B7A', // Intentional de-emphasis only — WCAG 1.4.3 exempt (M21 audit)
   textOnPrimary: '#0F1114',
 
   // Status
   success: '#4CAF75',
   warning: '#F0C040',
-  danger: '#E74C4C',
-  error: '#E74C4C',
+  danger: '#E85050', // WCAG AA 4.58:1 on surface (M21)
+  error: '#E85050', // WCAG AA 4.58:1 on surface (M21)
+  dangerPressed: '#D95050', // WCAG AA 4.69:1 vs textOnPrimary #0F1114 (M21)
+  dangerSurface: '#2D1515', // WCAG AA 4.63:1 vs danger #E85050 (M21)
   info: '#5DADE2',
   completed: '#4CAF75',
 
@@ -46,7 +48,7 @@ export const darkColors: ThemeColors = {
 
   // Controls & Overlays
   overlay: 'rgba(0, 0, 0, 0.6)',
-  tabInactive: '#5F6B7A',
+  tabInactive: '#7E90A2', // WCAG AA 5.15:1 on surface (M21)
   tabActive: '#4CAF75',
   checkboxUnchecked: '#3A3F48',
   checkboxChecked: '#4CAF75',

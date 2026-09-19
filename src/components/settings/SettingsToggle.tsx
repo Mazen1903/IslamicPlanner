@@ -22,10 +22,10 @@ export function SettingsToggle({
   icon,
   testID,
 }: SettingsToggleProps) {
-  const { colors, spacing, radii, typography, touchTargets, isDark } = useTheme();
+  const { colors, spacing, radii, typography, touchTargets } = useTheme();
 
   const trackColor = {
-    false: isDark ? colors.border : '#E2E8F0',
+    false: colors.checkboxUnchecked, // ADR-029: off-state uses checkboxUnchecked, not raw literal
     true: colors.primary,
   };
 

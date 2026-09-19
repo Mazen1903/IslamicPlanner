@@ -104,6 +104,8 @@ export interface ThemeColors {
   warning: string;
   danger: string;
   error: string;
+  dangerPressed: string; // Destructive button pressed state (WCAG AA vs textOnPrimary)
+  dangerSurface: string; // Error/danger banner background (WCAG AA vs danger text)
   info: string;
   completed: string;
 

@@ -100,7 +100,7 @@ export function SetupRequiredState({
           style={[
             styles.errorBanner,
             {
-              backgroundColor: '#FEE2E2',
+              backgroundColor: colors.dangerSurface,
               borderRadius: radii.md,
               padding: spacing.md,
               marginBottom: spacing.lg,

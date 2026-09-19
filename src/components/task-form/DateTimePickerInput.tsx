@@ -30,7 +30,7 @@ export function DatePickerInput({
   style,
   testID = 'date-picker-input',
 }: DatePickerInputProps) {
-  const { colors, spacing, radii, typography, touchTargets } = useTheme();
+  const { colors, spacing, radii, typography, touchTargets, isDark } = useTheme();
   const [showPicker, setShowPicker] = useState(false);
 
   // Parse YYYY-MM-DD safely into Date object for picker
@@ -93,6 +93,7 @@ export function DatePickerInput({
           mode="date"
           display={Platform.OS === 'ios' ? 'inline' : 'default'}
           onChange={handleChange}
+          themeVariant={isDark ? 'dark' : 'light'}
           testID={`${testID}-picker`}
         />
       )}
@@ -117,7 +118,7 @@ export function TimePickerInput({
   style,
   testID = 'time-picker-input',
 }: TimePickerInputProps) {
-  const { colors, spacing, radii, typography, touchTargets } = useTheme();
+  const { colors, spacing, radii, typography, touchTargets, isDark } = useTheme();
   const [showPicker, setShowPicker] = useState(false);
 
   // Parse HH:mm safely
@@ -181,6 +182,7 @@ export function TimePickerInput({
           is24Hour={false}
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           onChange={handleChange}
+          themeVariant={isDark ? 'dark' : 'light'}
           testID={`${testID}-picker`}
         />
       )}

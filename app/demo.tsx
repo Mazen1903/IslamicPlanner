@@ -70,9 +70,9 @@ export default function DesignSystemDemoScreen() {
             Brand & Backgrounds
           </Text>
           <View style={styles.colorRow}>
-            <ColorSwatch name="primary" color={theme.colors.primary} text="#FFF" />
+            <ColorSwatch name="primary" color={theme.colors.primary} text={theme.colors.textOnPrimary} />
             <ColorSwatch name="primaryLight" color={theme.colors.primaryLight} text={theme.colors.primary} />
-            <ColorSwatch name="primaryDark" color={theme.colors.primaryDark} text="#FFF" />
+            <ColorSwatch name="primaryDark" color={theme.colors.primaryDark} text={theme.colors.textOnPrimary} />
             <ColorSwatch name="surface" color={theme.colors.surface} text={theme.colors.textPrimary} border />
             <ColorSwatch name="surfaceSec" color={theme.colors.surfaceSecondary} text={theme.colors.textPrimary} border />
           </View>
@@ -92,10 +92,10 @@ export default function DesignSystemDemoScreen() {
             Status Colors
           </Text>
           <View style={styles.colorRow}>
-            <ColorSwatch name="success" color={theme.colors.success} text="#FFF" />
-            <ColorSwatch name="warning" color={theme.colors.warning} text="#FFF" />
-            <ColorSwatch name="danger" color={theme.colors.danger} text="#FFF" />
-            <ColorSwatch name="info" color={theme.colors.info} text="#FFF" />
+            <ColorSwatch name="success" color={theme.colors.success} text={theme.colors.textOnPrimary} />
+            <ColorSwatch name="warning" color={theme.colors.warning} text={theme.colors.textOnPrimary} />
+            <ColorSwatch name="danger" color={theme.colors.danger} text={theme.colors.textOnPrimary} />
+            <ColorSwatch name="info" color={theme.colors.info} text={theme.colors.textOnPrimary} />
           </View>
         </Card>
 

@@ -43,7 +43,7 @@ export function Toggle({
   };
 
   const trackColor = {
-    false: theme.isDark ? theme.colors.checkboxUnchecked : '#E2E8F0',
+    false: theme.colors.checkboxUnchecked, // ADR-029: off-state uses checkboxUnchecked, not disabledBackground
     true: theme.colors.primary,
   };
 
