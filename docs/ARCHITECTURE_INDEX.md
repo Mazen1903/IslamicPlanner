@@ -531,3 +531,84 @@
   - c49e17c was premature bookkeeping; corrected by 326f0cc; final re-review APPROVED
 - **Milestone Owner:** **M21 (CLOSED / SONNET APPROVED)**
 - **ADR:** ADR-029
+
+---
+
+### 22. Accessibility Semantics and RTL Layout (M22)
+
+- **Authoritative Docs:** `docs/M22_ARCHITECTURE.md`, `docs/DECISIONS.md` (ADR-030)
+- **Status:** ARCHITECTURE HARDENED / FROZEN LOCALLY — PENDING LEAD REVIEW
+- **Production files audited:** 82 (complete scope)
+- **Production files with planned changes:** 43
+- **Source Paths (planned to change in M22):**
+  - `src/components/common/Icon.tsx` — `decorative` prop (prerequisite)
+  - `src/components/common/Button.tsx` — logical margins
+  - `src/components/common/Toggle.tsx` — logical margin
+  - `src/components/layout/BottomNavBar.tsx` — decorative icons; RTL order contract
+  - `src/components/prayer/PrayerTabBar.tsx` — indicator dot suppressed; tab icons decorative; RTL order contract
+  - `src/components/prayer/PrayerHeader.tsx` — content grouping; composite label; decorative suppression; logical margins
+  - `src/components/prayer/PrayerTransitionBanner.tsx` — logical margins
+  - `src/components/task/TaskCard.tsx` — informational grouping; composite label; logical margins
+  - `src/components/task/CompletedSection.tsx` — decorative chevron icon
+  - `src/components/task/AnytimeTodaySection.tsx` — logical margin
+  - `src/components/task/MissedTaskRow.tsx` — no change (COMPLIANT)
+  - `src/components/task/TaskCheckbox.tsx` — no change (COMPLIANT)
+  - `src/components/journal/JournalDeleteDialog.tsx` — modal isolation; header role; logical margin
+  - `src/components/journal/JournalPrivacySheet.tsx` — modal isolation; header role; logical replacements
+  - `src/components/journal/JournalHeader.tsx` — logical margins
+  - `src/components/journal/JournalHistory.tsx` — logical margin
+  - `src/components/journal/JournalHistoryRow.tsx` — decorative chevron icon
+  - `src/components/journal/ReflectionSection.tsx` — logical margin
+  - `src/components/calendar/CalendarDayCell.tsx` — maxFontSizeMultiplier={2} on day numbers
+  - `src/components/calendar/CalendarMonthGrid.tsx` — remove invalid role; maxFontSizeMultiplier on weekday labels
+  - `src/components/calendar/DayDetailTaskList.tsx` — Arabic name suppression; logical margin
+  - `src/components/calendar/UpcomingSection.tsx` — logical margins
+  - `src/components/settings/SettingsSectionHeader.tsx` — header role
+  - `src/components/settings/SettingsRow.tsx` — decorative chevron; logical margins
+  - `src/components/settings/SettingsToggle.tsx` — double-announcement suppression; logical replacements
+  - `src/components/settings/SettingsSelectOption.tsx` — logical padding
+  - `src/components/settings/SettingsInfoCard.tsx` — logical margin
+  - `src/components/settings/SettingsScreenHeader.tsx` — decorative chevron icon
+  - `src/components/premium/PremiumBadge.tsx` — remove invalid role; decorative icon
+  - `src/components/premium/PremiumLockedInfo.tsx` — modal isolation; header role; logical margin
+  - `src/components/task-form/CustomRecurrenceModal.tsx` — modal isolation; header role
+  - `src/components/task-form/EditScopeSheet.tsx` — modal isolation; header role
+  - `src/components/task-form/DateTimePickerInput.tsx` — logical margins
+  - `src/components/task-form/MoreOptionsSection.tsx` — logical margins
+  - `src/components/task-form/RecurrenceSection.tsx` — logical margin
+  - `src/components/task-form/ScheduleModeCards.tsx` — logical margins
+  - `src/components/task-form/SuccessScreen.tsx` — logical margins
+  - `src/components/task-form/TaskFormScreen.tsx` — logical margin
+  - `src/components/today/SetupRequiredState.tsx` — logical margins; live region
+  - `app/(tabs)/today.tsx` — error live region
+  - `app/(tabs)/journal.tsx` — logical margins; error live region
+  - `app/(tabs)/settings/hijri-calendar.tsx` — modal isolation; header role; logical margins
+  - `app/(tabs)/settings/notifications.tsx` — logical margins
+  - `app/(tabs)/settings/planning-day.tsx` — logical margins
+  - `app/(tabs)/settings/prayer-location.tsx` — logical margins
+  - `app/onboarding/index.tsx` — radio roles; radio states (checked); city result labels
+- **Relevant Test Files (to be created):**
+  - `src/__tests__/m22/AccessibleNames.test.tsx` (Group A — 22 tests)
+  - `src/__tests__/m22/AccessibilityRoles.test.tsx` (Group B — 14 tests)
+  - `src/__tests__/m22/AccessibilityStates.test.tsx` (Group C — 12 tests)
+  - `src/__tests__/m22/ModalAccessibility.test.tsx` (Group E — 18 tests)
+  - `src/__tests__/m22/TextScaling.test.tsx` (Group F — 6 tests)
+  - `src/__tests__/m22/RTLLogicalStyles.test.tsx` (Group H — 26 tests)
+  - `src/__tests__/m22/RTLIcons.test.tsx` (Group I — 8 tests)
+  - `src/__tests__/m22/PrayerTabRTL.test.tsx` (Group J — 8 tests)
+  - `src/__tests__/m22/CalendarRTL.test.tsx` (Group K — 8 tests)
+  - `src/__tests__/m22/ArabicBidi.test.tsx` (Group L — 6 tests)
+  - `src/__tests__/m22/StaticA11yAudit.test.tsx` (Group M — 10 tests)
+- **Key decisions:**
+  - RTL scope: Layout readiness only; no `I18nManager.forceRTL`; no locale system
+  - Prayer tab RTL: Natural flex mirroring (Fajr at logical start); DO NOT force LTR
+  - BottomNavBar RTL: Natural flex mirroring; canonical route indices unchanged
+  - Calendar RTL: Natural flex mirroring; onPreviousMonth/onNextMonth callbacks unchanged
+  - All 6 native Modal consumers require `accessibilityViewIsModal={true}` on content View
+  - All 6 native Modal consumers require `accessibilityRole="header"` on title Text
+  - `accessibilityRole="radio"` requires `accessibilityState={{ checked }}` (not `selected`)
+  - `maxFontSizeMultiplier={2}` authorized ONLY for calendar weekday labels and day cell numbers
+  - `decorative` prop on `Icon.tsx` suppresses icon traversal inside labeled Pressables
+  - 0 unresolved blocking architecture questions
+- **Milestone Owner:** **M22 (ARCHITECTURE HARDENED / FROZEN — PENDING LEAD REVIEW)**
+- **ADR:** ADR-030

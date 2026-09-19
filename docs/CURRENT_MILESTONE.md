@@ -1,9 +1,9 @@
 # Current Milestone: M22 — Accessibility / RTL
 
-> **Current State:** M21 CLOSED / SONNET APPROVED — M22 PENDING ARCHITECTURE
+> **Current State:** M22 ARCHITECTURE HARDENED / FROZEN LOCALLY — PENDING LEAD REVIEW
 > **Previous Milestone:** M21 CLOSED / SONNET APPROVED
-> **Milestone Status:** M22 — CURRENT — PENDING ARCHITECTURE
-> **Architecture Status:** NOT STARTED — Architecture doc and formal contract pending
+> **Milestone Status:** M22 — CURRENT — ARCHITECTURE HARDENED, IMPLEMENTATION NOT STARTED
+> **Architecture Status:** HARDENED AND FROZEN LOCALLY — 82-file audit complete; all 17 Lead corrections applied; ADR-030 authorized
 
 ---
 
@@ -141,7 +141,7 @@ M18 — Widgets (dev build required)            ✅ CLOSED / SONNET APPROVED
 M19 — Premium Entitlement Scaffolding          ✅ CLOSED / SONNET APPROVED
 M20 — Onboarding                               ✅ CLOSED / SONNET APPROVED
 M21 — Dark Mode Polish                         ✅ CLOSED / SONNET APPROVED
-M22 — Accessibility / RTL                      --> CURRENT — PENDING ARCHITECTURE
+M22 — Accessibility / RTL                      --> CURRENT — ARCHITECTURE HARDENED / FROZEN / PENDING LEAD REVIEW
 M23 — QA + Edge Cases                          --> NOT STARTED
 M24 — Release Preparation                      --> NOT STARTED
 ```
@@ -212,4 +212,64 @@ The following checks require physical devices or simulators and are carried forw
 - App Group data propagation behavior
 - Deep link behavior from widget tap
 
+---
 
+## M22 Architecture Summary
+
+**M22 — Accessibility / RTL** architecture is HARDENED AND FROZEN LOCALLY.
+
+| Commit Role | Hash | Description |
+|---|---|---|
+| Architecture freeze | `20c68e2` | docs(m22): freeze M22 architecture - accessibility and RTL |
+| Architecture hardening | *(hardening commit)* | docs(m22): harden accessibility and RTL architecture |
+
+**Architecture Status:** HARDENED / FROZEN LOCALLY — PENDING LEAD REVIEW
+
+### Scope
+
+| Item | Count |
+|---|---|
+| Production files audited | 82 |
+| Production files with planned changes | 43 |
+| Accessibility issues (A-1..A-23) | 23 |
+| RTL issues (RTL-1..RTL-6) | 6 |
+| Total findings | 29 |
+| HIGH severity | 6 |
+| MEDIUM severity | 14 |
+| LOW severity | 8 |
+| OBSERVATION (no change) | 2 |
+
+### Key Decisions Frozen
+
+- **RTL scope:** Layout readiness only — no `I18nManager.forceRTL`, no locale system
+- **Prayer tab RTL:** Natural flex mirroring (Fajr at logical start, reads chronologically in both LTR and RTL)
+- **BottomNavBar RTL:** Natural flex mirroring; canonical route indices unchanged
+- **Calendar RTL:** Natural flex mirroring; callback semantics (onPreviousMonth/onNextMonth) unchanged
+- **Modal isolation:** All 6 Modals require `accessibilityViewIsModal={true}` + `accessibilityRole="header"` on title
+- **Radio state:** `accessibilityRole="radio"` requires `accessibilityState={{ checked }}` (not `selected`)
+- **`maxFontSizeMultiplier={2}`:** Calendar weekday labels + day cell numbers only (justified)
+- **Icon `decorative` prop:** New prop on `Icon.tsx`; all labeled-Pressable icon callsites pass `decorative`
+- **ADR-030:** Authorized — Accessibility Semantics and RTL Layout Contract
+
+### Unresolved Blocking Items
+
+**0 unresolved blocking architecture items.**
+
+### Test Estimates
+
+| Metric | Value |
+|---|---|
+| Test baseline | 1404 / 121 suites |
+| Estimated new tests | 138 |
+| Expected total | ~1542 |
+| Minimum acceptable | ≥ 1504 |
+
+### Native QA Carry-Forward
+
+VoiceOver/TalkBack focus order verification, modal focus trapping on device, RTL visual layout on device, large text calendar layout — all carried to M23.
+
+### Prerequisites for Implementation
+
+- Lead review approval of this document
+- No code changes before Lead approval
+- 0 new dependencies, 0 migrations

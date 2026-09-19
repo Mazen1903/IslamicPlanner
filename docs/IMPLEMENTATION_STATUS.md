@@ -1,5 +1,5 @@
-**Current Milestone:** M22 — Accessibility / RTL (PENDING ARCHITECTURE)
-**Last Updated:** 2026-09-19 (M21 CLOSED / SONNET APPROVED)
+**Current Milestone:** M22 — Accessibility / RTL (ARCHITECTURE HARDENED / FROZEN — PENDING LEAD REVIEW)
+**Last Updated:** 2026-09-19 (M22 Architecture Hardened — 82-file audit, 17 corrections applied, ADR-030 authorized)
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -30,7 +30,7 @@
 | **M19** | Premium entitlement scaffolding | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `fa3c664`, hardening `29cd586`, implementation `26e403f`. 1296/1296 tests (113 suites). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies added. `EntitlementService` (fail-closed), `PlanningDayMutationCoordinator`, `usePlanningDayMutation`, MIDNIGHT/CUSTOM gating, read-only `EntitlementRepository`, strict isolation. Sonnet independent review APPROVED. |
 | **M20** | Onboarding | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture freeze `54e03c0`, hardening `fde4f7e`, integration `966c5d6`, implementation `0c92614`. 1374/1374 tests (118 suites; 78 new M20 tests, 5 new suites). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies added. Root gate (zero-flash render-time auth), 4-screen flow, mode-aware location validation, calculation recommendation, ThemeProvider live switch, OnboardingCoordinator. Sonnet independent review APPROVED. |
 | **M21** | Dark mode polish | **CLOSED / SONNET APPROVED** | 2026-09-19 | Architecture `d27e176`, implementation `3c7bfc5`, review fix `326f0cc`. 1404/1404 tests (121 suites; +30 tests, +3 suites vs M20). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies. 16 production files. Semantic token compliance, WCAG AA contrast, themeReady hydration gate, ThemedStatusBar, PrayerTabBar contrast. ADR-029. Sonnet independent re-review APPROVED — UNCONDITIONAL. |
-| **M22** | Accessibility/RTL | **CURRENT — PENDING ARCHITECTURE** | — | Prerequisites: All UI milestones |
+| **M22** | Accessibility/RTL | **ARCHITECTURE HARDENED / FROZEN — PENDING LEAD REVIEW** | — | 82-file audit; 43 production files planned to change; 23 A + 6 RTL findings; ADR-030; 0 dependencies, 0 migrations; estimate +138 tests |
 | **M23** | QA + edge cases | Not Started | — | Opus review required |
 | **M24** | Release preparation | Not Started | — | Final builds and release checklist |
 

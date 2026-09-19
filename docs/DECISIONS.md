@@ -1,7 +1,7 @@
 # Architecture Decision Log
 
 **Status:** Living document  
-**Updated:** 2026-09-19 (Rev 9 — M21 CLOSED / SONNET APPROVED: ADR-029 finalized; 16 files, WCAG AA, hydration gate)
+**Updated:** 2026-09-19 (Rev 10 — M22 Architecture Hardened: ADR-030 authorized; 82-file audit, accessibility semantics + RTL layout contract)
 **Purpose:** Record every major architectural decision, the alternatives considered, and the rationale.
 
 ---
@@ -777,3 +777,85 @@ theme-hydration race condition in `app/_layout.tsx`.
 | Block on both theme + onboarding reads | Unnecessary - themeReady is sufficient; onboarding gate handles its own loading state |
 | New ThemeMode values (AUTO, etc.) | Adds complexity; SYSTEM mode already adapts to OS preference |
 | Allow any transparent value without audit | Creates category of unreviewed potential raw colors; explicit Category-B list is auditable |
+
+---
+
+## ADR-030: Accessibility Semantics and RTL Layout Contract
+
+**Status:** AUTHORIZED — M22 Architecture Hardened 2026-09-19
+
+**Decision:** Establish a permanent accessibility semantics contract and RTL layout readiness contract for the Islamic Planner application.
+
+**Binding Rules:**
+
+### A. Accessibility Semantic Contract (React Native 0.86)
+
+1. **Radio groups:** `accessibilityRole="radio"` requires `accessibilityState={{ checked: boolean }}`. Using `selected` is incorrect for radio elements.
+2. **Tab bars:** `accessibilityRole="tab"` requires `accessibilityState={{ selected: boolean }}`.
+3. **Checkboxes and switches:** `accessibilityState={{ checked: boolean }}`.
+4. **Section headers:** All visible section headings (SettingsSectionHeader, modal title Text, dialog title Text) use `accessibilityRole="header"` on the Text node.
+5. **Modal isolation:** All `<Modal>` consumers must apply `accessibilityViewIsModal={true}` to the innermost content View. This ensures TalkBack (Android) traps focus within the modal. For dialogs with backdrop dismiss, the backdrop Pressable carries `accessibilityRole="button"` and a descriptive label.
+6. **Decorative icons:** All icons inside labeled Pressables that are purely decorative (the Pressable label already describes the action) receive `decorative` prop on `<Icon>`. The `decorative` prop sets `accessibilityLabel=""`, `accessibilityRole="none"`, and `importantForAccessibility="no"`.
+7. **Informational grouping:** Non-interactive compound content containers (e.g., TaskCard content, PrayerHeader text block) use `accessible={true}` + `importantForAccessibility="no-hide-descendants"` on the container View with a composite `accessibilityLabel`. Interactive descendants (e.g., TaskCheckbox Pressable) must be placed as siblings OUTSIDE the grouped container, not inside it.
+8. **Error live regions:** Error messages that appear dynamically require `accessibilityLiveRegion="assertive"`. Save/autosave status use `"polite"`.
+
+### B. RTL Layout Readiness Contract
+
+1. **RTL activation scope:** No runtime `I18nManager.forceRTL` call. No locale system. The app responds to device-level RTL naturally through Yoga's flex engine. This is the permanent policy until a full localization system is introduced in a future milestone.
+2. **Logical style convention:** In `flexDirection: 'row'` contexts, all icon-text spacing uses `marginStart`/`marginEnd`/`paddingStart`/`paddingEnd`. Never `marginLeft`/`marginRight`/`paddingLeft`/`paddingRight` for icon-text row spacing.
+3. **Absolute-positioned geometry (overlays, decorative):** Physical `left`/`right` are acceptable for full-screen overlay backdrops and purely decorative positioned elements. These do not require logical-style migration.
+4. **`marginLeft: 'auto'` (flex push):** Retained as-is. `auto` is direction-neutral in flexbox.
+
+### C. Prayer Tab Order — PERMANENT RULE (never reverses)
+
+- Canonical array: `[FAJR, DHUHR, ASR, MAGHRIB, ISHA]` — always in this logical order.
+- **Do NOT reverse the array** in RTL.
+- **Do NOT force `direction: 'ltr'`** on the PrayerTabBar container.
+- Let `flexDirection: 'row'` with `I18nManager.isRTL` place Fajr at the logical start (visually right in RTL). RTL users reading right-to-left encounter Fajr → Isha — chronologically correct.
+- Screen readers traverse elements in DOM order (Fajr → Isha) regardless of visual direction.
+
+### D. BottomNavBar — PERMANENT RULE
+
+- Canonical route index order: `[today, calendar, add, journal, settings]` — never changes.
+- Natural RTL flip is correct. Canonical indices and active state are index-based, not position-based.
+- The `add` button (index 2) remains visually centered in both LTR and RTL.
+
+### E. Calendar RTL
+
+- Weekday array `[Sun, Mon, Tue, Wed, Thu, Fri, Sat]` — never changes.
+- Natural RTL flex mirroring is correct. Arabic-locale users expect Sunday at the right.
+- `onPreviousMonth` and `onNextMonth` callbacks are semantic — their meaning never swaps regardless of layout direction.
+
+### F. Icon Mirroring
+
+- **Directional icons (require future RTL mirroring):** `chevron-left` (back/previous) and `chevron-right` (forward/next) in navigation usage.
+- **Non-directional icons:** All other icons — no mirroring. Glyph is semantically universal.
+- Runtime RTL mirroring (`transform: [{ scaleX: -1 }]`) deferred to a future RTL activation milestone.
+
+### G. Text Scaling — `maxFontSizeMultiplier` Policy
+
+- Default `allowFontScaling={true}` everywhere — never disable scaling globally.
+- `maxFontSizeMultiplier={2}` authorized ONLY for calendar grid cells (weekday header labels + day cell numbers) — justified by grid layout integrity at extreme scales (see `M22_ARCHITECTURE.md §10`).
+- Any future `maxFontSizeMultiplier` use requires explicit written justification following the §10 framework.
+
+**Why this decision is necessary:**
+
+The codebase reached M22 with excellent structural accessibility scaffolding but with gaps in: modal screen-reader isolation, radio group semantics, composite-label grouping for compound components, icon traversal noise, and physical directional styling. This ADR freezes the corrective contract to ensure M22 implementation and all future UI milestones apply it consistently.
+
+**Alternatives considered:**
+
+| Alternative | Reason rejected |
+|---|---|
+| Force LTR on PrayerTabBar and BottomNavBar | Anti-chronological for RTL readers; physical forced direction violates accessibility expectations for RTL users |
+| Runtime `I18nManager.forceRTL` in M22 | No locale system exists; activation without translation system creates a broken bilingual experience |
+| `maxFontSizeMultiplier={1.0}` globally | Disables user's accessibility settings; violates WCAG and Apple/Google accessibility guidelines |
+| Keep `accessibilityRole="text"` on PremiumBadge | Not a valid React Native role; silently ignored by screen readers but incorrect in spec |
+| `selected` state for radio buttons | Incorrect — VoiceOver/TalkBack announce `selected` as selection, not checked state; radio must use `checked` |
+
+**Consequences:**
+
+- 43 production files modified in M22
+- 11 new test files created
+- Estimated +138 new tests; total ≥ 1504
+- 0 new dependencies, 0 migrations
+- ADR-030 durable rules apply to all subsequent milestones (M23, M24, post-release)

@@ -195,3 +195,26 @@ The following negative constraints are absolute and non-negotiable across all fu
 13. **Theme hydration before render:** Normal app content must not render before the persisted explicit theme mode is resolved. The ``themeReady`` gate in ``RootLayout`` is the canonical mechanism. Never remove or bypass this gate. (ADR-029, established M21)
 13. **DO NOT place business or domain logic in React components**: Components remain pure views.
 
+---
+
+## 12. Accessibility Invariants (ADR-030, established M22)
+
+1. **`accessibilityRole="radio"` requires `accessibilityState={{ checked }}`** — not `selected`. This applies to all onboarding selection options and any future mutually-exclusive single-select controls.
+2. **`accessibilityRole="tab"` uses `accessibilityState={{ selected }}`** — not `checked`.
+3. **All `<Modal>` consumers must have `accessibilityViewIsModal={true}`** on the innermost content View. Do not omit this — it is required for Android TalkBack focus trapping.
+4. **All modal/dialog title Text elements must have `accessibilityRole="header"`**.
+5. **All section header Text elements (SettingsSectionHeader, etc.) must have `accessibilityRole="header"`**.
+6. **Decorative icons inside labeled Pressables** must pass the `decorative` prop to `<Icon>`. Never let redundant icon announcements pollute screen reader output.
+7. **Informational compound containers** (TaskCard content, PrayerHeader text block) must be grouped with `accessible={true}` + `importantForAccessibility="no-hide-descendants"` and a composite `accessibilityLabel`. Interactive elements (checkboxes, buttons) must be siblings OUTSIDE the group — never nested inside.
+8. **Error messages that appear dynamically** require `accessibilityLiveRegion="assertive"`.
+9. **`allowFontScaling={true}` is the default** — never disable globally. `maxFontSizeMultiplier` is authorized only for calendar grid cells (justified in `M22_ARCHITECTURE.md §10`). Any future use requires written architectural justification.
+
+---
+
+## 13. RTL Invariants (ADR-030, established M22)
+
+1. **Prayer tab canonical order never changes**: `[FAJR, DHUHR, ASR, MAGHRIB, ISHA]`. Never reverse. Never force `direction: 'ltr'`. Natural flex mirroring is correct — Fajr is at logical start in both LTR and RTL.
+2. **BottomNavBar canonical route order never changes**: `[today, calendar, add, journal, settings]` by index. Natural flip is correct.
+3. **`onPreviousMonth` and `onNextMonth` calendar callbacks are semantic** — their meaning never swaps regardless of layout direction.
+4. **Icon-text row spacing uses logical properties**: `marginStart`/`marginEnd`/`paddingStart`/`paddingEnd` — never `marginLeft`/`marginRight`/`paddingLeft`/`paddingRight` in `flexDirection: 'row'` contexts. `marginLeft: 'auto'` for flex push is exempt (direction-neutral).
+5. **No runtime `I18nManager.forceRTL` call** without a full localization system.
