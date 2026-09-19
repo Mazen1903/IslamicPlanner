@@ -1,5 +1,5 @@
-**Current Milestone:** M23 — QA + Edge Cases (CURRENT — PENDING ARCHITECTURE)
-**Last Updated:** 2026-09-19 (M22 CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED — 45 production files, 27 findings resolved, +152 tests, 11 new suites, 1556 total tests, 0 TS errors, 0 ESLint errors/warnings)
+**Current Milestone:** M23 — QA + Edge Cases (CURRENT — ARCHITECTURE HARDENED LOCALLY — PENDING OPUS SPECIALIST REVIEW / LEAD APPROVAL)
+**Last Updated:** 2026-09-19 (M23 architecture hardened — 16 Lead-review corrections applied — see docs/M23_ARCHITECTURE.md)
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -31,7 +31,7 @@
 | **M20** | Onboarding | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture freeze `54e03c0`, hardening `fde4f7e`, integration `966c5d6`, implementation `0c92614`. 1374/1374 tests (118 suites; 78 new M20 tests, 5 new suites). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies added. Root gate (zero-flash render-time auth), 4-screen flow, mode-aware location validation, calculation recommendation, ThemeProvider live switch, OnboardingCoordinator. Sonnet independent review APPROVED. |
 | **M21** | Dark mode polish | **CLOSED / SONNET APPROVED** | 2026-09-19 | Architecture `d27e176`, implementation `3c7bfc5`, review fix `326f0cc`. 1404/1404 tests (121 suites; +30 tests, +3 suites vs M20). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies. 16 production files. Semantic token compliance, WCAG AA contrast, themeReady hydration gate, ThemedStatusBar, PrayerTabBar contrast. ADR-029. Sonnet independent re-review APPROVED — UNCONDITIONAL. |
 | **M22** | Accessibility/RTL | **CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED** | 2026-09-19 | 82-file audit; exactly 45 production files modified; 27 findings resolved (23 A + 4 RTL); 1556/1556 tests pass across 132 suites (+152 tests, +11 suites); ADR-030; TaskCard retained pending M23 native TalkBack QA (reviewer D-1 rejected per RN 0.86 API); PrayerHeader composite grouping corrected (7af86fb); 0 dependencies, 0 migrations |
-| **M23** | QA + edge cases | **CURRENT — PENDING ARCHITECTURE** | — | Opus/Sonnet review required; comprehensive test matrix and native device QA carry-forward |
+| **M23** | QA + edge cases | **CURRENT — ARCHITECTURE HARDENED LOCALLY — PENDING OPUS REVIEW / LEAD APPROVAL** | — | Architecture freeze commit pending post-Opus. 93 planned tests / 12 new suites. 44 iOS + 39 Android QA checks. Opus Q1-Q5 required before implementation. See `docs/M23_ARCHITECTURE.md`. |
 | **M24** | Release preparation | Not Started | — | Final builds and release checklist |
 
 ---

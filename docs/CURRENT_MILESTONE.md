@@ -1,10 +1,10 @@
 # Current Milestone: M23 — QA + Edge Cases
 
-> **Current State:** M22 CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED — M23 PENDING ARCHITECTURE
+> **Current State:** M22 CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED — M23 ARCHITECTURE HARDENED LOCALLY — PENDING OPUS SPECIALIST REVIEW / LEAD APPROVAL
 > **Previous Milestone:** M22 CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED
-> **Milestone Status:** M23 — CURRENT — PENDING ARCHITECTURE
-> **Architecture Status:** NOT STARTED — Architecture doc and formal QA contract pending
-> **Implementation Status:** M22 CLOSED — 45 production files modified; 1556/1556 tests pass across 132 suites (+152 tests, +11 suites); 0 TS errors, 0 ESLint errors/warnings; 0 new dependencies, 0 migrations
+> **Milestone Status:** M23 — CURRENT — ARCHITECTURE HARDENED LOCALLY
+> **Architecture Status:** HARDENED — 16 Lead-review corrections applied (2026-09-19) — docs/M23_ARCHITECTURE.md created — Opus specialist review (Q1-Q5) required before implementation begins
+> **Implementation Status:** NOT STARTED — baseline 1556/1556 tests pass across 132 suites; 0 TS errors, 0 ESLint errors/warnings; 0 new dependencies, 0 migrations
 
 ---
 
@@ -300,7 +300,10 @@ The following native QA items are carried forward to M23 (physical device / emul
 
 ### M23 Status
 
-**CURRENT — PENDING ARCHITECTURE.**
+**CURRENT — ARCHITECTURE HARDENED LOCALLY — PENDING OPUS SPECIALIST REVIEW / LEAD APPROVAL.**
 - Milestone name: **QA + Edge Cases**
-- Awaits formal architecture design and test matrix definition.
-- No M23 architecture, design, or implementation has started.
+- `docs/M23_ARCHITECTURE.md` created (2026-09-19). 16 Lead-review corrections applied.
+- **Required before implementation:** Opus specialist Q1-Q5 answers (see §7 of M23_ARCHITECTURE.md).
+- **93 planned new tests across 12 new suites.** Exact test scenarios locked.
+- **44 iOS QA checks + 39 Android QA checks.** Evidence levels defined.
+- **No production code changes until Opus review completes.**

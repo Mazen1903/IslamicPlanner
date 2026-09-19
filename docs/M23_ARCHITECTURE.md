@@ -1,0 +1,1128 @@
+# M23 — QA + Edge Cases Architecture
+
+**Status:** CURRENT — ARCHITECTURE HARDENED LOCALLY — PENDING OPUS SPECIALIST REVIEW / LEAD APPROVAL
+**Milestone:** M23 — QA + Edge Cases
+**Baseline HEAD:** `5b1d913c2b4ed6b6a3ea5ff5ee059df937c6be11`
+**Baseline origin/main:** `5b1d913c2b4ed6b6a3ea5ff5ee059df937c6be11` (synchronized ✓)
+**Architecture authored:** 2026-09-19
+**Architecture hardened:** 2026-09-19 (post Lead review — 16 hardening items applied)
+**Author role:** Software Architect / Technical Reviewer (Sonnet)
+**Working tree at freeze:** CLEAN — 0 uncommitted files
+**Baseline tests:** 1556 / 1556 — 132 / 132 suites — 0 failures — 0 skipped
+**TypeScript:** 0 errors
+**ESLint:** 0 errors / 0 warnings
+**Dependencies added since M22:** 0
+**Migrations added since M22:** 0
+
+---
+
+## 0. Hardening Changelog (Lead Review Items)
+
+This architecture was hardened after Lead review. The following corrections were applied:
+
+| # | Item | Change |
+|---|---|---|
+| H-1 | PC-C1 (TaskCard TalkBack fix) | Removed. Pre-authorizing `importantForAccessibility="no-hide-descendants"` on the composite accessible parent contradicts M22 contract. Replaced with native-evidence-first policy. |
+| H-2 | RISK-B1 severity model | Reclassified from BLOCKER defect to CRITICAL NATIVE QA GATE. No confirmed defect exists without native evidence. |
+| H-3 | JE-07 biometric unavailable | Corrected. Split into JE-07 (lock disabled) and JE-08 (lock enabled + unavailable → remains locked, no bypass). Journal suite grows from 7 to 8 tests. |
+| H-4 | PC-C2 (recurrence sync failure) | Removed. Wrapping sync in try/catch and continuing to READY is a semantic change, not a hardening fix. RISK-H2 remains an open HIGH architecture question pending Opus review. |
+| H-5 | "Option B is frozen" wording | Removed. No recurrence-sync failure policy is established in M23 architecture. |
+| H-6 | Opus review | Changed from NOT REQUIRED to REQUIRED BEFORE IMPLEMENTATION. Five specialist questions prepared. |
+| H-7 | Severity model | Separated QA GATE STATUS from CONFIRMED DEFECT SEVERITY. |
+| H-8 | Native evidence levels | Replaced contradictory simulator/physical device matrix with two-level evidence model (LEVEL 1 simulator / LEVEL 2 physical). |
+| H-9 | Widget carry-forward | Added missing checks CF-W4, CF-W6, CF-W9, CF-W16, CF-W18, CF-W19/CF-A24. Full CF-W1..W19 traceability table. |
+| H-10 | Earlier carry-forward | Full CF-E1..E12 traceability table with specific QA IDs. |
+| H-11 | Planning-day native QA | Added Fajr, Midnight, Custom boundary lifecycle/native checks beyond DST tests. |
+| H-12 | RISK-H7 race test | Added PBR-01 (dedicated async race test at planning-day boundary). |
+| H-13 | RISK-H3 notification race | Audited NotificationReconciliationService source. Clarified the precise race window. NE-01 tests a pre-reconcile terminal row, not the mid-reconcile window; NE-07 added to test mid-reconcile state transition race. |
+| H-14 | Test classification | Re-evaluated test classes. Recurrence/materialization integration tests reclassified to INTEGRATION where applicable. |
+| H-15 | M23/M24 carry-forward policy | Clarified: BLOCKED/NOT EXECUTED != PASS != RESOLVED. M24 carry-forward gates become release blockers. |
+| H-16 | Test count | Recomputed exactly. See §8.3. |
+
+---
+
+## 1. Milestone Objective
+
+M23 systematically proves that the Islamic Planner behaves safely and predictably under:
+
+- Real device conditions (iOS and Android)
+- Permission changes at runtime
+- App lifecycle transitions
+- Date/time boundaries, DST, and timezone changes
+- Recurrence boundaries and concurrent reconciliation
+- Failed services, empty state, and malformed state
+- Reinstall / restart scenarios
+- RTL rendering on physical devices
+- Accessibility with native screen readers
+- Widget lifecycle and stale snapshot behavior
+- Notification idempotency and edge scheduling
+- Data persistence failure paths
+- Rapid repeated user actions (idempotency)
+
+M23 prioritizes **finding hidden defects** over adding new capability.
+
+---
+
+## 2. Non-Goals
+
+| Non-Goal | Reason |
+|---|---|
+| New user-facing features | Architecture + QA only |
+| Product semantic redesign | No |
+| Cosmetic or structural refactors | Only if narrow confirmed defect |
+| i18n, localization | Deferred |
+| Cloud sync, billing, purchase | Not in scope |
+| Worship Suggestions | Still deferred |
+| M24 start | Only after M23 closes |
+
+---
+
+## 3. Baseline
+
+| Item | Value |
+|---|---|
+| HEAD | `5b1d913c2b4ed6b6a3ea5ff5ee059df937c6be11` |
+| origin/main | `5b1d913c2b4ed6b6a3ea5ff5ee059df937c6be11` |
+| Tests | 1556 / 1556 passing, 0 failed, 0 skipped |
+| Suites | 132 / 132 |
+| TypeScript errors | 0 |
+| ESLint errors/warnings | 0 |
+| New dependencies since M22 | 0 |
+| New migrations since M22 | 0 |
+| Milestones closed | 23 / 25 (M0-M22) |
+
+---
+
+## 4. Inherited Invariants
+
+The following product invariants are immutable in M23. Any change that violates them requires Lead escalation.
+
+1. **Exactly 5 prayer anchors:** Fajr, Dhuhr, Asr, Maghrib, Isha.
+2. **No sixth Anytime prayer tab.**
+3. **No automatic rollover** of missed tasks. Missed is terminal.
+4. **Terminal occurrence states** (COMPLETED, MISSED, CANCELLED) are immutable.
+5. **Schedule types:** EXACT_TIME, PRAYER_RELATIVE, PRAYER_WINDOW, ANYTIME_TODAY.
+6. **Calendar:** Month-based only.
+7. **Planning day defaults to Fajr.** Premium options: MIDNIGHT, CUSTOM.
+8. **Location AUTO:** strictly committed `lastAuto`/`lastKnown` location + timezone.
+9. **Location MANUAL:** manual city location only.
+10. **Normal refresh MUST NOT request location permission.**
+11. **No background location tracking. No location history.**
+12. **PlannerRefreshCoordinator order (current source):** inputs -> recurrence sync (currently un-wrapped, throws on failure) -> Today refresh -> lifecycle sweep -> optional requery -> notifications -> widget sync.
+13. **Plan-before-delete invariant:** replacement plan computed BEFORE destructive pending deletion.
+14. **Notifications:** event-driven only, no background polling.
+15. **Journal:** local, AES-256-GCM encrypted, prayer-centered, not exposed to widgets/notifications, independent of premium.
+16. **No gamification. Core planner remains free.**
+17. **No Sunrise anchor. No Qasr feature.**
+18. **Worship Suggestions deferred, not deleted.**
+19. **Widget:** read-only, no second planner, no authoritative writes.
+20. **No fake account/sync/export/reset/premium UX.**
+21. **No background polling anywhere.**
+
+**Biometric Lock Invariant (M16 §11.9):**
+- When biometric lock is DISABLED: Journal opens without prompt.
+- When biometric lock is ENABLED and biometrics become unavailable/not enrolled: Journal REMAINS LOCKED. Show calm user-facing unavailable/not-enrolled message. Do NOT auto-disable the lock. Do NOT bypass the lock. Do NOT use device PIN fallback (`disableDeviceFallback: true`). Recovery requires re-enrollment or an explicit deliberate disable-lock action.
+
+**TaskCard Accessibility Invariant (M22 §9.1 + D-1 Resolution):**
+- The `contentContainer` View has `accessible={true}` and `accessibilityLabel={compositeLabel}`.
+- `importantForAccessibility="no-hide-descendants"` MAY NOT be placed on the same View that has `accessible={true}` with a composite label. In RN 0.86, `no-hide-descendants` hides the View itself AND all descendants from accessibility, which would suppress the composite element from TalkBack. This was explicitly Lead-rejected in M22 review (D-1 Resolution, commit `346c84f`).
+- PrayerHeader correction (commit `7af86fb`) removed `importantForAccessibility="no-hide-descendants"` from the accessible composite wrapper so the View remains traversable by TalkBack with its composite label.
+- TaskCard TalkBack verification is deferred to M23 native QA. No production fix is pre-authorized.
+
+---
+
+## 5. Prior Native QA Carry-Forward
+
+### 5.1 From M22 — Accessibility / RTL
+
+| ID | Item | Platform | Status at M22 Close |
+|---|---|---|---|
+| CF-A1 | PrayerHeader VoiceOver composite announcement | iOS | Deferred |
+| CF-A2 | PrayerHeader TalkBack composite announcement | Android | Deferred |
+| CF-A3 | TaskCard VoiceOver grouping + checkbox navigation | iOS | Deferred |
+| CF-A4 | TaskCard TalkBack grouping / no duplicate announcements | Android | Deferred — D-1 rejected; retained pending native verification |
+| CF-A5 | JournalDeleteDialog modal focus VoiceOver | iOS | Deferred |
+| CF-A6 | JournalDeleteDialog modal focus TalkBack | Android | Deferred |
+| CF-A7 | JournalPrivacySheet modal focus VoiceOver | iOS | Deferred |
+| CF-A8 | JournalPrivacySheet modal focus TalkBack | Android | Deferred |
+| CF-A9 | CustomRecurrenceModal modal focus VoiceOver | iOS | Deferred |
+| CF-A10 | CustomRecurrenceModal modal focus TalkBack | Android | Deferred |
+| CF-A11 | EditScopeSheet modal focus VoiceOver | iOS | Deferred |
+| CF-A12 | EditScopeSheet modal focus TalkBack | Android | Deferred |
+| CF-A13 | PremiumLockedInfo OK button VoiceOver reachable | iOS | Deferred |
+| CF-A14 | PremiumLockedInfo OK button TalkBack reachable | Android | Deferred |
+| CF-A15 | Hijri calendar override modal VoiceOver | iOS | Deferred |
+| CF-A16 | Hijri calendar override modal TalkBack | Android | Deferred |
+| CF-A17 | Physical RTL layout all screens | iOS + Android | Deferred |
+| CF-A18 | All 8 directional chevrons visual flip in RTL | iOS + Android | Deferred |
+| CF-A19 | PrayerTabBar physical RTL order | iOS + Android | Deferred |
+| CF-A20 | BottomNavBar physical RTL placement | iOS + Android | Deferred |
+| CF-A21 | Calendar physical RTL grid | iOS + Android | Deferred |
+| CF-A22 | Large accessibility text calendar behavior | iOS + Android | Deferred |
+| CF-A23 | Native date/time picker screen reader interaction | iOS + Android | Deferred |
+| CF-A24 | Widget accessibility tree inspection | iOS + Android | Deferred (= CF-W19) |
+
+### 5.2 From M18 — Widgets
+
+| ID | Item | Platform | Status at M18 Close | M23 QA ID(s) |
+|---|---|---|---|---|
+| CF-W1 | iOS small widget render in widget gallery | iOS | Pending EAS build | IOS-W1 |
+| CF-W2 | iOS medium widget render in widget gallery | iOS | Pending EAS build | IOS-W2 |
+| CF-W3 | iOS widget timeline / prayer-boundary transitions | iOS | Pending | IOS-W3 |
+| CF-W4 | iOS widget countdown timer (native SwiftUI date) | iOS | Pending | IOS-W4 |
+| CF-W5 | iOS widget deep-link tap to Today screen | iOS | Pending | IOS-W5 |
+| CF-W6 | iOS widget dark-mode appearance | iOS | Pending | IOS-W6 |
+| CF-W7 | iOS widget SETUP_REQUIRED render | iOS | Pending | IOS-W7 |
+| CF-W8 | iOS widget stale snapshot behavior | iOS | Pending | IOS-W8 |
+| CF-W9 | iOS widget device-restart recovery | iOS | Pending | IOS-W9 |
+| CF-W10 | Android small widget in launcher gallery | Android | Pending physical device | AND-W1 |
+| CF-W11 | Android medium widget in launcher gallery | Android | Pending physical device | AND-W2 |
+| CF-W12 | Android widget tap / deep-link | Android | Pending | AND-W3 |
+| CF-W13 | Android widget 30-min update cadence | Android | Pending | AND-W4 |
+| CF-W14 | Android widget app-driven update propagation | Android | Pending | AND-W5 |
+| CF-W15 | Android widget SETUP_REQUIRED render | Android | Pending | AND-W6 |
+| CF-W16 | Android widget stale snapshot behavior | Android | Pending | AND-W7 |
+| CF-W17 | Android widget device-reboot launcher persistence | Android | Pending | AND-W8 |
+| CF-W18 | No Journal content, no coordinates, no notes in snapshot (device confirmation) | iOS + Android | Pending | IOS-W10, AND-W9 |
+| CF-W19 | Widget accessibility tree inspection | iOS + Android | Pending | IOS-W11, AND-W10 |
+
+### 5.3 From Earlier Milestones — Full CF-E Traceability
+
+| ID | Item | Milestone | Platform | M23 QA ID(s) |
+|---|---|---|---|---|
+| CF-E1 | Real local notification delivery on device | M13 | iOS + Android | IOS-N1, AND-N1 |
+| CF-E2 | Real expo-crypto AES-256-GCM roundtrip on device | M15 | iOS + Android | IOS-K1, AND-K1 |
+| CF-E3 | Journal encrypted entry persists and decrypts across app restart | M15 | iOS + Android | IOS-K1, AND-K1 |
+| CF-E4 | Real Face ID / Touch ID unlock on device | M16 | iOS | IOS-B1, IOS-B2 |
+| CF-E5 | Real fingerprint unlock on device | M16 | Android | AND-B1, AND-B2 |
+| CF-E6 | Biometric failure / cancel behavior on device | M16 | iOS + Android | IOS-B2, AND-B2 |
+| CF-E7 | Background relock behavior on device | M16 | iOS + Android | IOS-LC1, AND-LC1 |
+| CF-E8 | Process-restart relock behavior on device | M16 | iOS + Android | IOS-LC2, AND-LC2 |
+| CF-E9 | Cold-start theme hydration visual behavior | M17 | iOS + Android | IOS-C1, AND-C1 |
+| CF-E10 | Physical biometric enable/disable through Settings | M17 | iOS + Android | IOS-B3, AND-B3 |
+| CF-E11 | Settings persistence across process restart | M17 | iOS + Android | IOS-LC3, AND-LC3 |
+| CF-E12 | Prayer preview / stepper interaction on device | M17 | iOS + Android | IOS-ST1, AND-ST1 |
+
+---
+
+## 6. Two-Tier Native QA Model
+
+### 6.1 Definitions
+
+**QA GATE STATUS** — whether the check has been executed. Three valid states:
+- `PASS` — executed and passed. Evidence recorded.
+- `FAIL` — executed and a defect was found. Evidence recorded. Defect classified per §26.
+- `BLOCKED / NOT EXECUTED` — could not be executed (hardware unavailable). NOT the same as PASS.
+
+**CONFIRMED DEFECT SEVERITY** — applies only after a `FAIL` result is recorded. Uses the classification in §26.
+
+> A BLOCKED / NOT EXECUTED gate is never PASS. It does not imply the software is correct.
+
+### 6.2 Device Evidence Levels
+
+| Level | Definition |
+|---|---|
+| LEVEL 1 — Simulator / Emulator | iOS Simulator (Xcode) or Android Emulator. Provides functional path coverage for most control-flow checks. Does NOT prove native hardware behavior. |
+| LEVEL 2 — Physical Device | Real iOS or Android hardware. Required for biometrics, widget launcher gallery, VoiceOver on iOS, and real notification delivery. |
+
+### 6.3 Evidence Level Requirements by Check Category
+
+| Category | Minimum Level | Notes |
+|---|---|---|
+| VoiceOver (iOS screen reader) | LEVEL 2 — Physical iOS device | macOS Accessibility Inspector may supplement but is not equivalent to VoiceOver on device |
+| TalkBack (Android screen reader) | LEVEL 1 acceptable for functional TalkBack QA; LEVEL 2 preferred for release evidence | Android emulator with TalkBack enabled provides functional coverage |
+| Physical RTL layout rendering | LEVEL 1 acceptable (RTL locale on simulator/emulator); LEVEL 2 preferred for release evidence | |
+| Widget launcher gallery (iOS) | LEVEL 2 — Physical iOS device or TestFlight build | iOS Simulator does not display WidgetKit extensions |
+| Widget launcher gallery (Android) | LEVEL 2 — Physical Android device | Android Emulator widget gallery may work but is not reliable |
+| Widget content correctness (no journal/coordinates) | LEVEL 1 accepted for visual inspection; LEVEL 2 preferred | |
+| Widget accessibility tree | LEVEL 2 preferred | |
+| Biometric (Face ID / Touch ID) | LEVEL 1 for control-flow simulation; LEVEL 2 for actual hardware biometric | iOS Simulator can simulate Face ID; real behavior requires physical device |
+| Biometric (Android fingerprint) | LEVEL 2 — Physical Android device | Android Emulator fingerprint simulation is often unreliable |
+| Notification delivery | LEVEL 1 accepted for scheduling/control-flow; LEVEL 2 for actual OS delivery | |
+| GPS permission flow | LEVEL 1 accepted with simulated coordinates | |
+| Large font rendering | LEVEL 1 accepted | |
+| Cold-start theme hydration | LEVEL 1 accepted | |
+| App lifecycle (background/foreground) | LEVEL 1 accepted | |
+| Process kill / restart | LEVEL 1 accepted | |
+| AES-256-GCM roundtrip | LEVEL 1 accepted | |
+| Date/time picker accessibility | LEVEL 1 accepted | |
+| Settings persistence | LEVEL 1 accepted | |
+| Prayer stepper interaction | LEVEL 1 accepted | |
+| Planning-day boundary crossing | LEVEL 1 accepted with manual clock advance | |
+
+---
+
+## 7. Opus Specialist Review — REQUIRED BEFORE IMPLEMENTATION
+
+> **Status: OPUS REVIEW REQUIRED BEFORE IMPLEMENTATION BEGINS.**
+>
+> This is NOT a request to route all M23 work to Opus. Opus scope is limited to the high-risk temporal and synchronization questions below. Automated test suites and native QA checklists may begin scoping in parallel with Opus review, but NO production code changes and NO new test files may be committed until Opus review is complete and its answers are incorporated into this architecture document.
+
+### Specialist Questions for Opus
+
+**Q1 — RecurringHorizonSync failure in fullRefresh**
+
+When `RecurringHorizonSync.sync()` fails (throws) inside `PlannerRefreshCoordinator.fullRefresh()`, what should the canonical behavior be?
+
+Evaluate data-integrity consequences of each candidate:
+
+- **A. Propagate failure / abort:** `fullRefresh` throws. Caller (e.g., `useToday`) receives an error. Today does not re-render stale data after a failed authoritative recurrence sync. No partial READY result.
+- **B. Typed degraded result:** `fullRefresh` returns a non-READY result type (e.g., `RECURRENCE_SYNC_FAILED`) that callers may handle. Today may choose to display a degraded state or preserve the previous view.
+- **C. Best-effort continue:** Wrap sync in try/catch, warn, continue to steps 3-7, return READY with existing materialized occurrences. Consistent with the notification/widget non-fatal pattern, but recurrence sync is earlier in the pipeline and affects the authoritative occurrence set.
+
+Provide: recommended behavior, specific data-integrity risks for each candidate, what value `horizonSync` should carry in the result if sync failed, whether downstream steps (lifecycle sweep, notification reconcile, widget sync) should execute, and whether false READY should be avoided.
+
+Note: The current source at `PlannerRefreshCoordinator.ts` line 87 has no try/catch. If sync throws, fullRefresh throws. The READY result type requires a `horizonSync: HorizonSyncResult` field. Candidate C requires defining what `horizonSync` carries on failure.
+
+**Q2 — Stale occurrence state after recurrence-sync failure**
+
+If the Opus answer to Q1 permits continuing after a recurrence-sync failure:
+
+- What happens to `horizonSync` in the READY result? Null? Empty? Last-known?
+- May the lifecycle sweep (`OccurrenceLifecycleService.sweepExpired`) execute against potentially stale materialized occurrences?
+- May `NotificationReconciliationService.reconcile()` run and schedule notifications from a stale occurrence set?
+- May `widgetSyncCoordinator.sync()` push a stale snapshot?
+- How should stale recurrence state be surfaced to the user?
+- How is false READY (appearing operational when the occurrence set is stale) avoided?
+
+**Q3 — DST / timezone change and materialized occurrence staleness**
+
+Across DST transitions and explicit timezone changes (user moves to a new timezone):
+
+- Can existing +/-7-day materialized PENDING occurrences have a `planningDayKey` that is stale under the new timezone?
+- Define the invariant for each of: old-zone pending occurrences, new-zone materialization, duplicate prevention (given `UNIQUE(series_id, local_date)` constraint), terminal occurrence preservation, plan-before-delete, and idempotent repeated sync.
+- Is `planningDayKey` mismatch (occurrence appears under wrong prayer tab after timezone change) a data-integrity issue or merely a display artifact correctable on next fullRefresh?
+- Does M23 require INTEGRATION-level tests (against real repository + materialization layer) for DST recurrence scenarios, or is pure UNIT coverage of the RecurrenceEngine sufficient?
+
+Note: M9 RecurrenceEngine operates on civil dates and is timezone-independent per its design. DST effects on `planningDayKey` derivation occur in MaterializationEngine. The `UNIQUE(series_id, local_date)` DB constraint prevents duplicate rows. The open question is whether `planningDayKey` mismatch requires active remediation or passive re-sync correction.
+
+**Q4 — Concurrent / rapid fullRefresh calls**
+
+For concurrent or rapid sequential `fullRefresh` calls:
+
+- Can recurrence synchronization interleave destructively if two sync calls overlap?
+- Can a refresh schedule notifications or push a widget snapshot from state that has been superseded by a newer refresh?
+- Are the existing `TransactionLock` (SQLite root transactions), `requestGeneration` guard (`useTodayStore`), notification drain-loop coalescing, and `refreshInFlight` flag sufficient to prevent destructive interleaving at the coordinator level?
+- Does `PlannerRefreshCoordinator` itself require serialization or coalescing (e.g., a coordinator-level drain pattern analogous to `NotificationReconciliationService.drain()`)?
+
+Note: `requestGeneration` prevents stale async Zustand commits. `TransactionLock` serializes SQLite writes. `NotificationReconciliationService` has its own drain loop with `rerunRequested` coalescing. The open question is whether these existing guards are sufficient at the PRC level, or whether two concurrent fullRefresh calls can produce conflicting notification/widget states even if each individual call is internally consistent.
+
+**Q5 — INTEGRATION vs UNIT for DST recurrence tests**
+
+For the DST recurrence idempotency scenarios (DST-05, DST-06, REC-05, REC-06, REC-07):
+
+- Do these tests need to execute against the real `TaskOccurrenceRepository` + `MaterializationEngine` in an in-memory SQLite environment to be meaningful?
+- Or is pure UNIT coverage of `RecurrenceEngine.generateSeedDates()` + `RecurrenceEngine.occursOn()` across DST boundaries sufficient to prove the invariants?
+- If INTEGRATION coverage is required, define the minimal test harness (which real services, which mocks).
+
+---
+
+## 8. Edge-Case Taxonomy
+
+M23 covers 19 edge-case families:
+
+1. Planning-day boundary (Fajr / Midnight / Custom) — exact-second, DST, and lifecycle
+2. DST and timezone change
+3. Recurrence boundaries and reconciliation
+4. Notification idempotency and failure paths (including race conditions)
+5. Location permission states and mode transitions
+6. Prayer calculation edge cases
+7. PlannerRefreshCoordinator failure injection and idempotency
+8. Task state transitions (terminal immutability, rapid interaction)
+9. Calendar rendering (month boundaries, leap year, 6-week grids)
+10. Journal privacy, encryption failure paths, biometric lock states
+11. Settings mutation correctness and persistence
+12. Theme and dark-mode edge cases
+13. Premium entitlement edge cases
+14. Onboarding edge cases and gate race prevention
+15. Widget lifecycle (stale, SETUP_REQUIRED, reboot, privacy)
+16. Accessibility native QA (VoiceOver, TalkBack, modal focus)
+17. RTL physical rendering
+18. App lifecycle / concurrency / process restart
+19. Data integrity and failure injection
+
+---
+
+## 9. Automated Test Plan
+
+### 9.1 Classification Definitions
+
+| Class | Meaning |
+|---|---|
+| UNIT | Pure domain logic. No DB, no React, no external services. |
+| INTEGRATION | Multiple services/repositories interacting. Uses real in-memory SQLite via the project's test DB setup. |
+| COMPONENT | React Native Testing Library render. |
+| STATIC AUDIT | Static code inspection (grep / AST). Captured as a test that fails if the invariant is violated. |
+| NATIVE MANUAL QA | Physical device or simulator — not provable by Jest. Not a test file. |
+
+> **Note on Opus-dependent tests:** Tests in DST Domain 2 (DST-05, DST-06), Recurrence Domain 3 (REC-05..REC-07), and PRC Domain 4 (PRC-01..PRC-08) have their **classification** (UNIT vs INTEGRATION) subject to Opus Q3 and Q5 answers. The test scenarios are frozen; only the implementation layer (pure engine vs. real repository) depends on Opus guidance.
+
+> **Note on PRC-01..PRC-08:** Whether PRC-02 codifies Option A, B, or C depends entirely on Opus Q1 answer. The test is frozen as a scenario but its expected outcome is pending Opus. PRC-02 will lock whichever behavior Opus recommends.
+
+### 9.2 Test Plan by Domain
+
+#### Domain 1: Planning-Day Boundary
+
+**New suite:** `src/domain/planning-day/__tests__/PlanningDayBoundary.test.ts`
+**Classification:** UNIT
+
+| Test ID | Description |
+|---|---|
+| PDB-01 | Fajr boundary: time at `boundary - 1s` resolves to prior planningDayKey |
+| PDB-02 | Fajr boundary: time at exact `boundary` resolves to current planningDayKey |
+| PDB-03 | Fajr boundary: time at `boundary + 1s` resolves to current planningDayKey |
+| PDB-04 | Midnight boundary: time at `boundary - 1s` resolves to prior planningDayKey |
+| PDB-05 | Midnight boundary: time at exact `boundary` resolves to current planningDayKey |
+| PDB-06 | Midnight boundary: time at `boundary + 1s` resolves to current planningDayKey |
+| PDB-07 | Custom boundary: time at `boundary - 1s` resolves to prior planningDayKey |
+| PDB-08 | Custom boundary: time at exact `boundary` resolves to current planningDayKey |
+| PDB-09 | Custom boundary: time at `boundary + 1s` resolves to current planningDayKey |
+| PDB-10 | planningDayKey format is stable across DST spring-forward (23-hour day) |
+| PDB-11 | planningDayKey format is stable across DST fall-back (25-hour day) |
+
+*Count: 11 tests*
+
+#### Domain 2: DST / Timezone
+
+**New suite:** `src/domain/temporal/__tests__/DSTEdgeCases.test.ts`
+**Classification:** UNIT (subject to Opus Q5 — may become INTEGRATION for DST-05/06)
+
+| Test ID | Description |
+|---|---|
+| DST-01 | Spring-forward: EXACT_TIME task at skipped hour shifts to first valid instant (SPRING_FORWARD_SHIFTED) |
+| DST-02 | Spring-forward: PRAYER_RELATIVE task offset resolves correctly across DST gap |
+| DST-03 | Fall-back: EXACT_TIME task at ambiguous hour resolves to earlier occurrence |
+| DST-04 | Fall-back: only ONE occurrence created for a single fall-back local time (not duplicated) |
+| DST-05 | Recurrence sync idempotent at DST spring-forward boundary (+/-7 day window): no missing occurrence |
+| DST-06 | Recurrence sync idempotent at DST fall-back boundary (+/-7 day window): no duplicate occurrence |
+| DST-07 | Civil day is 23 hours on spring-forward: planningDayKey correct |
+| DST-08 | Civil day is 25 hours on fall-back: planningDayKey correct |
+| DST-09 | Year boundary Dec 31 -> Jan 1 planningDayKey correct |
+| DST-10 | Leap year Feb 29 planningDayKey correct |
+
+*Count: 10 tests*
+
+#### Domain 3: Recurrence Boundaries and Re-Sync Idempotency
+
+**New suite:** `src/domain/recurrence/__tests__/RecurrenceEdgeCases.test.ts`
+**Classification:** UNIT for REC-01..REC-04. UNIT or INTEGRATION for REC-05..REC-12 (subject to Opus Q5).
+
+| Test ID | Description |
+|---|---|
+| REC-01 | MONTHLY anchor on 31st clamps correctly in 28-day Feb (non-leap) |
+| REC-02 | MONTHLY anchor on 31st clamps correctly in 29-day leap Feb |
+| REC-03 | MONTHLY anchor on 31st clamps correctly in 30-day month |
+| REC-04 | MONTHLY anchor on Feb 29 (non-leap year): clamps to Feb 28, not Feb 28+1 |
+| REC-05 | Re-sync with same +/-7 window produces no duplicate pending occurrences (idempotent) |
+| REC-06 | Re-sync after DST spring-forward: no missing occurrence at DST boundary |
+| REC-07 | Re-sync after DST fall-back: no duplicate occurrence at DST boundary |
+| REC-08 | Series split: pending occurrences before split date are NOT deleted |
+| REC-09 | Series split: pending occurrences on/after split date ARE deleted |
+| REC-10 | COMPLETED occurrence is preserved through re-sync (status not overwritten) |
+| REC-11 | MISSED occurrence is preserved through re-sync |
+| REC-12 | CANCELLED (tombstone) occurrence blocks regeneration of that local_date |
+
+*Count: 12 tests*
+
+#### Domain 4: PlannerRefreshCoordinator Failure Injection
+
+**New suite:** `src/services/__tests__/PlannerRefreshCoordinator.edgeCases.test.ts`
+**Classification:** INTEGRATION
+
+| Test ID | Description | Depends on Opus |
+|---|---|---|
+| PRC-01 | SETUP_REQUIRED on first step: returns SETUP_REQUIRED without running subsequent steps | No |
+| PRC-02 | RecurringHorizonSync failure: locks in the Opus-approved behavior (A/B/C) | **YES — Q1** |
+| PRC-03 | TodayOrchestrator.refreshToday failure: propagates up (steps beyond sync succeeded) | No |
+| PRC-04 | Notification reconcile failure: fullRefresh returns READY (non-fatal) | No |
+| PRC-05 | Widget sync failure: fullRefresh returns READY (non-fatal) | No |
+| PRC-06 | Repeated rapid fullRefresh: second call returns fresh result; no duplicate occurrences | **YES — Q4** |
+| PRC-07 | Lifecycle sweep mutates 0 rows: reuses refreshToday viewModel (no second DB query) | No |
+| PRC-08 | Lifecycle sweep mutates >= 1 row: fires queryAndProject | No |
+
+*Count: 8 tests*
+
+#### Domain 5: Planning-Day Boundary Async Race
+
+**New test (location TBD — see note):** `PBR-01`
+**Classification:** INTEGRATION (store concurrency)
+
+| Test ID | Description |
+|---|---|
+| PBR-01 | fullRefresh generation A starts immediately before planning-day boundary; clock advances across boundary; generation B starts and completes; generation A is released — verify stale generation A result cannot overwrite generation B's committed state in the Today store |
+
+**Location note:** If the race-prevention behavior (`requestGeneration` guard) lives in `useTodayStore`, this test belongs in `src/stores/__tests__/useTodayStore.concurrency.test.ts`. If it belongs at the coordinator level, it belongs in `PlannerRefreshCoordinator.edgeCases.test.ts` as PRC-09. Architecture decision pending Opus Q4.
+
+*Count: 1 test*
+
+#### Domain 6: Task State / Terminal Immutability
+
+**New suite:** `src/domain/task/__tests__/TaskStateEdgeCases.test.ts`
+
+| Test ID | Class | Description |
+|---|---|---|
+| TSE-01 | UNIT | Double-complete attempt: second `completeTask` call is idempotent (no error, no duplicate COMPLETED row) |
+| TSE-02 | UNIT | Complete then edit series: COMPLETED occurrence status unchanged |
+| TSE-03 | UNIT | Complete then delete series: COMPLETED occurrence preserved in history |
+| TSE-04 | UNIT | MISSED occurrence not rolled over on refresh |
+| TSE-05 | UNIT | Terminal occurrence in recurrence re-sync: status not overwritten |
+| TSE-06 | UNIT | Stale view-model action on terminal occurrence: handled gracefully (no crash) |
+| TSE-07 | INTEGRATION | Rapid repeated `completeTask` calls (concurrent): exactly one COMPLETED row; no duplicate timestamps |
+
+*Count: 7 tests*
+
+#### Domain 7: Notification Idempotency and Race Conditions
+
+**New suite:** `src/services/notification/__tests__/NotificationEdgeCases.test.ts`
+**Classification:** UNIT
+
+**Audited race window for RISK-H3:**
+`NotificationReconciliationService.executeReconcile()` queries PENDING occurrences at step 3 (`findAllMaterializedPending()`). Notifications are scheduled at steps 10-11 (diff + schedule). The race window is:
+
+- **Window A (pre-query):** Task transitions to terminal BEFORE `findAllMaterializedPending()` runs. Already handled — terminal rows are not returned as PENDING by the repository. The next full reconcile will be correct. NE-01 tests this scenario.
+- **Window B (post-query):** Task transitions to terminal AFTER `findAllMaterializedPending()` returns but BEFORE notifications are scheduled for it (step 10). In this window, the occurrence was PENDING at query time but is now terminal. A notification would be incorrectly scheduled. On the NEXT reconcile, the notification would be cancelled (occurrence not in PENDING set). Risk: one incorrect notification delivery window until next reconcile.
+- **Window C (during scheduling):** `adapter.scheduleNotification()` completes for a now-terminal occurrence; the `cancelOccurrenceReminder()` fast-path (called at task completion) may have already run before `scheduleNotification()` completed, so the cancellation is lost.
+
+NE-01 covers Window A. NE-07 addresses Window B/C by testing that `cancelOccurrenceReminder()` is durable under concurrent reconcile activity.
+
+| Test ID | Description |
+|---|---|
+| NE-01 | Terminal task (already COMPLETED before reconcile starts): no notification scheduled after reconcile |
+| NE-02 | Permission denied: reconcile returns without scheduling; no throw |
+| NE-03 | Permission revoked between two reconcile calls: second call handles gracefully |
+| NE-04 | Empty PENDING set: reconcile cancels all existing app-owned notifications |
+| NE-05 | Concurrent reconcile calls: drain loop coalesces; no duplicate notifications scheduled |
+| NE-06 | Partial scheduling failure: next reconcile re-schedules missing notifications |
+| NE-07 | `cancelOccurrenceReminder()` called on occurrence that is concurrently being scheduled: net result is occurrence has no scheduled notification after both operations complete |
+
+*Count: 7 tests*
+
+#### Domain 8: Location Edge Cases
+
+**New suite:** `src/services/__tests__/LocationEdgeCases.test.ts`
+**Classification:** UNIT
+
+| Test ID | Description |
+|---|---|
+| LE-01 | AUTO mode with no committed location: returns SETUP_REQUIRED; no GPS call |
+| LE-02 | MANUAL mode with null coordinates: returns SETUP_REQUIRED |
+| LE-03 | AUTO mode with valid committed location: returns READY using committed; no GPS call |
+| LE-04 | Permission revoked after AUTO configured: committed location still usable; no re-request |
+| LE-05 | Location services disabled: `refreshAutoLocation` path does not call `requestForegroundPermissionsAsync` |
+| LE-06 | Geocoding failure in manual city search: handled gracefully, no crash, typed error |
+| LE-07 | AUTO -> MANUAL mode switch: refresh uses manual location only |
+| LE-08 | MANUAL -> AUTO mode switch: refresh uses committed auto location only |
+
+**Static audit (LE-STATIC):** `requestForegroundPermissionsAsync` is not called in any code path except explicit user-action handlers. Codified in `StaticA11yAudit.test.tsx` or a dedicated static audit test.
+
+*Count: 8 tests + 1 static audit*
+
+#### Domain 9: Journal Privacy, Encryption, and Biometric Lock
+
+**New suite:** `src/services/journal/__tests__/JournalEdgeCases.test.ts`
+**Classification:** UNIT
+
+| Test ID | Description |
+|---|---|
+| JE-01 | SecureStore key retrieval failure during decrypt: `JournalKeyError` thrown; ciphertext row NOT modified |
+| JE-02 | Corrupt/malformed ciphertext in repository: decrypt throws typed `JournalEncryptionError`; no crash |
+| JE-03 | Rapid save + edit: `StaleWriteError` on revision conflict; no duplicate rows; draft not discarded |
+| JE-04 | Journal save payload: no GPS coordinates, no task labels, no notes in save input |
+| JE-05 | STATIC AUDIT: no import from `src/services/journal/` or `src/domain/journal/` in: widget services, notification services, planner services, onboarding |
+| JE-06 | History navigation to planningDayKey with no entry: `loadEntry` returns null; no crash |
+| JE-07 | Lock DISABLED + biometric unavailable: Journal opens normally without prompt (lock disabled is the governing condition) |
+| JE-08 | Lock ENABLED + biometric unavailable/not enrolled: Journal remains LOCKED; calm user-facing message shown; lock NOT auto-disabled; lock NOT bypassed; no PIN fallback |
+
+*Count: 8 tests (JE-05 is a static audit test)*
+
+#### Domain 10: Calendar Edge Cases
+
+**New suite:** `src/domain/calendar/__tests__/CalendarEdgeCases.test.ts`
+**Classification:** UNIT
+
+| Test ID | Description |
+|---|---|
+| CAL-01 | February in non-leap year: 28-day grid; no Feb 29 cell |
+| CAL-02 | February in leap year: 29-day grid; Feb 29 cell present |
+| CAL-03 | Month requiring 6-row grid (42 cells): grid cell count correct |
+| CAL-04 | December -> January navigation: planningDayKey correct for Jan 1 |
+| CAL-05 | Hijri loader failure: calendarGrid falls back to base Hijri without crash |
+| CAL-06 | Hijri adjustment +/-2 boundary: effective dates correct; no overflow |
+| CAL-07 | Zero-task month: grid renders without crash |
+| CAL-08 | Filler day tap (day outside current month): handled gracefully; no crash |
+
+*Count: 8 tests*
+
+#### Domain 11: Onboarding Gate / Completion
+
+**New suite:** `src/services/onboarding/__tests__/OnboardingEdgeCases.test.ts`
+**Classification:** UNIT
+
+| Test ID | Description |
+|---|---|
+| OE-01 | Completion persistence failure (DB error on `onboardingCompleted` write): gate remains PENDING |
+| OE-02 | Partial persistence: `calculationMethod` write succeeds but `onboardingCompleted` write fails: gate remains PENDING; settings not corrupted |
+| OE-03 | fullRefresh failure after successful `onboardingCompleted: true` write: returns `PERSISTED_REFRESH_FAILED`; does NOT roll back `onboardingCompleted` |
+| OE-04 | Missing `user_settings` row (fresh install): resolves to PENDING; not ERROR |
+| OE-05 | DB infrastructure failure during gate `initialize()`: resolves to ERROR; not PENDING |
+
+*Count: 5 tests*
+
+#### Domain 12: Settings / Theme / Premium Edge Cases
+
+**New suite:** `src/services/__tests__/SettingsEdgeCases.test.ts`
+**Classification:** UNIT
+
+| Test ID | Description |
+|---|---|
+| SE-01 | Prayer adjustment beyond +/-60 minutes: rejected by `validatePrayerAdjustments` |
+| SE-02 | Hijri global adjustment = +/-2 (boundary values): persisted correctly |
+| SE-03 | Hijri global adjustment beyond +/-2: rejected |
+| SE-04 | Theme DB read failure: falls back to SYSTEM; `themeReady` becomes true |
+| SE-05 | Entitlement UNAVAILABLE (query failure): MIDNIGHT planning-day mutation rejected |
+| SE-06 | Entitlement FREE (missing row): MIDNIGHT planning-day mutation rejected |
+| SE-07 | FAJR planning-day: no entitlement check required (always allowed) |
+| SE-08 | Locked premium planning-day value (MIDNIGHT) in DB: temporal engine interprets it correctly; no silent downgrade on read |
+
+*Count: 8 tests*
+
+---
+
+### 9.3 Planned Test Count
+
+| Suite | File Path | Class | Planned Tests |
+|---|---|---|---|
+| PlanningDayBoundary | `src/domain/planning-day/__tests__/PlanningDayBoundary.test.ts` | UNIT | 11 |
+| DSTEdgeCases | `src/domain/temporal/__tests__/DSTEdgeCases.test.ts` | UNIT/INTEGRATION* | 10 |
+| RecurrenceEdgeCases | `src/domain/recurrence/__tests__/RecurrenceEdgeCases.test.ts` | UNIT/INTEGRATION* | 12 |
+| PlannerRefreshCoordinator.edgeCases | `src/services/__tests__/PlannerRefreshCoordinator.edgeCases.test.ts` | INTEGRATION | 8 |
+| PBR-01 (race) | TBD (useTodayStore or PRC) | INTEGRATION | 1 |
+| TaskStateEdgeCases | `src/domain/task/__tests__/TaskStateEdgeCases.test.ts` | UNIT/INTEGRATION | 7 |
+| NotificationEdgeCases | `src/services/notification/__tests__/NotificationEdgeCases.test.ts` | UNIT | 7 |
+| LocationEdgeCases | `src/services/__tests__/LocationEdgeCases.test.ts` | UNIT | 8 |
+| JournalEdgeCases | `src/services/journal/__tests__/JournalEdgeCases.test.ts` | UNIT/STATIC | 8 |
+| CalendarEdgeCases | `src/domain/calendar/__tests__/CalendarEdgeCases.test.ts` | UNIT | 8 |
+| OnboardingEdgeCases | `src/services/onboarding/__tests__/OnboardingEdgeCases.test.ts` | UNIT | 5 |
+| SettingsEdgeCases | `src/services/__tests__/SettingsEdgeCases.test.ts` | UNIT | 8 |
+| **Total** | | | **93 tests** |
+| **New suites** | | | **12 suites** |
+
+\* Classification of UNIT vs INTEGRATION for DST-05/06 and REC-05..REC-07 is pending Opus Q3/Q5 answers. The scenario count (10 and 12) is fixed.
+
+**Post-M23 estimated total:** 1556 (baseline) + 93 (planned) = **1649 tests** across **144 suites**
+
+Completion criterion: all 93 planned scenarios covered and passing. A numerically lower count (e.g., due to test consolidation discovered during implementation) is acceptable only if every named scenario above has explicit test coverage. No scenario may be silently dropped.
+
+---
+
+## 10. Native QA Model — QA Gate STATUS
+
+### 10.1 Critical Native QA Gates
+
+These are checks that are critical for release correctness. Each has a QA GATE STATUS that must be one of PASS / FAIL / BLOCKED (NOT EXECUTED).
+
+| Gate ID | Area | Required Evidence Level | M23 gate can close if: |
+|---|---|---|---|
+| GATE-1 | TaskCard TalkBack composite (CF-A4) | LEVEL 1+ | PASS or BLOCKED with Lead-approved M24 carry-forward |
+| GATE-2 | PrayerHeader TalkBack composite (CF-A2) | LEVEL 1+ | PASS or BLOCKED with Lead-approved M24 carry-forward |
+| GATE-3 | All 6 modals TalkBack `accessibilityViewIsModal` (CF-A6/8/10/12/14/16) | LEVEL 1+ | PASS or BLOCKED |
+| GATE-4 | iOS widget gallery Small + Medium render (CF-W1/W2) | LEVEL 2 (physical iOS required) | PASS or BLOCKED with Lead-approved M24 carry-forward (see §18) |
+| GATE-5 | iOS widget data delivery when app terminated (RISK-B3 / App Group) | LEVEL 2 | PASS or BLOCKED with Lead-approved M24 carry-forward |
+| GATE-6 | All 8 directional chevrons RTL flip | LEVEL 1+ | PASS or BLOCKED |
+| GATE-7 | Planning-day boundary Fajr/Midnight/Custom lifecycle | LEVEL 1+ | PASS |
+
+GATE-1 and GATE-2 are gates for **unconfirmed** defects. If native QA returns FAIL, the defect is confirmed and classified per §26. If it returns PASS, the risk is resolved.
+
+### 10.2 TaskCard TalkBack Gate — Positive Defect Resolution Policy
+
+> **GATE-1 applies only when native TalkBack testing is executed. No production fix is pre-authorized.**
+
+If AND-A2 (TaskCard TalkBack) returns FAIL (duplicate announcements confirmed):
+
+1. **Record exact native evidence:** which descendants TalkBack exposes, exact announcement sequence heard, Android API level and device.
+2. **STOP for Lead accessibility review.** Do not proceed to a fix without Lead guidance.
+3. **Explore fixes that preserve the composite accessible parent.** The composite `contentContainer` has `accessible={true}` and `accessibilityLabel={compositeLabel}`. Any fix must preserve the View's traversability with its composite label.
+4. **Possible future fix directions (NOT pre-authorized):** Suppression or grouping on CHILD elements (not the parent); a different structural approach. The precise fix depends on which descendants TalkBack actually exposes — this is empirical information only available after native testing.
+5. **Do NOT apply `importantForAccessibility="no-hide-descendants"` to the composite parent.** This was Lead-rejected in M22 (D-1 Resolution) because in RN 0.86, `no-hide-descendants` on a View hides that View itself AND all descendants, which would suppress the entire composite element.
+6. **If no narrow fix can be designed without Lead review:** Mark GATE-1 as FAIL / PENDING FIX and escalate before M23 can close.
+
+---
+
+## 11. iOS QA Matrix
+
+| QA ID | CF ID | Feature | Evidence Level | Steps | Expected Result |
+|---|---|---|---|---|---|
+| IOS-A1 | CF-A1 | VoiceOver — PrayerHeader composite | LEVEL 2 | VoiceOver on; focus PrayerHeader | ONE composite announcement: prayer name + time + countdown. No duplicate child announcements. |
+| IOS-A2 | CF-A3 | VoiceOver — TaskCard grouping | LEVEL 2 | VoiceOver on; focus contentContainer | ONE composite: title + important badge + overdue. Checkbox is a SEPARATE adjacent focus item. |
+| IOS-A3 | CF-A5 | VoiceOver — JournalDeleteDialog | LEVEL 2 | VoiceOver on; open delete dialog; navigate | Focus trapped within dialog. Cancel and Delete individually focusable. Underlying screen not traversable. |
+| IOS-A4 | CF-A7 | VoiceOver — JournalPrivacySheet | LEVEL 2 | VoiceOver on; open sheet | Focus trapped. Done button reachable. |
+| IOS-A5 | CF-A9 | VoiceOver — CustomRecurrenceModal | LEVEL 2 | VoiceOver on; tap Custom Repeat | Focus trapped. Done/Apply + Close reachable. |
+| IOS-A6 | CF-A11 | VoiceOver — EditScopeSheet | LEVEL 2 | VoiceOver on; edit recurring task | Focus trapped. Cancel + scope options reachable. |
+| IOS-A7 | CF-A13 | VoiceOver — PremiumLockedInfo | LEVEL 2 | VoiceOver on; tap locked planning-day | Focus trapped. OK individually reachable (not swallowed by group). |
+| IOS-A8 | CF-A15 | VoiceOver — Hijri Calendar override modal | LEVEL 2 | VoiceOver on; open hijri override | Focus trapped. Cancel + Save Override reachable. |
+| IOS-R1 | CF-A17 | RTL layout — all screens | LEVEL 1+ | Device/simulator in Arabic locale | Layouts mirror horizontally. No clipped content. Touch targets intact. |
+| IOS-R2 | CF-A18 | RTL — 8 directional chevrons | LEVEL 1+ | RTL locale; observe all 8 instances | All 8 horizontal chevrons flip (scaleX: -1). chevron-down does NOT flip. |
+| IOS-R3 | CF-A19 | RTL — PrayerTabBar | LEVEL 1+ | RTL locale | Fajr at logical-start (right in RTL). Canonical data order unchanged. |
+| IOS-R4 | CF-A20 | RTL — BottomNavBar | LEVEL 1+ | RTL locale | Icons mirror physically. Route indices / callbacks semantically unchanged. |
+| IOS-R5 | CF-A21 | RTL — Calendar grid | LEVEL 1+ | RTL locale | Weekday header mirrors. Day cells mirror. onPreviousMonth/onNextMonth semantics unchanged. |
+| IOS-T1 | CF-A22 | Large text — CalendarMonthGrid / CalendarDayCell | LEVEL 1+ | iOS Dynamic Type at maximum | No clipping of day numbers or weekday labels. maxFontSizeMultiplier=2 cap visible. |
+| IOS-T2 | CF-A22 | Large text — Today screen | LEVEL 1+ | Same | Labels readable; no overflow. |
+| IOS-L1 | CF-E11 | Location — AUTO permission denied | LEVEL 1+ | Location permission denied; AUTO mode with committed location | Committed lastAutoLocation used; no permission re-request. Prayer times load. |
+| IOS-L2 | — | Location — permission request only on explicit tap | LEVEL 1+ | Permission not granted | Tap "Use My Location" -> permission requested. All other navigation does NOT trigger it. |
+| IOS-N1 | CF-E1 | Notification delivery | LEVEL 2 (preferred) | Permission granted; reminder set | Notification appears in system notification center at correct time. |
+| IOS-N2 | — | Notification — permission denied | LEVEL 1+ | Permission denied | Full refresh; no notifications scheduled; no crash. |
+| IOS-P1 | CF-A23 | Date/time picker VoiceOver | LEVEL 2 | VoiceOver on; open task form picker | VoiceOver reads picker values. User adjusts date/time with swipe. |
+| IOS-W1 | CF-W1 | Widget — Small render | LEVEL 2 | Dev/EAS build; widget added to home screen | Small widget shows current prayer + next prayer. No Journal content. |
+| IOS-W2 | CF-W2 | Widget — Medium render | LEVEL 2 | Same | Medium widget shows prayer + up to 3 task titles. No notes, no coordinates. |
+| IOS-W3 | CF-W3 | Widget — timeline prayer-boundary transitions | LEVEL 2 | Wait for prayer boundary | Widget updates to next prayer without app open. |
+| IOS-W4 | CF-W4 | Widget — countdown timer (native SwiftUI date) | LEVEL 2 | Observe widget clock | Timer counts down using native OS clock. No JS polling. |
+| IOS-W5 | CF-W5 | Widget — deep-link tap | LEVEL 2 | Tap widget | App opens to Today screen. |
+| IOS-W6 | CF-W6 | Widget — dark-mode appearance | LEVEL 2 | Device in dark mode; observe widget | Widget adapts to dark ambient environment. Correct brand colors. |
+| IOS-W7 | CF-W7 | Widget — SETUP_REQUIRED | LEVEL 2 | App in setup-required state | "Open Islamic Planner to finish setup." No fake prayer times. |
+| IOS-W8 | CF-W8 | Widget — stale after planning-day boundary (overnight) | LEVEL 2 | App not opened overnight | Shows last-known data + "Open app to refresh". No crash. |
+| IOS-W9 | CF-W9 | Widget — device-restart recovery | LEVEL 2 | Restart device | Widget reappears. Content may be stale; calm fallback shown. |
+| IOS-W10 | CF-W18 | Widget — no Journal/coordinates/notes in content | LEVEL 2 | Observe widget with tasks scheduled | No journal text, no coordinates visible. Task titles only (no notes). |
+| IOS-W11 | CF-W19/CF-A24 | Widget — accessibility tree inspection | LEVEL 2 | Accessibility Inspector or VoiceOver | Widget exposes meaningful accessibility labels. Prayer names audible. |
+| IOS-C1 | CF-E9 | Cold-start theme hydration | LEVEL 1+ | Set Dark theme; force-quit; relaunch | Dark theme appears without white flash. |
+| IOS-B1 | CF-E4 | Biometric — Face ID unlock (lock enabled) | LEVEL 2 | Journal lock enabled; app backgrounded; return to Journal | Face ID prompt. Unlocks on success. |
+| IOS-B2 | CF-E6 | Biometric — Face ID cancel (lock enabled) | LEVEL 2 | Same; cancel Face ID | Journal remains locked. Cancel handled gracefully; no crash. |
+| IOS-B3 | CF-E10 | Biometric — enable/disable through Settings | LEVEL 2 | Biometric toggle in Settings | Enable requires successful Face ID first. Disable permitted. No auto-disable on unavailable. |
+| IOS-K1 | CF-E2/E3 | AES-256-GCM roundtrip across restart | LEVEL 1+ | Journal entry written; force-quit; reopen | Entry decrypts correctly. Same content visible. |
+| IOS-LC1 | CF-E7 | App lifecycle — background -> foreground (journal relock) | LEVEL 1+ | Lock enabled; background app 30s; return to journal | Journal relocks. Prompt on re-entry. Today refreshes. |
+| IOS-LC2 | CF-E8 | App lifecycle — process kill -> cold launch (lock restored) | LEVEL 1+ | Kill app from app switcher | Journal locked on restart. All persisted planner state restored. No crash. |
+| IOS-LC3 | CF-E11 | Settings persistence across process restart | LEVEL 1+ | Configure settings; force-quit; relaunch | All settings values persist correctly. |
+| IOS-ST1 | CF-E12 | Prayer preview / stepper interaction | LEVEL 1+ | Open prayer calculation settings; adjust offset stepper | Stepper increments/decrements correctly. Prayer preview updates. |
+| IOS-PD1 | — | Planning-day boundary — Fajr — app open at boundary | LEVEL 1+ | Set time to 1s before Fajr; observe Today across boundary | planningDayKey updates at Fajr. Selected prayer switches. No duplicate refresh. |
+| IOS-PD2 | — | Planning-day boundary — Midnight — app open at boundary | LEVEL 1+ | Same for Midnight boundary | planningDayKey updates at Midnight. |
+| IOS-PD3 | — | Planning-day boundary — Custom — app open at boundary | LEVEL 1+ | Same for Custom boundary | planningDayKey updates at custom time. |
+| IOS-PD4 | — | Planning-day boundary — background across Fajr — foreground | LEVEL 1+ | Background app before Fajr; foreground after Fajr | Today refreshes with new planningDayKey. Prayer state correct. No duplicate effects. |
+
+**iOS QA check count: 44 checks**
+
+---
+
+## 12. Android QA Matrix
+
+| QA ID | CF ID | Feature | Evidence Level | Steps | Expected Result |
+|---|---|---|---|---|---|
+| AND-A1 | CF-A2 | TalkBack — PrayerHeader composite | LEVEL 1+ | TalkBack on; focus PrayerHeader | ONE composite: prayer + time + countdown. No duplicate. |
+| AND-A2 | CF-A4 | TalkBack — TaskCard composite (**GATE-1**) | LEVEL 1+ | TalkBack on; focus contentContainer | ONE composite: title + badge + overdue. Checkbox separate. If duplicates confirmed: record evidence; STOP; Lead review. |
+| AND-A3 | CF-A6/8/10/12/14/16 | TalkBack — all 6 modals focus trapping | LEVEL 1+ | TalkBack on; open each modal | Focus contained within modal. Underlying screen not traversable. Android back / onRequestClose closes modal. |
+| AND-A4 | CF-A14 | TalkBack — PremiumLockedInfo OK button | LEVEL 1+ | TalkBack on; open locked planning-day option | OK individually reachable (not swallowed by group). |
+| AND-R1 | CF-A17 | RTL layout — all screens | LEVEL 1+ | Android system language: Arabic | Layouts mirror. No clipping. Text start-aligned. |
+| AND-R2 | CF-A18 | RTL — 8 directional chevrons | LEVEL 1+ | RTL locale | All 8 horizontal chevrons flip. chevron-down unchanged. |
+| AND-R3 | CF-A19 | RTL — PrayerTabBar | LEVEL 1+ | RTL locale | Fajr at logical-start (right in RTL). Array order unchanged. |
+| AND-R4 | CF-A20 | RTL — BottomNavBar | LEVEL 1+ | RTL locale | Physical placement mirrors. Add button centered. Route indices unchanged. |
+| AND-R5 | CF-A21 | RTL — Calendar | LEVEL 1+ | RTL locale | Grid mirrors. Previous/next callbacks unchanged. |
+| AND-T1 | CF-A22 | Large font — calendar | LEVEL 1+ | Android font size: Largest | No clipping. maxFontSizeMultiplier=2 visible. |
+| AND-T2 | CF-A22 | Large font — Today screen | LEVEL 1+ | Same | Labels readable; no overflow. |
+| AND-L1 | CF-E11 | Location — AUTO permission denied | LEVEL 1+ | Deny location; AUTO configured with committed location | Prayer times load from committed location. No re-request. |
+| AND-L2 | — | Location — permission request explicit only | LEVEL 1+ | Not granted | Tap "Use My Location" -> permission dialog. No other action triggers it. |
+| AND-N1 | CF-E1 | Notification delivery | LEVEL 2 (preferred) | Permission granted; reminder set | Notification appears. Action tap opens app. |
+| AND-N2 | — | Notification — permission denied | LEVEL 1+ | Deny notification permission | Full refresh; no notifications scheduled; no crash. |
+| AND-P1 | CF-A23 | Date/time picker — TalkBack | LEVEL 1+ | TalkBack on; open picker | TalkBack reads fields. Adjustable via keyboard/swipe. |
+| AND-W1 | CF-W10 | Widget — Small in launcher gallery | LEVEL 2 | Physical Android; debug APK; widget added | Small widget renders. Prayer + next prayer visible. |
+| AND-W2 | CF-W11 | Widget — Medium in launcher gallery | LEVEL 2 | Same | Medium widget. Prayer + up to 3 task titles. No notes. |
+| AND-W3 | CF-W12 | Widget — tap / deep-link | LEVEL 2 | Tap widget | App opens to Today. |
+| AND-W4 | CF-W13 | Widget — no high-frequency update loop | LEVEL 2 | Monitor device 30+ min | Updates only at 30-min OS minimum + app-push events. No runaway loop. |
+| AND-W5 | CF-W14 | Widget — app-driven update propagation | LEVEL 2 | Task created/completed; observe widget | Widget updates to reflect change on next app-triggered sync. |
+| AND-W6 | CF-W15 | Widget — SETUP_REQUIRED | LEVEL 2 | App in setup-required state | Setup prompt. No fake data. |
+| AND-W7 | CF-W16 | Widget — stale snapshot behavior | LEVEL 2 | App not opened overnight; observe widget | Shows stale data; calm fallback. No crash. |
+| AND-W8 | CF-W17 | Widget — device-reboot launcher persistence | LEVEL 2 | Reboot device | Widget reappears. Calm stale fallback until app-push. |
+| AND-W9 | CF-W18 | Widget — no Journal/coordinates/notes in content | LEVEL 2 | Observe widget | No journal text, no coordinates. Task titles only. |
+| AND-W10 | CF-W19/CF-A24 | Widget — accessibility tree inspection | LEVEL 2 | TalkBack or Accessibility Inspector | Meaningful labels. Prayer names audible. |
+| AND-C1 | CF-E9 | Cold-start theme hydration | LEVEL 1+ | Dark theme; force-stop; relaunch | Dark theme without white flash. |
+| AND-B1 | CF-E5 | Biometric — fingerprint unlock (lock enabled) | LEVEL 2 | Journal lock enabled; biometric available | Fingerprint prompt. Unlocks on success. |
+| AND-B2 | CF-E6 | Biometric — fingerprint cancel (lock enabled) | LEVEL 2 | Same; cancel | Journal remains locked. No crash. |
+| AND-B3 | CF-E10 | Biometric — enable/disable through Settings | LEVEL 2 | Toggle in Settings | Enable requires successful fingerprint first. Disable works. |
+| AND-K1 | CF-E2/E3 | AES-256-GCM roundtrip across restart | LEVEL 1+ | Journal entry; force-stop; relaunch | Entry decrypts correctly. |
+| AND-LC1 | CF-E7 | App lifecycle — background/foreground (journal relock) | LEVEL 1+ | Lock enabled; background 30s; foreground to journal | Journal relocks. Today refreshes. |
+| AND-LC2 | CF-E8 | App lifecycle — process kill | LEVEL 1+ | Kill app | Relaunch. Planner state restored. Journal locked. No crash. |
+| AND-LC3 | CF-E11 | Settings persistence across process restart | LEVEL 1+ | Configure settings; force-stop; relaunch | All settings persist. |
+| AND-ST1 | CF-E12 | Prayer preview / stepper interaction | LEVEL 1+ | Prayer calculation settings; stepper | Stepper increments/decrements. Preview updates. |
+| AND-PD1 | — | Planning-day boundary — Fajr — app open at boundary | LEVEL 1+ | Set time to 1s before Fajr; observe Today across boundary | planningDayKey updates. Selected prayer switches. No duplicate refresh. |
+| AND-PD2 | — | Planning-day boundary — Midnight — app open at boundary | LEVEL 1+ | Same for Midnight boundary | planningDayKey updates. |
+| AND-PD3 | — | Planning-day boundary — Custom — app open at boundary | LEVEL 1+ | Same for Custom boundary | planningDayKey updates. |
+| AND-PD4 | — | Planning-day boundary — background across Fajr — foreground | LEVEL 1+ | Background before Fajr; foreground after | Today refreshes with new planningDayKey. No duplicate effects. |
+
+**Android QA check count: 39 checks**
+
+---
+
+## 13. Planning-Day Native QA Plan
+
+Planning-day boundary tests PDB-01..PDB-11 prove the pure domain logic (exact-second resolution and DST stability). The following native checks verify behavior in the running app, which also requires the full coordinator pipeline.
+
+### 13.1 Fajr Boundary
+
+- App open 30s before Fajr; observe Today state: yesterday's planningDayKey active
+- Clock crosses Fajr: observe Today state updates to today's planningDayKey
+- Selected prayer tab advances from prior day's final prayer to Fajr
+- No duplicate refresh effects (no double transition banner)
+- IOS-PD1, AND-PD1
+
+### 13.2 Midnight Boundary
+
+- Same scenario at Midnight boundary (Premium setting)
+- IOS-PD2, AND-PD2
+
+### 13.3 Custom Boundary
+
+- Same scenario at Custom time boundary (Premium setting)
+- IOS-PD3, AND-PD3
+
+### 13.4 Background-Across-Boundary
+
+- App backgrounded before Fajr boundary; foreground after
+- Today refreshes with new planningDayKey
+- Prayer tab state correct (no carryover of prior day)
+- Notifications for new day present; notifications for past day absent
+- Widget snapshot reflects new day after refresh
+- IOS-PD4, AND-PD4
+
+### 13.5 DST at Planning-Day Boundary
+
+Covered by PDB-10, PDB-11 (automated) + IOS-LC1/IOS-LC2 (lifecycle) + the manual DST timezone checks in §14.
+
+---
+
+## 14. Timezone / DST Plan
+
+### 14.1 Automated Coverage (DST-01..DST-10, PDB-10, PDB-11)
+
+See §9.2 Domains 1 and 2.
+
+### 14.2 Native Manual Timezone Checks
+
+| Item | Method |
+|---|---|
+| App open at DST spring-forward (2:00->3:00 AM) | Set device to DST-observing timezone; advance clock past DST boundary; observe planningDayKey rollover |
+| Background sleep across DST spring-forward; foreground | Sleep device; advance device time past DST; foreground app |
+| App open at DST fall-back (1:00 AM occurs twice) | Set device to fall-back timezone; advance clock; observe no duplicate refresh |
+| Timezone change while app installed (AUTO mode) | Change device timezone; fullRefresh; observe prayer times reflect new timezone |
+| MANUAL location with timezone differing from device | Manual location set; verify prayer times use manual location's timezone, not device timezone |
+
+---
+
+## 15. Risk Inventory
+
+### CRITICAL NATIVE QA GATES (not yet confirmed defects)
+
+These risks are critical to verify. They become confirmed defects only upon a FAIL result from native QA. Until then, they are QA gates.
+
+| ID | Gate | Native QA | Resolution if FAIL |
+|---|---|---|---|
+| RISK-G1 | TaskCard TalkBack duplicate announcements | AND-A2 (GATE-1) | Lead review required. See §10.2. Fix must preserve composite parent traversability. |
+| RISK-G2 | PrayerHeader TalkBack composite | AND-A1 (GATE-2) | Record evidence; if duplication confirmed, assess source-level fix for compositeLabel construction. |
+| RISK-G3 | Widget App Group (iOS): data delivery when app terminated | IOS-W3, IOS-W8 (GATE-5) | If FAIL: iOS App Group identifier must be configured as M18 §7.2 specified. Architecture amendment required before any further iOS widget native QA. |
+
+### HIGH Architecture Questions (Opus Required)
+
+| ID | Question | Status |
+|---|---|---|
+| RISK-H1 | DST recurrence duplicates at +/-7-day horizon boundary | Open — covered by DST-05/06, REC-06/07; classification pending Opus Q3/Q5 |
+| RISK-H2 | RecurringHorizonSync failure behavior in fullRefresh | Open — **Opus Q1 required before any production change** |
+| RISK-H3 | Notification race: terminal state during reconcile window B/C | Partially addressed by NE-01 (Window A), NE-07 (Window B/C). Opus Q4 may affect serialization approach. |
+| RISK-H4 | TalkBack modal trapping on Android API levels 29-34 | Open — GATE-3 (AND-A3) resolves |
+| RISK-H5 | Journal SecureStore failure path | Addressed by JE-01; no Opus needed |
+| RISK-H6 | Onboarding partial persistence | Addressed by OE-02; no Opus needed |
+| RISK-H7 | fullRefresh in-flight while planning-day boundary crossed | Addressed by PBR-01; Opus Q4 may affect which layer the test belongs to |
+
+### MEDIUM Risks
+
+| ID | Area | Automated Coverage | Native QA |
+|---|---|---|---|
+| RISK-M1 | Feb 29 recurrence clamp idempotency | REC-04 | None required |
+| RISK-M2 | Month-end 31st re-sync idempotency | REC-01..REC-03, REC-05 | None required |
+| RISK-M3 | Timezone change between syncs: stale planningDayKey | DST-05, DST-06; Opus Q3 | Manual timezone change test |
+| RISK-M4 | Hijri loader failure on calendar render | CAL-05 | None required |
+| RISK-M5 | Notification duplicate on rapid refresh | NE-05, drain-loop existing tests | None required |
+| RISK-M6 | Widget snapshot stale after location change | Existing WidgetSyncCoordinator tests | AND-W5 |
+| RISK-M7 | RTL physical rendering unverified | RTLIcons.test.tsx (I-1..I-12) | IOS-R1..R5, AND-R1..R5 |
+| RISK-M8 | Large font calendar clipping | TextScaling.test.tsx (F-1..F-3) | IOS-T1, AND-T1 |
+| RISK-M9 | Journal rapid save race | JE-03 | None required |
+| RISK-M10 | Entitlement UNAVAILABLE cascading | SE-05, SE-08 | None required |
+| RISK-M11 | VoiceOver modal traversal 6 modals | ModalAccessibility.test.tsx | IOS-A3..A8 |
+| RISK-M12 | Android location permission revocation | LE-04 | AND-L1 |
+
+### LOW Risks
+
+| ID | Description | Planned Coverage |
+|---|---|---|
+| RISK-L1 | DST exact-time SPRING_FORWARD_SHIFTED — no UI explanation | OBS: documented; DST-01 confirms behavior |
+| RISK-L2 | Prayer window wrapping rejection — no UI feedback test | May add in implementation if easily testable |
+| RISK-L3 | SettingsStepper rapid tap idempotency | SE-07 (indirect); may defer to M24 |
+| RISK-L4 | Calendar 6-week month grid layout | CAL-03 |
+| RISK-L5 | Onboarding redirect race (markComplete/router.replace) | OE-03 (indirect) |
+| RISK-L6 | Journal history navigation to deleted entry | JE-06 |
+| RISK-L7 | Notification scheduling partial failure recovery | NE-06 |
+
+### OBSERVATIONS
+
+| ID | Item |
+|---|---|
+| OBS-1 | Task title visible on lock screen (widget) — documented product decision, not defect |
+| OBS-2 | iOS widget countdown uses native SwiftUI clock — no JS polling. Correct. |
+| OBS-3 | Android `updatePeriodMillis=1800000` minimum — app-push covers prayer transitions. Correct. |
+| OBS-4 | `textAlign: 'center'` direction-neutral — no change (M22 OBS-3) |
+| OBS-5 | `right: -30` on PrayerHeader decorative ornament — physical/geometric. Correct (M22 OBS-2). |
+| OBS-6 | Expo SDK 57 advisory — pre-existing; does not reopen any milestone |
+| OBS-7 | `app/demo.tsx` `/demo` route — `__DEV__` gate deferred to M24 per ADR-029. Not a security defect. |
+
+---
+
+## 16. Severity Policy for Confirmed Defects
+
+A **confirmed defect** requires a FAIL result from a native QA gate or a verified source-level invariant violation. Severity applies only to confirmed defects.
+
+| Severity | Meaning | Required Action |
+|---|---|---|
+| BLOCKER | Prevents release. Correctness invariant violated. | Fix before M23 closure. If fix requires changing frozen product semantics or changing multiple systems: STOP; escalate to Lead. |
+| HIGH | Significant user-facing defect or safety risk. | Fix before M23 closure. Narrow fix only. |
+| MEDIUM | Notable defect with workaround. | Fix within M23 or document explicitly as M24 carry-forward with Lead approval. |
+| LOW | Minor defect; minimal impact. | May defer to M24 with documented justification. |
+| OBSERVATION | Confirmed-correct behavior. | Document only. No code change. |
+
+### Narrow Fix Policy
+
+A confirmed defect may be fixed within M23 if:
+1. It is a bug against a frozen contract.
+2. The fix is narrow (< 5 lines of production code).
+3. No product semantic redesign is required.
+4. Fix is accompanied by a dedicated regression test.
+
+If fixing requires changing product semantics, changing multiple systems, or adding a migration: **STOP. Escalate to Lead.**
+
+M23 adds **0 new migrations**. Any proposed migration is an immediate escalation.
+
+---
+
+## 17. Planned Production Changes
+
+No production changes are pre-authorized.
+
+Any production change during M23 must:
+1. Identify a specific confirmed defect against a frozen contract.
+2. Propose a narrow fix with a dedicated test.
+3. Classify the defect.
+4. Require Lead review if the fix changes any frozen product semantic.
+
+The previous draft pre-authorized PC-C1 (TaskCard fix) and PC-C2 (PRC sync failure wrapping). Both have been removed:
+
+- **PC-C1 removed:** TaskCard TalkBack is a native QA gate, not a confirmed defect. No fix is pre-authorized. If GATE-1 returns FAIL, the fix must be designed based on evidence.
+- **PC-C2 removed:** Adding try/catch around `recurringHorizonSync.sync()` and continuing to READY changes failure propagation semantics, READY semantics, and downstream pipeline behavior. This is not a "hardening fix" — it is a semantic change requiring Opus Q1 evaluation.
+
+---
+
+## 18. M23 / M24 Carry-Forward Policy
+
+### Policy
+
+A native QA gate may carry forward to M24 if and only if:
+1. The gate CANNOT be executed due to hardware unavailability (not due to scheduling convenience).
+2. Lead explicitly approves the carry-forward before M23 closure.
+3. The gate is marked `BLOCKED / NOT EXECUTED` — NOT `PASS` and NOT `RESOLVED`.
+4. The gate becomes a **RELEASE BLOCKER** in M24. M24 may not close or release until the gate is either executed with PASS or the capability is explicitly re-architected.
+
+### Currently Eligible for Lead-Approved Carry-Forward
+
+| Gate | Reason |
+|---|---|
+| GATE-4: iOS widget gallery (CF-W1..W9) | Requires EAS build on macOS or physical iOS device. Windows development constraint. |
+| IOS-A1..A8 (VoiceOver checks) | Requires physical iOS device. If no physical device available. |
+| IOS-B1, IOS-B2, IOS-B3 (biometric iOS) | Requires physical iOS device. |
+| GATE-5: Widget App Group | Depends on GATE-4 first being executed. |
+
+### May NOT Carry Forward
+
+Confirmed BLOCKER defects. If GATE-1, GATE-2, or GATE-3 return FAIL (a defect is confirmed), M23 may not close until that confirmed defect is resolved. The gate itself (the check) can carry forward; the confirmed defect cannot.
+
+---
+
+## 19. Native Manual QA Checklist
+
+Each item records: **PASS / FAIL / BLOCKED**, **evidence** (screenshot, transcript, or behavior description), **tester platform + OS version + device**.
+
+### iOS VoiceOver (LEVEL 2)
+
+- [ ] IOS-A1 (CF-A1): PrayerHeader VoiceOver — one composite announcement
+- [ ] IOS-A2 (CF-A3): TaskCard VoiceOver — composite + separate checkbox
+- [ ] IOS-A3 (CF-A5): JournalDeleteDialog — focus trapped; Cancel + Delete reachable
+- [ ] IOS-A4 (CF-A7): JournalPrivacySheet — focus trapped; Done reachable
+- [ ] IOS-A5 (CF-A9): CustomRecurrenceModal — focus trapped; Done + Close reachable
+- [ ] IOS-A6 (CF-A11): EditScopeSheet — focus trapped; scope options reachable
+- [ ] IOS-A7 (CF-A13): PremiumLockedInfo — OK individually reachable (not swallowed)
+- [ ] IOS-A8 (CF-A15): Hijri override modal — focus trapped; Cancel + Save reachable
+
+### Android TalkBack (LEVEL 1+)
+
+- [ ] AND-A1 (CF-A2): PrayerHeader TalkBack — composite; no duplicate
+- [ ] AND-A2 (CF-A4): TaskCard TalkBack — composite; checkbox separate **[GATE-1]**
+- [ ] AND-A3 (CF-A6/8/10/12/14/16): All 6 modals TalkBack — focus contained; Android back closes modal **[GATE-3]**
+- [ ] AND-A4 (CF-A14): PremiumLockedInfo TalkBack — OK individually reachable
+
+### RTL Physical Rendering (LEVEL 1+)
+
+- [ ] IOS-R1 / AND-R1 (CF-A17): All screens RTL — no clipping
+- [ ] IOS-R2 / AND-R2 (CF-A18): All 8 directional chevrons flip; chevron-down unchanged
+- [ ] IOS-R3 / AND-R3 (CF-A19): PrayerTabBar — Fajr at logical-start in RTL
+- [ ] IOS-R4 / AND-R4 (CF-A20): BottomNavBar — mirrors; route indices unchanged
+- [ ] IOS-R5 / AND-R5 (CF-A21): Calendar grid — mirrors; prev/next semantics unchanged
+
+### Large Font (LEVEL 1+)
+
+- [ ] IOS-T1 / AND-T1 (CF-A22): Calendar — no clipping at max text size
+- [ ] IOS-T2 / AND-T2 (CF-A22): Today screen — readable at max text size
+
+### Planning-Day Boundary (LEVEL 1+)
+
+- [ ] IOS-PD1 / AND-PD1: Fajr boundary — app open at boundary; rollover observed
+- [ ] IOS-PD2 / AND-PD2: Midnight boundary — app open at boundary
+- [ ] IOS-PD3 / AND-PD3: Custom boundary — app open at boundary
+- [ ] IOS-PD4 / AND-PD4: Background across Fajr; foreground — correct new planningDayKey
+
+### Timezone / DST (LEVEL 1+)
+
+- [ ] App open at DST spring-forward: planningDayKey rollover observed
+- [ ] Background across DST spring-forward; foreground: prayer times correct
+- [ ] Timezone change (AUTO mode): prayer times recalculated
+- [ ] MANUAL location with different timezone: prayer times use manual timezone
+
+### Widgets — iOS (LEVEL 2)
+
+- [ ] IOS-W1 (CF-W1): Small widget in gallery
+- [ ] IOS-W2 (CF-W2): Medium widget; correct content
+- [ ] IOS-W3 (CF-W3): Timeline updates at prayer boundary **[GATE-5 prerequisite]**
+- [ ] IOS-W4 (CF-W4): Countdown timer — native OS clock; no JS polling
+- [ ] IOS-W5 (CF-W5): Widget tap opens Today
+- [ ] IOS-W6 (CF-W6): Dark-mode appearance correct
+- [ ] IOS-W7 (CF-W7): SETUP_REQUIRED prompt shown
+- [ ] IOS-W8 (CF-W8): Stale after overnight — calm fallback **[GATE-5]**
+- [ ] IOS-W9 (CF-W9): Device-restart recovery
+- [ ] IOS-W10 (CF-W18): No Journal content / coordinates / notes
+- [ ] IOS-W11 (CF-W19/CF-A24): Accessibility tree — meaningful labels
+
+### Widgets — Android (LEVEL 2)
+
+- [ ] AND-W1 (CF-W10): Small widget in launcher gallery
+- [ ] AND-W2 (CF-W11): Medium widget; correct content
+- [ ] AND-W3 (CF-W12): Widget tap opens Today
+- [ ] AND-W4 (CF-W13): No high-frequency update loop (30+ min monitor)
+- [ ] AND-W5 (CF-W14): App-driven update propagation
+- [ ] AND-W6 (CF-W15): SETUP_REQUIRED prompt
+- [ ] AND-W7 (CF-W16): Stale snapshot behavior — calm fallback
+- [ ] AND-W8 (CF-W17): Device-reboot persistence
+- [ ] AND-W9 (CF-W18): No Journal content / coordinates / notes
+- [ ] AND-W10 (CF-W19/CF-A24): Accessibility tree
+
+### Notifications (LEVEL 1+ / LEVEL 2 preferred)
+
+- [ ] IOS-N1 / AND-N1 (CF-E1): Real notification delivered at correct time
+- [ ] IOS-N2 / AND-N2: Permission denied — planner loads; no crash
+
+### Biometric / Journal (LEVEL 2 for biometric; LEVEL 1+ for AES)
+
+- [ ] IOS-K1 / AND-K1 (CF-E2/E3): AES-256-GCM roundtrip across force-quit
+- [ ] IOS-B1 / AND-B1 (CF-E4/E5): Biometric unlock (lock enabled) — success
+- [ ] IOS-B2 / AND-B2 (CF-E6): Biometric cancel (lock enabled) — journal remains locked
+- [ ] IOS-B3 / AND-B3 (CF-E10): Enable/disable lock through Settings
+
+### Theme / Settings / Lifecycle (LEVEL 1+)
+
+- [ ] IOS-C1 / AND-C1 (CF-E9): Cold-start dark theme — no flash
+- [ ] IOS-L1 / AND-L1: Location permission denied — committed location used
+- [ ] IOS-L2 / AND-L2: Permission request only on explicit user action
+- [ ] IOS-P1 / AND-P1 (CF-A23): Date/time picker screen reader interaction
+- [ ] IOS-ST1 / AND-ST1 (CF-E12): Prayer preview / stepper interaction
+- [ ] IOS-LC1 / AND-LC1 (CF-E7): Background -> foreground; journal relocks; Today refreshes
+- [ ] IOS-LC2 / AND-LC2 (CF-E8): Process kill -> cold launch; lock restored; planner state restored
+- [ ] IOS-LC3 / AND-LC3 (CF-E11): Settings persist across process restart
+
+---
+
+## 20. Failure Injection Strategy
+
+All failure injection uses constructor injection (established pattern). No new test infrastructure required.
+
+| Failure | Injection Method |
+|---|---|
+| DB read failure | Mock `UserSettingsRepository.findFirst()` to throw |
+| DB write failure | Mock `UserSettingsRepository.upsert()` to throw |
+| SecureStore failure | Mock `expo-secure-store` (existing `__mocks__` pattern) |
+| Notification API failure | Mock `expo-notifications` (existing mock) |
+| Location API failure | Mock `expo-location` (existing mock) |
+| Widget sync failure | Mock `WidgetSyncCoordinator.sync()` to throw |
+| RecurrenceHorizonSync failure | Pass stub that throws to PlannerRefreshCoordinator constructor |
+| TodayOrchestrator failure | Pass stub that throws to PlannerRefreshCoordinator constructor |
+| Biometric unavailable | Mock `expo-local-authentication` `isEnrolledAsync()` to return false |
+
+---
+
+## 21. Completion Criteria
+
+M23 is complete when ALL of the following are true:
+
+1. **All 93 planned test scenarios covered** and passing. Every named scenario in §9.2 has explicit coverage.
+2. **Zero regressions:** All 1556 baseline tests continue to pass.
+3. **TypeScript:** 0 errors.
+4. **ESLint:** 0 errors, 0 warnings.
+5. **Opus specialist review complete:** All five Opus questions answered; answers incorporated into this architecture document; test classifications and PRC-02 expected outcome updated accordingly.
+6. **GATE-1, GATE-2, GATE-3:** Status is PASS, FAIL (with defect resolution), or Lead-approved BLOCKED/NOT EXECUTED.
+7. **GATE-4, GATE-5 (iOS widget):** Status is PASS or Lead-approved M24 carry-forward.
+8. **All MEDIUM risks:** Either covered by planned tests, native QA, or documented with explicit Lead-approved M24 carry-forward.
+9. **No new dependencies** without explicit justification.
+10. **No new migrations.**
+11. **No confirmed BLOCKER defects outstanding** (confirmed BLOCKER = native QA FAIL against a critical invariant).
+12. **Independent review:** Required before closure.
+13. **Lead approval:** Required before closure.
+
+---
+
+## 22. Supporting Docs to Update at Closure
+
+- `docs/CURRENT_MILESTONE.md` — advance to M23 closure summary, M24 status
+- `docs/IMPLEMENTATION_STATUS.md` — update M23 row
+- `docs/ARCHITECTURE_INDEX.md` — add M23 entry
+- `docs/DECISIONS.md` — add ADR-031 only if a durable architectural rule emerges from Opus review
+- `docs/AI_PROJECT_CONSTITUTION.md` — only if a fundamental invariant changes
+
+---
+
+## 23. Pre-Commit Verification Record (Architecture Hardening)
+
+```
+git rev-parse HEAD         -> 5b1d913c2b4ed6b6a3ea5ff5ee059df937c6be11  PASS
+git rev-parse origin/main  -> 5b1d913c2b4ed6b6a3ea5ff5ee059df937c6be11  PASS
+git status                 -> clean working tree  PASS (pre-commit)
+git diff                   -> (empty)  PASS (pre-commit)
+git diff --check           -> (no whitespace errors)  PASS (pre-commit)
+
+Initial M23 architecture commit: NONE existed before this pass.
+Commit type: docs(m23): freeze QA and edge-case architecture
+  (No flawed draft commit exists; this is the first architecture commit.)
+
+Docs changed:
+  docs/M23_ARCHITECTURE.md — NEW (this document)
+  docs/CURRENT_MILESTONE.md — status update
+  docs/IMPLEMENTATION_STATUS.md — M23 row update
+  docs/ARCHITECTURE_INDEX.md — M23 entry
+
+ADR-031: NOT created. No durable architectural decision has been established
+  in this pass. The Opus review may produce decisions worth capturing in DECISIONS.md;
+  ADR-031 is deferred until those answers are in hand.
+
+New dependencies: 0
+New migrations: 0
+```
+
+---
+
+## 24. Amendment History
+
+| Date | Author | Change |
+|---|---|---|
+| 2026-09-19 | Sonnet (Architect) | Initial freeze + hardening (combined: no flawed draft committed) — 16 Lead-review corrections applied |
+
+---
+
+*M23 ARCHITECTURE HARDENED LOCALLY — OPUS REVIEW REQUIRED BEFORE IMPLEMENTATION.*

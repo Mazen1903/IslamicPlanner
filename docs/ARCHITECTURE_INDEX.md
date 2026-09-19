@@ -615,3 +615,39 @@
   - Native QA operational items carried forward to M23
 - **Milestone Owner:** **M22 (CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED)**
 - **ADR:** ADR-030
+
+---
+
+### 24. QA + Edge Cases (M23)
+- **Authoritative Doc:** `docs/M23_ARCHITECTURE.md`
+- **Status:** ARCHITECTURE HARDENED LOCALLY — PENDING OPUS SPECIALIST REVIEW / LEAD APPROVAL
+- **Hardening corrections:** 16 Lead-review corrections applied (2026-09-19)
+- **Key concerns:**
+  - 19 edge-case families
+  - 93 planned new tests across 12 new suites (see §9 of M23_ARCHITECTURE.md for complete enumeration)
+  - 44 iOS QA checks + 39 Android QA checks (two-tier evidence levels)
+  - RISK-H2: RecurringHorizonSync failure behavior — open architecture question; Opus Q1 required before any production change
+  - RISK-G1/G2: TaskCard and PrayerHeader TalkBack — CRITICAL NATIVE QA GATES; not confirmed defects
+  - RISK-G3: iOS widget App Group when app terminated — CRITICAL NATIVE QA GATE; Level 2 required
+  - RISK-H7: fullRefresh generation race at planning-day boundary — covered by PBR-01
+  - RISK-H3: notification race post-query/pre-schedule window — covered by NE-07
+  - CF-W1..W19 and CF-E1..E12 carry-forward fully traced to M23 QA IDs
+  - ADR-031 deferred until Opus answers produce durable decisions
+- **Test suites planned (12 new):**
+  - `src/domain/planning-day/__tests__/PlanningDayBoundary.test.ts`
+  - `src/domain/temporal/__tests__/DSTEdgeCases.test.ts`
+  - `src/domain/recurrence/__tests__/RecurrenceEdgeCases.test.ts`
+  - `src/services/__tests__/PlannerRefreshCoordinator.edgeCases.test.ts`
+  - TBD concurrency test (PBR-01, useTodayStore or PRC layer)
+  - `src/domain/task/__tests__/TaskStateEdgeCases.test.ts`
+  - `src/services/notification/__tests__/NotificationEdgeCases.test.ts`
+  - `src/services/__tests__/LocationEdgeCases.test.ts`
+  - `src/services/journal/__tests__/JournalEdgeCases.test.ts`
+  - `src/domain/calendar/__tests__/CalendarEdgeCases.test.ts`
+  - `src/services/onboarding/__tests__/OnboardingEdgeCases.test.ts`
+  - `src/services/__tests__/SettingsEdgeCases.test.ts`
+- **Opus review required before implementation** (Q1-Q5 in §7 of M23_ARCHITECTURE.md)
+- **No production source changes pre-authorized** (PC-C1 and PC-C2 removed)
+- **Baseline tests:** 1556 / 1556 — 132 / 132 suites
+- **Expected post-M23 total:** ~1649 tests / ~144 suites
+- **Milestone Owner:** **M23 (CURRENT)**
