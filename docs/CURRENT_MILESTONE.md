@@ -232,21 +232,23 @@ The following checks require physical devices or simulators and are carried forw
 |---|---|
 | Production files audited | 82 |
 | Production files with planned changes | **45** |
-| Accessibility implementation findings (A-1..A-24 excl. A-19) | **24** |
+| Accessibility implementation findings (A-1..A-23 implementation, A-19=OBS-1) | **23** |
 | RTL implementation findings (RTL-1..RTL-4) | **4** |
 | Non-actionable observations (OBS-1..OBS-3) | **3** |
-| Total implementation findings | **28** |
+| Total implementation findings | **27** |
 | HIGH severity | **7** |
 | MEDIUM severity | **13** |
 | LOW severity | **7** |
-| Directional icon consumer files | **4** |
+| Directional horizontal-chevron icon instances | **8** |
+| Directional icon consumer files | **7** |
 | Modal consumers | **6** |
 
 ### Key Decisions Frozen
 
 - **RTL scope:** Layout readiness + directional glyph correction — no `I18nManager.forceRTL`, no locale system
-- **Directional icon RTL:** `directional` prop on `Icon.tsx`; reads `I18nManager.isRTL` (read-only); 4 icon instances in 3 consumer files
-- **Non-directional (disclosure) icons:** `SettingsRow`, `JournalHistoryRow`, expand-collapse toggles — NOT mirrored
+- **Directional icon RTL:** `directional` prop on `Icon.tsx`; reads `I18nManager.isRTL` (read-only); **8 horizontal-chevron instances** across **7 consumer files**
+- **All horizontal chevrons are directional:** back chevrons, prev/next month chevrons, disclosure chevrons (SettingsRow, JournalHistoryRow), and expand-collapse chevrons (CompletedSection, AnytimeTodaySection) — all mirror in RTL. `chevron-down` is NOT mirrored (vertical direction is invariant)
+- **Callback / action semantics unchanged:** `onPreviousMonth` always means previous month; disclosure always navigates same destination; expand-collapse always toggles same state. Only the visual glyph adapts.
 - **Prayer tab RTL:** Natural flex mirroring (Fajr at logical start, reads chronologically in both LTR and RTL)
 - **BottomNavBar RTL:** Natural flex mirroring; canonical route indices unchanged
 - **Calendar RTL:** Natural flex mirroring; callback semantics (onPreviousMonth/onNextMonth) unchanged
@@ -268,8 +270,8 @@ The following checks require physical devices or simulators and are carried forw
 | Metric | Value |
 |---|---|
 | Test baseline | 1404 / 121 suites |
-| Estimated new tests | **142** |
-| Expected total | **~1546** |
+| Estimated new tests | **146** |
+| Expected total | **~1550** |
 | Minimum acceptable | ≥ 1504 |
 
 ### Native QA Carry-Forward

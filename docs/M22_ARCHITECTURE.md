@@ -189,29 +189,29 @@ export function Icon({ name, size = 'md', color, style, accessibilityLabel, test
 ### 3.3 Authoritative Directional Icon Consumer Matrix
 
 Semantic taxonomy:
-- **Navigation / Back:** Icon indicates the direction of travel for the user. Meaning reverses in RTL. → `directional={true}`
-- **Previous/Next temporal:** Previous month (left), Next month (right). Meaning reverses visually in RTL. → `directional={true}`
-- **Disclosure / Expand-collapse:** Icon indicates a panel will open/close. Not directional in the navigation sense — the expand/collapse semantics are symmetric. → NOT directional
+- **Navigation / Back:** Icon indicates the direction of travel for the user. Glyph mirrors in RTL. → `directional={true}`
+- **Previous/Next temporal:** Prev month (left), Next month (right). Glyph mirrors in RTL. → `directional={true}`
+- **Disclosure / Expand-collapse (horizontal chevron only):** Icon indicates a panel will open or navigate. In RTL layouts the horizontal direction reverses — a disclosure arrow that points right in LTR should point left in RTL to correctly indicate the direction of reveal/navigation. → `directional={true}` for horizontal chevrons only. `chevron-down` is direction-neutral and is NOT mirrored.
 - **Decorative:** Icon supplements a labeled Pressable. → `decorative={true}` (and `directional` if applicable)
 
-| Consumer File | Icon | Semantic | LTR glyph | RTL glyph | `directional` | `decorative` | Callback unchanged |
+| Consumer File | Icon | Semantic | LTR glyph | RTL glyph | `directional` | `decorative` | Callback / action unchanged |
 |---|---|---|---|---|---|---|---|
 | `SettingsScreenHeader.tsx` L45 | `chevron-left` | Back navigation | ← | → (mirrored) | **YES** | YES (inside labeled Pressable) | YES — `handleBack` always calls `router.back()` |
 | `CalendarHeader.tsx` L73 | `chevron-left` | Previous month | ← | → (mirrored) | **YES** | YES (inside labeled Pressable) | YES — `onPreviousMonth` callback semantics never change |
 | `CalendarHeader.tsx` L91 | `chevron-right` | Next month | → | ← (mirrored) | **YES** | YES (inside labeled Pressable) | YES — `onNextMonth` callback semantics never change |
 | `JournalHistory.tsx` L51 | `chevron-left` | Back to today navigation | ← | → (mirrored) | **YES** | YES (inside labeled Pressable) | YES — `onBackToToday` callback unchanged |
-| `SettingsRow.tsx` L114 | `chevron-right` | Disclosure / navigate to sub-screen | → | → (not mirrored) | **NO** | YES (inside labeled Pressable) | YES — disclosure affordance is symmetric in RTL |
-| `JournalHistoryRow.tsx` L70-74 | `chevron-right` | Disclosure / navigate to entry | → | → (not mirrored) | **NO** | YES (inside labeled Pressable) | YES |
-| `CompletedSection.tsx` L44-48 | `chevron-right` / `chevron-down` | Expand-collapse toggle | → / ↓ | → / ↓ (not mirrored) | **NO** | YES (inside labeled Pressable) | YES |
-| `AnytimeTodaySection.tsx` L51-55 | `chevron-right` / `chevron-down` | Expand-collapse toggle | → / ↓ | → / ↓ (not mirrored) | **NO** | YES (inside labeled Pressable) | YES |
+| `SettingsRow.tsx` L114 | `chevron-right` | Disclosure / navigate to sub-screen | → | ← (mirrored) | **YES** | YES (inside labeled Pressable) | YES — disclosure affordance; same destination |
+| `JournalHistoryRow.tsx` L70-74 | `chevron-right` | Disclosure / navigate to entry | → | ← (mirrored) | **YES** | YES (inside labeled Pressable) | YES — same entry opened |
+| `CompletedSection.tsx` L44-48 | `chevron-right` (collapsed only; `chevron-down` unchanged) | Collapsed disclosure | → | ← (mirrored) | **YES** (`chevron-right` only) | YES (inside labeled Pressable) | YES — same collapsed state toggled |
+| `AnytimeTodaySection.tsx` L51-55 | `chevron-right` (collapsed only; `chevron-down` unchanged) | Collapsed disclosure | → | ← (mirrored) | **YES** (`chevron-right` only) | YES (inside labeled Pressable) | YES — same collapsed state toggled |
 
-**Total directional-icon consumer files: 4**
-(`SettingsScreenHeader`, `CalendarHeader`, `JournalHistory`, plus `Icon.tsx` itself as the implementation site)
+**`chevron-down` is NOT directional and is NOT mirrored** — vertical direction is invariant across LTR/RTL.
 
-**Total directional icon usages: 4 icon instances** (across 3 consumer files)
+**Total directional horizontal-chevron icon instances: 8** (across 7 consumer files)
 
-**Reasoning for disclosure icons (SettingsRow, JournalHistoryRow, expand toggles):**
-Disclosure indicators (`chevron-right`) are visually non-directional in this context — they mean "there is more content here" or "expand/collapse". In RTL layouts, the cell positions will already mirror via flex (the chevron appears on the opposite side). Mirroring the glyph itself would be wrong — RTL users understand `chevron-right` as a disclosure indicator in both directions. This is standard iOS/Android convention.
+**Total directional-icon consumer files: 7**
+(`SettingsScreenHeader`, `CalendarHeader`, `JournalHistory`, `SettingsRow`, `JournalHistoryRow`, `CompletedSection`, `AnytimeTodaySection`)
+(Plus `Icon.tsx` as the implementation site.)
 
 ### 3.4 Directional Icon Test Group I (added tests)
 
@@ -226,7 +226,11 @@ Tests in `src/__tests__/m22/RTLIcons.test.tsx`:
 | I-5 | CalendarHeader prev-month icon has `directional` prop |
 | I-6 | CalendarHeader next-month icon has `directional` prop |
 | I-7 | JournalHistory back icon has `directional` prop |
-| I-8 | SettingsRow disclosure chevron does NOT have `directional` prop |
+| I-8 | SettingsRow disclosure chevron-right has `directional` prop (mirrors in RTL) |
+| I-9 | JournalHistoryRow disclosure chevron-right has `directional` prop |
+| I-10 | CompletedSection collapsed chevron-right has `directional` prop |
+| I-11 | AnytimeTodaySection collapsed chevron-right has `directional` prop |
+| I-12 | chevron-down is never given `directional` prop (vertical, not mirrored) |
 
 **Native visual confirmation:** Carried to M23 (requires device with RTL system language).
 
@@ -341,9 +345,9 @@ Findings are divided into two categories:
 - **Implementation findings (A-series, RTL-series):** Require production code changes in M22.
 - **Non-actionable observations (OBS-series):** Confirmed compliant; no code change needed. Documented for completeness.
 
-### 5.2 Accessibility Implementation Findings (A-1..A-24)
+### 5.2 Accessibility Implementation Findings (A-1..A-23)
 
-All 24 findings require code changes. Each has exactly one ID, category, severity, file(s), action, and test group.
+**23 implementation findings** (A-1..A-24, with A-19 reclassified as OBS-1). Each has exactly one ID, category, severity, file(s), action, and test group.
 
 | ID | Category | Severity | Affected File(s) | Required Action | Test Group |
 |---|---|---|---|---|---|
@@ -373,7 +377,7 @@ All 24 findings require code changes. Each has exactly one ID, category, severit
 
 > **A-19 is reclassified as OBS-1 (non-actionable observation). See §5.4.**
 
-**Accessibility implementation finding count: 24 (A-1..A-24, excluding A-19)**
+**Accessibility implementation finding count: 23 (A-1..A-24 numbering, minus A-19=OBS-1 = 23 implementation findings)**
 
 ### 5.3 RTL Implementation Findings (RTL-1..RTL-5)
 
@@ -381,7 +385,7 @@ All 24 findings require code changes. Each has exactly one ID, category, severit
 |---|---|---|---|---|---|
 | RTL-1 | Logical Margin | MEDIUM | 24 files (see §14) | Replace `marginLeft`→`marginStart`, `marginRight`→`marginEnd` in icon-text row contexts | H |
 | RTL-2 | Logical Padding | MEDIUM | 3 files | Replace `paddingRight: 12`→`paddingEnd: 12` in icon-text/scroll contexts | H |
-| RTL-3 | Directional Glyph | HIGH | `Icon.tsx`, `SettingsScreenHeader.tsx`, `CalendarHeader.tsx`, `JournalHistory.tsx` | Add `directional` prop to Icon; apply to 4 directional icon instances (§3) | I |
+| RTL-3 | Directional Glyph | HIGH | `Icon.tsx`, `SettingsScreenHeader.tsx`, `CalendarHeader.tsx`, `JournalHistory.tsx`, `SettingsRow.tsx`, `JournalHistoryRow.tsx`, `CompletedSection.tsx`, `AnytimeTodaySection.tsx` | Add `directional` prop to Icon; apply to all 8 horizontal directional icon instances (§3); `chevron-down` not mirrored | I |
 | RTL-4 | Row Layout | LOW | See §16–18 | PrayerTabBar, BottomNavBar, CalendarMonthGrid: ordering decisions frozen in §16–18 | J, K, L |
 | RTL-5 | Physical Absolute | OBSERVATION | `PrayerHeader.tsx` | `right: -30` on decorative ornament — classified KEEP physical (§14.1) | — |
 
@@ -401,14 +405,14 @@ These are confirmed compliant items documented for completeness. They are **not*
 
 ### 5.5 Reconciled Severity Summary
 
-**Implementation findings only (A-1..A-24 excl. A-19, RTL-1..RTL-4):**
+**Implementation findings only (23 A-series + 4 RTL-series = 27 total):**
 
-| Severity | A-series | RTL-series | Combined |
+| Severity | A-series (23 findings) | RTL-series (4 findings) | Combined |
 |---|---|---|---|
 | HIGH | A-1, A-3, A-4, A-5, A-13, A-14; RTL-3 | — | **7** |
 | MEDIUM | A-2, A-6, A-7, A-8, A-10, A-15, A-17, A-18, A-20, A-22, A-24; RTL-1, RTL-2 | — | **13** |
 | LOW | A-9, A-11, A-12, A-16, A-21, A-23; RTL-4 | — | **7** |
-| **Total** | **21** | **7** | **27** |
+| **Total** | **23** | **4** | **27** |
 
 **Non-actionable observations: 3 (OBS-1, OBS-2, OBS-3)**
 
@@ -781,16 +785,16 @@ See ADR-030 §E.
 | E | Modal Accessibility Isolation | `src/__tests__/m22/ModalAccessibility.test.tsx` | 18 |
 | F | Text Scaling | `src/__tests__/m22/TextScaling.test.tsx` | 6 |
 | H | RTL Logical Styles | `src/__tests__/m22/RTLLogicalStyles.test.tsx` | 26 |
-| I | RTL Directional Icons | `src/__tests__/m22/RTLIcons.test.tsx` | 8 |
+| I | RTL Directional Icons | `src/__tests__/m22/RTLIcons.test.tsx` | **12** |
 | J | Prayer Tab RTL Order | `src/__tests__/m22/PrayerTabRTL.test.tsx` | 8 |
 | K | Calendar RTL | `src/__tests__/m22/CalendarRTL.test.tsx` | 8 |
 | L | Arabic/Bidi Text Suppression | `src/__tests__/m22/ArabicBidi.test.tsx` | 6 |
 | M | Static A11y Audit | `src/__tests__/m22/StaticA11yAudit.test.tsx` | 10 |
-| **Total** | | | **142** |
+| **Total** | | | **146** |
 
 **Baseline:** 1404 tests / 121 suites
-**Estimated M22 additions:** 142 new tests / 11 new test suites
-**Expected M22 total:** ~1546 tests / ~132 suites
+**Estimated M22 additions:** **146** new tests / 11 new test suites
+**Expected M22 total:** **~1550** tests / ~132 suites
 **Minimum acceptable:** ≥ 1504 total tests (≥ 100 new)
 
 ---
@@ -807,7 +811,7 @@ See ADR-030 §E.
 | Prayer tab visual order on device with Arabic/Hebrew system locale |
 | BottomNavBar visual order on device with RTL locale |
 | Calendar grid mirroring on device with RTL locale |
-| Directional icon glyph flip on device with RTL locale (back chevron, prev/next month) |
+| Directional icon glyph flip on device with RTL locale (back chevrons, prev/next month chevrons, disclosure chevrons, expand-collapse chevrons) |
 | Large Accessibility Text (iOS max / Android largest) — calendar weekday labels |
 | Large Accessibility Text (iOS max / Android largest) — calendar day cell numbers |
 | Widget accessibility (M23/M24) |
@@ -818,7 +822,7 @@ See ADR-030 §E.
 
 1. `npx tsc --noEmit` → 0 errors
 2. `npx eslint . --ext ts,tsx --max-warnings=0` → 0 errors, 0 warnings
-3. `npx jest --passWithNoTests` → 0 failures; all 1404 existing tests pass; all 142 M22 tests pass
+3. `npx jest --passWithNoTests` → 0 failures; all 1404 existing tests pass; all 146 M22 tests pass
 4. New test count ≥ 100
 5. Total test count ≥ 1504
 6. `git diff --stat origin/main HEAD` → 0 changes to domain, schema, migrations, services, widgets, package files

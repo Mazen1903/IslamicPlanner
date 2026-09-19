@@ -829,15 +829,16 @@ theme-hydration race condition in `app/_layout.tsx`.
 ### F. Icon Directional Mirroring Contract
 
 - **`directional` prop on `Icon.tsx`:** When `directional={true}` and `I18nManager.isRTL === true`, apply `transform: [{ scaleX: -1 }]` to flip the glyph. Never calls `forceRTL` or `allowRTL`.
-- **Directional icon instances (require `directional` prop in M22):**
+- **All horizontal chevrons are directional — 8 instances across 7 consumer files:**
   - `SettingsScreenHeader` — `chevron-left` back navigation
   - `CalendarHeader` — `chevron-left` previous month, `chevron-right` next month
   - `JournalHistory` — `chevron-left` back to today
-- **Non-directional (disclosure) icons — NOT mirrored:**
   - `SettingsRow` — `chevron-right` disclosure (navigate to sub-screen)
   - `JournalHistoryRow` — `chevron-right` disclosure (navigate to entry)
-  - `CompletedSection` / `AnytimeTodaySection` — `chevron-right`/`chevron-down` expand-collapse (symmetric affordance)
-- **Canonical callback meaning NEVER changes regardless of glyph direction:** `onPreviousMonth` always navigates to previous month; `router.back()` always navigates back. Only the visual glyph adapts.
+  - `CompletedSection` — `chevron-right` collapsed state (not `chevron-down`)
+  - `AnytimeTodaySection` — `chevron-right` collapsed state (not `chevron-down`)
+- **`chevron-down` is NOT directional and is NOT mirrored.** Vertical direction is invariant across LTR/RTL.
+- **Canonical callback / action meaning NEVER changes regardless of glyph direction:** `onPreviousMonth` always navigates to previous month; `router.back()` always navigates back; disclosure always navigates same destination; expand-collapse always toggles same state. Only the visual glyph adapts.
 
 ### G. Text Scaling — `maxFontSizeMultiplier` Policy
 
@@ -865,6 +866,6 @@ The codebase reached M22 with excellent structural accessibility scaffolding but
 
 - 45 production files modified in M22
 - 11 new test files created
-- Estimated +142 new tests; total ≥ 1546
+- Estimated +146 new tests; total ~1550
 - 0 new dependencies, 0 migrations
 - ADR-030 durable rules apply to all subsequent milestones (M23, M24, post-release)
