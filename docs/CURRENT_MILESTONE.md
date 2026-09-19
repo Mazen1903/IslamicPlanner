@@ -1,4 +1,4 @@
-# Current Milestone: M21 — Dark Mode Polish
+﻿# Current Milestone: M21 — Dark Mode Polish
 
 > **Current State:** PENDING — ARCHITECTURE NOT YET FROZEN
 > **Previous Milestone:** M20 CLOSED / SONNET APPROVED
@@ -140,7 +140,7 @@ M20 strictly does **NOT** implement or expose:
 M18 — Widgets (dev build required)            ✅ CLOSED / SONNET APPROVED
 M19 — Premium Entitlement Scaffolding          ✅ CLOSED / SONNET APPROVED
 M20 — Onboarding                               ✅ CLOSED / SONNET APPROVED
-M21 — Dark Mode Polish                         ← CURRENT / PENDING — ARCHITECTURE NOT YET FROZEN
+M21 - Dark Mode Polish                         --> CURRENT / ARCHITECTURE FROZEN / READY FOR IMPLEMENTATION
 M22 — Accessibility / RTL
 M23 — QA + Edge Cases
 M24 — Release Preparation
@@ -153,10 +153,10 @@ Worship Suggestions remain **DEFERRED** (not deleted). May be re-introduced post
 ## M21 Overview & Scope
 
 **M21 — Dark Mode Polish**
-- **Status:** PENDING — ARCHITECTURE NOT YET FROZEN
+- **Status:** ARCHITECTURE FROZEN - READY FOR IMPLEMENTATION (2026-09-19)
 - **Scope:** Full-fidelity dark mode review, contrast audit, and token polishing across all screens (Today, Calendar, Add/Edit Task, Journal, Settings, Onboarding) and primitives.
 - **Prerequisites:** M1 (Design System), M7 (Today), M14 (Calendar), M16 (Journal), M17 (Settings), M20 (Onboarding).
-- **Rule:** DO NOT start M21 implementation. Architecture must be authored, reviewed, and frozen before implementation begins.
+- **Rule:** Implementation may begin. Architecture is fully frozen (Rev 2, 7 corrections applied). Freeze baseline: 97ceb444ac33b771adc04020d5e4537ca0e72543. See docs/M21_ARCHITECTURE.md.
 
 ---
 
@@ -203,3 +203,4 @@ The following checks require physical devices or simulators and are carried forw
 - Native countdown timer behavior
 - App Group data propagation behavior
 - Deep link behavior from widget tap
+

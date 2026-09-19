@@ -704,3 +704,75 @@ Location writes via `useLocation.requestAutoLocation()` and `useLocation.setManu
 | `SettingsMutationCoordinator` path for `calculationMethod` in Step 3 | Would trigger premature `fullRefresh()` before onboarding is complete; violates single-refresh-at-completion principle |
 | AsyncStorage flag instead of DB for `onboardingCompleted` | DB is already the project's single source of truth for user state; a second persistence layer adds inconsistency |
 
+
+---
+
+## ADR-029 — Semantic Theme Consumption and Theme Hydration Contract
+
+**Date:** 2026-09-19
+**Status:** ACCEPTED
+**Milestone:** M21 - Dark Mode Polish
+**Deciders:** Gemini (author), Sonnet (independent review)
+
+### Context
+
+M1 established the semantic token system (`src/theme/tokens.ts`, `lightTheme.ts`,
+`darkTheme.ts`, `ThemeProvider.tsx`). M21 is the first systematic audit of all production
+UI files for raw color literal compliance, and the first discovery and fix of the
+theme-hydration race condition in `app/_layout.tsx`.
+
+### Decisions
+
+1. **Theme-first rendering:** Normal app content must not render before the persisted explicit
+   theme mode is resolved. The `themeReady` gate in `RootLayout` is the canonical
+   mechanism. `RootGate` is not mounted until `themeReady = true`.
+
+2. **Non-fatal theme read failure:** If the DB read for persisted theme mode fails, the app
+   falls back to SYSTEM mode and sets `themeReady = true` so the app continues normally.
+   A theme preference error must not block the application.
+
+3. **Semantic token consumption:** All production UI colors must come from semantic theme
+   tokens (`theme.colors.*`). Raw hex/rgba strings in UI component style props are
+   violations unless documented as a Category-B approved exception.
+
+4. **Category-B exceptions:** Alpha-on-primary overlays in `PrayerHeader.tsx` and
+   `'transparent'` values used for pressed-state resets and conditional border visibility
+   are approved exceptions. They are documented in `M21_ARCHITECTURE.md` Section 3.
+   No undocumented raw literals are permitted.
+
+5. **Intentional de-emphasis exemption:** `textMuted` and `disabledText` tokens may be
+   low-contrast. WCAG SC 1.4.3 permits reduced contrast for incidental, decorative, or
+   intentionally de-emphasized text where the semantic state (completed, past, disabled) is
+   the primary signal. Specifically: completed task titles (strikethrough) and past prayer
+   labels (textMuted), and disabled controls (disabledText).
+
+6. **Switch/toggle off-state token:** The unchecked (off) state of a switch or toggle uses
+   `colors.checkboxUnchecked`. `colors.disabledBackground` is semantically wrong for an
+   enabled control in its off state.
+
+7. **Widget theme isolation:** Widgets use a separate native rendering architecture.
+   App-level `ThemeColors` changes do not affect widget rendering. Widget dark-mode
+   issues are a separate work item (M23/M24).
+
+8. **Theme mode set:** SYSTEM, LIGHT, and DARK are the only three supported theme modes.
+   No new modes shall be introduced in M21 or M22.
+
+9. **Presentation/domain separation:** Dark-mode presentation changes cannot modify domain
+   objects, data repositories, services, scheduling engines, or database migrations.
+
+### Consequences
+
+- 15 production files modified in M21
+- 2 new tokens added: `dangerPressed` and `dangerSurface`
+- 6 token values changed (see `M21_ARCHITECTURE.md` Section 6)
+- `themeReady` gate added to `app/_layout.tsx`
+- 0 migrations, 0 new dependencies
+
+### Alternatives considered
+
+| Alternative | Reason not chosen |
+|---|---|
+| No hydration gate (current pre-M21 state) | Creates race where persisted DARK/LIGHT theme may not apply before normal content renders |
+| Block on both theme + onboarding reads | Unnecessary - themeReady is sufficient; onboarding gate handles its own loading state |
+| New ThemeMode values (AUTO, etc.) | Adds complexity; SYSTEM mode already adapts to OS preference |
+| Allow any transparent value without audit | Creates category of unreviewed potential raw colors; explicit Category-B list is auditable |

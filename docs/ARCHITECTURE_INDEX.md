@@ -494,3 +494,38 @@
   - `src/domain/onboarding/__tests__/OnboardingIsolation.test.ts` (ISO-01..ISO-17)
 - **Milestone Owner:** **M20 (CLOSED / SONNET APPROVED)**
 - **ADR:** ADR-028
+
+---
+
+### 21. Theme System - Dark Mode Polish (M21)
+- **Authoritative Docs:** `docs/M21_ARCHITECTURE.md`, `docs/DECISIONS.md` (ADR-029)
+- **Source Paths (modified in M21):**
+  - `src/theme/tokens.ts` (ThemeColors interface - dangerPressed, dangerSurface added)
+  - `src/theme/lightTheme.ts` (palette changes: textTertiary, tabInactive, dangerPressed, dangerSurface)
+  - `src/theme/darkTheme.ts` (palette changes: textTertiary, tabInactive, danger, error, dangerPressed, dangerSurface)
+  - `app/_layout.tsx` (themeReady gate + ThemedStatusBar)
+  - `src/components/common/Button.tsx` (dangerPressed)
+  - `src/components/common/Toggle.tsx` (checkboxUnchecked)
+  - `src/components/settings/SettingsToggle.tsx` (checkboxUnchecked)
+  - `src/components/task-form/DateTimePickerInput.tsx` (themeVariant)
+  - `src/components/today/SetupRequiredState.tsx` (dangerSurface)
+  - `src/components/journal/JournalDeleteDialog.tsx` (dangerPressed)
+  - `app/(tabs)/settings/appearance.tsx`, `hijri-calendar.tsx`, `index.tsx`
+  - `app/onboarding/index.tsx`
+  - `app/demo.tsx`
+- **Relevant Tests:**
+  - Token shape + contrast: `src/theme/__tests__/theme.test.ts`
+  - Hydration: `app/__tests__/_layout.test.tsx` (H-01..H-05)
+  - StatusBar: `app/__tests__/_layout.test.tsx`
+  - ThemeProvider: `src/theme/__tests__/ThemeProvider.test.tsx`
+  - Component: `src/components/common/__tests__/Button.test.tsx`, `Toggle.test.tsx`
+- **Key decisions:**
+  - themeReady gate blocks RootGate mount until persisted theme resolves (Correction 1)
+  - Dark dangerPressed = #D95050 (4.69:1 vs textOnPrimary) - Correction 2
+  - Light dangerSurface = #FEE7E7 (4.61:1 vs danger) - Correction 3
+  - Light textTertiary + tabInactive = #687483 (4.59:1 on bg) - Correction 4
+  - textMuted exempt (intentional de-emphasis) - Correction 5a
+  - app/demo.tsx is shipped route; semantic tokens applied in M21 - Correction 5b
+  - /demo __DEV__ gate deferred to M24
+- **Milestone Owner:** **M21 (ARCHITECTURE FROZEN / READY FOR IMPLEMENTATION)**
+- **ADR:** ADR-029

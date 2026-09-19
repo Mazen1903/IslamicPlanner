@@ -1281,3 +1281,44 @@ The following require a physical device or simulator and do not reopen M18:
 
 
 
+
+---
+
+## M21 Architecture Freeze Record
+
+- **Date:** 2026-09-19
+- **Milestone:** M21 - Dark Mode Polish
+- **Status:** **ARCHITECTURE FROZEN - READY FOR IMPLEMENTATION**
+- **Architecture Freeze baseline:** `97ceb444ac33b771adc04020d5e4537ca0e72543` (closed M20)
+- **Hardening revisions:** Rev 1 (2026-09-18), Rev 2 (2026-09-19)
+- **Corrections applied:** 7
+- **ADR:** ADR-029 (Semantic Theme Consumption and Theme Hydration Contract)
+
+### Architecture Summary
+
+- **Scope:** Presentation-only. No domain, data, service, or migration changes.
+- **Files in scope:** 15 production files (0 new, 0 deleted)
+- **New tokens:** `dangerPressed` and `dangerSurface` in all 3 theme files
+- **Token value changes:**
+  - Light: `textTertiary` #687483, `tabInactive` #687483
+  - Dark: `textTertiary` #7E90A2, `tabInactive` #7E90A2, `danger` #E85050, `error` #E85050
+- **Hydration race fix:** `themeReady` gate in `app/_layout.tsx`
+- **StatusBar:** `ThemedStatusBar` component in `app/_layout.tsx`
+- **DateTimePicker:** `themeVariant` prop added in `DateTimePickerInput.tsx`
+- **No new npm runtime or dev dependencies**
+- **No database migrations**
+
+### Hardening Corrections (Rev 2, 2026-09-19)
+
+1. Theme hydration race (CRITICAL) - themeReady gate added
+2. Dark dangerPressed contrast failure (CRITICAL) - #C0392B -> #D95050 (4.69:1)
+3. Light dangerSurface contrast failure (CRITICAL) - #FEE2E2 -> #FEE7E7 (4.61:1)
+4. Light textTertiary + tabInactive contrast failure - #8E99A8 -> #687483 (4.59:1)
+5. textMuted audit - EXEMPT; intentional de-emphasis confirmed
+5b. app/demo.tsx reclassified as shipped route; included in M21 scope
+6. Supporting documentation updated (ADR-029, ARCHITECTURE_INDEX, etc.)
+7. File inventory count corrected to 15 (includes app/demo.tsx)
+
+### M24 Carry-Forward Item
+
+- Gate `/demo` route behind `__DEV__` or remove from production build

@@ -1,4 +1,4 @@
-# AI Project Constitution: Islamic Daily Planner
+﻿# AI Project Constitution: Islamic Daily Planner
 
 > **Status:** PERMANENT ARCHITECTURAL INVARIANTS  
 > **Authority:** Supreme over AI agent implementation decisions  
@@ -189,5 +189,7 @@ The following negative constraints are absolute and non-negotiable across all fu
 9. **DO NOT make GPS mandatory**: The app must fully function with manually selected cities or coordinates.
 10. **DO NOT silently mutate exact-time intent**: DST or prayer adjustments never overwrite user schedule parameters.
 11. **DO NOT duplicate PrayerWindow rows**: One task occurrence is materialized; projection across tabs is purely virtual at the view layer.
-12. **DO NOT expand dark mode during MVP**: Keep styling focused strictly on the approved warm light design tokens.
+12. **Semantic token consumption is mandatory for production UI:** All production UI colors must come from semantic theme tokens (``theme.colors.*``). Raw hex or rgba strings in component style props are violations unless documented as Category-B approved exceptions in ``docs/M21_ARCHITECTURE.md``. Transparent values for pressed-state resets and alpha overlays on color.primary are the only approved exceptions. (ADR-029, established M21)
+13. **Theme hydration before render:** Normal app content must not render before the persisted explicit theme mode is resolved. The ``themeReady`` gate in ``RootLayout`` is the canonical mechanism. Never remove or bypass this gate. (ADR-029, established M21)
 13. **DO NOT place business or domain logic in React components**: Components remain pure views.
+
