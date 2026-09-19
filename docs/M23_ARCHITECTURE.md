@@ -303,7 +303,11 @@ The architecture must distinguish two distinct cases:
 - No lifecycle sweep executes.
 - No notification reconciliation executes.
 - No widget sync executes.
-- All callers handle this via their individual try/catch → `PERSISTED_REFRESH_FAILED` or `setError()`.
+- Each caller handles the rejection within its own try/catch boundary:
+  - `useToday` converts rejection into its token-aware store error path.
+  - `OnboardingCoordinator` and equivalent mutation coordinators translate rejection into `PERSISTED_REFRESH_FAILED` semantics where applicable.
+  - `useLocation` catches the rejection at the hook level, but its Today-store refresh token is **not currently settled on every rejection and applicable SETUP\_REQUIRED path**; that defect is tracked separately as RISK-M13 / PC-2 / LE-09.
+  - This section does NOT declare `useLocation`'s token lifecycle correct merely because the exception is caught at the hook boundary.
 - **This is the current source behavior at `PlannerRefreshCoordinator.ts:87` (no surrounding try/catch). Zero production change required.**
 
 **Case B — `recurringHorizonSync.sync()` resolves successfully with `HorizonSyncResult` containing `issues.length > 0`:**
@@ -1027,7 +1031,7 @@ A **confirmed defect** requires a FAIL result from a native QA gate or a verifie
 
 A confirmed defect may be fixed within M23 if:
 1. It is a bug against a frozen contract.
-2. The fix is narrow (< 5 lines of production code).
+2. The fix is the smallest localized production change necessary to correct the confirmed defect, with no unrelated refactor.
 3. No product semantic redesign is required.
 4. Fix is accompanied by a dedicated regression test.
 
@@ -1047,7 +1051,7 @@ Three narrow production changes are expected before M23 closure. They address co
 | PC-2 | useLocation Today-store refresh-token settlement | Every `useLocation` path that calls `startRefresh()` must deterministically settle the Today-store token through exactly one of: `commitRefresh(...)`, `setError(token, ...)`, or `setSetupRequired(token)`. The SETUP_REQUIRED and fullRefresh-rejection paths in `requestAutoLocation` snapshot-fallback branches and `setManualLocation` catch block are the confirmed unsettled paths. Fix must not double-settle. | LE-09 | RISK-M13 |
 | PC-3 | Terminal-transition notification reconciliation | After a terminal transition, the production terminal-transition owner/path must: (1) perform targeted deterministic cancellation (`cancelOccurrenceReminder(occurrenceId)`) for immediate cleanup; (2) request a best-effort full notification reconciliation (`notificationReconciliationService.reconcile()`). No background polling introduced. Fix is narrow and event-driven. | NE-07 (tightened) | RISK-H3 |
 
-**General fix policy:** Any fix must identify a specific confirmed defect against a frozen contract, propose a narrow change (< 5 lines of production code per fix), and be accompanied by a dedicated regression test. Fixes that change product semantics, affect multiple systems, or require a migration require Lead escalation before proceeding.
+**General fix policy:** Any fix must identify a specific confirmed defect against a frozen contract, propose the smallest localized production change necessary to correct that defect (narrow, ownership-correct, no unrelated refactor), and be accompanied by a dedicated regression test. Fixes that change product semantics, affect multiple systems, or require a migration require Lead escalation before proceeding.
 
 Previously removed non-authorizations:
 - **PC-C1 removed (M22 hardening):** TaskCard TalkBack is a native QA gate, not a confirmed defect. No fix pre-authorized. If GATE-1 returns FAIL, fix must be designed from native evidence.

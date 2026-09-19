@@ -901,7 +901,11 @@ Opus recommended propagating rejections (Option A) but did not fully separate th
 - No lifecycle sweep (`OccurrenceLifecycleService.sweepExpired`) executes.
 - No notification reconciliation (`NotificationReconciliationService.reconcile()`) executes.
 - No widget sync (`WidgetSyncCoordinator.sync()`) executes.
-- All callers (`useToday`, `OnboardingCoordinator`, `useLocation`) handle the rejection via their own try/catch logic and surface the appropriate error state (e.g., `PERSISTED_REFRESH_FAILED`, `setError()`, `return false`).
+- Each caller handles the rejection within its own try/catch boundary:
+  - `useToday` converts rejection into its token-aware store error path.
+  - `OnboardingCoordinator` and equivalent mutation coordinators translate rejection into `PERSISTED_REFRESH_FAILED` semantics where applicable.
+  - `useLocation` catches the rejection at the hook level, but its Today-store refresh token is **not currently settled on every rejection and applicable SETUP\_REQUIRED path**; that defect is tracked separately as RISK-M13 / PC-2 / LE-09.
+  - This ADR does NOT declare `useLocation`'s token lifecycle correct merely because the exception is caught at the hook boundary.
 
 **This is the current source behavior. Zero production change is required to implement Case A.**
 
@@ -923,7 +927,7 @@ Opus recommended propagating rejections (Option A) but did not fully separate th
 ### Consequences
 
 - No production code change to `PlannerRefreshCoordinator.ts` required for Case A (already correct).
-- PRC-02 (integration test) locks the Case A behavior: inject rejection → verify fullRefresh rejects, no READY result, no downstream steps invoked.
+- PRC-02 (**unit test**) locks the Case A behavior: inject actual `recurringHorizonSync.sync()` rejection (`Promise.reject`) → verify fullRefresh rejects, no READY result, no downstream Today/lifecycle/notification/widget work invoked.
 - PRC-09 (unit test) locks the Case B behavior: inject resolved HorizonSyncResult with issues → verify fullRefresh does NOT abort, downstream continues normally, READY may be returned.
 - This ADR does NOT authorize catching sync rejections and continuing. Any future change to Case A behavior requires a new ADR.
 - The PLAN/EXECUTE phase structure of `RecurringHorizonSync.syncSeries()` is non-transactional at the overall-series level (see M23_ARCHITECTURE.md §7.2). Partial mutations in EXECUTE phase produce `SyncIssue[]` in the resolved result (Case B), not a rejection. This is by design and does not trigger Case A handling.
