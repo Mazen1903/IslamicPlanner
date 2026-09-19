@@ -81,7 +81,7 @@ M22 must not change domain logic, scheduling behavior, database schema, or plann
 | 39 | `src/components/journal/JournalEditor.tsx` | COMPLIANT | `accessibilityLabel`, `accessibilityHint` already present |
 | 40 | `src/components/journal/JournalHeader.tsx` | **CHANGE** | Physical `marginLeft` (L128, L154) |
 | 41 | `src/components/journal/JournalHistory.tsx` | **CHANGE** | `chevron-left` back button icon → `directional` prop; physical `marginLeft` on Text at L52 |
-| 42 | `src/components/journal/JournalHistoryRow.tsx` | **CHANGE** | `chevron-right` disclosure icon → `decorative` prop (NOT directional — disclosure/navigate) |
+| 42 | `src/components/journal/JournalHistoryRow.tsx` | **CHANGE** | `chevron-right` disclosure icon → `decorative` + `directional` props (disclosure/navigate — horizontal chevrons ARE directional per §3.3) |
 | 43 | `src/components/journal/JournalLockedState.tsx` | COMPLIANT | Unlock button labeled, disabled state |
 | 44 | `src/components/journal/JournalPrivacySheet.tsx` | **CHANGE** | No `accessibilityViewIsModal`; title no `accessibilityRole="header"`; backdrop accessibility per §4; physical `marginLeft` (L63); physical `paddingRight: 12` (L202) |
 | 45 | `src/components/journal/JournalSaveStatus.tsx` | COMPLIANT | `accessibilityLiveRegion="polite"`, label already present |
@@ -104,8 +104,8 @@ M22 must not change domain logic, scheduling behavior, database schema, or plann
 | 62 | `src/components/settings/SettingsStepper.tsx` | COMPLIANT | Touch targets sized, labeled |
 | 63 | `src/components/settings/SettingsToggle.tsx` | **CHANGE** | Double announcement risk (A-1); physical `marginRight: spacing.md` (L57); physical `paddingRight: 12` (L117) |
 | 64 | `src/components/task/AllDoneState.tsx` | COMPLIANT | Purely informational |
-| 65 | `src/components/task/AnytimeTodaySection.tsx` | **CHANGE** | Physical `marginRight: 6` on icon (L46); `sun` icon → `decorative`; `chevron-right/down` expand icon → `decorative` (not directional) |
-| 66 | `src/components/task/CompletedSection.tsx` | **CHANGE** | `chevron-right/down` expand Icon → `decorative` prop (not directional) |
+| 65 | `src/components/task/AnytimeTodaySection.tsx` | **CHANGE** | Physical `marginRight: 6` on icon (L46); `sun` icon → `decorative`; `chevron-right` expand icon → `decorative` + `directional` (horizontal chevron IS directional per §3.3); `chevron-down` is NOT directional |
+| 66 | `src/components/task/CompletedSection.tsx` | **CHANGE** | `chevron-right` expand Icon → `decorative` + `directional` props (horizontal chevron IS directional per §3.3); `chevron-down` is NOT directional |
 | 67 | `src/components/task/EmptyPrayerState.tsx` | COMPLIANT | Purely informational |
 | 68 | `src/components/task/MissedTaskRow.tsx` | COMPLIANT | Thin wrapper around `TaskCard` |
 | 69 | `src/components/task/TaskCard.tsx` | **CHANGE** | Badge traversal noise (A-10); physical `marginLeft: 8` on contentContainer (L191); physical `marginRight: 4` on clock icon (L97) |
@@ -876,8 +876,8 @@ See `docs/DECISIONS.md` for the complete binding ADR-030 text. Summary of durabl
 7. Prayer tab order: canonical array unchanged; no forced LTR; natural flex mirroring
 8. BottomNavBar: canonical route indices unchanged; natural flex mirroring
 9. Calendar: `onPreviousMonth`/`onNextMonth` semantics never swap
-10. Disclosure icons (chevron-right in SettingsRow, JournalHistoryRow, expand-collapse): NOT directional
-11. Navigation icons (chevron-left back, chevron-left/right prev/next month): ARE directional
+10. All 8 horizontal chevrons ARE directional (including disclosure icons: SettingsRow, JournalHistoryRow; and expand-collapse: CompletedSection, AnytimeTodaySection). `chevron-down` is NOT directional. See §3.3 for the authoritative consumer matrix.
+11. Navigation icons (chevron-left back, chevron-left/right prev/next month) ARE directional (included in the 8 above).
 12. `maxFontSizeMultiplier` authorized only for 3 calendar cell Text nodes, cap={2}, with per-node justification
 13. `marginStart`/`marginEnd`/`paddingStart`/`paddingEnd` mandate for icon-text row spacing
 14. `PremiumLockedInfo` card: do NOT use `accessible` on the card wrapper — OK button must be individually traversable

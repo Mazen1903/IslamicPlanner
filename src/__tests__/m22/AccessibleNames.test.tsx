@@ -69,7 +69,7 @@ describe('Group A: Accessible Names & Traversal Noise', () => {
   });
 
   // A-7
-  it('A-7: PrayerHeader groups content with composite accessibilityLabel', async () => {
+  it('A-7: PrayerHeader groups content with composite accessibilityLabel and does NOT use no-hide-descendants on the composite View', async () => {
     await render(
       <ThemeProvider>
         <PrayerHeader
@@ -84,12 +84,30 @@ describe('Group A: Accessible Names & Traversal Noise', () => {
       includeHiddenElements: true,
     });
     expect(header).toBeTruthy();
+    expect(header.props.accessible).toBe(true);
+    // The composite grouping container uses accessible={true} + accessibilityLabel only.
+    // importantForAccessibility="no-hide-descendants" must NOT be on this same element:
+    // combining it with accessible={true} is incoherent — no-hide-descendants marks the
+    // element itself AND descendants as unimportant, which contradicts the intent of
+    // keeping the composite element focusable. (Lead ruling, M22 consistency fix.)
+    // M23 native QA carry-forward:
+    // "Verify PrayerHeader composite announcement with VoiceOver and TalkBack on physical devices."
+    expect(header.props.importantForAccessibility).not.toBe('no-hide-descendants');
   });
 
   // A-8
-  it('A-8: PrayerHeader countdown Text is hidden from individual traversal via descendant hiding', () => {
+  it('A-8: PrayerHeader Arabic name is suppressed at child level; composite grouping uses accessible={true} without no-hide-descendants', () => {
     const src = fs.readFileSync('src/components/prayer/PrayerHeader.tsx', 'utf8');
-    expect(src).toContain('importantForAccessibility="no-hide-descendants"');
+    // Child-level suppression of Arabic name is still present and correct:
+    expect(src).toContain('importantForAccessibility="no"');
+    expect(src).toContain('accessibilityElementsHidden={true}');
+    // The composite View itself must NOT use no-hide-descendants alongside accessible={true}:
+    // accessible={true} + no-hide-descendants on the same element is incoherent.
+    // Verified by absence of the combination: the source has accessible={true} and
+    // accessibilityLabel for grouping; no-hide-descendants has been removed from the composite.
+    // (Toggle's inner Switch is the one remaining valid no-hide-descendants use — that
+    // Switch is intentionally suppressed because the wrapping Pressable owns the semantics.)
+    expect(src).not.toContain('importantForAccessibility="no-hide-descendants"');
   });
 
   // A-9

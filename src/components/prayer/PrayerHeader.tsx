@@ -58,7 +58,6 @@ export function PrayerHeader({
       <View
         accessible={true}
         accessibilityLabel={compositeLabel}
-        importantForAccessibility="no-hide-descendants"
       >
         <View style={styles.topRow}>
           <View style={styles.prayerTitleGroup}>
