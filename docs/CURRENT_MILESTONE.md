@@ -1,9 +1,9 @@
 # Current Milestone: M20 — Onboarding
 
-> **Current State:** M20 PENDING — ARCHITECTURE HARDENED
+> **Current State:** M20 PENDING — ARCHITECTURE FINALIZED
 > **Previous Milestone:** M19 CLOSED / SONNET APPROVED
-> **Milestone Status:** M20 — ARCHITECTURE HARDENED / PENDING IMPLEMENTATION
-> **Architecture Status:** HARDENED — `docs/M20_ARCHITECTURE.md` hardened (2026-09-18). All 18 consistency issues resolved.
+> **Milestone Status:** M20 — ARCHITECTURE FINALIZED / PENDING IMPLEMENTATION
+> **Architecture Status:** FINALIZED — `docs/M20_ARCHITECTURE.md` finalized (2026-09-18). All 21 consistency + integration issues resolved (18 hardening + 3 integration corrections: gate zero-flash, MANUAL location recommendation, theme persistence).
 
 ---
 
@@ -127,7 +127,7 @@ M19 did **NOT** implement:
 ```
 M18 — Widgets (dev build required)            ✅ CLOSED / SONNET APPROVED
 M19 — Premium Entitlement Scaffolding          ✅ CLOSED / SONNET APPROVED
-M20 — Onboarding                               ← CURRENT / ARCHITECTURE HARDENED (implementation pending)
+M20 — Onboarding                               ← CURRENT / ARCHITECTURE FINALIZED (implementation pending)
 M21 — Dark Mode Polish
 M22 — Accessibility / RTL
 M23 — QA + Edge Cases
@@ -141,7 +141,7 @@ Worship Suggestions remain **DEFERRED** (not deleted). May be re-introduced post
 ## M20 Overview & Scope
 
 **M20 — Onboarding**
-- **Status:** ARCHITECTURE HARDENED — ready for implementation
+- **Status:** ARCHITECTURE FINALIZED — ready for implementation
 - **Architecture doc:** `docs/M20_ARCHITECTURE.md`
 - **ADR:** ADR-028
 - **Prerequisites:** M1 (Design System), M2 (Prayer Calculation), M12 (Location), M17 (Settings)
@@ -149,8 +149,8 @@ Worship Suggestions remain **DEFERRED** (not deleted). May be re-introduced post
 - **New files:** `src/stores/useOnboardingStore.ts`, `src/services/onboarding/OnboardingCoordinator.ts`, `src/services/onboarding/index.ts`, 4 test files.
 - **Modified files:** `app/_layout.tsx` (gate), `app/onboarding/index.tsx` (4-step screen).
 - **Constraints:** Location REQUIRED (GPS optional) · No GPS on mount · No silent mutation · No direct repo writes from React · No new deps · No new migrations · Zero entitlement/journal involvement.
-- **Estimated new tests:** ~85 (B-01..B-12, F-01..F-10, L-01..L-11, C-01..C-09, P-01..P-06, OC-01..OC-11, ISO-01..ISO-16).
-- **Rule:** Architecture is hardened. All 18 consistency issues are resolved. Implementation may proceed.
+- **Estimated new tests:** ~95 (B-01..B-13, F-01..F-10, L-01..L-11, C-01..C-12, P-01..P-06 + P-02b/P-02c, OC-01..OC-11, ISO-01..ISO-17).
+- **Rule:** Architecture is finalized. All 21 consistency + integration issues are resolved. Implementation may proceed.
 
 ---
 

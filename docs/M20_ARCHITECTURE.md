@@ -1,10 +1,11 @@
 # M20 — Onboarding Architecture
 
-> **Status:** ARCHITECTURE HARDENED — READY FOR IMPLEMENTATION
+> **Status:** ARCHITECTURE FINALIZED — READY FOR IMPLEMENTATION
 > **Authored:** 2026-09-18
 > **Architecture freeze commit:** `54e03c0`
 > **Header bookkeeping commit:** `2351859`
-> **Hardening commit:** see `git log --oneline -1`
+> **Hardening commit:** `fde4f7e`
+> **Integration-hardening commit:** see `git log --oneline -1`
 > **Baseline commit:** `f787191` (M19 CLOSED — f78719113e3d8ec3272cfb50fdc292ada04d4145)
 > **Milestone:** M20 — Onboarding
 > **Prerequisite milestones:** M1 (Design System), M2 (Prayer Calculation), M12 (Location), M17 (Settings/UserSettingsRepository)
@@ -218,11 +219,23 @@ Architecture MUST document honestly: `recommendCalculationMethod()` in the curre
 
 **Theme persistence decision:**
 
-Theme selection on Screen 4 is held as local draft state. It is **NOT written to DB on tap**. It is passed to `OnboardingCoordinator.complete()` and persisted as part of the coordinator's final persistence step. This avoids render-time writes and keeps the coordinator as the single completion boundary.
+Theme selection on Screen 4 calls the **existing `ThemeProvider.setThemeMode(mode)`** immediately on each explicit user tap (SYSTEM / LIGHT / DARK). This is write-on-tap, not a render-time write.
+
+**Why `setThemeMode()` and not coordinator persistence:**
+
+The root `RootLayout` owns the active `themeMode` React state and passes it to `<ThemeProvider mode={themeMode} onModeChange={handleModeChange} />`. `handleModeChange` (or `setThemeMode` exposed through ThemeProvider context) persists to the DB and updates the live visual theme simultaneously. If `OnboardingCoordinator` wrote `themeMode` directly to SQLite at completion, the already-mounted `RootLayout` state would NOT automatically reflect the change — the user would see the wrong theme until the next cold boot.
+
+Calling the existing `ThemeProvider.setThemeMode(mode)` on tap:
+1. Immediately updates the current visual theme through the live `RootLayout` state.
+2. Invokes the existing `onModeChange` persistence path.
+3. Requires zero new persistence code in `OnboardingCoordinator`.
+
+If the user selects a theme then closes the app before completing onboarding: the selected theme remains persisted. This is acceptable. Do not invent rollback behavior.
 
 **Data contract:**
-- No DB writes during render or on theme selection tap.
-- On "Start Planning" tap: call `OnboardingCoordinator.complete({ calculationMethod, themeMode })`.
+- On explicit user tap of SYSTEM / LIGHT / DARK: call `setThemeMode(mode)` from ThemeProvider context. This is write-on-tap, allowed.
+- Do NOT accumulate `themeMode` in local draft state for later coordinator persistence.
+- On "Start Planning" tap: call `OnboardingCoordinator.complete({ calculationMethod })`. `themeMode` is NOT passed.
 - Handle all result statuses per Section 9.
 
 ---
@@ -278,42 +291,75 @@ The gate prevents any protected route from rendering even for one frame while on
 
 **Critical invariant:** While `LOADING` or `ERROR`, `<Slot />` is NOT rendered. While in an in-flight redirect, `<Slot />` is NOT rendered for the protected target route.
 
-**Why this matters:** `useEffect` executes after render/commit. A redirect in `useEffect` with `<Slot />` always rendered allows the target route to appear for one frame before the redirect fires. This architecture MUST NOT claim that approach prevents flashing — it does not.
+**Why this matters:** `useEffect` executes after render/commit. A redirect in `useEffect` with `<Slot />` always rendered allows the target route to appear for one frame before the redirect fires. A `useRef` mutation inside `useEffect` does NOT trigger a re-render — so `isRedirecting.current = true` set inside an effect cannot suppress rendering on the same frame the route is first evaluated. This architecture MUST use synchronous render-time derivation to suppress protected content.
 
-**Logical structure (not implementation pseudocode):**
+**Zero-flash guarantee — principle:**
+
+- `mustRedirectToOnboarding` and `mustRedirectToToday` are derived **synchronously at render time** from `status` and `segments`.
+- The `useEffect` fires `router.replace()` **only for navigation**. It does NOT determine whether protected UI is allowed to render.
+- `<Slot />` is suppressed by a conditional return that executes **during the same render** that discovers the route is unauthorized — before any commit, before any effect.
+
+**Conceptual structure (not implementation pseudocode):**
 
 ```typescript
-const [status, setStatus] = useState<OnboardingStatus>('LOADING');
+const status = useOnboardingStore(s => s.status);
 const segments = useSegments();
 const router = useRouter();
-const isRedirecting = useRef(false);
 
+// Initialize once on mount
 useEffect(() => {
   useOnboardingStore.getState().initialize();
 }, []);
 
-const storeStatus = useOnboardingStore(s => s.status);
-useEffect(() => { setStatus(storeStatus); }, [storeStatus]);
+// ── Synchronous render-time authorization flags ─────────────────────────────
+// Derived at render time from stable values. No ref. No effect mutation.
+const inOnboarding = segments[0] === 'onboarding';
 
+const mustRedirectToOnboarding =
+  status === 'PENDING' && !inOnboarding;
+
+const mustRedirectToToday =
+  status === 'COMPLETE' && inOnboarding;
+
+// ── Navigation effect (fires after commit, only for router.replace) ─────────
 useEffect(() => {
-  if (status === 'LOADING' || status === 'ERROR') return;
-  const inOnboarding = segments[0] === 'onboarding';
-  if (status === 'PENDING' && !inOnboarding) {
-    isRedirecting.current = true;
+  if (mustRedirectToOnboarding) {
     router.replace('/onboarding');
-  } else if (status === 'COMPLETE' && inOnboarding) {
-    isRedirecting.current = true;
+  } else if (mustRedirectToToday) {
     router.replace('/(tabs)/today');
-  } else {
-    isRedirecting.current = false;
   }
-}, [status, segments, router]);
+}, [mustRedirectToOnboarding, mustRedirectToToday, router]);
 
-if (status === 'LOADING') return <BootstrapLoadingView />;
-if (status === 'ERROR') return <BootstrapErrorView onRetry={() => useOnboardingStore.getState().retry()} />;
-if (isRedirecting.current) return <BootstrapLoadingView />;
+// ── Render-time authorization gate ─────────────────────────────────────────
+// These guards execute during render, before commit, before effects.
+// <Slot /> is NEVER rendered for a protected route.
+if (status === 'LOADING') {
+  return <BootstrapLoadingView />;
+}
+
+if (status === 'ERROR') {
+  return <BootstrapErrorView onRetry={() => useOnboardingStore.getState().retry()} />;
+}
+
+if (mustRedirectToOnboarding || mustRedirectToToday) {
+  return <BootstrapLoadingView />;
+}
+
 return <Slot />;
 ```
+
+**CRITICAL guarantee:**
+
+| Scenario | Render behavior |
+|---|---|
+| PENDING + protected route | `mustRedirectToOnboarding = true` during same render → `<BootstrapLoadingView />` returned. Protected content never commits to DOM. |
+| COMPLETE + /onboarding | `mustRedirectToToday = true` during same render → `<BootstrapLoadingView />` returned. Onboarding content never commits to DOM. |
+| LOADING (any route) | `<BootstrapLoadingView />` returned. `<Slot />` never renders. |
+| ERROR (any route) | `<BootstrapErrorView />` returned. `<Slot />` never renders. |
+| PENDING + /onboarding | `mustRedirectToOnboarding = false`. `<Slot />` renders. |
+| COMPLETE + normal route | Neither flag true. `<Slot />` renders. |
+
+**No `isRedirecting` ref is required or permitted.** A ref mutation inside an effect cannot gate rendering on the same frame the route is evaluated.
 
 **Deep-link protection:** All named app routes (Today, Calendar, Task, Settings, Journal, Add) MUST be protected. A PENDING user who deep-links to any normal-app route sees only the controlled loading surface until the redirect to `/onboarding` completes.
 
@@ -397,7 +443,8 @@ export type OnboardingCompleteResult =
 
 export interface OnboardingCompleteInput {
   calculationMethod: CalculationMethodKey;
-  themeMode: ThemeMode;
+  // NOTE: themeMode is NOT included. Theme is persisted via ThemeProvider.setThemeMode()
+  // on explicit user tap during Screen 4. The coordinator does not own theme persistence.
 }
 
 export class OnboardingCoordinator {
@@ -414,9 +461,11 @@ export class OnboardingCoordinator {
    * Step 1 - Read: read current committed user_settings (not React state)
    * Step 2 - Validate location: confirm usable committed location exists
    *   If no usable location: return LOCATION_REQUIRED. Do NOT write onboardingCompleted.
-   * Step 3 - Validate inputs: validate calculationMethod and themeMode
+   * Step 3 - Validate inputs: validate calculationMethod (CalculationMethodKey)
    *   If invalid: return SETUP_INCOMPLETE. Do NOT write onboardingCompleted.
-   * Step 4 - Persist final fields: upsert { calculationMethod, themeMode }
+   *   NOTE: themeMode is NOT validated here — it is persisted via ThemeProvider
+   *   on each tap during Screen 4. The coordinator has no theme responsibility.
+   * Step 4 - Persist final fields: upsert { calculationMethod }
    *   If fails: return FAILED. Do NOT write onboardingCompleted.
    * Step 5 - Persist onboardingCompleted: upsert { onboardingCompleted: true }
    *   If fails: return FAILED. onboardingCompleted not written.
@@ -439,15 +488,13 @@ export const onboardingCoordinator = new OnboardingCoordinator();
 **Calculation method source (Step 3):**
 Valid methods are the keys of `CALCULATION_METHOD_LABELS` from `src/domain/prayer/calculationMethods.ts`. Do NOT use `SettingsMutationCoordinator.VALID_CALCULATION_METHODS` (private implementation detail — audit its export status before relying on it). Use `Object.keys(CALCULATION_METHOD_LABELS)` or the `CalculationMethodKey` type.
 
-**Theme validation (Step 3):**
-Valid theme modes: `SYSTEM | LIGHT | DARK` from the existing `ThemeMode` type in `src/theme/`.
-
 **Refresh failure semantics:**
 - `fullRefresh()` throws: return `PERSISTED_REFRESH_FAILED`. Do NOT rollback. Navigation proceeds. Today will retry on mount.
 - `fullRefresh()` returns `SETUP_REQUIRED` (not throws): return `PERSISTED_REFRESH_FAILED`. Do NOT return `SUCCESS`.
 
-**What `complete()` MUST NOT write (beyond calculationMethod, themeMode, onboardingCompleted):**
+**What `complete()` MUST NOT write (beyond calculationMethod, onboardingCompleted):**
 - Any location field: `locationMode`, `manualLatitude`, `manualLongitude`, `manualTimezone`, `lastAutoLatitude`, `lastAutoLongitude`, `lastKnownTimezone` (location written by `useLocation`)
+- `themeMode` (persisted via `ThemeProvider.setThemeMode()` on user tap; coordinator does not own theme persistence)
 - `isPremium` (reserved for future billing)
 - `worshipSuggestionsEnabled` (deferred)
 - `prayerAlertsEnabled` (deferred)
@@ -475,7 +522,7 @@ type OnboardingStep = 'SALAH_INTRO' | 'SCHEDULE_EXAMPLE' | 'PRAYER_SETUP' | 'MAK
 | `SALAH_INTRO` | Screen 1 | `SCHEDULE_EXAMPLE` | "Get Started" tapped | None |
 | `SCHEDULE_EXAMPLE` | Screen 2 | `PRAYER_SETUP` | "Next" tapped | None |
 | `PRAYER_SETUP` | Screen 3 | `MAKE_IT_YOURS` | "Continue" tapped AND usable location committed | Location via useLocation only |
-| `MAKE_IT_YOURS` | Screen 4 | exit — Today | "Start Planning" tapped AND complete() succeeds | { calculationMethod, themeMode, onboardingCompleted: true } via coordinator |
+| `MAKE_IT_YOURS` | Screen 4 | exit — Today | "Start Planning" tapped AND complete() succeeds | { calculationMethod, onboardingCompleted: true } via coordinator; themeMode persisted via ThemeProvider.setThemeMode() on earlier tap |
 
 **Back navigation:**
 - Screen 1: No in-app Back button.
@@ -543,13 +590,27 @@ It MUST ONLY be called inside the "Use My Location" button's `onPress` handler (
 
 ### Policy
 
-| Trigger | Recommendation |
-|---|---|
-| User selects a MANUAL city | `REGION_METHOD_MAP[cityRecord.countryCode] ?? 'MWL'` |
-| User taps "Use My Location" (AUTO success) | `recommendCalculationMethod(coordinates)` |
-| User reuses existing MANUAL location | `REGION_METHOD_MAP[existingCity.countryCode] ?? 'MWL'` (if countryCode available) |
-| User reuses existing AUTO location | `recommendCalculationMethod({ latitude, longitude })` |
-| Country not in `REGION_METHOD_MAP` | `'MWL'` (Muslim World League, default) |
+| Trigger | Recommendation | Source |
+|---|---|---|
+| NEW MANUAL city selected this session | `REGION_METHOD_MAP[cityRecord.countryCode] ?? 'MWL'` | `CityRecord.countryCode` from city dataset |
+| NEW AUTO location acquired this session | `recommendCalculationMethod(coordinates)` | Coordinates from GPS (currently always MWL) |
+| EXISTING AUTO location reused | `recommendCalculationMethod({ latitude: lastAutoLatitude, longitude: lastAutoLongitude })` | Stored coordinates from user_settings |
+| EXISTING MANUAL location reused | Use `settings.calculationMethod` as initial draft | Persisted value from user_settings; display as "Current method: <label>" not "Recommended" |
+| Country not in `REGION_METHOD_MAP` | `'MWL'` (Muslim World League, default) | — |
+
+**Why existing MANUAL reuse does NOT use REGION_METHOD_MAP:**
+
+`user_settings` persists `manualLatitude`, `manualLongitude`, `manualLocationName`, `manualTimezone`. It does **NOT** persist `countryCode`. After a restart, there is no `existingCity` object — only raw coordinates and a display name. Attempting to reconstruct `countryCode` from the stored city name would require:
+- Re-searching the city dataset by name (fragile, ambiguous)
+- A reverse-geocoding network call (offline-first violation)
+- Fabricating a CityRecord that was never persisted
+
+**Correct policy for existing MANUAL reuse:** read `settings.calculationMethod` (already persisted from the previous session or a prior onboarding attempt). Display it as:
+```
+Current method: <CALCULATION_METHOD_LABELS[settings.calculationMethod]>
+"You can change this in Settings."
+```
+The user may still press "Change Method" to select a different one. Do NOT claim this is a new geographic recommendation.
 
 **Honest AUTO documentation:**
 
@@ -587,30 +648,44 @@ The onboarding screen MUST NOT call `userSettingsRepository.upsert()` directly f
 **React may hold (local state only):**
 - Selected/recommended calculation method draft
 - `userSelected: boolean` flag
-- Selected theme mode draft
 - Current step
 - Location display state (read from hook)
 - Error display state
 
 **React emits intent. A service/coordinator performs validation and persistence.**
 
-**Correct flow for final persistence:**
+**Correct flow — theme (write-on-tap via ThemeProvider):**
+```typescript
+// Screen 4: user taps SYSTEM / LIGHT / DARK
+// Called directly from the tap handler — write-on-tap, not render-time.
+const { setThemeMode } = useTheme(); // from ThemeProvider context
+setThemeMode(selectedMode); // persists + updates live RootLayout theme immediately
+```
+
+**Correct flow — final completion (coordinator):**
 ```typescript
 // Screen 4 "Start Planning" tap
+// themeMode is NOT passed — it is already persisted via setThemeMode() above.
 const result = await onboardingCoordinator.complete({
   calculationMethod: draftMethod,
-  themeMode: draftTheme,
 });
 ```
 
 **Wrong (MUST NOT do):**
 ```typescript
-// Do NOT write directly from React
+// Do NOT accumulate themeMode in local draft and pass to coordinator
+const result = await onboardingCoordinator.complete({
+  calculationMethod: draftMethod,
+  themeMode: draftTheme,            // WRONG: coordinator does not own theme
+});
+
+// Do NOT write preferences directly from React
 await userSettingsRepository.upsert({ calculationMethod: selectedMethod });
-await userSettingsRepository.upsert({ themeMode: selectedTheme });
 ```
 
-Location writes via `useLocation.requestAutoLocation()` and `useLocation.setManualLocation()` are acceptable exceptions — they go through the existing canonical mutation path, not ad-hoc direct repository writes.
+**Acceptable write-on-tap exceptions (both go through established canonical paths):**
+- `setThemeMode(mode)` via ThemeProvider context — not a direct repository write; uses existing persistence path through `onModeChange`
+- `useLocation.requestAutoLocation()` and `useLocation.setManualLocation()` — canonical M12 location mutation path
 
 ---
 
@@ -673,6 +748,7 @@ The following rules are enforced by the `OnboardingIsolation.test.ts` test suite
 15. `MaterializationEngine` MUST NOT be called from any onboarding screen or coordinator.
 16. No new migration files may be created by M20.
 17. `package.json` `dependencies` MUST be unchanged from M19 baseline.
+18. `OnboardingCoordinator.complete()` upsert does not include `themeMode`.
 
 ---
 
@@ -687,7 +763,7 @@ The following rules are enforced by the `OnboardingIsolation.test.ts` test suite
 | `REGION_METHOD_MAP` | Screen 3 MANUAL city -> method recommendation | None |
 | `recommendCalculationMethod()` | Screen 3 AUTO -> method recommendation | None |
 | `CalculationMethodKey` type | OnboardingCoordinator input validation | None |
-| `ThemeMode` type + `ThemeProvider` | Screen 4 theme selection | None |
+| `ThemeProvider` context (`setThemeMode`) | Screen 4: each theme tap calls `setThemeMode(mode)` via context; persists + updates live theme immediately | None |
 | `UserSettingsRepository` | OnboardingCoordinator: reads settings + persists final fields | None |
 | `PlannerRefreshCoordinator` | OnboardingCoordinator: triggers fullRefresh() | None |
 | Design system tokens (`src/theme/`) | Onboarding UI styling | None |
@@ -708,12 +784,13 @@ Zero new npm runtime dependencies. Zero new native modules.
 | B-04 | DB get() throws -> status ERROR |
 | B-05 | LOADING -> Slot NOT rendered |
 | B-06 | ERROR -> Slot NOT rendered; error/retry surface shown |
-| B-07 | PENDING + deep link to Today -> redirect to /onboarding; Today NOT rendered |
-| B-08 | PENDING + deep link to task route -> redirect to /onboarding; task route NOT rendered |
-| B-09 | PENDING + deep link to Settings -> redirect to /onboarding; Settings NOT rendered |
-| B-10 | COMPLETE + route /onboarding -> redirect to Today; onboarding NOT rendered |
+| B-07 | PENDING + deep link to Today -> Today component never renders (mustRedirectToOnboarding suppresses Slot synchronously); redirect fires |
+| B-08 | PENDING + deep link to task route -> task route component never renders; redirect fires |
+| B-09 | PENDING + deep link to Settings -> Settings component never renders; redirect fires |
+| B-10 | COMPLETE + route /onboarding -> onboarding component never renders (mustRedirectToToday suppresses Slot synchronously); redirect to Today fires |
 | B-11 | ERROR retry -> re-runs initialization; transitions to PENDING or COMPLETE |
 | B-12 | No redirect loop (PENDING + /onboarding stays at /onboarding) |
+| B-13 | mustRedirectToOnboarding/mustRedirectToToday are derived synchronously at render; no ref mutation required |
 
 ### Flow (F-* group)
 
@@ -759,13 +836,18 @@ Zero new npm runtime dependencies. Zero new native modules.
 | C-07 | User-selected method is NOT overwritten on subsequent render or location change |
 | C-08 | No render-time writes to DB (method stays in draft state until complete()) |
 | C-09 | Onboarding screen does NOT call userSettingsRepository.upsert() directly for any preference field |
+| C-10 | Existing MANUAL location reused: initial draft uses `settings.calculationMethod` (not REGION_METHOD_MAP) |
+| C-11 | Existing MANUAL location reused: no countryCode required; no city dataset reload |
+| C-12 | Existing MANUAL location reused: `settings.calculationMethod` is NOT automatically overwritten on Screen 3 mount |
 
 ### Preferences (P-* group)
 
 | ID | Description |
 |---|---|
 | P-01 | Screen 4 offers SYSTEM / LIGHT / DARK theme options |
-| P-02 | Existing ThemeProvider / theme path reused (no new theme type) |
+| P-02 | Theme tap calls existing ThemeProvider `setThemeMode(mode)` via context |
+| P-02b | Theme change updates visual theme immediately without restart |
+| P-02c | OnboardingCoordinator patch does NOT contain `themeMode` field |
 | P-03 | No Worship Suggestions toggle on Screen 4 |
 | P-04 | No Prayer Alerts toggle on Screen 4 |
 | P-05 | No Premium feature or upsell on Screen 4 |
@@ -777,7 +859,7 @@ Zero new npm runtime dependencies. Zero new native modules.
 |---|---|
 | OC-01 | No usable location -> complete() returns LOCATION_REQUIRED |
 | OC-02 | LOCATION_REQUIRED -> onboardingCompleted NOT written |
-| OC-03 | Valid setup -> complete() persists { calculationMethod, themeMode, onboardingCompleted: true } |
+| OC-03 | Valid setup -> complete() persists { calculationMethod, onboardingCompleted: true }; does NOT include themeMode |
 | OC-04 | onboardingCompleted = true written ONLY when "Start Planning" tapped and coordinator succeeds |
 | OC-05 | Write failure -> no navigation |
 | OC-06 | Write failure -> no fullRefresh() call |
@@ -803,12 +885,13 @@ Zero new npm runtime dependencies. Zero new native modules.
 | ISO-10 | OnboardingCoordinator.complete() upsert does not include prayerAlertsEnabled |
 | ISO-11 | OnboardingCoordinator.complete() upsert does not include any location field |
 | ISO-12 | Onboarding screen does not import from src/domain/entitlement/ |
+| ISO-17 | OnboardingCoordinator.complete() upsert does not include themeMode |
 | ISO-13 | No new migration files created |
 | ISO-14 | package.json dependencies unchanged from M19 baseline |
 | ISO-15 | SchedulingEngine not called from onboarding |
 | ISO-16 | MaterializationEngine not called from onboarding |
 
-**Estimated total new tests: ~85** (12 B + 10 F + 11 L + 9 C + 6 P + 11 OC + 16 ISO + buffer)
+**Estimated total new tests: ~95** (13 B + 10 F + 11 L + 12 C + 8 P + 11 OC + 17 ISO + buffer)
 
 ---
 
@@ -829,7 +912,7 @@ Zero new npm runtime dependencies. Zero new native modules.
 
 9. npx tsc --noEmit exits with 0 errors.
 10. eslint src/ app/ --max-warnings=0 exits with 0 errors/warnings.
-11. All ~85 new tests pass.
+11. All ~95 new tests pass.
 12. Full regression suite passes (all existing 1296 tests continue to pass).
 13. No new user_settings migrations.
 14. No new npm runtime dependencies (package.json dependencies unchanged).
@@ -855,4 +938,5 @@ These are resolved by the implementer and do not require architecture re-review.
 ---
 
 *Hardening performed against: Issues 1-18 from the independent consistency review.*
-*Hardening commit: see `git log --oneline -1`*
+*Integration hardening: gate zero-flash algorithm corrected, existing MANUAL recommendation corrected, theme persistence decoupled from coordinator.*
+*Hardening commit: `fde4f7e` | Integration-hardening commit: see `git log --oneline -1`*

@@ -164,7 +164,7 @@
 | **M16** | Journal Experience / UI | **CLOSED / SONNET APPROVED** | Compose view, history, biometric lock, tab replacement |
 | **M17** | Settings & Preferences UI | **CLOSED / SONNET APPROVED** | Method picker, juristic switch, Hijri adjustment, planning-day (FAJR-only guard), appearance, notifications, journal privacy |
 | **M19** | Premium Entitlement Scaffolding | **CLOSED / SONNET APPROVED** | EntitlementService, PlanningDayMutationCoordinator, MIDNIGHT/CUSTOM gating, fail-closed reads, read-only EntitlementRepository, no billing SDK |
-| **M20** | Onboarding | *PENDING — ARCHITECTURE HARDENED* | First-run setup, prayer & location configuration, method selection, core preferences |
+| **M20** | Onboarding | *PENDING — ARCHITECTURE FINALIZED* | First-run setup, prayer & location configuration, method selection, core preferences |
 
 ### Closed Milestone Trust Contract
 - Public interfaces and contracts established in **M1–M7 are CLOSED, VERIFIED, and TRUSTED**.

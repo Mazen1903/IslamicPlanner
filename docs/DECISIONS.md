@@ -1,7 +1,7 @@
 # Architecture Decision Log
 
 **Status:** Living document  
-**Updated:** 2026-09-18 (Rev 7 — M20 ADR-028 hardened)  
+**Updated:** 2026-09-18 (Rev 8 — M20 ADR-028 finalized: gate, MANUAL recommendation, theme)  
 **Purpose:** Record every major architectural decision, the alternatives considered, and the rationale.
 
 ---
@@ -685,7 +685,11 @@ DB read failure resolution: a DB infrastructure failure during `initialize()` re
 
 `OnboardingCoordinator.complete()` writes `{ onboardingCompleted: true }` directly via `UserSettingsRepository.upsert()`. It does NOT go through `SettingsMutationCoordinator`.
 
-Reason: `SettingsMutationCoordinator` is a general-purpose settings coordinator for user-facing preference mutations. It calls `PlannerRefreshCoordinator.fullRefresh()` on every temporal change. Screen 3 (PRAYER_SETUP) does not write calculationMethod directly from React. The draft is passed to `OnboardingCoordinator.complete()` at Screen 4, which performs the single authoritative persistence + refresh. This avoids premature full refresh before `onboardingCompleted = true` and keeps the coordinator as the sole completion boundary. Location writes via `useLocation.requestAutoLocation()` and `useLocation.setManualLocation()` are acceptable exceptions — they go through the existing canonical mutation path. `FORBIDDEN_PATCH_KEYS` in `SettingsMutationCoordinator` already lists `onboardingCompleted`, which correctly blocks general-purpose mutation of the lifecycle flag.
+Reason: `SettingsMutationCoordinator` is a general-purpose settings coordinator for user-facing preference mutations. It calls `PlannerRefreshCoordinator.fullRefresh()` on every temporal change. Screen 3 (PRAYER_SETUP) does not write calculationMethod directly from React. The draft is passed to `OnboardingCoordinator.complete()` at Screen 4, which performs the single authoritative persistence + refresh. This avoids premature full refresh before `onboardingCompleted = true` and keeps the coordinator as the sole completion boundary.
+
+**themeMode is NOT passed to OnboardingCoordinator.complete().** Theme is persisted via `ThemeProvider.setThemeMode(mode)` on each explicit tap in Screen 4. The existing `RootLayout` `onModeChange` handler owns theme persistence. Writing `themeMode` via the coordinator would persist to SQLite without updating the already-mounted `RootLayout` state, causing the wrong theme to display until a cold boot. The write-on-tap approach via `setThemeMode()` updates both the live visual theme and the persistence in a single call, using the existing path from M1.
+
+Location writes via `useLocation.requestAutoLocation()` and `useLocation.setManualLocation()` are acceptable exceptions — they go through the existing canonical mutation path. `FORBIDDEN_PATCH_KEYS` in `SettingsMutationCoordinator` already lists `onboardingCompleted`, which correctly blocks general-purpose mutation of the lifecycle flag.
 
 **Alternatives considered:**
 

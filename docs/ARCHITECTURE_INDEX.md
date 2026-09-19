@@ -457,7 +457,7 @@
 ---
 
 ### 23. Onboarding
-- **Authoritative Docs:** `docs/M20_ARCHITECTURE.md` (ARCHITECTURE HARDENED — ready for implementation)
+- **Authoritative Docs:** `docs/M20_ARCHITECTURE.md` (ARCHITECTURE FINALIZED — ready for implementation)
 - **Source Paths (new):**
   - `src/stores/useOnboardingStore.ts` (Zustand store: `status`, `initialize()`, `retry()`, `markComplete()`)
   - `src/services/onboarding/OnboardingCoordinator.ts` (validates prerequisites + persists final fields + `onboardingCompleted: true` + triggers `fullRefresh()`)
@@ -468,6 +468,7 @@
 - **Key invariants:**
   - `onboardingCompleted` in `user_settings` is the canonical flag; no new schema columns or migrations required
   - DB read failure resolves to `ERROR` (not `PENDING`); user retries via `retry()`; controlled error surface shown
+  - Gate authorization is synchronous render-time (mustRedirectToOnboarding/mustRedirectToToday derived at render); useEffect only fires router.replace(); no isRedirecting ref
   - No GPS call on mount: `requestForegroundPermissionsAsync()` invoked only from "Use My Location" button's `onPress` handler (via `useLocation.requestAutoLocation()`)
   - Location is REQUIRED; GPS is OPTIONAL; no "Skip for now" in location step
   - No silent mutation: data written only on explicit button tap (write-on-tap constraint)
@@ -476,7 +477,10 @@
   - `markComplete()` called synchronously BEFORE `router.replace()` to prevent gate redirect-back race
   - Zero entitlement involvement; zero Journal involvement; zero Worship involvement
   - Zero new runtime npm dependencies; zero new migrations
-  - Calculation method recommendation uses `REGION_METHOD_MAP` (MANUAL path) or `recommendCalculationMethod()` (AUTO path; currently always MWL)
+  - NEW MANUAL city: recommendation uses `REGION_METHOD_MAP[cityRecord.countryCode] ?? MWL`
+  - EXISTING MANUAL reused: use `settings.calculationMethod` as initial draft (countryCode is NOT persisted in user_settings)
+  - AUTO (new or reused): `recommendCalculationMethod(coords)` (currently always MWL)
+  - Theme: `ThemeProvider.setThemeMode(mode)` called on each explicit tap; coordinator does NOT persist themeMode
 - **Screen machine:**
   - `SALAH_INTRO` → `SCHEDULE_EXAMPLE` → `PRAYER_SETUP` → `MAKE_IT_YOURS` → (Today)
   - Screen 1 (SALAH_INTRO): educational only; five prayers listed; no writes
@@ -484,9 +488,9 @@
   - Screen 3 (PRAYER_SETUP): location + calculation method together; location REQUIRED to advance
   - Screen 4 (MAKE_IT_YOURS): theme selection; `OnboardingCoordinator.complete()` writes `{ calculationMethod, themeMode, onboardingCompleted: true }` + triggers `fullRefresh()`
 - **Relevant Tests:**
-  - `src/stores/__tests__/useOnboardingStore.test.ts` (B-01..B-12)
+  - `src/stores/__tests__/useOnboardingStore.test.ts` (B-01..B-13)
   - `src/services/onboarding/__tests__/OnboardingCoordinator.test.ts` (OC-01..OC-11)
-  - `app/onboarding/__tests__/OnboardingScreen.test.tsx` (F-*, L-*, C-*, P-* groups)
-  - `src/domain/onboarding/__tests__/OnboardingIsolation.test.ts` (ISO-01..ISO-16)
-- **Milestone Owner:** **M20 (ARCHITECTURE HARDENED — ready for implementation)**
+  - `app/onboarding/__tests__/OnboardingScreen.test.tsx` (F-*, L-*, C-01..C-12, P-01..P-06 + P-02b/P-02c groups)
+  - `src/domain/onboarding/__tests__/OnboardingIsolation.test.ts` (ISO-01..ISO-17)
+- **Milestone Owner:** **M20 (ARCHITECTURE FINALIZED — ready for implementation)**
 - **ADR:** ADR-028
