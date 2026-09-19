@@ -632,7 +632,7 @@ Widgets are PRESENTATION SURFACES. All widget content derives from the canonical
 
 ## ADR-027: Feature Code Consumes EntitlementService, Not user_settings.isPremium Directly
 
-**Status:** Accepted (2026-09-18) — M19 ARCHITECTURE FROZEN
+**Status:** Accepted (2026-09-18) — M19 CLOSED / SONNET APPROVED
 
 **Context:**
 

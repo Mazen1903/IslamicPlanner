@@ -420,10 +420,10 @@
 ---
 
 ### 22. Premium Entitlement Scaffolding
-- **Authoritative Docs:** `docs/M19_ARCHITECTURE.md` (FROZEN — OPUS REVIEW APPROVED — AMENDMENTS APPLIED)
-- **Source Paths (planned):**
+- **Authoritative Docs:** `docs/M19_ARCHITECTURE.md` (CLOSED — SONNET APPROVED)
+- **Source Paths:**
   - `src/domain/entitlement/types.ts` (`EntitlementTier`, `PremiumFeature`, `EntitlementSnapshot`, `EntitlementService` interface)
-  - `src/domain/entitlement/EntitlementService.ts` (`LocalEntitlementService` + singleton)
+  - `src/domain/entitlement/EntitlementService.ts` (`LocalEntitlementService` + singleton `localEntitlementService`)
   - `src/data/repositories/EntitlementRepository.ts` (read-only `readIsPremium()` adapter)
   - `src/services/PlanningDayMutationCoordinator.ts` (authorization + mutation + refresh)
   - `src/hooks/useEntitlement.ts` (thin React hook, fail-closed)
@@ -441,6 +441,17 @@
   - FAJR always allowed regardless of entitlement state (authorization step skipped)
   - Zero new migrations; zero new runtime dependencies
   - No purchase flow; no billing SDK; no fake upgrade button
-- **Relevant Tests (planned):** E/A/P/S/UI/I series (50+ tests) — see `docs/M19_ARCHITECTURE.md §28`
-- **Milestone Owner:** **M19 (ARCHITECTURE FROZEN — OPUS REVIEW APPROVED — AMENDMENTS APPLIED — READY FOR GEMINI IMPLEMENTATION)**
+- **Relevant Tests:**
+  - `src/domain/entitlement/__tests__/EntitlementService.test.ts`
+  - `src/domain/entitlement/__tests__/EntitlementIsolation.test.ts`
+  - `src/data/repositories/__tests__/EntitlementRepository.test.ts`
+  - `src/services/__tests__/PlanningDayMutationCoordinator.test.ts`
+  - `src/hooks/__tests__/useEntitlement.test.ts`
+  - `src/hooks/__tests__/usePlanningDayMutation.test.ts`
+  - `src/components/premium/__tests__/PremiumBadge.test.tsx`
+  - `src/components/premium/__tests__/PremiumLockedInfo.test.tsx`
+  - `app/(tabs)/settings/__tests__/PlanningDayM19.test.tsx`
+  - `app/(tabs)/settings/__tests__/PlanningDay.test.tsx`
+- **Milestone Owner:** **M19 (CLOSED / SONNET APPROVED)**
+
 

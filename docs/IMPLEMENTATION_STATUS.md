@@ -1,5 +1,5 @@
-**Current Milestone:** M19 — Premium Entitlement Scaffolding (ARCHITECTURE FROZEN — OPUS REVIEW APPROVED — AMENDMENTS APPLIED — READY FOR GEMINI IMPLEMENTATION)
-**Last Updated:** 2026-09-18 (M18 closed / SONNET APPROVED; M19 architecture frozen, Opus review approved, amendments applied)  
+**Current Milestone:** M20 — Onboarding (PENDING — ARCHITECTURE NOT YET FROZEN)
+**Last Updated:** 2026-09-18 (M19 closed / SONNET APPROVED; M20 pending)  
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -27,9 +27,8 @@
 | **M16** | Journal Experience / UI | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture commit `a316b19`, implementation commit `b4e09c1`, test hardening `cb2428a`. 1092/1092 tests (89 suites). Zero migrations. Replaces Worship tab with full encrypted Journal experience, autosave, planningDayKey pinning, optional biometric lock (`expo-local-authentication` ~57.0.3). Native biometric verification pending. |
 | **M17** | Settings | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `00891c2`, hardening `a2af7a3`, implementation `76ac716`. 1171/1171 tests (102 suites). 0 migrations. 0 dependencies. ADR-025 (prayer adjustment ±60 bound). Full Settings experience: prayer config, planning day (Fajr), Hijri calendar, appearance, journal privacy, about, hub. `SettingsMutationCoordinator` non-React orchestration. `HijriAdjustmentConfigLoader` dynamic Hijri config. Sonnet independent review APPROVED. Native device QA pending (does not reopen M17). |
 | **M18** | Widgets (dev build required) | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `4128c93`, implementation `3cd5980`, WorkManager fix `bc3b37c`. 1230/1230 tests (104 suites). 0 migrations. 3 runtime deps: `expo-widgets ~57.0.20`, `@expo/ui ~57.0.19`, `react-native-android-widget ^0.22.1`. Android prebuild PASS, assembleDebug PASS. iOS native QA pending macOS/EAS. Android physical-runtime QA pending. WorkManager conflict resolved via tracked CNG-compatible plugin. ADR-026 + ADR-026-H. Sonnet independent review APPROVED. |
-
-| **M19** | Premium entitlement scaffolding | **IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW** | 2026-09-18 | Architecture frozen `fa3c664`, hardened `29cd586`. Implementation completed. `EntitlementService` (fail-closed), `PlanningDayMutationCoordinator`, `usePlanningDayMutation`, MIDNIGHT/CUSTOM gating. 1296/1296 tests (113 suites). Zero migrations. Zero runtime deps. Pending Sonnet review. |
-| **M20** | Onboarding | Not Started | — | Prerequisites: M1, M12, M2 |
+| **M19** | Premium entitlement scaffolding | **CLOSED / SONNET APPROVED** | 2026-09-18 | Architecture `fa3c664`, hardening `29cd586`, implementation `26e403f`. 1296/1296 tests (113 suites). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies added. `EntitlementService` (fail-closed), `PlanningDayMutationCoordinator`, `usePlanningDayMutation`, MIDNIGHT/CUSTOM gating, read-only `EntitlementRepository`, strict isolation. Sonnet independent review APPROVED. |
+| **M20** | Onboarding | **PENDING — ARCHITECTURE NOT YET FROZEN** | — | Prerequisites: M1, M12, M2, M17 |
 | **M21** | Dark mode polish | Not Started | — | Prerequisites: M1, M7, M14, M16, M17 |
 | **M22** | Accessibility/RTL | Not Started | — | Prerequisites: All UI milestones |
 | **M23** | QA + edge cases | Not Started | — | Opus review required |
@@ -1170,4 +1169,53 @@ The following require a physical device or simulator and do not reopen M18:
   to resolve `MAX_PATH` (260-character) filename length failures in the CMake/NDK build.
 - Host/toolchain operational item only — NOT an application runtime dependency.
 - `ninja.exe` must NOT be committed to the repository.
+
+---
+
+## M19 Completion Record
+
+- **Date:** 2026-09-18
+- **Milestone:** M19 — Premium Entitlement Scaffolding
+- **Status:** **CLOSED / SONNET APPROVED**
+- **Architecture Commit:** `fa3c664`
+- **Opus Hardening Commit:** `29cd586`
+- **Implementation Commit:** `26e403f`
+- **Independent Review:** APPROVED (Sonnet)
+
+### Delivered Capabilities
+- **Entitlement Model:** Typed `FREE` and `PREMIUM` tiers; active Premium feature registry gating `PLANNING_DAY_MIDNIGHT` and `PLANNING_DAY_CUSTOM`.
+- **Entitlement Source:** `user_settings.isPremium` serves as the temporary local entitlement snapshot; read-only access strictly isolated to `EntitlementRepository`; missing row resolves cleanly to `READY / FREE`; database failures resolve to `UNAVAILABLE`.
+- **Fail-Closed Security:** Entitlement errors never grant access; `hasFeature()` strictly returns `false` on `UNAVAILABLE` state; coordinators differentiate `PREMIUM_REQUIRED` from `ENTITLEMENT_UNAVAILABLE`.
+- **Planning Day Authority:** `FAJR` remains universally free without entitlement query; `MIDNIGHT` and `CUSTOM:HH:mm` require active Premium; stored state interpretation is independent of entitlement (no auto-downgrade); entitlement gates state mutation only.
+- **Mutation Boundary:** `PlanningDayMutationCoordinator` is the sole authorized path for modifying `planningDayStart`; `SettingsMutationCoordinator` explicitly rejects `planningDayStart` (removed from `TEMPORAL_ALLOWED_KEYS`) and forbids `isPremium`; strict `validate` → `authorize` → `persist` → `fullRefresh` pipeline; persistence success with refresh failure does not roll back persisted state.
+- **React Boundary:** Clean `useEntitlement` (unmount-safe, fail-closed) and `usePlanningDayMutation` hooks; zero entitlement authorization logic in presentation components; no polling or React Context required.
+- **Premium UI:** `PremiumBadge` and `PremiumLockedInfo` reusable components; locked visual state for Free users; direct selection for Premium users; no checkout, no pricing, no fake upgrade buttons, and no developer toggle in production UI.
+- **Subsystem Isolation:** Pure temporal engines (`PlanningDayEngine`, `TodayTemporalInputProvider`, `temporalSettingsHelper`, `SchedulingEngine`), home screen widgets, and encrypted Journal remain 100% free of entitlement imports or gating logic.
+
+### Non-Goals / Future Billing Seam
+- No StoreKit, Google Play Billing, RevenueCat, Stripe, or payment SDKs.
+- No subscriptions, trials, pricing models, receipt validation, or restore flows.
+- No accounts, cloud login, or remote entitlement verification.
+- No auto-downgrade or temporal re-materialization reconciliation.
+- Future billing adapters will swap behind the `EntitlementService` interface without touching feature code or freezing one-time-purchase-only APIs.
+
+### Database Migrations
+- **0 new migrations.** Migrations 0000–0003 remain untouched.
+
+### Dependencies Added
+- **0 new runtime/dev dependencies added.**
+
+### Final Verification Results
+
+| Check | Result |
+|---|---|
+| Jest tests | **1296 / 1296** |
+| Test suites | **113 / 113** |
+| TypeScript errors | **0** |
+| ESLint errors | **0** |
+| ESLint warnings | **0** |
+| Expo config | **Valid** |
+| expo-doctor | **20/21** (known SDK 57 patch advisory only) |
+| Working tree | **Clean** |
+
 

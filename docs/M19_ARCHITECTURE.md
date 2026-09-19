@@ -1,10 +1,14 @@
 # M19 — Premium Entitlement Scaffolding Architecture
 
-> **Status:** FROZEN — PENDING OPUS INDEPENDENT REVIEW
+> **Status:** CLOSED — SONNET APPROVED (2026-09-18)
 > **Authored:** 2026-09-18
 > **Baseline commit:** b5666e4ee91dd9f93c0504b695a6927eb8e417c6 (M18 CLOSED)
+> **Architecture freeze commit:** `fa3c664`
+> **Opus hardening commit:** `29cd586`
+> **Implementation commit:** `26e403f`
 > **Milestone:** M19 — Premium Entitlement Scaffolding
-> **Review required:** Opus independent architecture/security review before implementation begins
+> **Independent Review:** APPROVED (Sonnet)
+> **Final Verification:** 1296 / 1296 tests, 113 / 113 suites, 0 TypeScript errors, 0 ESLint errors/warnings, 0 migrations, 0 dependencies added
 
 ---
 
@@ -582,6 +586,47 @@ All BLOCKER items resolved:
 | B-06 | Custom time picker | ✅ APPROVED — `@react-native-community/datetimepicker` v9.1.0 already installed |
 
 Amendments applied per Opus review: Amendment 1 (§4 fresh-install semantics), Amendment 2 (§19a active-mode no-op rule), Amendment 3 (§25/27 usePlanningDayMutation hook), Amendment 4 (§30 billing seam language). Test matrix hardened with A-12, P-08, UI-12, E-11.
+
+---
+
+## 32. Independent Implementation Review & Closure Record
+
+**Verdict:** APPROVED — READY FOR CLOSURE (2026-09-18 / Sonnet)
+
+### Commits
+- Architecture freeze: `fa3c664`
+- Opus architecture hardening: `29cd586`
+- Implementation: `26e403f`
+
+### Final Verification Results
+- 1296 / 1296 tests passing (113 / 113 suites)
+- 0 TypeScript errors (`tsc --noEmit`)
+- 0 ESLint errors, 0 warnings (`eslint src/ app/ --max-warnings=0`)
+- Expo config valid (`npx expo config --json`)
+- `expo-doctor` 20/21 (only known Expo SDK 57 patch advisory remains)
+- 0 new database migrations (schema unchanged)
+- 0 new npm runtime/dev dependencies added
+
+### Delivered Capabilities
+- **Entitlement Model:** Typed `FREE` and `PREMIUM` tiers; active feature registry gating `PLANNING_DAY_MIDNIGHT` and `PLANNING_DAY_CUSTOM`.
+- **Entitlement Source:** `user_settings.isPremium` serves as the local snapshot; read-only access strictly isolated to `EntitlementRepository`; missing row resolves cleanly to `READY / FREE`; database failures resolve to `UNAVAILABLE`.
+- **Fail-Closed Security:** Entitlement errors never grant access; `hasFeature()` strictly returns `false` when unavailable; coordinators differentiate `PREMIUM_REQUIRED` from `ENTITLEMENT_UNAVAILABLE`.
+- **Planning Day Authority:** `FAJR` remains universally free without entitlement query; `MIDNIGHT` and `CUSTOM:HH:mm` require active Premium; stored state interpretation is independent of entitlement (no auto-downgrade); entitlement gates state mutation only.
+- **Mutation Boundary:** `PlanningDayMutationCoordinator` is the sole authorized path for modifying `planningDayStart`; `SettingsMutationCoordinator` explicitly rejects `planningDayStart` and forbids `isPremium`; strict validate → authorize → persist → fullRefresh execution pipeline; persistence success with refresh failure does not roll back.
+- **React Boundary:** Clean `useEntitlement` and `usePlanningDayMutation` hooks; zero entitlement authorization logic in presentation components; no polling or React Context required.
+- **Premium UI:** `PremiumBadge` and `PremiumLockedInfo` reusable components; locked visual state for Free users; direct selection for Premium users; no checkout, no pricing, no fake upgrade buttons, and no developer toggle in production UI.
+- **Subsystem Isolation:** Pure temporal engines, home screen widgets, and encrypted Journal remain 100% free of entitlement imports or gating logic.
+
+### Non-Goals / Future Billing Seam
+- No StoreKit, Google Play Billing, RevenueCat, Stripe, or payment SDKs.
+- No subscriptions, trials, pricing models, receipt validation, or restore flows.
+- No accounts, cloud login, or remote entitlement verification.
+- No auto-downgrade or temporal re-materialization reconciliation.
+- Future billing adapters will swap behind the `EntitlementService` interface without touching feature code or freezing one-time-purchase-only APIs.
+
+### Test Coverage
+- 66 new tests added in M19 across 7 test suites (total: 1296 tests, 113 suites).
+- Comprehensive coverage including fresh install, tier transitions, fail-closed handling, Fajr exemption, Premium authorization, malformed input rejection, isolation guards, and M18 regression safety.
 
 ---
 

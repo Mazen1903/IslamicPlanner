@@ -1,131 +1,150 @@
-# Current Milestone: M19 — Premium Entitlement Scaffolding
+# Current Milestone: M20 — Onboarding
 
-> **Current State:** M19 IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW
-> **Previous Milestone:** M18 CLOSED / SONNET APPROVED
-> **Milestone Status:** M19 — IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW
-> **Architecture Status:** FROZEN — Authored 2026-09-18 — Opus-reviewed 2026-09-18 — see docs/M19_ARCHITECTURE.md
-
----
-
-## M18 Closure Summary
-
-**M18 — Home Screen Widgets** is CLOSED / SONNET APPROVED as of 2026-09-18.
-
-| Commit Role | Hash |
-|---|---|
-| Architecture freeze | `4128c93` |
-| Implementation | `3cd5980` |
-| Android WorkManager fix | `bc3b37c` |
-| Closure | See closure commit |
-
-**Final verification:** 1230 / 1230 tests, 104 suites, 0 TypeScript errors, 0 ESLint errors/warnings.
-Android prebuild PASS. Android assembleDebug PASS (BUILD SUCCESSFUL). 0 new migrations.
-
-**Dependencies added:**
-- `expo-widgets ~57.0.20` (iOS WidgetKit integration)
-- `@expo/ui ~57.0.19` (SwiftUI native primitives)
-- `react-native-android-widget ^0.22.1` (Android AppWidget)
-
-**Tooling correction:**
-- `react-test-renderer ^1.3.0` (test-only, aligns with React version)
+> **Current State:** M20 PENDING — ARCHITECTURE NOT YET FROZEN
+> **Previous Milestone:** M19 CLOSED / SONNET APPROVED
+> **Milestone Status:** M20 — NOT STARTED
+> **Architecture Status:** PENDING — ARCHITECTURE NOT YET FROZEN
 
 ---
 
-## M18 Delivered Capabilities
+## M19 Closure Summary
 
-### Widget Scope
-- Small widget (iOS + Android)
-- Medium widget (iOS + Android)
-- Large widget: deferred
-- Widgets are read-only presentation surfaces
+**M19 — Premium Entitlement Scaffolding** is CLOSED / SONNET APPROVED as of 2026-09-18.
 
-### Shared Widget Architecture
-- `WidgetSnapshot` — privacy-safe, serializable data model
-- `WidgetSnapshotBuilder` — pure TypeScript, uses canonical planner services
-- `WidgetSyncCoordinator` — non-React singleton, best-effort push
-- Reuses existing scheduling/planner engine; no second engine introduced
+| Commit Role | Hash | Description |
+|---|---|---|
+| Architecture freeze | `fa3c664` | docs: freeze M19 architecture - premium entitlement scaffolding contract |
+| Opus architecture hardening | `29cd586` | docs: harden M19 entitlement architecture after Opus review |
+| Implementation | `26e403f` | feat(premium): implement M19 entitlement scaffolding |
+| Closure | See closure commit | docs: close M19 after independent review -- APPROVED |
 
-### iOS
-- `expo-widgets` + `@expo/ui/swift-ui` exclusively (no React Native View/Text in widget files)
-- Small widget: current prayer + next prayer + native WidgetKit countdown timer
-- Medium widget: prayer panel + next 3 tasks
-- `'widget'` directive enforced on all iOS widget files
-- `createWidget()` + `updateTimeline()` for OS-managed refresh
-- App Group / config plugin integration via `expo-widgets` plugin
-
-### Android
-- `react-native-android-widget` AppWidget framework
-- Small widget: current prayer + next prayer (static local time)
-- Medium widget: prayer panel + next 3 tasks
-- Custom Expo Router entry point (`index.ts`) — `registerWidgetTaskHandler` before `expo-router/entry`
-- `widgetTaskHandler` handles `WIDGET_ADDED`, `WIDGET_UPDATE`, `WIDGET_RESIZED`, `WIDGET_CLICK`, `WIDGET_DELETED`
-- `requestWidgetUpdate` passes actual `React.createElement(WidgetComponent, snapshot)` — not null
-- `updatePeriodMillis: 1800000` on both Android widget entries
-- No fake live second-by-second countdown on Android
-
-### Sync Triggers
-- Full planner refresh (`PlannerRefreshCoordinator.fullRefresh`)
-- Prayer transition (`useToday.ts` prayer boundary)
-- Task completion (`useToday.completeTask`)
-- All triggers use best-effort `.sync().catch(...)` — never throws to caller
-
-### Privacy
-- No Journal data, no Journal decryption
-- No task notes, descriptions, or subtasks
-- No raw coordinates or GPS requests
-- `WidgetSnapshot` schema: prayer times + task titles + planning day key only
-
-### SETUP_REQUIRED
-- Calm neutral prompt — no fake Mecca/default location
-- Handled in all paths: iOS widget, Android widget, widgetTaskHandler
-
-### WorkManager Dependency Resolution
-- `plugins/withAndroidWorkManagerResolution.js` — tracked CNG-compatible Expo config plugin
-- Aligns all `androidx.work` artifacts to `2.8.1`
-- Resolves `react-native-android-widget` (2.8.1) vs `expo-widgets/glance` (2.7.1) duplicate class conflict
-- No generated Android edits committed (CNG policy maintained)
-- Documented in `docs/DECISIONS.md` (ADR-026-H)
+**Final Verification:**
+- 1296 / 1296 tests passing (113 / 113 suites)
+- 0 TypeScript errors (`tsc --noEmit`)
+- 0 ESLint errors, 0 ESLint warnings (`eslint src/ app/ --max-warnings=0`)
+- Expo config valid (`npx expo config --json`)
+- `expo-doctor` 20/21 (only known Expo SDK 57 patch advisory remains)
+- 0 new database migrations (0000–0003 untouched)
+- 0 new npm runtime/dev dependencies added
 
 ---
 
-## M18 Commit History
+## M19 Delivered Capabilities
 
-```
-4128c93  docs: freeze M18 architecture - widgets implementation contract
-3cd5980  feat(widgets): implement M18 home screen widgets
-bc3b37c  fix(widgets): align Android WorkManager dependencies
-<closure commit>  docs: close M18 after independent review -- APPROVED
-```
+### Entitlement Model
+- Typed `FREE` and `PREMIUM` tiers.
+- Active Premium feature registry contains exactly:
+  - `PLANNING_DAY_MIDNIGHT`
+  - `PLANNING_DAY_CUSTOM`
+
+### Entitlement Source
+- `user_settings.isPremium` is the temporary local entitlement snapshot.
+- Feature code queries `EntitlementService` (`hasFeature()`, `getSnapshot()`).
+- `EntitlementRepository` is the sole data-layer adapter and is strictly read-only.
+- Missing row (e.g. fresh install) resolves to `READY / FREE`.
+- Real database failure resolves to `UNAVAILABLE`.
+
+### Fail-Closed Security
+- Entitlement errors never grant Premium.
+- `hasFeature()` strictly returns `false` on `UNAVAILABLE` state.
+- Premium coordinator differentiates:
+  - `PREMIUM_REQUIRED` (user is FREE)
+  - `ENTITLEMENT_UNAVAILABLE` (read failed)
+
+### Planning Day
+- `FAJR` remains universally free without entitlement query.
+- `MIDNIGHT` requires Premium.
+- `CUSTOM:HH:mm` requires Premium (persisted in canonical 24-hour representation).
+- No auto-downgrade: existing Premium mode remains operational if entitlement becomes FREE.
+- Entitlement controls authorization to CHANGE state, not how stored temporal state is interpreted.
+
+### Mutation Boundary
+- `PlanningDayMutationCoordinator` is the sole authorized path for mutating `planningDayStart`.
+- `SettingsMutationCoordinator` explicitly rejects `planningDayStart` (removed from `TEMPORAL_ALLOWED_KEYS`).
+- `SettingsMutationCoordinator` still strictly forbids `isPremium`.
+- Strict pipeline: `validate` → `authorize` → `persist` → `fullRefresh`.
+- Persistence success + refresh failure does not roll back persisted state.
+
+### React Boundary
+- `useEntitlement` hook (unmount-safe, fail-closed default).
+- `usePlanningDayMutation` hook wrapping `PlanningDayMutationCoordinator`.
+- No entitlement authorization logic in React presentation screens.
+- No entitlement Context or background polling required in M19.
+
+### Premium UI
+- `PremiumBadge` and `PremiumLockedInfo` components.
+- FREE users see locked Midnight/Custom with badge and info banner.
+- Premium users can select Midnight and Custom directly.
+- No pricing, checkout, fake upgrade button, or developer Premium toggle in UI.
+
+### Subsystem Isolation
+- Zero entitlement logic in temporal engines (`PlanningDayEngine`, `TodayTemporalInputProvider`, `temporalSettingsHelper`, `SchedulingEngine`).
+- Zero entitlement logic in home screen widgets (M18 Small and Medium widgets remain free).
+- Zero entitlement logic in Journal (encryption and privacy remain untouched).
 
 ---
 
-## M19 Prerequisites
+## M19 Non-Goals / Future Billing Seam
 
-| Prerequisite | Status |
-|---|---|
-| M1 — Design System | ✅ CLOSED |
-| M7 — Today Screen | ✅ CLOSED / OPUS APPROVED |
-| M17 — Settings | ✅ CLOSED / SONNET APPROVED |
-| M18 — Widgets | ✅ CLOSED / SONNET APPROVED |
+M19 did **NOT** implement:
+- StoreKit (iOS)
+- Google Play Billing (Android)
+- RevenueCat, Stripe, or any payment SDK
+- Subscriptions, pricing, trials, or restore purchases
+- User accounts, login, or cloud verification
+- Server-side entitlement validation
+- Subscription expiry behavior or automatic downgrade reconciliation
+
+**Future billing seam:** Future billing integrations will replace the entitlement source behind the existing `EntitlementService` boundary without altering feature screens or freezing a one-time-purchase-only API.
+
+---
+
+## M19 Test Coverage
+
+- **66 new tests** added in M19 across 7 test suites.
+- **1296 total tests** across **113 test suites** project-wide.
+- Coverage includes:
+  - Fresh install entitlement resolution (`READY / FREE`)
+  - `FREE`, `PREMIUM`, and `UNAVAILABLE` states
+  - Fail-closed behavior on database error
+  - `FAJR` authorization bypass (free without DB query)
+  - `MIDNIGHT` and `CUSTOM` Premium authorization checks
+  - Malformed `CUSTOM` format validation (`CUSTOM:25:00`, `CUSTOM:08:5`, etc.)
+  - Persistence isolation
+  - Refresh failure non-rollback semantics
+  - `SettingsMutationCoordinator` bypass prevention (`planningDayStart` and `isPremium` rejected)
+  - `useEntitlement` unmount safety and tier propagation
+  - `usePlanningDayMutation` hook lifecycle and state transitions
+  - `PremiumBadge` and `PremiumLockedInfo` rendering
+  - Existing Premium stored-mode operational persistence (no-auto-downgrade)
+  - Subsystem isolation guards (`EntitlementIsolation.test.ts`)
+  - Full M18 widget and core regression suite
 
 ---
 
 ## Roadmap Context
 
 ```
-M15 — Journal Core & Privacy       ✅ CLOSED / SONNET APPROVED
-M16 — Journal Experience / UI      ✅ CLOSED / SONNET APPROVED
-M17 — Settings                     ✅ CLOSED / SONNET APPROVED
-M18 — Widgets (dev build required) ✅ CLOSED / SONNET APPROVED
-M19 — Premium Entitlement Scaffolding  ← CURRENT (IMPLEMENTED LOCALLY — PENDING INDEPENDENT REVIEW)
-M20 — Onboarding
+M18 — Widgets (dev build required)            ✅ CLOSED / SONNET APPROVED
+M19 — Premium Entitlement Scaffolding          ✅ CLOSED / SONNET APPROVED
+M20 — Onboarding                               ← CURRENT / PENDING (ARCHITECTURE NOT YET FROZEN)
 M21 — Dark Mode Polish
 M22 — Accessibility / RTL
-M23 — QA + edge cases
-M24 — Release preparation
+M23 — QA + Edge Cases
+M24 — Release Preparation
 ```
 
 Worship Suggestions remain **DEFERRED** (not deleted). May be re-introduced post-M24.
+
+---
+
+## M20 Overview & Scope (Not Started)
+
+**M20 — Onboarding**
+- **Status:** PENDING — ARCHITECTURE NOT YET FROZEN
+- **Prerequisites:** M1 (Design System), M2 (Prayer Calculation), M12 (Location), M17 (Settings)
+- **Scope:** First-run onboarding flow introducing prayer calculations, location detection/selection, calculation method selection, and core preferences.
+- **Rule:** DO NOT start implementation until M20 architecture is formally authored, reviewed, and frozen.
 
 ---
 
@@ -172,9 +191,3 @@ The following checks require physical devices or simulators and are carried forw
 - Native countdown timer behavior
 - App Group data propagation behavior
 - Deep link behavior from widget tap
-
-### M18 (Widgets) — Windows Build Toolchain Note
-- Windows local Android native build required updating local `ninja.exe` to v1.12.1
-  to resolve `MAX_PATH` (260 character) filename length failures.
-- This is a host/toolchain operational item — NOT an application runtime dependency.
-- `ninja.exe` must NOT be committed to the repository or distributed.

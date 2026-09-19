@@ -163,8 +163,8 @@
 | **M15** | Journal Core & Privacy | **CLOSED / SONNET APPROVED** | Encrypted private journal, planningDayKey ownership, AES-256-GCM, expo-crypto, ciphertext-only repository boundary. Implementation commit: `71edcdf`. Final HEAD: `9752921`. |
 | **M16** | Journal Experience / UI | **CLOSED / SONNET APPROVED** | Compose view, history, biometric lock, tab replacement |
 | **M17** | Settings & Preferences UI | **CLOSED / SONNET APPROVED** | Method picker, juristic switch, Hijri adjustment, planning-day (FAJR-only guard), appearance, notifications, journal privacy |
-| **M18** | Home Screen Widgets | **CLOSED / SONNET APPROVED** | Small + Medium iOS/Android widgets; WidgetSnapshotBuilder; WidgetSyncCoordinator; read-only presentation surface; WorkManager dependency alignment |
-| **M19** | Premium Entitlement Scaffolding | *ARCHITECTURE FROZEN — PENDING OPUS REVIEW* | EntitlementService, PlanningDayMutationCoordinator, MIDNIGHT/CUSTOM gating, fail-closed reads, no billing SDK |
+| **M19** | Premium Entitlement Scaffolding | **CLOSED / SONNET APPROVED** | EntitlementService, PlanningDayMutationCoordinator, MIDNIGHT/CUSTOM gating, fail-closed reads, read-only EntitlementRepository, no billing SDK |
+| **M20** | Onboarding | *PENDING — ARCHITECTURE NOT YET FROZEN* | First-run setup, prayer & location configuration, method selection, core preferences |
 
 ### Closed Milestone Trust Contract
 - Public interfaces and contracts established in **M1–M7 are CLOSED, VERIFIED, and TRUSTED**.
