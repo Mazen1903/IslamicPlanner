@@ -114,6 +114,18 @@ describe('NotificationSchedulerAdapter', () => {
         const result = normalizePermissionResponse(response);
         expect(result).toEqual({ canSchedule: false, canRequest: true, status: 'NOT_DETERMINED' });
       });
+
+      it('normalizes iOS status using runtime IosAuthorizationStatus enum object', () => {
+        const response: any = {
+          granted: true,
+          status: 'granted',
+          canAskAgain: false,
+          expires: 'never',
+          ios: { status: Notifications.IosAuthorizationStatus.AUTHORIZED },
+        };
+        const result = normalizePermissionResponse(response, Notifications.IosAuthorizationStatus);
+        expect(result).toEqual({ canSchedule: true, canRequest: false, status: 'AUTHORIZED' });
+      });
     });
 
     describe('Android', () => {
@@ -299,6 +311,42 @@ describe('NotificationSchedulerAdapter', () => {
       expect(snapshots[0].identifier).toBe('task-reminder:occ-1:default');
       expect(snapshots[0].triggerAtMs).toBe(1789640000000);
       expect(snapshots[1].identifier).toBe('other-app:123');
+    });
+
+    it('retrieves iOS permission status and resolves using runtime enum', async () => {
+      (Platform as any).OS = 'ios';
+      (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({
+        granted: true,
+        status: 'granted',
+        canAskAgain: false,
+        expires: 'never',
+        ios: { status: Notifications.IosAuthorizationStatus.AUTHORIZED },
+      });
+
+      const result = await adapter.getPermissionStatus();
+      expect(result).toEqual({ canSchedule: true, canRequest: false, status: 'AUTHORIZED' });
+      expect(Notifications.getPermissionsAsync).toHaveBeenCalled();
+    });
+
+    it('requests iOS permission and resolves using runtime enum', async () => {
+      (Platform as any).OS = 'ios';
+      (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValue({
+        granted: true,
+        status: 'granted',
+        canAskAgain: false,
+        expires: 'never',
+        ios: { status: Notifications.IosAuthorizationStatus.PROVISIONAL },
+      });
+
+      const result = await adapter.requestPermission();
+      expect(result).toEqual({ canSchedule: true, canRequest: false, status: 'AUTHORIZED' });
+      expect(Notifications.requestPermissionsAsync).toHaveBeenCalledWith({
+        ios: {
+          allowAlert: true,
+          allowSound: true,
+          allowBadge: false,
+        },
+      });
     });
   });
 

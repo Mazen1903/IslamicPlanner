@@ -18,7 +18,7 @@ jest.mock('expo-notifications', () => {
   );
 });
 
-describe('M24 Expo Go Route-Graph Compatibility (NG-05 to NG-09)', () => {
+describe('M24 Expo Go Route-Graph Compatibility & Runtime Safety (NG-05 to NG-11)', () => {
   let NotificationSchedulerAdapterModule: typeof import('../NotificationSchedulerAdapter');
   let NotificationChannelManagerModule: typeof import('../NotificationChannelManager');
   let NotificationReconciliationServiceModule: typeof import('../NotificationReconciliationService');
@@ -38,12 +38,18 @@ describe('M24 Expo Go Route-Graph Compatibility (NG-05 to NG-09)', () => {
     }).not.toThrow();
   });
 
+  afterEach(() => {
+    const { isRunningInExpoGo } = require('expo');
+    (isRunningInExpoGo as jest.Mock).mockReturnValue(true);
+    const { _resetNotificationRuntimeForTesting } = require('../notificationRuntime');
+    _resetNotificationRuntimeForTesting();
+  });
+
   describe('NG-05 — Scheduler adapter module load in Expo Go', () => {
     it('evaluates module without evaluating expo-notifications native runtime', () => {
       expect(NotificationSchedulerAdapterModule).toBeDefined();
       expect(NotificationSchedulerAdapterModule.NotificationSchedulerAdapter).toBeDefined();
       expect(NotificationSchedulerAdapterModule.notificationSchedulerAdapter).toBeDefined();
-      expect(NotificationSchedulerAdapterModule.IosAuthorizationStatus).toBeDefined();
     });
   });
 
@@ -123,6 +129,49 @@ describe('M24 Expo Go Route-Graph Compatibility (NG-05 to NG-09)', () => {
     it('channel creation is a safe no-op under Expo Go', async () => {
       const manager = new NotificationChannelManagerModule.NotificationChannelManager();
       await expect(manager.ensureChannel()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('NG-10 — Native module load failure propagates', () => {
+    it('rejects when isRunningInExpoGo() = false and expo-notifications module loading fails', async () => {
+      const { isRunningInExpoGo } = require('expo');
+      (isRunningInExpoGo as jest.Mock).mockReturnValue(false);
+
+      const {
+        getNotificationsModule,
+        _resetNotificationRuntimeForTesting,
+      } = require('../notificationRuntime');
+      _resetNotificationRuntimeForTesting();
+
+      await expect(getNotificationsModule()).rejects.toThrow(
+        /expo-notifications: Android Push notifications functionality provided by expo-notifications was removed/
+      );
+
+      // Verify failure was NOT swallowed into null
+      let caughtError: any = null;
+      try {
+        await getNotificationsModule();
+      } catch (err) {
+        caughtError = err;
+      }
+      expect(caughtError).not.toBeNull();
+      expect(caughtError).toBeInstanceOf(Error);
+    });
+  });
+
+  describe('NG-11 — Expo Go still returns unavailable safely', () => {
+    it('returns null when isRunningInExpoGo() = true without evaluating expo-notifications', async () => {
+      const { isRunningInExpoGo } = require('expo');
+      (isRunningInExpoGo as jest.Mock).mockReturnValue(true);
+
+      const {
+        getNotificationsModule,
+        _resetNotificationRuntimeForTesting,
+      } = require('../notificationRuntime');
+      _resetNotificationRuntimeForTesting();
+
+      const mod = await getNotificationsModule();
+      expect(mod).toBeNull();
     });
   });
 

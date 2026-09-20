@@ -6,14 +6,6 @@ import type {
   ScheduledNotificationSnapshot,
 } from '@/domain/notification/types';
 
-export enum IosAuthorizationStatus {
-  NOT_DETERMINED = 0,
-  DENIED = 1,
-  AUTHORIZED = 2,
-  PROVISIONAL = 3,
-  EPHEMERAL = 4,
-}
-
 export interface PermissionStatusResult {
   canSchedule: boolean;
   canRequest: boolean;
@@ -74,20 +66,39 @@ export function normalizeScheduledNotification(
 
 /**
  * Normalizes platform-specific PermissionResponse into PermissionStatusResult.
+ * Accepts optional iosAuthStatus enum from runtime expo-notifications module.
  */
 export function normalizePermissionResponse(
-  response: Notifications.NotificationPermissionsStatus
+  response: Notifications.NotificationPermissionsStatus,
+  iosAuthStatus?: typeof Notifications.IosAuthorizationStatus
 ): PermissionStatusResult {
   if (Platform.OS === 'ios') {
     const iosStatus = response.ios?.status;
+    const AuthStatus = iosAuthStatus;
+    if (AuthStatus) {
+      switch (iosStatus) {
+        case AuthStatus.AUTHORIZED:
+        case AuthStatus.PROVISIONAL:
+        case AuthStatus.EPHEMERAL:
+          return { canSchedule: true, canRequest: false, status: 'AUTHORIZED' };
+        case AuthStatus.DENIED:
+          return { canSchedule: false, canRequest: false, status: 'DENIED' };
+        case AuthStatus.NOT_DETERMINED:
+        default:
+          return { canSchedule: false, canRequest: true, status: 'NOT_DETERMINED' };
+      }
+    }
+
+    // Direct numeric fallback if runtime enum was not provided:
+    // UNAuthorizationStatus: 2 = authorized, 3 = provisional, 4 = ephemeral, 1 = denied, 0 = notDetermined
     switch (iosStatus) {
-      case IosAuthorizationStatus.AUTHORIZED:
-      case IosAuthorizationStatus.PROVISIONAL:
-      case IosAuthorizationStatus.EPHEMERAL:
+      case 2:
+      case 3:
+      case 4:
         return { canSchedule: true, canRequest: false, status: 'AUTHORIZED' };
-      case IosAuthorizationStatus.DENIED:
+      case 1:
         return { canSchedule: false, canRequest: false, status: 'DENIED' };
-      case IosAuthorizationStatus.NOT_DETERMINED:
+      case 0:
       default:
         return { canSchedule: false, canRequest: true, status: 'NOT_DETERMINED' };
     }
@@ -117,7 +128,7 @@ export class NotificationSchedulerAdapter implements NotificationSchedulerAdapte
         return { canSchedule: false, canRequest: false, status: 'DENIED' };
       }
       const response = await notifications.getPermissionsAsync();
-      return normalizePermissionResponse(response);
+      return normalizePermissionResponse(response, notifications.IosAuthorizationStatus);
     } catch {
       return { canSchedule: false, canRequest: false, status: 'DENIED' };
     }
@@ -140,7 +151,7 @@ export class NotificationSchedulerAdapter implements NotificationSchedulerAdapte
           allowBadge: false,
         },
       });
-      return normalizePermissionResponse(response);
+      return normalizePermissionResponse(response, notifications.IosAuthorizationStatus);
     } catch {
       return { canSchedule: false, canRequest: false, status: 'DENIED' };
     }

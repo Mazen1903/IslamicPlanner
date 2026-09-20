@@ -31,20 +31,23 @@ export async function getNotificationsModule(): Promise<NotificationsModule | nu
     modulePromise = (async () => {
       try {
         let mod: any;
-        try {
+        const isJest = typeof jest !== 'undefined' || process.env.NODE_ENV === 'test';
+        if (isJest) {
+          try {
+            mod = await import('expo-notifications');
+          } catch {
+            // CommonJS Jest fallback without --experimental-vm-modules
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            mod = require('expo-notifications');
+          }
+        } else {
           mod = await import('expo-notifications');
-        } catch {
-          // CommonJS Jest fallback without --experimental-vm-modules
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          mod = require('expo-notifications');
         }
         cachedModule = mod as NotificationsModule;
         return cachedModule;
       } catch (err) {
-        if (__DEV__) {
-          console.warn('[notifications] Failed to load expo-notifications module:', err);
-        }
-        return null;
+        cachedModule = null;
+        throw err;
       } finally {
         modulePromise = null;
       }
