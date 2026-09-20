@@ -151,13 +151,87 @@ export async function migrateDatabase(db: AppDatabase): Promise<void> {
 - Zero runtime filesystem discovery
 - Uses `migrations.js` static bundle exclusively
 
+**TypeScript acceptance criterion for `migrations.js` import:**
+
+This project has `strict: true` in `tsconfig.json`. The static import of `./migrations/migrations.js`
+from TypeScript must not produce a type error.
+
+Implementation engineer must follow this decision tree:
+
+1. **Attempt the bare static import first.** If `npm run typecheck` succeeds with zero errors, no further action is required.
+2. **If TypeScript reports a missing declaration or implicit-any error** for `migrations.js`: add the narrowest appropriate local declaration file describing only the shape required by `drizzle-orm/expo-sqlite/migrator`. For example:
+   ```ts
+   // src/data/migrations/migrations.js.d.ts  (only create if required)
+   declare const bundle: { journal: import('...').MigrationJournal; migrations: Record<string, string> };
+   export default bundle;
+   ```
+   The exact shape must match what `drizzle-orm/expo-sqlite/migrator`'s `migrate()` accepts.
+
+**Must NOT do:**
+- Convert `migrations.js` manually to TypeScript
+- Edit generated migration SQL or `migrations.js` content
+- Weaken `strict` mode or enable broad `allowJs`/`checkJs` to silence this one import
+- Use `any` across the migration API surface
+- Add a blanket `// @ts-ignore` on the import
+
+`npm run typecheck` MUST succeed (0 errors) after the full WP-1 implementation.
+
 **New Node-only test helper:**
 
 Candidate filename: `src/data/__tests__/migrationConfigLoader.node.ts`
 
 - Contains `loadMigrationConfig()`, the `MigrationConfig`, `MigrationJournal`, `MigrationJournalEntry` type definitions, and all `node:fs` / `node:path` imports
 - MUST NOT be imported from any runtime-reachable module
-- The `.node.` infix is an established pattern in React Native / Expo projects signaling Node-only files excluded from Metro bundling
+
+> [!IMPORTANT]
+> **The `.node.` filename infix does NOT guarantee Metro exclusion.**
+> The `.node.` convention is a useful human signal indicating the file is Node/test-only.
+> **The safety property does not depend on the suffix.** Metro does not exclude files based on
+> a `.node.` infix; it follows the module import graph. The isolation guarantee is solely that
+> no runtime-reachable module imports this file.
+
+**Module-graph isolation invariant:**
+
+The runtime dependency graph rooted at:
+```
+index.ts / expo-router/entry
+  → app/_layout.tsx
+  → src/data/migrator.ts
+```
+MUST contain zero imports of:
+- `node:fs`, `node:path`, `node:sqlite`, or any other `node:*` specifier
+- the Node-only migration loader (`migrationConfigLoader.node.ts` or equivalent)
+- any conditional or dynamic form of the above
+
+**Allowed importers of the Node-only migration loader:**
+
+| Importer | Allowed |Reason |
+|---|---|---|
+| `src/data/__tests__/migrations.test.ts` | ✅ YES | Jest test — never bundled by Metro |
+| `src/data/__tests__/testDbHelper.ts` | ✅ YES | Jest test helper — never bundled by Metro |
+| Other `__tests__/*.test.ts` files if later required | ✅ YES | Jest environment only |
+
+**Forbidden importers:**
+
+| Importer | Allowed | Reason |
+|---|---|---|
+| `src/data/migrator.ts` | ❌ NO | Runtime-reachable; bundled by Metro |
+| `app/**` | ❌ NO | Runtime-reachable; bundled by Metro |
+| `src/services/**` | ❌ NO | Runtime-reachable |
+| `src/stores/**` | ❌ NO | Runtime-reachable |
+| `src/hooks/**` | ❌ NO | Runtime-reachable |
+| `widgets/**` | ❌ NO | Runtime-reachable |
+| Any repository module at runtime | ❌ NO | Runtime-reachable |
+
+**No runtime conditional smuggling:**
+The following patterns MUST NOT be used to introduce Node dependencies into a runtime module:
+```ts
+// FORBIDDEN:
+if (__DEV__) { require('./migrationConfigLoader.node'); }     // runtime-reachable
+if (Platform.OS === 'web') { import('./migrationConfigLoader.node'); } // runtime-reachable
+const mod = await import('./migrationConfigLoader.node');     // runtime-reachable
+```
+The separation MUST occur at the static module graph level.
 
 **Convention note:** Inspect the project's existing `__tests__` naming pattern before finalizing the filename. If the project uses a different test-only file pattern, match it.
 
@@ -707,7 +781,7 @@ COMPLETE, ERROR RootGate states with B-series tests. These are not replaced or d
 
 | ID | Gap | Test Location |
 |---|---|---|
-| MB-01 | Runtime `migrator.ts` module contains zero `node:` imports (structural) | `src/data/__tests__/migrator.runtime.test.ts` (new) |
+| MB-01 | **Runtime dependency-graph isolation:** The production migrator/runtime bootstrap dependency graph contains no Node-only migration loader and no `node:fs`/`node:path`/`node:sqlite` dependency. At minimum verify `src/data/migrator.ts` does not import the Node loader or any `node:*` module. A static source assertion (checking import statements) is a supporting check; the primary contract is runtime module separation enforced at the graph level. | `src/data/__tests__/migrator.runtime.test.ts` (new) |
 | MB-02 | `migrateDatabase()` does NOT call `loadMigrationConfig()`; uses static bundle | Same |
 | MB-03 | Bootstrap: `migrateDatabase()` invoked before `userSettingsRepository.get()` | `app/__tests__/_layout.test.tsx` (extend) |
 | MB-04 | Bootstrap READY: `userSettingsRepository.get()` called only after migration success | Same |
