@@ -112,9 +112,10 @@ describe('Drizzle Migrations & Discovery (MG Suite)', () => {
       nodeDb.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[]
     ).map(t => t.name);
 
-    const expectedTables = [
-      '__drizzle_migrations',
+    // 8 Application Tables
+    const expectedApplicationTables = [
       'hijri_month_overrides',
+      'journal_entries',
       'notification_schedule',
       'prayer_cache',
       'task_definitions',
@@ -122,10 +123,14 @@ describe('Drizzle Migrations & Discovery (MG Suite)', () => {
       'user_settings',
       'worship_item_settings',
     ];
+    // 1 Drizzle internal migration ledger table
+    const expectedDrizzleTable = '__drizzle_migrations';
 
-    for (const expected of expectedTables) {
-      expect(postMigrationTables).toContain(expected);
+    for (const appTable of expectedApplicationTables) {
+      expect(postMigrationTables).toContain(appTable);
     }
+    expect(postMigrationTables).toContain(expectedDrizzleTable);
+    expect(postMigrationTables).toHaveLength(9);
 
     // Verify task_occurrences columns include window_start and window_end
     const columns = (
@@ -324,14 +329,14 @@ describe('Drizzle Migrations & Discovery (MG Suite)', () => {
     const uniqueTimestamps = new Set(timestamps);
     expect(uniqueTimestamps.size).toBe(config.journal.entries.length);
 
-    // Verify all expected schema tables exist and are valid
+    // Verify all expected schema tables exist and are valid: 8 application tables + 1 Drizzle migration ledger table
     const postMigrationTables = (
       nodeDb.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[]
     ).map(t => t.name);
 
-    const expectedTables = [
-      '__drizzle_migrations',
+    const expectedApplicationTables = [
       'hijri_month_overrides',
+      'journal_entries',
       'notification_schedule',
       'prayer_cache',
       'task_definitions',
@@ -339,9 +344,12 @@ describe('Drizzle Migrations & Discovery (MG Suite)', () => {
       'user_settings',
       'worship_item_settings',
     ];
+    const expectedDrizzleTable = '__drizzle_migrations';
 
-    for (const expected of expectedTables) {
-      expect(postMigrationTables).toContain(expected);
+    for (const appTable of expectedApplicationTables) {
+      expect(postMigrationTables).toContain(appTable);
     }
+    expect(postMigrationTables).toContain(expectedDrizzleTable);
+    expect(postMigrationTables).toHaveLength(9);
   });
 });
