@@ -1,10 +1,12 @@
 import { Platform } from 'react-native';
+import { isRunningInExpoGo } from 'expo';
 import * as Notifications from 'expo-notifications';
 import {
   NotificationSchedulerAdapter,
   normalizeScheduledNotification,
   normalizePermissionResponse,
 } from '../NotificationSchedulerAdapter';
+import { _resetNotificationRuntimeForTesting } from '../notificationRuntime';
 import {
   NOTIFICATION_CHANNEL_ID,
   NOTIFICATION_DEFAULT_SLOT,
@@ -12,6 +14,10 @@ import {
   type DesiredNotification,
 } from '@/domain/notification/types';
 import { isNotificationEquivalent } from '@/domain/notification/notificationEquality';
+
+jest.mock('expo', () => ({
+  isRunningInExpoGo: jest.fn(),
+}));
 
 jest.mock('expo-notifications', () => {
   return {
@@ -38,6 +44,8 @@ describe('NotificationSchedulerAdapter', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    _resetNotificationRuntimeForTesting();
+    (isRunningInExpoGo as jest.Mock).mockReturnValue(false);
     adapter = new NotificationSchedulerAdapter();
   });
 
@@ -291,6 +299,58 @@ describe('NotificationSchedulerAdapter', () => {
       expect(snapshots[0].identifier).toBe('task-reminder:occ-1:default');
       expect(snapshots[0].triggerAtMs).toBe(1789640000000);
       expect(snapshots[1].identifier).toBe('other-app:123');
+    });
+  });
+
+  describe('NG-07: Expo Go Degradation', () => {
+    beforeEach(() => {
+      (isRunningInExpoGo as jest.Mock).mockReturnValue(true);
+    });
+
+    it('returns DENIED without calling getPermissionsAsync', async () => {
+      const result = await adapter.getPermissionStatus();
+      expect(result).toEqual({ canSchedule: false, canRequest: false, status: 'DENIED' });
+      expect(Notifications.getPermissionsAsync).not.toHaveBeenCalled();
+    });
+
+    it('returns DENIED without calling requestPermissionsAsync', async () => {
+      const result = await adapter.requestPermission();
+      expect(result).toEqual({ canSchedule: false, canRequest: false, status: 'DENIED' });
+      expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
+    });
+
+    it('returns identifier without calling scheduleNotificationAsync', async () => {
+      const desired: DesiredNotification = {
+        identifier: 'task-reminder:occ-1:default',
+        occurrenceId: 'occ-1',
+        taskDefinitionId: 'def-1',
+        title: 'Morning Dhikr',
+        triggerAtMs: 1789640000000,
+        channelId: NOTIFICATION_CHANNEL_ID,
+        data: {
+          kind: 'task-reminder',
+          occurrenceId: 'occ-1',
+          taskDefinitionId: 'def-1',
+          reminderSlot: NOTIFICATION_DEFAULT_SLOT,
+          triggerAtMs: 1789640000000,
+          payloadVersion: NOTIFICATION_PAYLOAD_VERSION,
+        },
+      };
+
+      const result = await adapter.scheduleNotification(desired);
+      expect(result).toBe('task-reminder:occ-1:default');
+      expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+    });
+
+    it('cancels scheduled notification safely without calling cancelScheduledNotificationAsync', async () => {
+      await expect(adapter.cancelScheduledNotification('task-reminder:occ-1:default')).resolves.toBeUndefined();
+      expect(Notifications.cancelScheduledNotificationAsync).not.toHaveBeenCalled();
+    });
+
+    it('returns empty array without calling getAllScheduledNotificationsAsync', async () => {
+      const result = await adapter.getAllScheduledNotifications();
+      expect(result).toEqual([]);
+      expect(Notifications.getAllScheduledNotificationsAsync).not.toHaveBeenCalled();
     });
   });
 });

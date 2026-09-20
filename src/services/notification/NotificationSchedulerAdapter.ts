@@ -1,13 +1,18 @@
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
-import {
-  SchedulableTriggerInputTypes,
-  IosAuthorizationStatus,
-} from 'expo-notifications';
+import type * as Notifications from 'expo-notifications';
+import { getNotificationsModule, notificationsAvailable } from './notificationRuntime';
 import type {
   DesiredNotification,
   ScheduledNotificationSnapshot,
 } from '@/domain/notification/types';
+
+export enum IosAuthorizationStatus {
+  NOT_DETERMINED = 0,
+  DENIED = 1,
+  AUTHORIZED = 2,
+  PROVISIONAL = 3,
+  EPHEMERAL = 4,
+}
 
 export interface PermissionStatusResult {
   canSchedule: boolean;
@@ -102,8 +107,16 @@ export function normalizePermissionResponse(
 
 export class NotificationSchedulerAdapter implements NotificationSchedulerAdapterAPI {
   async getPermissionStatus(): Promise<PermissionStatusResult> {
+    if (!notificationsAvailable()) {
+      return { canSchedule: false, canRequest: false, status: 'DENIED' };
+    }
+
     try {
-      const response = await Notifications.getPermissionsAsync();
+      const notifications = await getNotificationsModule();
+      if (!notifications) {
+        return { canSchedule: false, canRequest: false, status: 'DENIED' };
+      }
+      const response = await notifications.getPermissionsAsync();
       return normalizePermissionResponse(response);
     } catch {
       return { canSchedule: false, canRequest: false, status: 'DENIED' };
@@ -111,8 +124,16 @@ export class NotificationSchedulerAdapter implements NotificationSchedulerAdapte
   }
 
   async requestPermission(): Promise<PermissionStatusResult> {
+    if (!notificationsAvailable()) {
+      return { canSchedule: false, canRequest: false, status: 'DENIED' };
+    }
+
     try {
-      const response = await Notifications.requestPermissionsAsync({
+      const notifications = await getNotificationsModule();
+      if (!notifications) {
+        return { canSchedule: false, canRequest: false, status: 'DENIED' };
+      }
+      const response = await notifications.requestPermissionsAsync({
         ios: {
           allowAlert: true,
           allowSound: true,
@@ -126,13 +147,23 @@ export class NotificationSchedulerAdapter implements NotificationSchedulerAdapte
   }
 
   async scheduleNotification(desired: DesiredNotification): Promise<string> {
+    if (!notificationsAvailable()) {
+      return desired.identifier;
+    }
+
+    const notifications = await getNotificationsModule();
+    if (!notifications) {
+      return desired.identifier;
+    }
+
+    const triggerType = (notifications.SchedulableTriggerInputTypes?.DATE ?? 'date') as any;
     const trigger: Notifications.DateTriggerInput = {
-      type: SchedulableTriggerInputTypes.DATE,
+      type: triggerType,
       date: desired.triggerAtMs,
       channelId: desired.channelId,
     };
 
-    return await Notifications.scheduleNotificationAsync({
+    return await notifications.scheduleNotificationAsync({
       identifier: desired.identifier,
       content: {
         title: desired.title,
@@ -144,15 +175,32 @@ export class NotificationSchedulerAdapter implements NotificationSchedulerAdapte
   }
 
   async cancelScheduledNotification(identifier: string): Promise<void> {
+    if (!notificationsAvailable()) {
+      return;
+    }
+
     try {
-      await Notifications.cancelScheduledNotificationAsync(identifier);
+      const notifications = await getNotificationsModule();
+      if (!notifications) {
+        return;
+      }
+      await notifications.cancelScheduledNotificationAsync(identifier);
     } catch {
       // Cancellation on missing/already fired notification is idempotent
     }
   }
 
   async getAllScheduledNotifications(): Promise<ScheduledNotificationSnapshot[]> {
-    const requests = await Notifications.getAllScheduledNotificationsAsync();
+    if (!notificationsAvailable()) {
+      return [];
+    }
+
+    const notifications = await getNotificationsModule();
+    if (!notifications) {
+      return [];
+    }
+
+    const requests = await notifications.getAllScheduledNotificationsAsync();
     return requests.map(normalizeScheduledNotification);
   }
 }

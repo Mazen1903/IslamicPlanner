@@ -1,6 +1,5 @@
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
-import { AndroidImportance } from 'expo-notifications';
+import { getNotificationsModule, notificationsAvailable } from './notificationRuntime';
 import {
   NOTIFICATION_CHANNEL_ID,
   NOTIFICATION_CHANNEL_NAME,
@@ -15,10 +14,10 @@ export class NotificationChannelManager implements NotificationChannelManagerAPI
 
   /**
    * Idempotently ensures the single app-owned Android notification channel exists.
-   * Only executes on Android; no-op on other platforms.
+   * Only executes on Android outside Expo Go; no-op on other platforms or in Expo Go.
    */
   async ensureChannel(): Promise<void> {
-    if (Platform.OS !== 'android') {
+    if (Platform.OS !== 'android' || !notificationsAvailable()) {
       return;
     }
 
@@ -27,9 +26,15 @@ export class NotificationChannelManager implements NotificationChannelManagerAPI
     }
 
     try {
-      await Notifications.setNotificationChannelAsync(NOTIFICATION_CHANNEL_ID, {
+      const notifications = await getNotificationsModule();
+      if (!notifications) {
+        return;
+      }
+
+      const importance = (notifications.AndroidImportance?.DEFAULT ?? 5) as any;
+      await notifications.setNotificationChannelAsync(NOTIFICATION_CHANNEL_ID, {
         name: NOTIFICATION_CHANNEL_NAME,
-        importance: AndroidImportance.DEFAULT,
+        importance,
         showBadge: false,
         enableVibrate: true,
       });

@@ -1,4 +1,5 @@
 import { isRunningInExpoGo } from 'expo';
+import { getNotificationsModule } from './notificationRuntime';
 
 let handlerInitialized = false;
 
@@ -23,12 +24,9 @@ export async function initNotificationHandler(): Promise<void> {
     return;
   }
 
-  let Notifications: typeof import('expo-notifications');
-  try {
-    Notifications = await import('expo-notifications');
-  } catch {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    Notifications = require('expo-notifications');
+  const Notifications = await getNotificationsModule();
+  if (!Notifications) {
+    return;
   }
 
   Notifications.setNotificationHandler({
