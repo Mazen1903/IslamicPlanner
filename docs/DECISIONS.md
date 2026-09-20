@@ -1,7 +1,7 @@
 # Architecture Decision Log
 
 **Status:** Living document  
-**Updated:** 2026-09-19 (Rev 11 — M22 CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED: ADR-030 finalized; 45 production files, accessibility semantics + RTL layout contract, 1556 tests)
+**Updated:** 2026-09-19 (Rev 12 — M23 CLOSED / CHATGPT TECHNICAL LEAD APPROVED: ADR-031 confirmed; 97 new tests; 1653 total tests; three production hardening items PC-1/PC-2/PC-3 accepted; all M23 risks resolved; M24 blockers RB-M24-BOOTSTRAP and RB-M24-ROOT recorded)
 **Purpose:** Record every major architectural decision, the alternatives considered, and the rationale.
 
 ---
@@ -931,3 +931,21 @@ Opus recommended propagating rejections (Option A) but did not fully separate th
 - PRC-09 (unit test) locks the Case B behavior: inject resolved HorizonSyncResult with issues → verify fullRefresh does NOT abort, downstream continues normally, READY may be returned.
 - This ADR does NOT authorize catching sync rejections and continuing. Any future change to Case A behavior requires a new ADR.
 - The PLAN/EXECUTE phase structure of `RecurringHorizonSync.syncSeries()` is non-transactional at the overall-series level (see M23_ARCHITECTURE.md §7.2). Partial mutations in EXECUTE phase produce `SyncIssue[]` in the resolved result (Case B), not a rejection. This is by design and does not trigger Case A handling.
+
+---
+
+## M23 Closure Note
+
+**Milestone:** M23 — QA + Edge Cases
+**Closure Status:** CLOSED / CHATGPT TECHNICAL LEAD APPROVED
+**Closure Date:** 2026-09-19
+**Closure Commit:** `docs(m23): close M23 after final QA -- APPROVED`
+**Implementation Commit:** `d73d8e634e708d4b20c05f0d82a4a77fc54d3477` (`fix(m23): implement QA edge-case hardening`)
+
+ADR-031 is confirmed. No further decisions were required for M23 closure. The following production hardening was accepted by Technical Lead:
+
+- **PC-1** — Atomic PENDING-only occurrence deletion (TSE-08)
+- **PC-2** — useLocation Today-store refresh-token settlement (LE-09)
+- **PC-3** — Terminal task completion targeted notification cancellation + best-effort full reconcile (NE-07)
+
+All M23 risks (RISK-H1, H2, H3, H7, H8, M13) are resolved. Two M24 release blockers discovered during QA (RB-M24-BOOTSTRAP, RB-M24-ROOT) are recorded in `docs/M23_ARCHITECTURE.md §25`.

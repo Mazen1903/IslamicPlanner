@@ -1,10 +1,10 @@
 # Current Milestone: M23 — QA + Edge Cases
 
-> **Current State:** M22 CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED — M23 ARCHITECTURE INTEGRATED (Opus + Lead) — AWAITING CHATGPT TECHNICAL LEAD FINAL GATE
-> **Previous Milestone:** M22 CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED
-> **Milestone Status:** M23 — CURRENT — ARCHITECTURE INTEGRATED (Opus Specialist Review + ChatGPT Lead Review)
-> **Architecture Status:** INTEGRATED — ADR-031 authored — 97 planned tests / 12 suites — three narrow production changes expected — three HIGH/MEDIUM risks OPEN (RISK-H3, RISK-H8, RISK-M13) — RISK-H1/H2/H7 RESOLVED
-> **Implementation Status:** NOT STARTED — baseline 1556/1556 tests pass across 132 suites; 0 TS errors, 0 ESLint errors/warnings; 0 new dependencies, 0 migrations
+> **Current State:** M23 CLOSED / CHATGPT TECHNICAL LEAD APPROVED 2026-09-19 — M24 NOT STARTED
+> **Previous Milestone:** M23 CLOSED / CHATGPT TECHNICAL LEAD APPROVED
+> **Milestone Status:** M24 — Release Preparation — NOT STARTED
+> **Architecture Status:** M23 closed — ADR-031 confirmed — 1653 tests / 144 suites — all M23 risks resolved — GATE-1/2/7 PASS — GATE-3/4/5/6 BLOCKED (infra) — M24 blockers RB-M24-BOOTSTRAP + RB-M24-ROOT recorded
+> **Implementation Status:** M24 NOT STARTED — final test baseline: 1653/1653 tests pass across 144 suites; 0 TS errors, 0 ESLint errors/warnings; 0 new dependencies, 0 migrations (M23 delta)
 
 ---
 
@@ -300,12 +300,18 @@ The following native QA items are carried forward to M23 (physical device / emul
 
 ### M23 Status
 
-**CURRENT — ARCHITECTURE INTEGRATED (Opus + Lead) — AWAITING CHATGPT TECHNICAL LEAD FINAL GATE.**
+**CLOSED / CHATGPT TECHNICAL LEAD APPROVED 2026-09-19.**
 - Milestone name: **QA + Edge Cases**
-- `docs/M23_ARCHITECTURE.md` updated (2026-09-19). 16 Lead-review corrections + Opus+Lead integration pass applied.
-- **ADR-031 authored** in `docs/DECISIONS.md`: RecurringHorizonSync Result Semantics — Propagate Rejection; Continue on Resolved SyncIssues.
-- **97 planned new tests** across **12 new suites** (up from 93; +PRC-09, REC-13, TSE-08, LE-09).
-- **44 iOS QA checks + 39 Android QA checks.** Evidence levels defined.
-- **Three narrow production fixes expected:** PC-1 (atomic PENDING cleanup guard), PC-2 (useLocation token settlement), PC-3 (terminal-transition notification reconciliation).
-- **RISK-H1, RISK-H2, RISK-H7 RESOLVED.** RISK-H3 OPEN/HIGH (notification terminal-state race). RISK-H8 OPEN/HIGH (stale PENDING delete without atomic guard). RISK-M13 OPEN/MEDIUM (useLocation token settlement defect, source-confirmed).
-- **Implementation does NOT begin until ChatGPT Technical Lead Final Gate is passed.**
+- Implementation commit: `d73d8e634e708d4b20c05f0d82a4a77fc54d3477` (`fix(m23): implement QA edge-case hardening`)
+- Closure commit: `docs(m23): close M23 after final QA -- APPROVED`
+- **ADR-031 confirmed** in `docs/DECISIONS.md`.
+- **1653 / 1653 tests** across **144 suites** (baseline delta: +97 tests, +12 suites).
+- **PC-1/PC-2/PC-3** production hardening accepted.
+- **All M23 risks resolved:** RISK-H1, H2, H3 (PC-3), H7, H8 (PC-1), M13 (PC-2).
+- **GATE-1 PASS, GATE-2 PASS, GATE-7 PASS** (native Android API 36 evidence).
+- **GATE-3 BLOCKED** (CF-A10 native PASS; CF-A6/A8/A12/A14/A16 blocked by Expo Dev Client Metro transport failure — test infrastructure, not product defect).
+- **GATE-4 BLOCKED / NOT EXECUTED** (iOS environment unavailable).
+- **GATE-5 BLOCKED / NOT EXECUTED** (iOS environment unavailable).
+- **GATE-6 BLOCKED** (system ar-SA confirmed; Metro multipart ProtocolException — test infrastructure, not product defect).
+- **M24 release blockers discovered:** RB-M24-BOOTSTRAP (migrateDatabase not invoked at boot), RB-M24-ROOT (app/index.tsx absent).
+- See `docs/M23_ARCHITECTURE.md §25` for complete closure record.

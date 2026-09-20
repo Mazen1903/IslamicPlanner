@@ -1,6 +1,6 @@
 # M23 — QA + Edge Cases Architecture
 
-**Status:** CURRENT — ARCHITECTURE INTEGRATED (Opus + Lead) — AWAITING CHATGPT TECHNICAL LEAD FINAL GATE
+**Status:** CLOSED / APPROVED — CHATGPT TECHNICAL LEAD APPROVED 2026-09-19
 **Milestone:** M23 — QA + Edge Cases
 **Baseline HEAD:** `5b1d913c2b4ed6b6a3ea5ff5ee059df937c6be11`
 **Baseline origin/main:** `5b1d913c2b4ed6b6a3ea5ff5ee059df937c6be11` (synchronized ✓)
@@ -1294,7 +1294,159 @@ Commit: docs(m23): integrate Lead review of Opus findings
 |---|---|---|
 | 2026-09-19 | Sonnet (Architect) | Initial freeze + hardening (combined: no flawed draft committed) — 16 Lead-review corrections applied |
 | 2026-09-19 | Sonnet (Architect) | Integration pass — Opus specialist review + ChatGPT Technical Lead review integrated. ADR-031 authored. RISK-H1/H2/H7 resolved; RISK-H3 reopened (HIGH); RISK-H8 added (HIGH); RISK-M13 added (MEDIUM). PRC-09, REC-13, TSE-08, LE-09 added. Test count 93 → 97. Three production changes expected. Status: AWAITING CHATGPT LEAD FINAL GATE. |
+| 2026-09-19 | Sonnet (Architect/QA Recorder) | Closure pass — ChatGPT Technical Lead approved M23. Final gate status, risk disposition, M24 carry-forwards, and release blockers recorded. Status: CLOSED / APPROVED. |
 
 ---
 
-*M23 ARCHITECTURE INTEGRATED — AWAITING CHATGPT TECHNICAL LEAD FINAL GATE.*
+## 25. M23 Closure Record
+
+**Technical Lead Closure Date:** 2026-09-19
+**Closure Decision:** M23 = APPROVED FOR CLOSURE
+**Closure Commit:** `docs(m23): close M23 after final QA -- APPROVED`
+
+### Final Implementation Commit
+
+```
+d73d8e634e708d4b20c05f0d82a4a77fc54d3477
+fix(m23): implement QA edge-case hardening
+```
+
+Production hardening accepted:
+- **PC-1** — Atomic PENDING-only occurrence deletion (TSE-08)
+- **PC-2** — useLocation Today-store refresh-token settlement (LE-09)
+- **PC-3** — Terminal task completion targeted notification cancellation + best-effort full reconcile (NE-07)
+
+### Final Automated Validation (Accepted)
+
+| Metric | Baseline | M23 Delta | Final |
+|---|---|---|---|
+| Test suites | 132 | +12 | **144** |
+| Tests | 1556 | +97 | **1653** |
+| Passed | 1556 | +97 | **1653** |
+| Failed | 0 | 0 | **0** |
+| TypeScript errors | 0 | 0 | **0** |
+| ESLint errors | 0 | 0 | **0** |
+| ESLint warnings | 0 | 0 | **0** |
+| New dependencies | 0 | 0 | **0** |
+| New migrations | 0 | 0 | **0** |
+
+### 97-Scenario Architecture-Domain Matrix (Accepted)
+
+| Domain | Count |
+|---|---|
+| PDB (Planning Day Boundary) | 11 |
+| DST (Daylight Saving Time) | 10 |
+| REC (Recurrence) | 13 |
+| PRC (Planner Refresh Coordinator) | 9 |
+| PBR (Planning Boundary Race) | 1 |
+| TSE (Transaction/State Edge) | 8 |
+| NE (Notification Edge) | 7 |
+| LE (Location Edge) | 9 |
+| JE (Journal Edge) | 8 |
+| CAL (Calendar) | 8 |
+| OE (Occurrence Edge) | 5 |
+| SE (Settings Edge) | 8 |
+| **TOTAL** | **97** |
+
+All architecture IDs reconciled to concrete Jest tests.
+
+### Critical Test Acceptance (Lead)
+
+| Test | Semantic |
+|---|---|
+| PRC-02 | ADR-031 rejection semantics — inject sync rejection → fullRefresh throws → no READY, no downstream |
+| PRC-09 | Resolved SyncIssues continue semantics — HorizonSyncResult with issues does NOT abort coordinator |
+| PBR-01 | Stale Today token suppression |
+| REC-13 | Partial EXECUTE failure + retry convergence |
+| TSE-08 | Atomic PENDING deletion preserves terminal history |
+| LE-09 | useLocation refresh token settlement |
+| NE-07 | Terminal completion production path requests follow-up reconciliation |
+
+### PC-1 Fallback Resolution
+
+No M23 fix required. `RecurringHorizonSync` contains a redundant runtime fallback `delete(...)` but `TaskOccurrenceRepository.delete()` unconditionally delegates to `deleteIfPending(...)`. Both paths ultimately execute `WHERE id = ? AND status = 'PENDING'`. The fallback does NOT restore RISK-H8. Optional cleanup may occur in M24; not an M23 defect.
+
+### ADR-031 Confirmation
+
+ADR-031 remains intact:
+- **Case A** — actual `recurringHorizonSync` Promise rejection → `PlannerRefreshCoordinator` rejects → downstream Today/lifecycle/notification/widget work does NOT execute.
+- **Case B** — resolved `HorizonSyncResult` with `SyncIssues` → coordinator continues → READY may return with issue diagnostics.
+
+No coordinator-wide mutex was added.
+
+### Final Native Gate Status
+
+| Gate | Area | Result | Evidence |
+|---|---|---|---|
+| GATE-1 | TaskCard TalkBack composite | ✅ PASS | Native Android API 36 emulator. TalkBack focus verified: checkbox separately from TaskCard composite content. Task completion activated through accessibility focus. |
+| GATE-2 | PrayerHeader TalkBack composite | ✅ PASS | Native Android API 36 emulator. Single composite PrayerHeader TalkBack focus observed. TTS activity observed. |
+| GATE-3 | All 6 modal accessibilityViewIsModal | ⛔ BLOCKED / NOT FULLY EXECUTED | CF-A10 PASS natively (focus containment, background unreachable, Back dismissal confirmed). CF-A6/A8/A12/A14/A16 blocked after Expo Dev Client / Metro transport failure. All six production modals specify accessibilityViewIsModal={true}. ModalAccessibility tests PASS. TEST INFRASTRUCTURE BLOCKER — NOT A CONFIRMED PRODUCT DEFECT. |
+| GATE-4 | iOS widget gallery Small + Medium | ⛔ BLOCKED / NOT EXECUTED | Required iOS/macOS/physical-iOS environment unavailable. Carry to M24. |
+| GATE-5 | iOS widget App Group data delivery | ⛔ BLOCKED / NOT EXECUTED | Required iOS native environment unavailable. Carry to M24. |
+| GATE-6 | All 8 directional chevrons RTL flip | ⛔ BLOCKED / NOT FULLY EXECUTED | RTLIcons.test.tsx 12/12 PASS. All eight directional icons satisfy directional contract. System ar-SA confirmed on emulator. Native visual verification blocked: Expo Dev Client Metro multipart ProtocolException (`Expected leading [0-9a-fA-F] character but was 0xd`). TEST INFRASTRUCTURE BLOCKER — NOT A CONFIRMED PRODUCT DEFECT. |
+| GATE-7 | Planning-day boundary Fajr/Midnight/Custom | ✅ PASS | AND-PD1 FAJR PASS, AND-PD2 MIDNIGHT PASS, AND-PD3 CUSTOM:19:00 PASS, AND-PD4 background→foreground PASS. |
+
+### M23 Risk Disposition
+
+| Risk | Disposition |
+|---|---|
+| RISK-H1 | RESOLVED |
+| RISK-H2 | RESOLVED |
+| RISK-H3 | RESOLVED by PC-3 / NE-07 |
+| RISK-H7 | RESOLVED |
+| RISK-H8 | RESOLVED by PC-1 / TSE-08 |
+| RISK-M13 | RESOLVED by PC-2 / LE-09 |
+
+Native BLOCKED states are evidence gaps, not confirmed defects.
+
+### M24 Verification Carry-Forwards
+
+The following native verification items are unresolved and carry to M24 as **verification blockers before release**:
+
+1. **GATE-3 remaining modal native checks:** CF-A6 (JournalDeleteDialog), CF-A8 (JournalPrivacySheet), CF-A12 (EditScopeSheet), CF-A14 (PremiumLockedInfo), CF-A16 (Hijri Calendar override)
+2. **GATE-4** — iOS widget gallery Small + Medium
+3. **GATE-5** — iOS App Group / terminated-app widget delivery
+4. **GATE-6** — Native app RTL visual verification
+
+Do not describe these as confirmed application defects.
+
+### M24 Release Blockers Discovered During M23 QA
+
+#### RB-M24-BOOTSTRAP — CRITICAL / RELEASE BLOCKER
+
+`migrateDatabase()` exists but is NOT invoked from normal application runtime before repository reads. On fresh install / `pm clear`: SQLite file is created but required tables are absent; first `user_settings` query fails; `BootstrapErrorView` is rendered; fresh installation is unusable without manually injecting schema.
+
+**M24 requirement:** Ensure migrations execute during canonical application bootstrap before the first DB-dependent read.
+
+#### RB-M24-ROOT — CRITICAL / RELEASE BLOCKER
+
+`app/index.tsx` is absent. Normal root/default application launch reaches Expo Router `+not-found` instead of the application bootstrap/onboarding flow. Native QA required deep-linking directly to `/onboarding` as a workaround.
+
+**M24 requirement:** Provide a valid root route compatible with the existing `RootGate` / onboarding/tabs bootstrap contract.
+
+---
+
+### Closure Pass Verification
+
+```
+git status --short:        (no output) — CLEAN
+git rev-parse HEAD:        d73d8e634e708d4b20c05f0d82a4a77fc54d3477  (implementation commit)
+git rev-parse origin/main: 5b1d913c2b4ed6b6a3ea5ff5ee059df937c6be11
+ahead = 5 / behind = 0  (after closure commit)
+working tree: CLEAN
+
+Docs changed (closure pass):
+  docs/M23_ARCHITECTURE.md — §25 closure record appended; status updated to CLOSED/APPROVED
+  docs/DECISIONS.md        — M23 closure note appended
+  docs/IMPLEMENTATION_STATUS.md — M23 row updated to CLOSED
+  docs/CURRENT_MILESTONE.md — M23 status section updated to CLOSED
+
+No source / test / dependency changes.
+New dependencies: 0
+New migrations: 0
+Commit: docs(m23): close M23 after final QA -- APPROVED
+```
+
+---
+
+*M23 CLOSED / APPROVED — CHATGPT TECHNICAL LEAD APPROVED 2026-09-19.*
