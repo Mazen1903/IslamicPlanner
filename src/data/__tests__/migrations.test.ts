@@ -3,7 +3,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import * as schema from '../schema';
-import { loadMigrationConfig, migrateDatabase } from '../migrator';
+import { migrateDatabase } from '../migrator';
+import { loadMigrationConfig } from './migrationConfigLoader.node';
 
 function createMockClient(nodeDb: DatabaseSync) {
   return {
@@ -296,5 +297,51 @@ describe('Drizzle Migrations & Discovery (MG Suite)', () => {
     expect(row.manual_longitude).toBeCloseTo(-87.6298);
     expect(row.last_auto_latitude).toBeNull();
     expect(row.last_auto_longitude).toBeNull();
+  });
+
+  it('MB-09: Near-concurrent migrateDatabase() invocations against the same DB settle safely with one row per migration', async () => {
+    const nodeDb = new DatabaseSync(':memory:');
+    nodeDb.exec('PRAGMA foreign_keys = ON;');
+
+    const client = createMockClient(nodeDb);
+    const db = drizzle(client as any, { schema });
+
+    // Concurrent invocation of migrateDatabase against the same database
+    await expect(Promise.all([migrateDatabase(db), migrateDatabase(db)])).resolves.toBeDefined();
+
+    const config = loadMigrationConfig();
+
+    // Verify exactly one row per migration in ledger (no duplicate entries)
+    const ledgerRows = nodeDb.prepare('SELECT id, hash, created_at FROM __drizzle_migrations').all() as {
+      id: number;
+      hash: string;
+      created_at: number;
+    }[];
+    expect(ledgerRows).toHaveLength(config.journal.entries.length);
+
+    // Verify all timestamps in ledger are unique (no duplicate migrations applied)
+    const timestamps = ledgerRows.map(r => r.created_at);
+    const uniqueTimestamps = new Set(timestamps);
+    expect(uniqueTimestamps.size).toBe(config.journal.entries.length);
+
+    // Verify all expected schema tables exist and are valid
+    const postMigrationTables = (
+      nodeDb.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[]
+    ).map(t => t.name);
+
+    const expectedTables = [
+      '__drizzle_migrations',
+      'hijri_month_overrides',
+      'notification_schedule',
+      'prayer_cache',
+      'task_definitions',
+      'task_occurrences',
+      'user_settings',
+      'worship_item_settings',
+    ];
+
+    for (const expected of expectedTables) {
+      expect(postMigrationTables).toContain(expected);
+    }
   });
 });

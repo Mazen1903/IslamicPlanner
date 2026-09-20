@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Redirect } from 'expo-router';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { Icon, type IconName } from '@/components/common/Icon';
@@ -7,7 +8,7 @@ import { Toggle } from '@/components/common/Toggle';
 import { SafeArea } from '@/components/layout/SafeArea';
 import { useTheme, type ThemeMode } from '@/theme';
 
-export default function DesignSystemDemoScreen() {
+function DemoContent() {
   const theme = useTheme();
   const [toggleVal1, setToggleVal1] = useState(false);
   const [toggleVal2, setToggleVal2] = useState(true);
@@ -229,6 +230,13 @@ export default function DesignSystemDemoScreen() {
       </ScrollView>
     </SafeArea>
   );
+}
+
+export default function DesignSystemDemoScreen() {
+  if (!__DEV__) {
+    return <Redirect href="/(tabs)/today" />;
+  }
+  return <DemoContent />;
 }
 
 function ColorSwatch({

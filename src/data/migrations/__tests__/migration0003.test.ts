@@ -1,5 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
-import { loadMigrationConfig } from '@/data/migrator';
+import { loadMigrationConfig } from '../../__tests__/migrationConfigLoader.node';
 
 describe('Migration 0003 Compatibility', () => {
   it('JM-01: Migration 0003 applies cleanly on existing M14-era database', () => {

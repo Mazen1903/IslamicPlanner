@@ -19,7 +19,8 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.mm1903.islamicplannerapp"
+      "package": "com.mm1903.islamicplannerapp",
+      "permissions": ["android.permission.POST_NOTIFICATIONS"]
     },
     "web": {
       "favicon": "./assets/favicon.png"

@@ -5,9 +5,13 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme, type ThemeMode } from '@/theme';
 import { Button } from '@/components/common/Button';
+import { getDatabase } from '@/data/db';
+import { migrateDatabase } from '@/data/migrator';
 import { userSettingsRepository } from '@/data/repositories/UserSettingsRepository';
 import { initNotificationHandler } from '@/services/notification/NotificationBootstrap';
 import { useOnboardingStore } from '@/stores/useOnboardingStore';
+
+export type BootstrapState = 'LOADING' | 'READY' | 'ERROR';
 
 export function BootstrapLoadingView() {
   const theme = useTheme();
@@ -105,27 +109,56 @@ export function RootGate() {
 
 export default function RootLayout() {
   const [themeMode, setThemeMode] = useState<ThemeMode>('SYSTEM');
-  // themeReady gates RootGate mount: persisted theme must resolve before normal
-  // content renders. Eliminates the hydration race (ADR-029, M21 Correction 1).
-  const [themeReady, setThemeReady] = useState(false);
+  const [bootstrapState, setBootstrapState] = useState<BootstrapState>('LOADING');
+  const [retryTrigger, setRetryTrigger] = useState(0);
+
+  const handleRetry = useCallback(() => {
+    setBootstrapState('LOADING');
+    setRetryTrigger(prev => prev + 1);
+  }, []);
 
   useEffect(() => {
-    initNotificationHandler();
-    userSettingsRepository
-      .get()
-      .then(settings => {
-        if (settings?.themeMode) {
+    let cancelled = false;
+
+    async function bootstrap() {
+      // Step 1: Notifications bootstrap (side-effect only, no DB)
+      initNotificationHandler();
+
+      // Step 2: Runtime database migration (P0 fix: RB-M24-BOOTSTRAP)
+      try {
+        const db = getDatabase();
+        await migrateDatabase(db);
+      } catch (err) {
+        console.error('[RootLayout] Database migration failed:', err);
+        if (!cancelled) {
+          setBootstrapState('ERROR');
+        }
+        return;
+      }
+
+      // Step 3: First app DB read (persisted theme) - safely post-migration
+      try {
+        const settings = await userSettingsRepository.get();
+        if (settings?.themeMode && !cancelled) {
           setThemeMode(settings.themeMode as ThemeMode);
         }
-      })
-      .catch(err => {
+      } catch (err) {
         console.warn('[RootLayout] Failed to load persisted theme mode:', err);
         // Non-fatal: app falls back to SYSTEM mode
-      })
-      .finally(() => {
-        setThemeReady(true);
-      });
-  }, []);
+      }
+
+      // Step 4: Complete bootstrap lifecycle
+      if (!cancelled) {
+        setBootstrapState('READY');
+      }
+    }
+
+    void bootstrap();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [retryTrigger]);
 
   const handleModeChange = useCallback(async (mode: ThemeMode) => {
     setThemeMode(mode);
@@ -140,7 +173,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider mode={themeMode} onModeChange={handleModeChange}>
         <ThemedStatusBar />
-        {themeReady ? <RootGate /> : <BootstrapLoadingView />}
+        {bootstrapState === 'READY' && <RootGate />}
+        {bootstrapState === 'LOADING' && <BootstrapLoadingView />}
+        {bootstrapState === 'ERROR' && <BootstrapErrorView onRetry={handleRetry} />}
       </ThemeProvider>
     </SafeAreaProvider>
   );

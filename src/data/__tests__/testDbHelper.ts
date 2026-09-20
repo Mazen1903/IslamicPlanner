@@ -2,7 +2,7 @@ import { drizzle, type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import * as schema from '../schema';
 import { DatabaseSync } from 'node:sqlite';
 import { setDatabase, resetDatabase } from '../db';
-import { loadMigrationConfig } from '../migrator';
+import { loadMigrationConfig } from './migrationConfigLoader.node';
 
 export function createTestDatabase(): {
   db: ExpoSQLiteDatabase<typeof schema>;
