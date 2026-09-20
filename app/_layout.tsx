@@ -122,7 +122,7 @@ export default function RootLayout() {
 
     async function bootstrap() {
       // Step 1: Notifications bootstrap (side-effect only, no DB)
-      initNotificationHandler();
+      await initNotificationHandler();
 
       // Step 2: Runtime database migration (P0 fix: RB-M24-BOOTSTRAP)
       try {

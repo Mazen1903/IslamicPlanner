@@ -1,25 +1,48 @@
+import { isRunningInExpoGo } from 'expo';
 import * as Notifications from 'expo-notifications';
 import {
   initNotificationHandler,
   _resetNotificationHandlerForTesting,
 } from '../NotificationBootstrap';
 
-jest.mock('expo-notifications', () => {
-  return {
-    setNotificationHandler: jest.fn(),
-  };
-});
+jest.mock('expo', () => ({
+  isRunningInExpoGo: jest.fn(),
+}));
+
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+}));
 
 describe('NotificationBootstrap', () => {
+  let warnSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
     _resetNotificationHandlerForTesting();
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
-  it('registers foreground notification handler once', async () => {
-    initNotificationHandler();
-    expect(Notifications.setNotificationHandler).toHaveBeenCalledTimes(1);
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
 
+  it('NG-01: skips notification initialization when running in Expo Go', async () => {
+    (isRunningInExpoGo as jest.Mock).mockReturnValue(true);
+
+    await expect(initNotificationHandler()).resolves.toBeUndefined();
+
+    expect(Notifications.setNotificationHandler).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[notifications] Notification bootstrap skipped in Expo Go')
+    );
+  });
+
+  it('NG-02: loads expo-notifications and initializes handler in native/dev builds', async () => {
+    (isRunningInExpoGo as jest.Mock).mockReturnValue(false);
+
+    await initNotificationHandler();
+
+    expect(Notifications.setNotificationHandler).toHaveBeenCalledTimes(1);
     const callArg = (Notifications.setNotificationHandler as jest.Mock).mock.calls[0][0];
     expect(callArg).toBeDefined();
     expect(typeof callArg.handleNotification).toBe('function');
@@ -34,11 +57,22 @@ describe('NotificationBootstrap', () => {
     });
   });
 
-  it('does not register multiple times when called repeatedly', () => {
-    initNotificationHandler();
-    initNotificationHandler();
-    initNotificationHandler();
+  it('NG-03: outside Expo Go, repeated calls are idempotent and register handler only once', async () => {
+    (isRunningInExpoGo as jest.Mock).mockReturnValue(false);
+
+    await initNotificationHandler();
+    await initNotificationHandler();
+    await initNotificationHandler();
 
     expect(Notifications.setNotificationHandler).toHaveBeenCalledTimes(1);
+  });
+
+  it('NG-04: in Expo Go, repeated calls remain harmless and do not load notifications', async () => {
+    (isRunningInExpoGo as jest.Mock).mockReturnValue(true);
+
+    await initNotificationHandler();
+    await initNotificationHandler();
+
+    expect(Notifications.setNotificationHandler).not.toHaveBeenCalled();
   });
 });
