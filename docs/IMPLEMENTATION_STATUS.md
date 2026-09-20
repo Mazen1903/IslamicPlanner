@@ -1,5 +1,5 @@
-**Current Milestone:** M24 — Release Preparation (M23 CLOSED / CHATGPT TECHNICAL LEAD APPROVED 2026-09-19)
-**Last Updated:** 2026-09-19 (M23 closed — ChatGPT Technical Lead approved — see docs/M23_ARCHITECTURE.md §25)
+**Current Milestone:** M24 — Release Preparation (ARCHITECTURE REVISION 2 FROZEN — AWAITING CHATGPT TECHNICAL LEAD + OPUS REVIEW)
+**Last Updated:** 2026-09-19 (M24 architecture Revision 2 frozen — Lead Correction Gate — 10 findings addressed — see docs/M24_ARCHITECTURE.md)
 **Project:** Islamic Prayer-Centered Planner  
 
 ---
@@ -32,7 +32,7 @@
 | **M21** | Dark mode polish | **CLOSED / SONNET APPROVED** | 2026-09-19 | Architecture `d27e176`, implementation `3c7bfc5`, review fix `326f0cc`. 1404/1404 tests (121 suites; +30 tests, +3 suites vs M20). 0 TS errors, 0 ESLint errors/warnings. 0 migrations, 0 dependencies. 16 production files. Semantic token compliance, WCAG AA contrast, themeReady hydration gate, ThemedStatusBar, PrayerTabBar contrast. ADR-029. Sonnet independent re-review APPROVED — UNCONDITIONAL. |
 | **M22** | Accessibility/RTL | **CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED** | 2026-09-19 | 82-file audit; exactly 45 production files modified; 27 findings resolved (23 A + 4 RTL); 1556/1556 tests pass across 132 suites (+152 tests, +11 suites); ADR-030; TaskCard retained pending M23 native TalkBack QA (reviewer D-1 rejected per RN 0.86 API); PrayerHeader composite grouping corrected (7af86fb); 0 dependencies, 0 migrations |
 | **M23** | QA + edge cases | **CLOSED / CHATGPT TECHNICAL LEAD APPROVED** | 2026-09-19 | Implementation commit: `d73d8e634e708d4b20c05f0d82a4a77fc54d3477`. Closure commit: `docs(m23): close M23 after final QA -- APPROVED`. 1653/1653 tests (144 suites; +97 tests, +12 suites). 0 TS errors, 0 ESLint errors/warnings. 0 new dependencies, 0 migrations. PC-1/PC-2/PC-3 hardening accepted. ADR-031 confirmed. All risks resolved (H1, H2, H3, H7, H8, M13). GATE-1/2/7 PASS natively. GATE-3/4/5/6 BLOCKED (test infrastructure). M24 release blockers RB-M24-BOOTSTRAP + RB-M24-ROOT discovered. |
-| **M24** | Release preparation | Not Started | — | Final builds and release checklist. M23 carry-forwards: GATE-3 CF-A6/A8/A12/A14/A16, GATE-4, GATE-5, GATE-6 native RTL. Release blockers: RB-M24-BOOTSTRAP (migrateDatabase not invoked at boot), RB-M24-ROOT (app/index.tsx absent). |
+| **M24** | Release preparation | **Architecture Revision 2 Frozen** | — | P0 blockers: RB-M24-BOOTSTRAP (migrateDatabase not invoked at boot), RB-M24-MIGRATOR-FS (node:fs top-level imports), RB-M24-SQL-BUNDLE (SQL bundling not configured), RB-M24-ROOT (app/index.tsx absent). CF: GATE-3 CF-A6/A8/A12/A14/A16, GATE-6, GATE-4/5 iOS. OPUS REVIEW: YES. See docs/M24_ARCHITECTURE.md Rev 2. |
 
 ---
 

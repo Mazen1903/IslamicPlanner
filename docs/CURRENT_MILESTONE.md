@@ -1,10 +1,10 @@
-# Current Milestone: M23 — QA + Edge Cases
+# Current Milestone: M24 — Release Preparation
 
-> **Current State:** M23 CLOSED / CHATGPT TECHNICAL LEAD APPROVED 2026-09-19 — M24 NOT STARTED
-> **Previous Milestone:** M23 CLOSED / CHATGPT TECHNICAL LEAD APPROVED
-> **Milestone Status:** M24 — Release Preparation — NOT STARTED
-> **Architecture Status:** M23 closed — ADR-031 confirmed — 1653 tests / 144 suites — all M23 risks resolved — GATE-1/2/7 PASS — GATE-3/4/5/6 BLOCKED (infra) — M24 blockers RB-M24-BOOTSTRAP + RB-M24-ROOT recorded
-> **Implementation Status:** M24 NOT STARTED — final test baseline: 1653/1653 tests pass across 144 suites; 0 TS errors, 0 ESLint errors/warnings; 0 new dependencies, 0 migrations (M23 delta)
+> **Current State:** M24 IN PROGRESS — ARCHITECTURE REVISED — AWAITING CHATGPT TECHNICAL LEAD + OPUS REVIEW
+> **Previous Milestone:** M23 CLOSED / CHATGPT TECHNICAL LEAD APPROVED 2026-09-19
+> **Milestone Status:** M24 — Release Preparation — ARCHITECTURE REVISION 2 FROZEN
+> **Architecture Status:** Revision 2 frozen 2026-09-19 — 4 P0 blockers: RB-M24-BOOTSTRAP, RB-M24-MIGRATOR-FS, RB-M24-SQL-BUNDLE, RB-M24-ROOT — GATE-3/6/RB1/RB2 required — GATE-4/5 iOS pending environment — See `docs/M24_ARCHITECTURE.md`
+> **Implementation Status:** M24 NOT STARTED (awaiting Lead + Opus review) — baseline: 1653/1653 tests / 144 suites — 0 TS errors, 0 ESLint errors/warnings — 0 new dependencies, 0 migrations
 
 ---
 
@@ -143,11 +143,11 @@ M19 — Premium Entitlement Scaffolding          ✅ CLOSED / SONNET APPROVED
 M20 — Onboarding                               ✅ CLOSED / SONNET APPROVED
 M21 — Dark Mode Polish                         ✅ CLOSED / SONNET APPROVED
 M22 — Accessibility / RTL                      ✅ CLOSED / INDEPENDENT REVIEW APPROVED / LEAD APPROVED
-M23 — QA + Edge Cases                          --> CURRENT — PENDING ARCHITECTURE
-M24 — Release Preparation                      --> NOT STARTED
+M23 — QA + Edge Cases                          ✅ CLOSED / CHATGPT TECHNICAL LEAD APPROVED 2026-09-19
+M24 — Release Preparation                      --> CURRENT — ARCHITECTURE REVISION 2 FROZEN — AWAITING REVIEW
 ```
 
-Progress: M0–M22 = 23 of 25 milestones closed (92%).
+Progress: M0–M23 = 24 of 25 milestones closed (96%).
 
 Worship Suggestions remain **DEFERRED** (not deleted). May be re-introduced post-M24.
 
@@ -313,5 +313,18 @@ The following native QA items are carried forward to M23 (physical device / emul
 - **GATE-4 BLOCKED / NOT EXECUTED** (iOS environment unavailable).
 - **GATE-5 BLOCKED / NOT EXECUTED** (iOS environment unavailable).
 - **GATE-6 BLOCKED** (system ar-SA confirmed; Metro multipart ProtocolException — test infrastructure, not product defect).
-- **M24 release blockers discovered:** RB-M24-BOOTSTRAP (migrateDatabase not invoked at boot), RB-M24-ROOT (app/index.tsx absent).
+- **M24 release blockers discovered:** RB-M24-BOOTSTRAP (migrateDatabase not invoked at boot), RB-M24-ROOT (app/index.tsx absent), RB-M24-MIGRATOR-FS (node:fs top-level imports), RB-M24-SQL-BUNDLE (SQL bundling not configured).
 - See `docs/M23_ARCHITECTURE.md §25` for complete closure record.
+
+---
+
+### M24 Status
+
+**IN PROGRESS — Architecture Revision 2 frozen 2026-09-19.**
+- Milestone name: **Release Preparation**
+- Architecture: `docs/M24_ARCHITECTURE.md` — Revision 2
+- Architecture revised: 2026-09-19 (Lead Correction Gate — 10 findings addressed)
+- **P0 blockers:** RB-M24-BOOTSTRAP, RB-M24-MIGRATOR-FS, RB-M24-SQL-BUNDLE, RB-M24-ROOT
+- **OPUS REVIEW RECOMMENDED: YES** (see `docs/M24_ARCHITECTURE.md §25`)
+- Implementation: NOT STARTED — awaiting ChatGPT Technical Lead + Opus architecture review
+- Baseline: 1653/1653 tests — 0 TS errors — 0 ESLint errors/warnings

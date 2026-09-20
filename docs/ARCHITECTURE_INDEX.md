@@ -657,3 +657,27 @@
 - **Baseline tests:** 1556 / 1556 — 132 / 132 suites
 - **Expected post-M23 total:** 1653 tests / 144 suites
 - **Milestone Owner:** **M23 (CURRENT)**
+
+---
+
+### 25. M24 Release Preparation Architecture
+
+- **Authoritative Docs:** `docs/M24_ARCHITECTURE.md` (Revision 2 -- Lead Correction Gate 2026-09-19)
+- **Milestone Owner:** **M24 (CURRENT -- ARCHITECTURE FROZEN)**
+- **Architecture Status:** Revision 2 frozen 2026-09-19; awaiting ChatGPT Technical Lead + Opus review
+- **P0 Blockers:**
+  - `RB-M24-BOOTSTRAP`: `migrateDatabase()` not invoked at boot
+  - `RB-M24-MIGRATOR-FS`: `migrator.ts` top-level `node:fs` / `node:path` imports; module unsafe for Metro/Hermes
+  - `RB-M24-SQL-BUNDLE`: `.sql` imports in `migrations.js` not bundled; no `babel.config.js`; no `sql` in `sourceExts`
+  - `RB-M24-ROOT`: `app/index.tsx` absent; launcher cold-start hits `+not-found`
+- **Key Architecture Decisions:**
+  - Project is **Expo CNG / Prebuild** (`/android` and `/ios` are ignored generated directories)
+  - Runtime migrator: Node-free `src/data/migrator.ts` using static `migrations.js` bundle
+  - Node-only loader: `src/data/__tests__/migrationConfigLoader.node.ts` (for test infrastructure only)
+  - Bootstrap state machine: `LOADING | READY | ERROR` (extends ADR-029)
+  - Migration transaction: `SQLiteSyncDialect.migrate()` wraps all pending migrations in `BEGIN/ROLLBACK` (verified from installed drizzle-orm 0.45.x)
+  - Android QA: Clean CNG prebuild + release-mode build (`npx expo run:android --variant release`); no production signing required for emulator QA
+  - Distribution signing: EAS credential management (no committed keystores)
+  - App Group: `expo-widgets` plugin `groupIdentifier` prop; default `group.com.mm1903.islamicplannerapp` (verified from plugin source)
+- **OPUS REVIEW:** YES (see `docs/M24_ARCHITECTURE.md Section 25`)
+- **Native Gates Required:** GATE-3 CF-A6/A8/A12/A14/A16, GATE-6, GATE-RB1, GATE-RB2; GATE-4/5 iOS pending environment
