@@ -8,6 +8,7 @@ import { CompletedSection } from './CompletedSection';
 import { AnytimeTodaySection } from './AnytimeTodaySection';
 import { EmptyPrayerState } from './EmptyPrayerState';
 import { AllDoneState } from './AllDoneState';
+import { AddTaskButton } from './AddTaskButton';
 import { computeEmptyState } from '@/services/TodayViewModelProjection';
 
 export interface TaskListProps {
@@ -16,9 +17,9 @@ export interface TaskListProps {
   currentPrayer: Prayer;
   nextPrayer: Prayer | null;
   completedCollapsed: boolean;
-  anytimeCollapsed: boolean;
+  anytimeCollapsed?: boolean;
   onToggleCompletedCollapsed: () => void;
-  onToggleAnytimeCollapsed: () => void;
+  onToggleAnytimeCollapsed?: () => void;
   onCompleteTask: (occurrenceId: string) => void;
 }
 
@@ -56,7 +57,7 @@ export function TaskList({
         <MissedTaskRow key={task.occurrenceId} task={task} />
       ))}
 
-      {/* 3. Empty state if no scheduled/missed tasks */}
+      {/* 3. Empty state if no scheduled/anytime/missed tasks */}
       {emptyState === 'NOTHING_SCHEDULED' && (
         <EmptyPrayerState
           selectedPrayer={selectedPrayer}
@@ -73,20 +74,25 @@ export function TaskList({
         />
       )}
 
-      {/* 4. Completed tasks (collapsible) */}
+      {/* 4. Anytime Today section (collapsible bottom section) */}
+      {tab.anytimeTasks && tab.anytimeTasks.length > 0 && (
+        <AnytimeTodaySection
+          tasks={tab.anytimeTasks}
+          collapsed={anytimeCollapsed ?? true}
+          onToggleCollapsed={onToggleAnytimeCollapsed ?? (() => {})}
+          onComplete={onCompleteTask}
+        />
+      )}
+
+      {/* 5. Completed tasks (collapsible) */}
       <CompletedSection
         tasks={tab.completedTasks}
         collapsed={completedCollapsed}
         onToggleCollapsed={onToggleCompletedCollapsed}
       />
 
-      {/* 5. Anytime Today section (collapsible bottom section) */}
-      <AnytimeTodaySection
-        tasks={tab.anytimeTasks}
-        collapsed={anytimeCollapsed}
-        onToggleCollapsed={onToggleAnytimeCollapsed}
-        onComplete={onCompleteTask}
-      />
+      {/* 6. + Add Task Button */}
+      <AddTaskButton />
     </ScrollView>
   );
 }

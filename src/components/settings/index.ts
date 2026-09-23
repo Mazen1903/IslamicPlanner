@@ -5,3 +5,8 @@ export { SettingsToggle, type SettingsToggleProps } from './SettingsToggle';
 export { SettingsSelectOption, type SettingsSelectOptionProps } from './SettingsSelectOption';
 export { SettingsStepper, type SettingsStepperProps } from './SettingsStepper';
 export { SettingsInfoCard, type SettingsInfoCardProps } from './SettingsInfoCard';
+export { PastelOptionCard, type PastelOptionCardProps } from './PastelOptionCard';
+export { SettingsPastelHeader, type SettingsPastelHeaderProps } from './SettingsPastelHeader';
+export { SettingsQuoteCard, type SettingsQuoteCardProps } from './SettingsQuoteCard';
+export { SettingsSectionCard, type SettingsSectionCardProps } from './SettingsSectionCard';
+export * from './SettingsIcons';

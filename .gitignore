@@ -50,3 +50,11 @@ coverage/
 
 # Temporary export verification directories
 .tmp/
+
+# Scratch & QA artifacts
+qa_*
+scratch_*
+crop_*
+
+# Root design reference mockups
+/*.png

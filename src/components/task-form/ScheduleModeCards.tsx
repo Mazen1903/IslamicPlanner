@@ -19,6 +19,7 @@ interface ScheduleModeCardsProps {
   state: FormState;
   dispatch: React.Dispatch<FormAction>;
   previewResult: SchedulePreviewResult | null;
+  onRequestRelativeView?: () => void;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -26,6 +27,7 @@ export function ScheduleModeCards({
   state,
   dispatch,
   previewResult,
+  onRequestRelativeView,
   style,
 }: ScheduleModeCardsProps) {
   const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
@@ -35,44 +37,49 @@ export function ScheduleModeCards({
       mode: 'EXACT_TIME',
       label: 'Exact Time',
       icon: 'clock',
-      desc: 'Specific wall-clock time on a date',
+      desc: 'Set a specific time',
     },
     {
       mode: 'PRAYER_RELATIVE',
       label: 'Relative to Prayer',
       icon: 'prayer',
-      desc: 'Before or after a prayer time',
+      desc: 'e.g. Maghrib + 30m',
     },
     {
       mode: 'PRAYER_WINDOW',
       label: 'Prayer Window',
       icon: 'calendar',
-      desc: 'Between two consecutive prayers',
+      desc: 'e.g. Fajr → Asr',
     },
     {
       mode: 'ANYTIME_TODAY',
       label: 'Anytime Today',
       icon: 'sun',
-      desc: 'Flexible for the planning day',
+      desc: 'Do it whenever',
     },
   ];
 
   return (
     <View style={[styles.container, style]}>
-      <Text style={[typography.headlineMedium, { color: colors.textPrimary, marginBottom: spacing.sm }]}>
-        Schedule
+      <Text style={[typography.headlineMedium, styles.heading, { color: colors.textPrimary }]}>
+        When?
       </Text>
 
-      {/* Mode Selector Cards */}
+      {/* 2x2 Mode Selector Cards */}
       <View style={styles.modeGrid}>
         {modes.map(item => {
           const isSelected = state.scheduleMode === item.mode;
           return (
             <Pressable
               key={item.mode}
-              onPress={() => dispatch({ type: 'SET_SCHEDULE_MODE', payload: item.mode })}
+              onPress={() => {
+                dispatch({ type: 'SET_SCHEDULE_MODE', payload: item.mode });
+                if (item.mode === 'PRAYER_RELATIVE' && onRequestRelativeView) {
+                  onRequestRelativeView();
+                }
+              }}
               accessibilityRole="radio"
-              accessibilityState={{ selected: isSelected }}
+              accessibilityState={{ checked: isSelected }}
               accessibilityLabel={`${item.label}: ${item.desc}`}
               testID={`schedule-mode-${item.mode.toLowerCase()}`}
               style={({ pressed }) => [
@@ -82,47 +89,57 @@ export function ScheduleModeCards({
                   backgroundColor: isSelected ? colors.primaryLight : colors.surface,
                   borderColor: isSelected ? colors.primary : colors.border,
                   borderRadius: radii.card,
-                  minHeight: touchTargets.min,
                   padding: spacing.md,
+                  alignItems: 'center',
                   opacity: pressed ? 0.8 : 1,
                 },
               ]}
             >
-              <View style={styles.modeCardHeader}>
-                <View
-                  style={[
-                    styles.iconCircle,
-                    {
-                      backgroundColor: isSelected ? colors.primary : colors.surfaceSecondary,
-                      borderRadius: radii.pill,
-                    },
-                  ]}
-                >
-                  <Icon
-                    name={item.icon}
-                    size={16}
-                    color={isSelected ? colors.textOnPrimary : colors.textSecondary}
-                    decorative
-                  />
-                </View>
-                <Text
-                  style={[
-                    typography.labelLarge,
-                    {
-                      color: isSelected ? colors.primaryDark : colors.textPrimary,
-                      fontWeight: isSelected ? '700' : '600',
-                      marginStart: spacing.sm,
-                      flex: 1,
-                    },
-                  ]}
-                >
-                  {item.label}
-                </Text>
+              <View
+                style={[
+                  styles.iconBox,
+                  {
+                    marginBottom: spacing.xs,
+                  },
+                ]}
+              >
+                <Icon
+                  name={item.icon}
+                  size={28}
+                  color={
+                    item.mode === 'ANYTIME_TODAY'
+                      ? colors.warning
+                      : item.mode === 'PRAYER_RELATIVE'
+                      ? colors.primary
+                      : isSelected
+                      ? colors.primary
+                      : colors.textSecondary
+                  }
+                  dotColor={colors.primary}
+                  decorative
+                />
               </View>
               <Text
                 style={[
+                  typography.labelLarge,
+                  styles.modeLabel,
+                  {
+                    color: isSelected ? colors.primaryDark : colors.textPrimary,
+                    fontWeight: isSelected ? '700' : '600',
+                    textAlign: 'center',
+                  },
+                ]}
+              >
+                {item.label}
+              </Text>
+              <Text
+                style={[
                   typography.caption,
-                  { color: isSelected ? colors.textPrimary : colors.textSecondary, marginTop: spacing.xs },
+                  {
+                    color: isSelected ? colors.primary : colors.textSecondary,
+                    marginTop: 2,
+                    textAlign: 'center',
+                  },
                 ]}
               >
                 {item.desc}
@@ -132,41 +149,41 @@ export function ScheduleModeCards({
         })}
       </View>
 
-      {/* Active Mode Fields */}
-      <View
-        style={[
-          styles.fieldsContainer,
-          shadows.card,
-          {
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-            borderRadius: radii.card,
-            padding: spacing.lg,
-            marginTop: spacing.md,
-          },
-        ]}
-      >
-        {state.scheduleMode === 'EXACT_TIME' && (
-          <View testID="exact-time-fields">
-            <DatePickerInput
-              value={state.civilSeedDate}
-              onChange={d => dispatch({ type: 'SET_CIVIL_SEED_DATE', payload: d })}
-              label="Date"
-              testID="exact-date-picker"
-            />
-            <TimePickerInput
-              value={state.exactDraft.localTime}
-              onChange={t => dispatch({ type: 'UPDATE_EXACT_DRAFT', payload: { localTime: t } })}
-              label="Time"
-              testID="exact-time-picker"
-            />
-            {state.validationErrors.localTime && (
-              <Text style={[typography.caption, { color: colors.danger, marginTop: spacing.xs }]}>
-                {state.validationErrors.localTime}
-              </Text>
-            )}
-          </View>
-        )}
+      {/* Mode Fields */}
+      {state.scheduleMode === 'EXACT_TIME' ? (
+        <View testID="exact-time-fields" style={styles.exactFieldsStack}>
+          <DatePickerInput
+            value={state.civilSeedDate}
+            onChange={d => dispatch({ type: 'SET_CIVIL_SEED_DATE', payload: d })}
+            label="Date"
+            testID="exact-date-picker"
+          />
+          <TimePickerInput
+            value={state.exactDraft.localTime}
+            onChange={t => dispatch({ type: 'UPDATE_EXACT_DRAFT', payload: { localTime: t } })}
+            label="Time"
+            testID="exact-time-picker"
+          />
+          {state.validationErrors.localTime && (
+            <Text style={[typography.caption, { color: colors.danger, marginTop: spacing.xs, marginStart: spacing.sm }]}>
+              {state.validationErrors.localTime}
+            </Text>
+          )}
+        </View>
+      ) : (
+        <View
+          style={[
+            styles.fieldsContainer,
+            shadows.card,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderRadius: radii.card,
+              padding: spacing.lg,
+              marginTop: spacing.md,
+            },
+          ]}
+        >
 
         {state.scheduleMode === 'PRAYER_RELATIVE' && (
           <View testID="prayer-relative-fields">
@@ -406,85 +423,107 @@ export function ScheduleModeCards({
             </View>
           </View>
         )}
-
-        {/* Live Derived Preview */}
-        {previewResult && previewResult.status === 'READY' && (
-          <View
-            style={[
-              styles.previewBanner,
-              {
-                backgroundColor: colors.primaryLight,
-                borderColor: colors.primary,
-                borderRadius: radii.md,
-                padding: spacing.md,
-                marginTop: spacing.md,
-              },
-            ]}
-            testID="schedule-preview-banner"
-          >
-            <View style={styles.previewHeader}>
-              <Icon name="clock" size={16} color={colors.primary} style={{ marginEnd: spacing.xs }} decorative />
-              <Text style={[typography.labelMedium, { color: colors.primaryDark, fontWeight: '700' }]}>
-                Schedule Preview
-              </Text>
-            </View>
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600', marginTop: 2 }]}>
-              {previewResult.primaryLabel}
-            </Text>
-            {previewResult.secondaryLabel ? (
-              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                {previewResult.secondaryLabel}
-              </Text>
-            ) : null}
-          </View>
-        )}
-
-        {previewResult && (previewResult.status === 'CONTEXT_UNAVAILABLE' || previewResult.status === 'INVALID') && (
-          <View
-            style={[
-              styles.previewBanner,
-              {
-                backgroundColor: colors.surfaceSecondary,
-                borderColor: colors.border,
-                borderRadius: radii.md,
-                padding: spacing.md,
-                marginTop: spacing.md,
-              },
-            ]}
-          >
-            <Text style={[typography.caption, { color: colors.textTertiary }]}>
-              {previewResult.reason || 'Preview unavailable'}
-            </Text>
-          </View>
-        )}
       </View>
-    </View>
-  );
+    )}
+
+    {/* Live Derived Preview */}
+    {previewResult && previewResult.status === 'READY' && (
+      <View
+        style={[
+          styles.previewBanner,
+          {
+            backgroundColor: colors.primaryLight,
+            borderColor: colors.primary,
+            borderRadius: radii.md,
+            padding: spacing.md,
+            marginTop: spacing.md,
+          },
+        ]}
+        testID="schedule-preview-banner"
+      >
+        <View style={styles.previewHeader}>
+          <Icon name="clock" size={16} color={colors.primary} style={{ marginEnd: spacing.xs }} decorative />
+          <Text style={[typography.labelMedium, { color: colors.primaryDark, fontWeight: '700' }]}>
+            Schedule Preview
+          </Text>
+        </View>
+        <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600', marginTop: 2 }]}>
+          {previewResult.primaryLabel}
+        </Text>
+        {previewResult.secondaryLabel ? (
+          <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+            {previewResult.secondaryLabel}
+          </Text>
+        ) : null}
+      </View>
+    )}
+
+    {previewResult && (previewResult.status === 'CONTEXT_UNAVAILABLE' || previewResult.status === 'INVALID') && (
+      <View
+        style={[
+          styles.previewBanner,
+          {
+            backgroundColor: colors.surfaceSecondary,
+            borderColor: colors.border,
+            borderRadius: radii.md,
+            padding: spacing.md,
+            marginTop: spacing.md,
+          },
+        ]}
+      >
+        <Text style={[typography.caption, { color: colors.textTertiary }]}>
+          {previewResult.reason || 'Preview unavailable'}
+        </Text>
+      </View>
+    )}
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
   container: {
     marginVertical: 8,
   },
+  heading: {
+    fontWeight: '700',
+    marginBottom: 12,
+  },
   modeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
+  },
+  exactFieldsStack: {
+    marginTop: 12,
+    gap: 10,
   },
   modeCard: {
     width: '48%',
     borderWidth: 1.5,
+    minHeight: 110,
     justifyContent: 'flex-start',
   },
-  modeCardHeader: {
+  cardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 8,
   },
-  iconCircle: {
-    width: 28,
-    height: 28,
+  iconBox: {
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  checkBadge: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeLabel: {
+    marginTop: 2,
   },
   fieldsContainer: {
     borderWidth: 1,

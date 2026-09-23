@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, screen, cleanup, act } from '@testing-library/react-native';
 import { ThemeProvider } from '@/theme';
 import SettingsHubScreen from '../index';
 import * as userSettingsHook from '@/hooks/useUserSettings';
@@ -14,7 +14,7 @@ jest.mock('expo-router', () => ({
   })),
 }));
 
-describe('SettingsHubScreen', () => {
+describe('SettingsHubScreen (Pastel UI Mockup)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -53,105 +53,103 @@ describe('SettingsHubScreen', () => {
     });
   });
 
-  const renderScreen = () => {
-    return render(
+  afterEach(() => {
+    cleanup();
+  });
+
+  const renderScreen = async () => {
+    await render(
       <ThemeProvider>
         <SettingsHubScreen />
       </ThemeProvider>
     );
   };
 
-  it('renders Settings hub title and all active group sections', async () => {
+  it('renders Settings hub title, subtitle, and mosque header', async () => {
     await renderScreen();
 
     expect(screen.getByText('Settings')).toBeTruthy();
-    expect(screen.getByTestId('section-header-prayer')).toBeTruthy();
-    expect(screen.getByTestId('section-header-planner')).toBeTruthy();
-    expect(screen.getByTestId('section-header-system')).toBeTruthy();
-    expect(screen.getByTestId('section-header-about')).toBeTruthy();
+    expect(screen.getByText('Customize your app experience')).toBeTruthy();
+    expect(screen.getByTestId('section-header-settings')).toBeTruthy();
   });
 
-  it('renders all active settings rows with accurate summaries', async () => {
+  it('renders all 9 pastel option cards from Pastel Islamic Settings mockup', async () => {
     await renderScreen();
 
-    // Prayer Calculation
-    expect(screen.getByText('Prayer Calculation')).toBeTruthy();
-    expect(screen.getByText('Muslim World League')).toBeTruthy();
+    // 1. Prayer & Location
+    expect(screen.getByText('Prayer & Location')).toBeTruthy();
+    expect(screen.getByTestId('settings-row-prayer-location')).toBeTruthy();
 
-    // Prayer Location
-    expect(screen.getByText('Prayer Location')).toBeTruthy();
-    expect(screen.getByText('Automatic • America/New_York')).toBeTruthy();
+    // 2. Planner
+    expect(screen.getByText('Planner')).toBeTruthy();
+    expect(screen.getByTestId('settings-row-planning-day')).toBeTruthy();
 
-    // Planning Day
-    expect(screen.getByText('Planning Day')).toBeTruthy();
-    expect(screen.getByText('Day starts at Fajr')).toBeTruthy();
-
-    // Hijri Calendar
-    expect(screen.getByText('Hijri Calendar')).toBeTruthy();
-    expect(screen.getByText('Hijri adjustment: 0 days')).toBeTruthy();
-
-    // Appearance
-    expect(screen.getByText('Appearance')).toBeTruthy();
-    expect(screen.getByText('System')).toBeTruthy();
-
-    // Notifications
+    // 3. Notifications
     expect(screen.getByText('Notifications')).toBeTruthy();
+    expect(screen.getByTestId('settings-row-notifications')).toBeTruthy();
 
-    // Journal Privacy
-    expect(screen.getByText('Journal Privacy')).toBeTruthy();
+    // 4. Appearance
+    expect(screen.getByText('Appearance')).toBeTruthy();
+    expect(screen.getByTestId('settings-row-appearance')).toBeTruthy();
 
-    // About & Help
-    expect(screen.getByText('About & Help')).toBeTruthy();
+    // 5. Calendar
+    expect(screen.getByText('Calendar')).toBeTruthy();
+    expect(screen.getByTestId('settings-row-hijri-calendar')).toBeTruthy();
+
+    // 6. Worship Suggestions
+    expect(screen.getByText('Worship Suggestions')).toBeTruthy();
+    expect(screen.getByTestId('settings-row-worship')).toBeTruthy();
+
+    // 7. Account & Sync
+    expect(screen.getByText('Account & Sync')).toBeTruthy();
+    expect(screen.getByTestId('settings-row-account')).toBeTruthy();
+
+    // 8. Premium
+    expect(screen.getByText('Premium')).toBeTruthy();
+    expect(screen.getByTestId('settings-row-premium')).toBeTruthy();
+
+    // 9. About
+    expect(screen.getByText('About')).toBeTruthy();
+    expect(screen.getByTestId('settings-row-about')).toBeTruthy();
   });
 
-  it('navigates to sub-screens when rows are pressed', async () => {
+  it('renders Quran inspiration quote card', async () => {
     await renderScreen();
 
-    fireEvent.press(screen.getByTestId('settings-row-prayer-calculation'));
-    expect(mockPush).toHaveBeenCalledWith('/(tabs)/settings/prayer-calculation');
+    expect(screen.getByText(/And whoever relies upon Allah/i)).toBeTruthy();
+    expect(screen.getByText(/Surah At-Talaq/i)).toBeTruthy();
+  });
 
+  it('navigates to prayer-location when pressed', async () => {
+    await renderScreen();
     fireEvent.press(screen.getByTestId('settings-row-prayer-location'));
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/settings/prayer-location');
+  });
 
+  it('navigates to planning-day when pressed', async () => {
+    await renderScreen();
     fireEvent.press(screen.getByTestId('settings-row-planning-day'));
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/settings/planning-day');
+  });
 
-    fireEvent.press(screen.getByTestId('settings-row-hijri-calendar'));
-    expect(mockPush).toHaveBeenCalledWith('/(tabs)/settings/hijri-calendar');
-
-    fireEvent.press(screen.getByTestId('settings-row-appearance'));
-    expect(mockPush).toHaveBeenCalledWith('/(tabs)/settings/appearance');
-
+  it('navigates to notifications when pressed', async () => {
+    await renderScreen();
     fireEvent.press(screen.getByTestId('settings-row-notifications'));
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/settings/notifications');
-
-    fireEvent.press(screen.getByTestId('settings-row-journal-privacy'));
-    expect(mockPush).toHaveBeenCalledWith('/(tabs)/settings/journal-privacy');
-
-    fireEvent.press(screen.getByTestId('settings-row-about'));
-    expect(mockPush).toHaveBeenCalledWith('/(tabs)/settings/about');
   });
 
-  it('INVARIANT: does NOT render Worship Suggestions row', async () => {
+  it('navigates to appearance when pressed', async () => {
     await renderScreen();
-
-    expect(screen.queryByText(/Worship Suggestions/i)).toBeNull();
-    expect(screen.queryByTestId('settings-row-worship')).toBeNull();
+    fireEvent.press(screen.getByTestId('settings-row-appearance'));
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/settings/appearance');
   });
 
-  it('INVARIANT: does NOT render Account / Cloud Sync row', async () => {
+  it('opens premium modal when Premium card is pressed', async () => {
     await renderScreen();
 
-    expect(screen.queryByText(/Account & Sync/i)).toBeNull();
-    expect(screen.queryByText(/Cloud Sync/i)).toBeNull();
-    expect(screen.queryByTestId('settings-row-account')).toBeNull();
-  });
+    fireEvent.press(screen.getByTestId('settings-row-premium'));
 
-  it('INVARIANT: does NOT render Premium purchase row', async () => {
-    await renderScreen();
-
-    expect(screen.queryByText(/Upgrade to Premium/i)).toBeNull();
-    expect(screen.queryByText(/Purchase Premium/i)).toBeNull();
-    expect(screen.queryByTestId('settings-row-premium')).toBeNull();
+    expect(await screen.findByText('Islamic Planner Premium')).toBeTruthy();
   });
 });
+

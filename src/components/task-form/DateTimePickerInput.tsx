@@ -39,7 +39,10 @@ export function DatePickerInput({
     : DateTime.now();
   const dateObj = dt.toJSDate();
 
-  const formattedDate = dt.toFormat('EEE, MMM d, yyyy');
+  const isToday = dt.hasSame(DateTime.now(), 'day');
+  const formattedDate = isToday
+    ? `Today, ${dt.toFormat('MMM d, yyyy')}`
+    : dt.toFormat('EEE, MMM d, yyyy');
 
   const handleChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
@@ -55,12 +58,6 @@ export function DatePickerInput({
 
   return (
     <View style={[styles.container, style]}>
-      {label ? (
-        <Text style={[typography.labelMedium, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-          {label}
-        </Text>
-      ) : null}
-
       <Pressable
         onPress={() => !disabled && setShowPicker(true)}
         disabled={disabled}
@@ -73,18 +70,26 @@ export function DatePickerInput({
           {
             backgroundColor: colors.surface,
             borderColor: colors.border,
-            borderRadius: radii.md,
+            borderRadius: radii.card,
             minHeight: touchTargets.min,
             paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
             opacity: disabled ? 0.6 : pressed ? 0.8 : 1,
           },
         ]}
       >
-        <Icon name="calendar" size={18} color={colors.primary} style={{ marginEnd: spacing.sm }} decorative />
-        <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
-          {formattedDate}
-        </Text>
-        <Icon name="chevron-down" size={16} color={colors.textTertiary} decorative />
+        <View style={[styles.iconBox, { marginEnd: spacing.sm }]}>
+          <Icon name="calendar" size={24} color={colors.textSecondary} dotColor={colors.primary} decorative />
+        </View>
+        <View style={styles.textColumn}>
+          <Text style={[typography.caption, { color: colors.textSecondary }]}>
+            {label}
+          </Text>
+          <Text style={[typography.bodyLarge, { color: colors.textPrimary, fontWeight: '500', marginTop: 2 }]}>
+            {formattedDate}
+          </Text>
+        </View>
+        <Icon name="chevron-right" size={18} color={colors.primary} directional decorative />
       </Pressable>
 
       {showPicker && (
@@ -143,36 +148,38 @@ export function TimePickerInput({
 
   return (
     <View style={[styles.container, style]}>
-      {label ? (
-        <Text style={[typography.labelMedium, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-          {label}
-        </Text>
-      ) : null}
-
       <Pressable
         onPress={() => !disabled && setShowPicker(true)}
         disabled={disabled}
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${formattedTime}`}
-        accessibilityHint="Opens time picker to select time"
+        accessibilityHint="Opens time picker to select a time"
         testID={testID}
         style={({ pressed }) => [
           styles.triggerButton,
           {
             backgroundColor: colors.surface,
             borderColor: colors.border,
-            borderRadius: radii.md,
+            borderRadius: radii.card,
             minHeight: touchTargets.min,
             paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
             opacity: disabled ? 0.6 : pressed ? 0.8 : 1,
           },
         ]}
       >
-        <Icon name="clock" size={18} color={colors.primary} style={{ marginEnd: spacing.sm }} decorative />
-        <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
-          {formattedTime}
-        </Text>
-        <Icon name="chevron-down" size={16} color={colors.textTertiary} decorative />
+        <View style={[styles.iconBox, { marginEnd: spacing.sm }]}>
+          <Icon name="clock" size={24} color={colors.textSecondary} decorative />
+        </View>
+        <View style={styles.textColumn}>
+          <Text style={[typography.caption, { color: colors.textSecondary }]}>
+            {label}
+          </Text>
+          <Text style={[typography.bodyLarge, { color: colors.textPrimary, fontWeight: '500', marginTop: 2 }]}>
+            {formattedTime}
+          </Text>
+        </View>
+        <Icon name="chevron-right" size={18} color={colors.primary} directional decorative />
       </Pressable>
 
       {showPicker && (
@@ -198,5 +205,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
+  },
+  iconBox: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textColumn: {
+    flex: 1,
   },
 });

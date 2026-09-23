@@ -1,8 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Linking, AppState, ActivityIndicator, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Linking,
+  AppState,
+  ActivityIndicator,
+  Platform,
+  ScrollView,
+  Switch,
+} from 'react-native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
+import {
+  SettingsPastelHeader,
+  SettingsSectionCard,
+  SettingsSecPrayerAlertsIcon,
+  SettingsSecTaskRemindersIcon,
+  SettingsSecWorshipStarIcon,
+  SettingsSecGeneralBellIcon,
+} from '@/components/settings';
 import {
   notificationSchedulerAdapter,
   type PermissionStatusResult,
@@ -21,10 +41,20 @@ export default function NotificationSettingsScreen({
   channelManager = notificationChannelManager,
   reconciliationService = notificationReconciliationService,
 }: NotificationSettingsProps) {
-  const { colors, spacing, radii, typography, touchTargets } = useTheme();
+  const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
+  const router = useRouter();
+
   const [permission, setPermission] = useState<PermissionStatusResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRequesting, setIsRequesting] = useState(false);
+
+  // Exact mockup toggles
+  const [prayerNotifications, setPrayerNotifications] = useState(true);
+  const [prayerVibration, setPrayerVibration] = useState(true);
+  const [taskReminders, setTaskReminders] = useState(true);
+  const [taskVibration, setTaskVibration] = useState(true);
+  const [worshipSuggestions, setWorshipSuggestions] = useState(true);
+  const [quietHours, setQuietHours] = useState(false);
 
   const refreshPermissionStatus = useCallback(async () => {
     try {
@@ -37,12 +67,11 @@ export default function NotificationSettingsScreen({
     }
   }, [adapter]);
 
-  // Refresh status on screen mount
   useEffect(() => {
     let mounted = true;
     adapter
       .getPermissionStatus()
-      .then(res => {
+      .then((res) => {
         if (mounted) {
           setPermission(res);
           setIsLoading(false);
@@ -60,9 +89,8 @@ export default function NotificationSettingsScreen({
     };
   }, [adapter]);
 
-  // Refresh status when returning from OS Settings (app returns to active)
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', nextState => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
         refreshPermissionStatus();
       }
@@ -82,7 +110,6 @@ export default function NotificationSettingsScreen({
       setPermission(res);
 
       if (res.canSchedule) {
-        // Immediate reconcile so stored reminder intent is delivered without background/reopen
         await reconciliationService.reconcile();
       }
     } catch (err) {
@@ -101,118 +128,249 @@ export default function NotificationSettingsScreen({
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-      <View style={[styles.content, { padding: spacing.lg }]}>
-        <View style={styles.headerRow}>
-          <Icon name="bell" size={28} color={colors.primary} style={{ marginEnd: spacing.sm }} decorative />
-          <Text style={[typography.headlineMedium, { color: colors.textPrimary }]}>
-            Reminders & Notifications
-          </Text>
-        </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+      <SettingsPastelHeader
+        title="Notifications"
+        subtitle="Set reminders and alerts."
+        showBack
+        showMosqueArt
+        onBack={() => router.back()}
+        testID="section-header-notifications"
+      />
 
-        <Text style={[typography.bodyMedium, { color: colors.textSecondary, marginTop: spacing.xs, marginBottom: spacing.xl }]}>
-          Configure local task reminder delivery.
-        </Text>
-
-        {isLoading ? (
-          <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: spacing.xl }} />
-        ) : (
-          <View
-            style={[
-              styles.card,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                borderRadius: radii.card,
-                padding: spacing.lg,
-              },
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: spacing.md, paddingBottom: spacing.xxxl }]}
+        showsVerticalScrollIndicator={false}
+        testID="notification-settings-scroll"
+      >
+        {/* CARD 1: PRAYER ALERTS */}
+        <SettingsSectionCard
+          customBadge={<SettingsSecPrayerAlertsIcon size={40} />}
+          title="Prayer Alerts"
+          subtitle="Get notified for prayer times."
+          rightElement={
+            <Switch
+              value={prayerNotifications}
+              onValueChange={setPrayerNotifications}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.surface}
+            />
+          }
+          testID="prayer-alerts-section-card"
+        >
+          {/* Sub-row: Adhan Sound */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.subRow,
+              { borderBottomColor: colors.border, paddingVertical: spacing.sm, opacity: pressed ? 0.8 : 1 },
             ]}
           >
-            <Text style={[typography.labelMedium, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              Permission Status
-            </Text>
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Adhan Sound</Text>
+            <Text style={[typography.bodySmall, { color: colors.textSecondary, marginRight: 6 }]}>Default</Text>
+            <Icon name="chevron-right" size="sm" color={colors.textTertiary} decorative />
+          </Pressable>
 
-            {permission?.canSchedule ? (
-              <View style={styles.statusRow} testID="notifications-enabled-container">
-                <Icon name="check" size={20} color={colors.primary} style={{ marginEnd: spacing.xs }} decorative />
-                <Text
-                  style={[typography.bodyLarge, { color: colors.primary, fontWeight: '700' }]}
-                  testID="notifications-enabled-label"
-                >
-                  Notifications enabled
-                </Text>
-              </View>
-            ) : permission?.status === 'DENIED' ? (
-              <View>
-                <Text style={[typography.bodyMedium, { color: colors.textPrimary, marginBottom: spacing.md }]}>
-                  Notifications are disabled in system settings.
-                </Text>
-                <Pressable
-                  onPress={handleOpenSettings}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open System Settings"
-                  testID="open-settings-btn"
-                  style={({ pressed }) => [
-                    styles.actionButton,
-                    {
-                      backgroundColor: colors.surfaceSecondary,
-                      borderColor: colors.border,
-                      borderRadius: radii.md,
-                      minHeight: touchTargets.min,
-                      opacity: pressed ? 0.8 : 1,
-                    },
-                  ]}
-                >
-                  <Icon name="settings" size={18} color={colors.textPrimary} style={{ marginEnd: spacing.sm }} decorative />
-                  <Text style={[typography.labelMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
-                    Open Settings
-                  </Text>
-                </Pressable>
-              </View>
-            ) : (
-              <View>
-                <Text style={[typography.bodyMedium, { color: colors.textPrimary, marginBottom: spacing.md }]}>
-                  Enable notifications to receive reminders for scheduled tasks.
-                </Text>
-                <Pressable
-                  onPress={handleEnableNotifications}
-                  disabled={isRequesting}
-                  accessibilityRole="button"
-                  accessibilityLabel="Enable Notifications"
-                  testID="enable-notifications-btn"
-                  style={({ pressed }) => [
-                    styles.actionButton,
-                    {
-                      backgroundColor: colors.primary,
-                      borderColor: colors.primary,
-                      borderRadius: radii.md,
-                      minHeight: touchTargets.min,
-                      opacity: pressed || isRequesting ? 0.8 : 1,
-                    },
-                  ]}
-                >
-                  {isRequesting ? (
-                    <ActivityIndicator color={colors.textOnPrimary} size="small" />
-                  ) : (
-                    <>
-                      <Icon name="bell" size={18} color={colors.textOnPrimary} style={{ marginEnd: spacing.sm }} decorative />
-                      <Text style={[typography.labelMedium, { color: colors.textOnPrimary, fontWeight: '600' }]}>
-                        Enable Notifications
-                      </Text>
-                    </>
-                  )}
-                </Pressable>
-              </View>
-            )}
+          {/* Sub-row: Vibration */}
+          <View style={[styles.subRow, { borderBottomColor: colors.border, paddingVertical: spacing.sm }]}>
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Vibration</Text>
+            <Switch
+              value={prayerVibration}
+              onValueChange={setPrayerVibration}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.surface}
+            />
           </View>
-        )}
 
-        <View style={[styles.policyBox, { marginTop: spacing.xl }]}>
+          {/* Sub-row: Notify Before Prayer */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.subRow,
+              { paddingVertical: spacing.sm, opacity: pressed ? 0.8 : 1 },
+            ]}
+          >
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Notify Before Prayer</Text>
+            <Text style={[typography.bodySmall, { color: colors.textSecondary, marginRight: 6 }]}>10 minutes</Text>
+            <Icon name="chevron-right" size="sm" color={colors.textTertiary} decorative />
+          </Pressable>
+        </SettingsSectionCard>
+
+        {/* CARD 2: TASK REMINDERS */}
+        <SettingsSectionCard
+          customBadge={<SettingsSecTaskRemindersIcon size={40} />}
+          title="Task Reminders"
+          subtitle="Get reminders for your tasks."
+          rightElement={
+            <Switch
+              value={taskReminders}
+              onValueChange={setTaskReminders}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.surface}
+            />
+          }
+          testID="task-reminders-section-card"
+        >
+          {/* System Permission Banner inside card if needed */}
+          {isLoading ? (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: spacing.xs }} />
+          ) : !permission?.canSchedule ? (
+            <View style={[styles.permissionNoticeBox, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border, borderRadius: radii.md, padding: spacing.sm, marginBottom: spacing.sm }]}>
+              {permission?.status === 'DENIED' ? (
+                <>
+                  <Text style={[typography.caption, { color: colors.textPrimary, marginBottom: spacing.xs }]}>
+                    Notifications are disabled in system settings.
+                  </Text>
+                  <Pressable
+                    onPress={handleOpenSettings}
+                    accessibilityRole="button"
+                    accessibilityLabel="Open System Settings"
+                    testID="open-settings-btn"
+                    style={[styles.smallActionBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.sm }]}
+                  >
+                    <Icon name="settings" size="xs" color={colors.textPrimary} style={{ marginRight: 4 }} decorative />
+                    <Text style={[typography.labelSmall, { color: colors.textPrimary }]}>Open Settings</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <>
+                  <Text style={[typography.caption, { color: colors.textPrimary, marginBottom: spacing.xs }]}>
+                    Enable notifications to receive reminders for scheduled tasks.
+                  </Text>
+                  <Pressable
+                    onPress={handleEnableNotifications}
+                    disabled={isRequesting}
+                    accessibilityRole="button"
+                    accessibilityLabel="Enable Notifications"
+                    testID="enable-notifications-btn"
+                    style={[styles.smallActionBtn, { backgroundColor: colors.primary, borderColor: colors.primary, borderRadius: radii.sm }]}
+                  >
+                    {isRequesting ? (
+                      <ActivityIndicator size="small" color={colors.textOnPrimary} />
+                    ) : (
+                      <>
+                        <Icon name="bell" size="xs" color={colors.textOnPrimary} style={{ marginRight: 4 }} decorative />
+                        <Text style={[typography.labelSmall, { color: colors.textOnPrimary }]}>Enable Notifications</Text>
+                      </>
+                    )}
+                  </Pressable>
+                </>
+              )}
+            </View>
+          ) : (
+            <View style={[styles.grantedBadge, { paddingBottom: spacing.xs }]} testID="notifications-enabled-container">
+              <Icon name="check" size="xs" color={colors.primary} decorative style={{ marginRight: 4 }} />
+              <Text style={[typography.caption, { color: colors.primary, fontWeight: '700' }]} testID="notifications-enabled-label">
+                Notifications enabled
+              </Text>
+            </View>
+          )}
+
+          {/* Sub-row: Reminder Time */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.subRow,
+              { borderBottomColor: colors.border, paddingVertical: spacing.sm, opacity: pressed ? 0.8 : 1 },
+            ]}
+          >
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Reminder Time</Text>
+            <Text style={[typography.bodySmall, { color: colors.textSecondary, marginRight: 6 }]}>At time of task</Text>
+            <Icon name="chevron-right" size="sm" color={colors.textTertiary} decorative />
+          </Pressable>
+
+          {/* Sub-row: Sound */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.subRow,
+              { borderBottomColor: colors.border, paddingVertical: spacing.sm, opacity: pressed ? 0.8 : 1 },
+            ]}
+          >
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Sound</Text>
+            <Text style={[typography.bodySmall, { color: colors.textSecondary, marginRight: 6 }]}>Default</Text>
+            <Icon name="chevron-right" size="sm" color={colors.textTertiary} decorative />
+          </Pressable>
+
+          {/* Sub-row: Vibration */}
+          <View style={[styles.subRow, { paddingVertical: spacing.sm }]}>
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Vibration</Text>
+            <Switch
+              value={taskVibration}
+              onValueChange={setTaskVibration}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.surface}
+            />
+          </View>
+        </SettingsSectionCard>
+
+        {/* CARD 3: WORSHIP SUGGESTIONS */}
+        <SettingsSectionCard
+          customBadge={<SettingsSecWorshipStarIcon size={40} />}
+          title="Worship Suggestions"
+          subtitle="Get notified for suggested acts of worship."
+          rightElement={
+            <Switch
+              value={worshipSuggestions}
+              onValueChange={setWorshipSuggestions}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.surface}
+            />
+          }
+          testID="worship-suggestions-section-card"
+        >
+          {/* Sub-row: Daily Reminders */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.subRow,
+              { paddingVertical: spacing.sm, opacity: pressed ? 0.8 : 1 },
+            ]}
+          >
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Daily Reminders</Text>
+            <Text style={[typography.bodySmall, { color: colors.textSecondary, marginRight: 6 }]}>Morning & Evening</Text>
+            <Icon name="chevron-right" size="sm" color={colors.textTertiary} decorative />
+          </Pressable>
+        </SettingsSectionCard>
+
+        {/* CARD 4: GENERAL */}
+        <SettingsSectionCard
+          customBadge={<SettingsSecGeneralBellIcon size={40} />}
+          title="General"
+          testID="general-section-card"
+        >
+          {/* Sub-row: Quiet Hours */}
+          <View style={[styles.subRow, { borderBottomColor: colors.border, paddingVertical: spacing.sm }]}>
+            <View style={{ flex: 1, paddingRight: spacing.sm }}>
+              <Text style={[typography.bodyMedium, { color: colors.textPrimary }]}>Quiet Hours</Text>
+              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+                Pause non-prayer notifications.
+              </Text>
+            </View>
+            <Switch
+              value={quietHours}
+              onValueChange={setQuietHours}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.surface}
+            />
+          </View>
+
+          {/* Sub-row: Sound & Vibration Style */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.subRow,
+              { paddingVertical: spacing.sm, opacity: pressed ? 0.8 : 1 },
+            ]}
+          >
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
+              Sound & Vibration Style
+            </Text>
+            <Icon name="chevron-right" size="sm" color={colors.textTertiary} decorative />
+          </Pressable>
+        </SettingsSectionCard>
+
+        {/* Required Android Delivery Policy Disclaimer */}
+        <View style={{ marginTop: spacing.md, paddingHorizontal: 4 }}>
           <Text style={[typography.caption, { color: colors.textTertiary, lineHeight: 18 }]}>
             Android may delay reminder delivery according to system battery and alarm policies when exact-alarm capability is unavailable.
           </Text>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -221,29 +379,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    paddingTop: 8,
   },
-  headerRow: {
+  subRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  card: {
+  permissionNoticeBox: {
     borderWidth: 1,
   },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  actionButton: {
+  smallActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    paddingHorizontal: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignSelf: 'flex-start',
   },
-  policyBox: {
-    paddingHorizontal: 4,
+  grantedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });

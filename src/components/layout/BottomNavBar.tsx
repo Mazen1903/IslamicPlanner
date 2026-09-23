@@ -1,7 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useContext, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { Icon, type IconName } from '@/components/common/Icon';
+import { NavHomeIcon, NavCalendarIcon, NavLibraryIcon, NavMoreIcon } from '@/components/settings/SettingsIcons';
+import { useAddTaskModalStore, type FabOrigin } from '@/stores/useAddTaskModalStore';
 
 export interface BottomNavBarRoute {
   key: string;
@@ -17,15 +20,36 @@ export interface BottomNavBarProps {
 }
 
 const TAB_CONFIG: Record<string, { label: string; icon: IconName }> = {
-  today: { label: 'Today', icon: 'sun' },
+  today: { label: 'Today', icon: 'home' },
   calendar: { label: 'Calendar', icon: 'calendar' },
   add: { label: 'Add', icon: 'plus' },
   journal: { label: 'Journal', icon: 'journal' },
-  settings: { label: 'Settings', icon: 'settings' },
+  settings: { label: 'More', icon: 'more' },
 };
 
 export function BottomNavBar(props: BottomNavBarProps) {
   const { colors, spacing, radii, typography, shadows, touchTargets } = useTheme();
+  const insetsContext = useContext(SafeAreaInsetsContext);
+  const bottomInset = props.insets?.bottom ?? insetsContext?.bottom ?? 0;
+
+  const addButtonRef = useRef<View>(null);
+  const screenDimensions = Dimensions.get('window');
+  const defaultOrigin: FabOrigin = {
+    x: (screenDimensions.width - 48) / 2,
+    y: screenDimensions.height - (bottomInset > 0 ? bottomInset + 54 : 58),
+    width: 48,
+    height: 48,
+  };
+
+  const measureAddButton = useCallback(() => {
+    if (addButtonRef.current && typeof addButtonRef.current.measureInWindow === 'function') {
+      addButtonRef.current.measureInWindow((x, y, width, height) => {
+        if (width > 0 && height > 0) {
+          useAddTaskModalStore.getState().setOrigin({ x, y, width, height });
+        }
+      });
+    }
+  }, []);
 
   const routes = props.state?.routes ?? [
     { key: 'today', name: 'today' },
@@ -46,6 +70,7 @@ export function BottomNavBar(props: BottomNavBarProps) {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
           borderTopWidth: 1,
+          paddingBottom: bottomInset > 0 ? bottomInset + 4 : 8,
         },
       ]}
       accessibilityRole="tablist"
@@ -71,26 +96,53 @@ export function BottomNavBar(props: BottomNavBarProps) {
         };
 
         if (isAdd) {
+          const handleAddPress = () => {
+            if (props.navigation) {
+              props.navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              });
+            }
+
+            const currentOrigin = useAddTaskModalStore.getState().origin || defaultOrigin;
+            useAddTaskModalStore.getState().openModal(currentOrigin);
+
+            if (addButtonRef.current && typeof addButtonRef.current.measureInWindow === 'function') {
+              addButtonRef.current.measureInWindow((x, y, width, height) => {
+                if (width > 0 && height > 0) {
+                  useAddTaskModalStore.getState().setOrigin({ x, y, width, height });
+                }
+              });
+            }
+          };
+
           return (
             <View key={route.key} style={styles.addTabWrapper}>
-              <Pressable
-                onPress={onPress}
-                accessibilityRole="button"
-                accessibilityLabel="Add task"
-                style={({ pressed }) => [
-                  styles.addButton,
-                  shadows.elevated,
-                  {
-                    backgroundColor: pressed ? colors.primaryPressed : colors.primary,
-                    minWidth: touchTargets.comfortable,
-                    minHeight: touchTargets.comfortable,
-                    borderRadius: radii.pill,
-                  },
-                ]}
-                testID="bottom-nav-add"
+              <View
+                ref={addButtonRef}
+                collapsable={false}
+                onLayout={measureAddButton}
               >
-                <Icon name="plus" size={24} color={colors.textOnPrimary} decorative />
-              </Pressable>
+                <Pressable
+                  onPress={handleAddPress}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add task"
+                  style={({ pressed }) => [
+                    styles.addButton,
+                    shadows.elevated,
+                    {
+                      backgroundColor: pressed ? colors.primaryPressed : colors.primary,
+                      minWidth: touchTargets.comfortable,
+                      minHeight: touchTargets.comfortable,
+                      borderRadius: radii.pill,
+                    },
+                  ]}
+                  testID="bottom-nav-add"
+                >
+                  <Icon name="plus" size={24} color={colors.textOnPrimary} decorative />
+                </Pressable>
+              </View>
             </View>
           );
         }
@@ -111,12 +163,35 @@ export function BottomNavBar(props: BottomNavBarProps) {
             ]}
             testID={`bottom-nav-${route.name}`}
           >
-            <Icon
-              name={config.icon}
-              size={22}
-              color={isFocused ? colors.tabActive : colors.tabInactive}
-              decorative
-            />
+            <View
+              style={[
+                styles.iconContainer,
+                isFocused && [
+                  styles.activeIconPill,
+                  {
+                    backgroundColor: colors.primaryLight,
+                    borderRadius: radii.pill,
+                  },
+                ],
+              ]}
+            >
+              {route.name === 'today' ? (
+                <NavHomeIcon size={22} color={isFocused ? colors.tabActive : colors.tabInactive} />
+              ) : route.name === 'calendar' ? (
+                <NavCalendarIcon size={22} color={isFocused ? colors.tabActive : colors.tabInactive} />
+              ) : route.name === 'journal' ? (
+                <NavLibraryIcon size={22} color={isFocused ? colors.tabActive : colors.tabInactive} />
+              ) : route.name === 'settings' ? (
+                <NavMoreIcon size={22} color={isFocused ? colors.tabActive : colors.tabInactive} />
+              ) : (
+                <Icon
+                  name={config.icon}
+                  size={22}
+                  color={isFocused ? colors.tabActive : colors.tabInactive}
+                  decorative
+                />
+              )}
+            </View>
             <Text
               style={[
                 typography.caption,
@@ -149,6 +224,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconContainer: {
+    height: 32,
+    minWidth: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  activeIconPill: {
+    paddingHorizontal: 14,
   },
   addTabWrapper: {
     flex: 1,

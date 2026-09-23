@@ -1,16 +1,36 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { DateTime } from 'luxon';
-import { useTheme } from '@/theme';
+import { useTheme, type ThemeColors } from '@/theme';
 import type { TaskCardViewModel } from '@/services/types';
 import { TaskCheckbox } from './TaskCheckbox';
-import { Icon } from '@/components/common/Icon';
+import { Icon, type IconName } from '@/components/common/Icon';
 import { useTodayStore } from '@/stores/useTodayStore';
 import { deriveOverdueState } from '@/services/TodayViewModelProjection';
 
 export interface TaskCardProps {
   task: TaskCardViewModel;
   onComplete?: (occurrenceId: string) => void;
+}
+
+function getCategoryTheme(title: string, colors: ThemeColors): { icon: IconName; bg: string; color: string } {
+  const lower = title.toLowerCase();
+  if (lower.includes('lunch') || lower.includes('dinner') || lower.includes('breakfast') || lower.includes('food') || lower.includes('eat')) {
+    return { icon: 'restaurant', bg: colors.primaryLight, color: colors.primary };
+  }
+  if (lower.includes('meet') || lower.includes('work') || lower.includes('team') || lower.includes('sync') || lower.includes('laptop')) {
+    return { icon: 'laptop', bg: colors.surfaceSecondary, color: colors.info };
+  }
+  if (lower.includes('qur') || lower.includes('read') || lower.includes('dhikr') || lower.includes('surah') || lower.includes('book')) {
+    return { icon: 'book', bg: colors.prayerFajr, color: colors.primary };
+  }
+  if (lower.includes('call') || lower.includes('phone') || lower.includes('mom') || lower.includes('dad')) {
+    return { icon: 'call', bg: colors.primaryLight, color: colors.primary };
+  }
+  if (lower.includes('gym') || lower.includes('workout') || lower.includes('exercise') || lower.includes('run') || lower.includes('fitness')) {
+    return { icon: 'barbell', bg: colors.primaryLight, color: colors.primary };
+  }
+  return { icon: 'check', bg: colors.primaryLight, color: colors.primary };
 }
 
 export function TaskCard({ task, onComplete }: TaskCardProps) {
@@ -23,6 +43,8 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
   const nowMs = useTodayStore(s => s.nowMs);
   const now = useMemo(() => DateTime.fromMillis(nowMs), [nowMs]);
   const overdueState = deriveOverdueState(task, now);
+
+  const category = getCategoryTheme(task.title, colors);
 
   const compositeLabel = useMemo(() => {
     let label = task.title;
@@ -49,7 +71,8 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
         {
           backgroundColor: isCompleted ? colors.surfaceSecondary : colors.surface,
           borderRadius: radii.card,
-          padding: spacing.md,
+          paddingVertical: spacing.md,
+          paddingHorizontal: spacing.md,
           marginBottom: spacing.sm,
           borderColor: colors.border,
           borderWidth: 1,
@@ -58,6 +81,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
       testID={`task-card-${task.occurrenceId}`}
     >
       <View style={styles.mainRow}>
+        {/* Left: Checkbox */}
         <TaskCheckbox
           checked={isCompleted}
           disabled={!isPending}
@@ -70,6 +94,12 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
           testID={`checkbox-${task.occurrenceId}`}
         />
 
+        {/* Category Icon Badge */}
+        <View style={[styles.categoryCircle, { backgroundColor: category.bg }]}>
+          <Icon name={category.icon} size={18} color={category.color} decorative />
+        </View>
+
+        {/* Title and metadata block */}
         <View
           style={styles.contentContainer}
           accessible={true}
@@ -83,10 +113,11 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
                   color: isCompleted ? colors.textMuted : colors.textPrimary,
                   textDecorationLine: isCompleted ? 'line-through' : 'none',
                   fontWeight: '600',
+                  fontSize: 15,
                   flex: 1,
                 },
               ]}
-              numberOfLines={2}
+              numberOfLines={1}
             >
               {task.title}
             </Text>
@@ -96,7 +127,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
                 style={[
                   styles.badge,
                   {
-                    backgroundColor: colors.danger + '1A', // subtle 10% tint
+                    backgroundColor: colors.dangerSurface,
                     borderColor: colors.danger,
                     borderRadius: radii.pill,
                     borderWidth: 1,
@@ -104,6 +135,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
                     marginStart: spacing.xs,
                   },
                 ]}
+                testID={`important-badge-${task.occurrenceId}`}
               >
                 <Text style={[typography.caption, { color: colors.danger, fontWeight: '700' }]}>
                   IMPORTANT
@@ -123,7 +155,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
             ) : null}
 
             {task.estimatedMinutes ? (
-              <View style={[styles.metaItem, { marginStart: spacing.md }]}>
+              <View style={[styles.metaItem, { marginStart: spacing.sm }]}>
                 <Text style={[typography.caption, { color: colors.textTertiary }]}>
                   {task.estimatedMinutes}m
                 </Text>
@@ -194,6 +226,11 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
             )}
           </View>
         </View>
+
+        {/* Right side indicators: Chevron */}
+        <View style={styles.rightActions}>
+          <Icon name="chevron-right" size={18} color={colors.textTertiary} decorative />
+        </View>
       </View>
     </View>
   );
@@ -207,6 +244,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  categoryCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 4,
+  },
   contentContainer: {
     flex: 1,
     marginStart: 8,
@@ -214,12 +259,11 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 3,
   },
   metaItem: {
     flexDirection: 'row',
@@ -228,5 +272,10 @@ const styles = StyleSheet.create({
   badge: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginStart: 8,
   },
 });

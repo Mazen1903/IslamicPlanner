@@ -28,12 +28,16 @@ import type {
 import type { TaskDefinition, TaskOccurrence } from '@/domain/task/types';
 import type { TodayTemporalInputProvider } from '@/services/types';
 import { M7BootstrapInputProvider } from '@/services/TodayTemporalInputProvider';
+import { TaskHeaderBanner } from './TaskHeaderBanner';
 import { ScheduleModeCards } from './ScheduleModeCards';
-import { RecurrenceSection } from './RecurrenceSection';
-import { MoreOptionsSection } from './MoreOptionsSection';
+import { RelativePrayerSubView } from './RelativePrayerSubView';
+import { RecurrenceSubView } from './RecurrenceSubView';
+import { MoreOptionsSubView } from './MoreOptionsSubView';
 import { EditScopeSheet } from './EditScopeSheet';
 import { SuccessScreen } from './SuccessScreen';
 import { PartialSuccessView } from './PartialSuccessView';
+
+export type FormView = 'MAIN' | 'RELATIVE_PRAYER' | 'REPEAT' | 'MORE_OPTIONS';
 
 export interface TaskFormScreenProps {
   initialDefinition?: TaskDefinition;
@@ -49,6 +53,27 @@ export interface TaskFormScreenProps {
 }
 
 const defaultInputProvider = new M7BootstrapInputProvider();
+
+function getRecurrenceLabel(preset: string, specificDaysCount: number, calendar: string): string {
+  switch (preset) {
+    case 'NONE':
+      return "Doesn't repeat";
+    case 'DAILY':
+      return 'Daily';
+    case 'WEEKDAYS':
+      return 'Weekdays (Mon - Fri)';
+    case 'WEEKLY':
+      return 'Weekly';
+    case 'MONTHLY':
+      return 'Monthly';
+    case 'SPECIFIC_DAYS':
+      return `Specific days (${specificDaysCount} selected)`;
+    case 'CUSTOM':
+      return calendar === 'HIJRI' ? 'Custom (Hijri)' : 'Custom (Gregorian)';
+    default:
+      return "Doesn't repeat";
+  }
+}
 
 export function TaskFormScreen({
   initialDefinition,
@@ -68,6 +93,9 @@ export function TaskFormScreen({
   const isRecurringSeries = Boolean(
     initialDefinition?.recurrenceRule || initialDefinition?.hijriRecurrence
   );
+
+  // Sub-view navigation state
+  const [currentView, setCurrentView] = useState<FormView>('MAIN');
 
   // Scope selection sheet state for recurring task edits
   const [showScopeSheet, setShowScopeSheet] = useState(
@@ -169,6 +197,8 @@ export function TaskFormScreen({
     const validation = validateForm(state);
     if (!validation.isValid) {
       dispatch({ type: 'SET_VALIDATION_ERRORS', payload: validation.errors });
+      // If validation failed, ensure we return to MAIN view to show errors
+      setCurrentView('MAIN');
       return;
     }
 
@@ -228,99 +258,137 @@ export function TaskFormScreen({
     );
   }
 
-  // If THIS_OCCURRENCE scope: only show occurrence-level override fields!
+  // Sub-view 2: Relative to Prayer screen (add task2.png)
+  if (currentView === 'RELATIVE_PRAYER') {
+    return (
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['top', 'left', 'right']}
+        testID="task-form-screen"
+      >
+        <TaskHeaderBanner
+          title={isEdit ? 'Edit Task' : 'Add Task'}
+          subtitle="Schedule it around your prayers"
+          onBack={() => setCurrentView('MAIN')}
+          backTestID="task-form-back-button"
+        />
+        <RelativePrayerSubView
+          state={state}
+          dispatch={dispatch}
+          previewResult={previewResult}
+          onBack={() => setCurrentView('MAIN')}
+          onNext={() => setCurrentView('MAIN')}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  // Sub-view 3: Repeat options screen (add task3.png)
+  if (currentView === 'REPEAT') {
+    return (
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['top', 'left', 'right']}
+        testID="task-form-screen"
+      >
+        <TaskHeaderBanner
+          title={isEdit ? 'Edit Task' : 'Add Task'}
+          subtitle="Set how often this task repeats"
+          onBack={() => setCurrentView('MAIN')}
+          backTestID="task-form-back-button"
+        />
+        <RecurrenceSubView
+          state={state}
+          dispatch={dispatch}
+          onBack={() => setCurrentView('MAIN')}
+          onNext={() => setCurrentView('MAIN')}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  // Sub-view 4: More Options screen (add task4.png)
+  if (currentView === 'MORE_OPTIONS') {
+    return (
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['top', 'left', 'right']}
+        testID="task-form-screen"
+      >
+        <TaskHeaderBanner
+          title={isEdit ? 'Edit Task' : 'Add Task'}
+          subtitle="Customize your task"
+          onBack={() => setCurrentView('MAIN')}
+          backTestID="task-form-back-button"
+        />
+        <MoreOptionsSubView
+          state={state}
+          dispatch={dispatch}
+          onBack={() => setCurrentView('MAIN')}
+          onSave={handleSave}
+          isSubmitting={isSubmitting}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  // If THIS_OCCURRENCE scope: only show occurrence-level override fields
   const isThisOccurrenceScope = state.editScope === 'THIS_OCCURRENCE';
 
+  // Sub-view 1: Main screen (add task1.png)
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top', 'left', 'right']}
       testID="task-form-screen"
     >
-      {/* Visual Mosque / Header Banner */}
-      <View
-        style={[
-          styles.headerBanner,
-          {
-            backgroundColor: colors.surface,
-            borderBottomColor: colors.border,
-            borderBottomWidth: 1,
-            paddingHorizontal: spacing.lg,
-            paddingVertical: spacing.md,
-          },
-        ]}
-      >
-        <View style={styles.headerTopRow}>
-          <Pressable
-            onPress={handleBackPress}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            testID="task-form-back-button"
-            style={[styles.iconButton, { minHeight: touchTargets.min, minWidth: touchTargets.min }]}
-          >
-            <Icon name="close" size={22} color={colors.textPrimary} />
-          </Pressable>
-
-          <Text style={[typography.headlineLarge, { color: colors.primaryDark, fontWeight: '700' }]}>
-            {isEdit ? 'Edit Task' : 'Add Task'}
-          </Text>
-
-          {/* Save Button in Header */}
-          <Pressable
-            onPress={handleSave}
-            disabled={isSubmitting}
-            accessibilityRole="button"
-            accessibilityLabel="Save task"
-            accessibilityState={{ busy: isSubmitting }}
-            testID="task-form-save-button"
-            style={({ pressed }) => [
-              styles.saveHeaderButton,
-              {
-                backgroundColor: isSubmitting ? colors.disabledBackground : pressed ? colors.primaryPressed : colors.primary,
-                borderRadius: radii.pill,
-                minHeight: touchTargets.min,
-                paddingHorizontal: spacing.lg,
-                opacity: isSubmitting ? 0.7 : 1,
-              },
-            ]}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color={colors.textOnPrimary} testID="save-busy-indicator" />
-            ) : (
-              <Text style={[typography.labelLarge, { color: colors.textOnPrimary, fontWeight: '700' }]}>
-                Save
-              </Text>
-            )}
-          </Pressable>
-        </View>
-      </View>
+      {/* Mosque Skyline Header Banner */}
+      <TaskHeaderBanner
+        title={isEdit ? 'Edit Task' : 'Add Task'}
+        subtitle="Turn your plans into progress"
+        onBack={handleBackPress}
+        backTestID="task-form-back-button"
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
       >
-        {/* Task Title Input */}
+        {/* Task Title Input Card with Pencil Icon */}
         <View style={[styles.titleSection, { marginBottom: spacing.md }]}>
-          <TextInput
-            value={state.title}
-            onChangeText={text => dispatch({ type: 'SET_TITLE', payload: text })}
-            placeholder="What would you like to do?"
-            placeholderTextColor={colors.textTertiary}
-            accessibilityLabel="Task title"
-            testID="task-title-input"
+          <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary, marginBottom: spacing.xs }]}>
+            Task name
+          </Text>
+          <View
             style={[
-              styles.titleInput,
-              typography.headlineMedium,
+              styles.titleInputCard,
+              shadows.card,
               {
-                color: colors.textPrimary,
                 backgroundColor: colors.surface,
                 borderColor: state.validationErrors.title ? colors.danger : colors.border,
                 borderRadius: radii.card,
-                padding: spacing.lg,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.xs,
               },
-              shadows.card,
             ]}
-          />
+          >
+            <Icon name="edit" size={20} color={colors.textSecondary} decorative style={{ marginEnd: spacing.sm }} />
+            <TextInput
+              value={state.title}
+              onChangeText={text => dispatch({ type: 'SET_TITLE', payload: text })}
+              placeholder="What do you need to do?"
+              placeholderTextColor={colors.textTertiary}
+              accessibilityLabel="Task title"
+              testID="task-title-input"
+              style={[
+                styles.titleTextInput,
+                typography.bodyLarge,
+                {
+                  color: colors.textPrimary,
+                },
+              ]}
+            />
+          </View>
           {state.validationErrors.title && (
             <Text
               style={[typography.caption, { color: colors.danger, marginTop: spacing.xs, marginStart: spacing.xs }]}
@@ -331,30 +399,121 @@ export function TaskFormScreen({
           )}
         </View>
 
-        {/* If THIS_OCCURRENCE: hide definition-level fields (schedule, recurrence, priority, duration, tags, reminder) */}
+        {/* If THIS_OCCURRENCE: hide definition-level fields */}
         {!isThisOccurrenceScope ? (
           <>
-            {/* Scheduling Mode Cards */}
+            {/* Scheduling Mode Cards (When? 2x2 Grid) */}
             <ScheduleModeCards
               state={state}
               dispatch={dispatch}
               previewResult={previewResult}
+              onRequestRelativeView={() => setCurrentView('RELATIVE_PRAYER')}
             />
 
-            {/* Recurrence Section */}
-            <RecurrenceSection
-              state={state}
-              dispatch={dispatch}
-            />
+            {/* Repeat Row Entry Card (Tapping opens add task3.png) */}
+            <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
+              Repeat
+            </Text>
+            <Pressable
+              onPress={() => setCurrentView('REPEAT')}
+              accessibilityRole="button"
+              accessibilityLabel={`Repeat: ${getRecurrenceLabel(state.recurrencePreset, state.specificDays.length, state.recurrenceCalendar)}`}
+              testID="repeat-entry-card"
+              style={({ pressed }) => [
+                styles.navEntryCard,
+                shadows.card,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderRadius: radii.card,
+                  padding: spacing.md,
+                  minHeight: touchTargets.min,
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
+            >
+              <View style={styles.entryIconBox}>
+                <Icon name="refresh" size={24} color={colors.textSecondary} decorative />
+              </View>
+              <View style={styles.entryContent}>
+                <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
+                  {getRecurrenceLabel(state.recurrencePreset, state.specificDays.length, state.recurrenceCalendar)}
+                </Text>
+              </View>
+              <Icon name="chevron-down" size={18} color={colors.primary} decorative />
+            </Pressable>
 
-            {/* More Options Section */}
-            <MoreOptionsSection
-              state={state}
-              dispatch={dispatch}
-            />
+            {/* More Options Row Entry Card (Tapping opens add task4.png) */}
+            <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
+              More options
+            </Text>
+            <Pressable
+              onPress={() => setCurrentView('MORE_OPTIONS')}
+              accessibilityRole="button"
+              accessibilityLabel="More Options"
+              testID="more-options-entry-card"
+              style={({ pressed }) => [
+                styles.navEntryCard,
+                shadows.card,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderRadius: radii.card,
+                  padding: spacing.md,
+                  minHeight: touchTargets.min,
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
+            >
+              <View style={styles.entryIconBox}>
+                <Icon name="options" size={24} color={colors.textSecondary} decorative />
+              </View>
+              <View style={styles.entryContent}>
+                <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
+                  More options
+                </Text>
+                <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+                  Reminder, Priority, Duration, Notes, Subtasks, Attachment
+                </Text>
+              </View>
+              <Icon name="chevron-right" size={18} color={colors.primary} directional decorative />
+            </Pressable>
+
+            {/* Full-width Save Task Button */}
+            <Pressable
+              onPress={handleSave}
+              disabled={isSubmitting}
+              accessibilityRole="button"
+              accessibilityLabel="Save task"
+              accessibilityState={{ busy: isSubmitting }}
+              testID="task-form-save-button"
+              style={({ pressed }) => [
+                styles.saveTaskButton,
+                {
+                  backgroundColor: isSubmitting
+                    ? colors.disabledBackground
+                    : pressed
+                    ? colors.primaryPressed
+                    : colors.primary,
+                  borderRadius: radii.pill,
+                  minHeight: touchTargets.min,
+                  marginTop: spacing.xl,
+                  marginBottom: spacing.xl,
+                  opacity: isSubmitting ? 0.7 : 1,
+                },
+              ]}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color={colors.textOnPrimary} testID="save-busy-indicator" />
+              ) : (
+                <Text style={[typography.labelLarge, { color: colors.textOnPrimary, fontWeight: '700', fontSize: 18 }]}>
+                  Save Task
+                </Text>
+              )}
+            </Pressable>
           </>
         ) : (
-          /* THIS_OCCURRENCE: Only occurrence-level fields (Title, Notes, Subtasks) */
+          /* THIS_OCCURRENCE: Only occurrence-level fields */
           <View style={{ marginTop: spacing.md }} testID="occurrence-override-fields">
             <View
               style={[
@@ -396,6 +555,39 @@ export function TaskFormScreen({
                 },
               ]}
             />
+
+            {/* Save Button for occurrence override */}
+            <Pressable
+              onPress={handleSave}
+              disabled={isSubmitting}
+              accessibilityRole="button"
+              accessibilityLabel="Save task occurrence"
+              accessibilityState={{ busy: isSubmitting }}
+              testID="task-form-save-button"
+              style={({ pressed }) => [
+                styles.saveTaskButton,
+                {
+                  backgroundColor: isSubmitting
+                    ? colors.disabledBackground
+                    : pressed
+                    ? colors.primaryPressed
+                    : colors.primary,
+                  borderRadius: radii.pill,
+                  minHeight: touchTargets.min,
+                  marginTop: spacing.xl,
+                  marginBottom: spacing.xl,
+                  opacity: isSubmitting ? 0.7 : 1,
+                },
+              ]}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color={colors.textOnPrimary} testID="save-busy-indicator" />
+              ) : (
+                <Text style={[typography.labelLarge, { color: colors.textOnPrimary, fontWeight: '700', fontSize: 16 }]}>
+                  Save Task
+                </Text>
+              )}
+            </Pressable>
           </View>
         )}
       </ScrollView>
@@ -414,30 +606,52 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerBanner: {
-    justifyContent: 'center',
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  iconButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveHeaderButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   scrollContent: {
     paddingBottom: 40,
   },
   titleSection: {
     width: '100%',
   },
-  titleInput: {
+  sectionTitle: {
+    fontWeight: '700',
+  },
+  titleInputCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
+    minHeight: 56,
+  },
+  titleTextInput: {
+    flex: 1,
+    paddingVertical: 4,
+  },
+  titleIconBox: {
+    paddingLeft: 8,
+  },
+  navEntryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  entryIconBox: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  entryContent: {
+    flex: 1,
+  },
+  saveTaskButton: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveBtnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   noticeBanner: {
     borderWidth: 1,

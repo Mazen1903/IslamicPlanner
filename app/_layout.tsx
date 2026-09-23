@@ -10,6 +10,7 @@ import { migrateDatabase } from '@/data/migrator';
 import { userSettingsRepository } from '@/data/repositories/UserSettingsRepository';
 import { initNotificationHandler } from '@/services/notification/NotificationBootstrap';
 import { useOnboardingStore } from '@/stores/useOnboardingStore';
+import * as Font from 'expo-font';
 
 export type BootstrapState = 'LOADING' | 'READY' | 'ERROR';
 
@@ -121,6 +122,23 @@ export default function RootLayout() {
     let cancelled = false;
 
     async function bootstrap() {
+      // Step 0: Font loading
+      try {
+        await Font.loadAsync({
+          Mali: require('../assets/fonts/Mali-Regular.ttf'),
+          'Mali-Regular': require('../assets/fonts/Mali-Regular.ttf'),
+          'Mali-Bold': require('../assets/fonts/Mali-Bold.ttf'),
+          'Mali-Italic': require('../assets/fonts/Mali-Italic.ttf'),
+          'Mali-BoldItalic': require('../assets/fonts/Mali-BoldItalic.ttf'),
+          'Mali-Medium': require('../assets/fonts/Mali-Medium.ttf'),
+          'Mali-MediumItalic': require('../assets/fonts/Mali-MediumItalic.ttf'),
+          'Mali-SemiBold': require('../assets/fonts/Mali-SemiBold.ttf'),
+          'Mali-SemiBoldItalic': require('../assets/fonts/Mali-SemiBoldItalic.ttf'),
+        });
+      } catch (fontErr) {
+        console.warn('[RootLayout] Non-fatal font load error:', fontErr);
+      }
+
       // Step 1: Notifications bootstrap (side-effect only, no DB)
       await initNotificationHandler();
 

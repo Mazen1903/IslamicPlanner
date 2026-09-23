@@ -18,37 +18,43 @@ export function AnytimeTodaySection({
   onToggleCollapsed,
   onComplete,
 }: AnytimeTodaySectionProps) {
-  const { colors, spacing, typography, touchTargets } = useTheme();
+  const { colors, spacing, typography, shadows } = useTheme();
 
-  if (tasks.length === 0) {
-    return null;
-  }
+  const taskCount = tasks.length;
+  const countLabel = `${taskCount} task${taskCount === 1 ? '' : 's'}`;
 
   return (
     <View style={styles.container} testID="anytime-today-section">
       <Pressable
         onPress={onToggleCollapsed}
         style={[
-          styles.header,
+          styles.cardHeader,
+          shadows.card,
           {
-            minHeight: touchTargets.min,
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            borderWidth: 1,
+            borderRadius: 16,
             paddingHorizontal: spacing.lg,
-            paddingVertical: spacing.sm,
-            borderTopColor: colors.divider,
-            borderTopWidth: 1,
+            paddingVertical: 14,
           },
         ]}
         accessibilityRole="button"
-        accessibilityLabel={`Anytime Today, ${tasks.length} items, ${collapsed ? 'collapsed' : 'expanded'}`}
+        accessibilityLabel={`Anytime Today, ${taskCount} items, ${collapsed ? 'collapsed' : 'expanded'}`}
         accessibilityState={{ expanded: !collapsed }}
         testID="anytime-section-header"
       >
         <View style={styles.headerLeft}>
-          <Icon name="sun" size={16} color={colors.primary} style={{ marginEnd: 6 }} decorative />
-          <Text style={[typography.labelMedium, { color: colors.textPrimary, fontWeight: '700' }]}>
-            Anytime Today ({tasks.length})
+          <Icon name="clock" size={18} color={colors.textSecondary} style={{ marginEnd: 6 }} decorative />
+          <Text style={[typography.labelLarge, styles.title, { color: colors.textPrimary }]}>
+            Anytime Today
           </Text>
+
+          <View style={[styles.badgePill, { backgroundColor: colors.primaryLight }]}>
+            <Text style={[styles.badgeText, { color: colors.primary }]}>{countLabel}</Text>
+          </View>
         </View>
+
         <Icon
           name={collapsed ? 'chevron-right' : 'chevron-down'}
           size={18}
@@ -58,7 +64,7 @@ export function AnytimeTodaySection({
         />
       </Pressable>
 
-      {!collapsed && (
+      {!collapsed && tasks.length > 0 && (
         <View style={styles.list}>
           {tasks.map(task => (
             <TaskCard key={task.occurrenceId} task={task} onComplete={onComplete} />
@@ -71,19 +77,35 @@ export function AnytimeTodaySection({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 20,
-    marginBottom: 24,
+    marginTop: 8,
+    marginBottom: 16,
   },
-  header: {
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginHorizontal: 16,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  title: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginStart: 4,
+  },
+  badgePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginStart: 8,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   list: {
-    marginTop: 6,
+    marginTop: 10,
   },
 });

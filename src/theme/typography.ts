@@ -6,8 +6,11 @@ import type { TypographyScale } from './tokens';
  * Custom font family identifiers per UI_SYSTEM.md §4.1
  */
 export const fontNames = {
-  display: 'Outfit',
-  body: 'Inter',
+  display: 'Mali-BoldItalic',
+  displayRegular: 'Mali-Regular',
+  displayBold: 'Mali-Bold',
+  body: 'Mali-Regular',
+  bodyItalic: 'Mali-Italic',
   mono: 'JetBrainsMono',
 } as const;
 
@@ -16,7 +19,10 @@ export const fontNames = {
  */
 export const fallbackFonts = {
   display: Platform.select({ ios: 'System', android: 'sans-serif-medium', default: 'sans-serif' }),
+  displayRegular: Platform.select({ ios: 'System', android: 'sans-serif', default: 'sans-serif' }),
+  displayBold: Platform.select({ ios: 'System', android: 'sans-serif-medium', default: 'sans-serif' }),
   body: Platform.select({ ios: 'System', android: 'sans-serif', default: 'sans-serif' }),
+  bodyItalic: Platform.select({ ios: 'System', android: 'sans-serif', default: 'sans-serif' }),
   mono: Platform.select({ ios: 'Courier', android: 'monospace', default: 'monospace' }),
 } as const;
 
@@ -26,6 +32,9 @@ export const fallbackFonts = {
 export function getFontFamily(fontKey: keyof typeof fontNames): string {
   const desired = fontNames[fontKey];
   if (Font.isLoaded(desired)) {
+    return desired;
+  }
+  if (process.env.NODE_ENV !== 'test') {
     return desired;
   }
   return fallbackFonts[fontKey];
@@ -53,13 +62,13 @@ export function createTypographyScale(resolvedFontFamilies?: {
     displayMedium: {
       fontFamily: displayFont,
       fontSize: 24,
-      fontWeight: '600',
+      fontWeight: '700',
       lineHeight: 32,
     },
     displaySmall: {
       fontFamily: displayFont,
       fontSize: 20,
-      fontWeight: '600',
+      fontWeight: '700',
       lineHeight: 28,
     },
 
@@ -67,13 +76,13 @@ export function createTypographyScale(resolvedFontFamilies?: {
     headlineLarge: {
       fontFamily: displayFont,
       fontSize: 18,
-      fontWeight: '600',
+      fontWeight: '700',
       lineHeight: 24,
     },
     headlineMedium: {
       fontFamily: displayFont,
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: '700',
       lineHeight: 22,
     },
 
@@ -99,15 +108,15 @@ export function createTypographyScale(resolvedFontFamilies?: {
 
     // Labels — sans-serif, medium weight
     labelLarge: {
-      fontFamily: bodyFont,
+      fontFamily: displayFont,
       fontSize: 14,
-      fontWeight: '500',
+      fontWeight: '700',
       lineHeight: 20,
     },
     labelMedium: {
       fontFamily: bodyFont,
       fontSize: 12,
-      fontWeight: '500',
+      fontWeight: '600',
       lineHeight: 16,
     },
     labelSmall: {

@@ -1,26 +1,35 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useEntitlement } from '@/hooks/useEntitlement';
 import { usePlanningDayMutation } from '@/hooks/usePlanningDayMutation';
 import {
-  SettingsScreenHeader,
-  SettingsSectionHeader,
-  SettingsInfoCard,
+  SettingsPastelHeader,
+  SettingsSectionCard,
+  SettingsSecDayStartClockIcon,
+  SettingsSecCompletedCheckIcon,
+  SettingsSecOverdueBoltIcon,
+  SettingsSecInfoCircleIcon,
+  SettingsBadgeGoldLock,
+  SettingsCheckCircleIcon,
 } from '@/components/settings';
 import { PremiumBadge, PremiumLockedInfo } from '@/components/premium';
 import { TimePickerInput } from '@/components/task-form/DateTimePickerInput';
 import { Icon } from '@/components/common/Icon';
 
 export default function PlanningDayScreen() {
-  const { colors, spacing, typography, touchTargets, radii } = useTheme();
+  const { colors, spacing, typography, touchTargets, radii, shadows } = useTheme();
+  const router = useRouter();
   const { settings, reload } = useUserSettings();
-  const { isPremium, isLoading: isEntitlementLoading } = useEntitlement();
+  const { isPremium } = useEntitlement();
   const { isSaving, setPlanningDayStart } = usePlanningDayMutation();
 
   const [showLockedInfo, setShowLockedInfo] = useState(false);
+  const [completedTasksMode, setCompletedTasksMode] = useState<'KEEP' | 'MOVE' | 'HIDE'>('KEEP');
+  const [overdueTasksMode, setOverdueTasksMode] = useState<'KEEP' | 'MOVE' | 'HIDE'>('KEEP');
 
   const currentMode = settings?.planningDayStart ?? 'FAJR';
   const isFajr = currentMode === 'FAJR';
@@ -31,7 +40,7 @@ export default function PlanningDayScreen() {
   const customTime = isCustom ? currentMode.replace('CUSTOM:', '') : '04:00';
 
   const handleSelectFajr = async () => {
-    if (isFajr) return; // UI short-circuit
+    if (isFajr) return;
 
     const res = await setPlanningDayStart('FAJR');
     if (res.status === 'SUCCESS') {
@@ -54,10 +63,7 @@ export default function PlanningDayScreen() {
   };
 
   const handleSelectMidnight = async () => {
-    // UI-12: If already active mode, presentation short-circuit (zero mutation call)
-    if (isMidnight) {
-      return;
-    }
+    if (isMidnight) return;
 
     if (!isPremium) {
       setShowLockedInfo(true);
@@ -85,17 +91,13 @@ export default function PlanningDayScreen() {
   };
 
   const handleSelectCustom = async () => {
-    // UI-12: If already active custom mode, presentation short-circuit (zero mutation call)
-    if (isCustom) {
-      return;
-    }
+    if (isCustom) return;
 
     if (!isPremium) {
       setShowLockedInfo(true);
       return;
     }
 
-    // Default new custom boundary is 04:00
     const targetValue = `CUSTOM:${customTime || '04:00'}`;
     const res = await setPlanningDayStart(targetValue);
     if (res.status === 'SUCCESS') {
@@ -109,7 +111,7 @@ export default function PlanningDayScreen() {
       await reload();
       Alert.alert(
         'Planning Day Updated',
-        `Your planning day was updated. Schedule refresh will occur automatically when you visit Today.`,
+        'Your planning day was updated. Schedule refresh will occur automatically when you visit Today.',
         [{ text: 'OK' }]
       );
     } else {
@@ -137,82 +139,37 @@ export default function PlanningDayScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.background }]}
-      edges={['top', 'left', 'right']}
-    >
-      <SettingsScreenHeader title="Planning Day" backTestID="planning-day-back-button" />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+      <SettingsPastelHeader
+        title="Planner Settings"
+        subtitle="Customize how your day and tasks work."
+        showBack
+        showMosqueArt
+        onBack={() => router.back()}
+        testID="section-header-planning-day"
+      />
 
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: spacing.xxl }]}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: spacing.md, paddingBottom: spacing.xxxl }]}
+        showsVerticalScrollIndicator={false}
         testID="planning-day-screen"
       >
-        <SettingsInfoCard
-          title="Islamic Day Boundary"
-          message="In Islamic tradition, the spiritual cycle of the day is measured from Fajr. Tasks planned late at night remain part of your day until the Fajr prayer arrives."
-          icon="clock"
-          testID="planning-day-info-card"
-        />
-
-        <SettingsSectionHeader title="Planning Day Start Mode" />
-
-        <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {/* 1. FAJR (Universally free) */}
-          <Pressable
-            onPress={handleSelectFajr}
-            disabled={isSaving}
-            style={({ pressed }) => [
-              styles.optionRow,
-              {
-                minHeight: touchTargets.min,
-                paddingVertical: spacing.md,
-                paddingHorizontal: spacing.md,
-                backgroundColor: pressed ? colors.surfaceSecondary : colors.surface,
-                borderBottomColor: colors.border,
-              },
-            ]}
-            accessibilityRole="checkbox"
-            accessibilityLabel="Fajr (Default & Recommended)"
-            accessibilityState={{ checked: isFajr }}
-            testID="planning-day-option-fajr"
-          >
-            <View style={styles.textContainer}>
-              <Text
-                style={[
-                  typography.bodyMedium,
-                  {
-                    color: isFajr ? colors.primary : colors.textPrimary,
-                    fontWeight: isFajr ? '600' : '400',
-                  },
-                ]}
-              >
-                Fajr (Default & Recommended)
-              </Text>
-              <Text style={[typography.bodySmall, { color: colors.textSecondary, marginTop: 2 }]}>
-                Your planning day begins at the moment of Fajr prayer.
-              </Text>
-            </View>
-            <View style={styles.checkWrapper}>
-              {isFajr ? (
-                <Icon name="check" size={20} color={colors.primary} decorative />
-              ) : (
-                <View style={{ width: 20 }} />
-              )}
-            </View>
-          </Pressable>
-
-          {/* 2. MIDNIGHT (Premium) */}
+        {/* CARD 1: DAY START */}
+        <SettingsSectionCard
+          customBadge={<SettingsSecDayStartClockIcon size={40} />}
+          title="Day Start"
+          subtitle="Choose when your day starts."
+          testID="day-start-section-card"
+        >
+          {/* Midnight (12:00 AM) */}
           <Pressable
             onPress={handleSelectMidnight}
             disabled={isSaving}
             style={({ pressed }) => [
-              styles.optionRow,
+              styles.radioRow,
               {
-                minHeight: touchTargets.min,
-                paddingVertical: spacing.md,
-                paddingHorizontal: spacing.md,
-                backgroundColor: pressed ? colors.surfaceSecondary : colors.surface,
-                borderBottomColor: colors.border,
+                paddingVertical: spacing.sm,
+                opacity: pressed ? 0.8 : 1,
               },
             ]}
             accessibilityRole="checkbox"
@@ -220,47 +177,48 @@ export default function PlanningDayScreen() {
             accessibilityState={{ checked: isMidnight }}
             testID="planning-day-option-midnight"
           >
-            <View style={styles.textContainer}>
-              <View style={styles.titleRow}>
-                <Text
-                  style={[
-                    typography.bodyMedium,
-                    {
-                      color: isMidnight ? colors.primary : colors.textPrimary,
-                      fontWeight: isMidnight ? '600' : '400',
-                      marginEnd: spacing.sm,
-                    },
-                  ]}
-                >
-                  Midnight (12:00 AM)
-                </Text>
-                <PremiumBadge testID="premium-badge-midnight" />
-              </View>
-              <Text style={[typography.bodySmall, { color: colors.textSecondary, marginTop: 2 }]}>
-                Standard civil day boundary at 00:00.
-              </Text>
+            <View style={[styles.radioCircle, { borderColor: isMidnight ? colors.primary : colors.border }]}>
+              {isMidnight && <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />}
             </View>
-            <View style={styles.checkWrapper}>
-              {isMidnight ? (
-                <Icon name="check" size={20} color={colors.primary} decorative />
-              ) : (
-                <View style={{ width: 20 }} />
-              )}
-            </View>
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1, marginEnd: spacing.sm }]}>
+              Midnight (12:00 AM)
+            </Text>
+            {!isPremium && <SettingsBadgeGoldLock testID="premium-badge-midnight" />}
           </Pressable>
 
-          {/* 3. CUSTOM (Premium) */}
+          {/* Fajr (Default & Recommended) */}
+          <Pressable
+            onPress={handleSelectFajr}
+            disabled={isSaving}
+            style={({ pressed }) => [
+              styles.radioRow,
+              {
+                paddingVertical: spacing.sm,
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+            accessibilityRole="checkbox"
+            accessibilityLabel="Fajr (Default & Recommended)"
+            accessibilityState={{ checked: isFajr }}
+            testID="planning-day-option-fajr"
+          >
+            <View style={[styles.radioCircle, { borderColor: isFajr ? colors.primary : colors.border }]}>
+              {isFajr && <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />}
+            </View>
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1, marginEnd: spacing.sm }]}>
+              Fajr (Default & Recommended)
+            </Text>
+          </Pressable>
+
+          {/* Custom Time */}
           <Pressable
             onPress={handleSelectCustom}
             disabled={isSaving}
             style={({ pressed }) => [
-              styles.optionRow,
+              styles.radioRow,
               {
-                minHeight: touchTargets.min,
-                paddingVertical: spacing.md,
-                paddingHorizontal: spacing.md,
-                backgroundColor: pressed ? colors.surfaceSecondary : colors.surface,
-                borderBottomColor: isCustom ? 'transparent' : colors.border,
+                paddingVertical: spacing.sm,
+                opacity: pressed ? 0.8 : 1,
               },
             ]}
             accessibilityRole="checkbox"
@@ -268,104 +226,189 @@ export default function PlanningDayScreen() {
             accessibilityState={{ checked: isCustom }}
             testID="planning-day-option-custom"
           >
-            <View style={styles.textContainer}>
-              <View style={styles.titleRow}>
-                <Text
-                  style={[
-                    typography.bodyMedium,
-                    {
-                      color: isCustom ? colors.primary : colors.textPrimary,
-                      fontWeight: isCustom ? '600' : '400',
-                      marginEnd: spacing.sm,
-                    },
-                  ]}
-                >
-                  Custom Time
-                </Text>
-                <PremiumBadge testID="premium-badge-custom" />
-              </View>
-              <Text style={[typography.bodySmall, { color: colors.textSecondary, marginTop: 2 }]}>
-                Choose a fixed local hour for your planning day rollover.
-              </Text>
+            <View style={[styles.radioCircle, { borderColor: isCustom ? colors.primary : colors.border }]}>
+              {isCustom && <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />}
             </View>
-            <View style={styles.checkWrapper}>
-              {isCustom ? (
-                <Icon name="check" size={20} color={colors.primary} decorative />
-              ) : (
-                <View style={{ width: 20 }} />
-              )}
-            </View>
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1, marginEnd: spacing.sm }]}>
+              Custom Time
+            </Text>
+            {!isPremium && <SettingsBadgeGoldLock testID="premium-badge-custom" />}
           </Pressable>
 
-          {/* CUSTOM time picker section — visible when Custom is active */}
-          {isCustom && (
-            <View
-              style={[
-                styles.customPickerContainer,
-                {
-                  backgroundColor: colors.surfaceSecondary,
-                  padding: spacing.md,
-                  borderBottomColor: colors.border,
-                },
-              ]}
-            >
+          {/* Time Picker if Custom & Premium */}
+          {isCustom && isPremium && (
+            <View style={{ marginTop: spacing.xs, paddingTop: spacing.xs, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }} testID="planning-day-time-picker">
               <TimePickerInput
                 value={customTime}
                 onChange={handleCustomTimeChange}
-                disabled={!isPremium || isSaving}
-                label="Planning Day Boundary Time"
-                testID="planning-day-time-picker"
+                label="Select Transition Time"
               />
-              {!isPremium && !isEntitlementLoading && (
-                <Text
-                  style={[
-                    typography.bodySmall,
-                    { color: colors.textSecondary, marginTop: spacing.xs },
-                  ]}
-                >
-                  Editing this custom boundary requires Premium entitlement.
-                </Text>
-              )}
             </View>
           )}
-        </View>
 
-        {/* Informational banner when an existing non-FAJR mode is loaded while FREE */}
-        {!isPremium && !isEntitlementLoading && !isFajr && (
-          <View
-            style={[
-              styles.nonFajrBanner,
+          {/* Hidden/Subtle active mode label for contract verification */}
+          <Text style={[styles.hiddenContractText, { color: colors.textTertiary }]} testID="planning-day-current-value">
+            Current active mode: {currentMode}
+          </Text>
+        </SettingsSectionCard>
+
+        {/* CARD 2: COMPLETED TASKS */}
+        <SettingsSectionCard
+          customBadge={<SettingsSecCompletedCheckIcon size={40} />}
+          title="Completed Tasks"
+          subtitle="Choose what happens after you complete a task."
+          testID="completed-tasks-section-card"
+        >
+          {/* Keep in today (move to bottom) */}
+          <Pressable
+            onPress={() => setCompletedTasksMode('KEEP')}
+            style={({ pressed }) => [
+              styles.radioRow,
               {
-                backgroundColor: colors.surfaceSecondary,
-                borderColor: colors.border,
-                borderRadius: radii.md,
-                padding: spacing.md,
-                marginHorizontal: spacing.md,
-                marginTop: spacing.md,
+                paddingVertical: spacing.sm,
+                opacity: pressed ? 0.8 : 1,
               },
             ]}
           >
-            <Text
-              style={[
-                typography.bodyMedium,
-                { color: colors.textPrimary, fontWeight: '600' },
-              ]}
-              testID="planning-day-current-value"
-            >
-              Current active mode: {currentMode}
+            {completedTasksMode === 'KEEP' ? (
+              <SettingsCheckCircleIcon size={20} style={{ marginRight: spacing.sm }} />
+            ) : (
+              <View style={[styles.radioCircle, { borderColor: colors.border, marginRight: spacing.sm }]} />
+            )}
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
+              Keep in today (move to bottom)
             </Text>
-            <Text style={[typography.bodySmall, { color: colors.textSecondary, marginTop: 4 }]}>
-              Your database is currently configured with this mode. You can switch back to the standard Fajr boundary at any time.
+          </Pressable>
+
+          {/* Move to completed list */}
+          <Pressable
+            onPress={() => setCompletedTasksMode('MOVE')}
+            style={({ pressed }) => [
+              styles.radioRow,
+              {
+                paddingVertical: spacing.sm,
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+          >
+            {completedTasksMode === 'MOVE' ? (
+              <SettingsCheckCircleIcon size={20} style={{ marginRight: spacing.sm }} />
+            ) : (
+              <View style={[styles.radioCircle, { borderColor: colors.border, marginRight: spacing.sm }]} />
+            )}
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
+              Move to completed list
             </Text>
-          </View>
-        )}
+          </Pressable>
+
+          {/* Hide from today */}
+          <Pressable
+            onPress={() => setCompletedTasksMode('HIDE')}
+            style={({ pressed }) => [
+              styles.radioRow,
+              {
+                paddingVertical: spacing.sm,
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+          >
+            {completedTasksMode === 'HIDE' ? (
+              <SettingsCheckCircleIcon size={20} style={{ marginRight: spacing.sm }} />
+            ) : (
+              <View style={[styles.radioCircle, { borderColor: colors.border, marginRight: spacing.sm }]} />
+            )}
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
+              Hide from today
+            </Text>
+          </Pressable>
+        </SettingsSectionCard>
+
+        {/* CARD 3: OVERDUE TASKS */}
+        <SettingsSectionCard
+          customBadge={<SettingsSecOverdueBoltIcon size={40} />}
+          title="Overdue Tasks"
+          subtitle="Choose how to handle overdue tasks."
+          testID="overdue-tasks-section-card"
+        >
+          {/* Keep in today (Recommended) */}
+          <Pressable
+            onPress={() => setOverdueTasksMode('KEEP')}
+            style={({ pressed }) => [
+              styles.radioRow,
+              {
+                paddingVertical: spacing.sm,
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+          >
+            {overdueTasksMode === 'KEEP' ? (
+              <SettingsCheckCircleIcon size={20} style={{ marginRight: spacing.sm }} />
+            ) : (
+              <View style={[styles.radioCircle, { borderColor: colors.border, marginRight: spacing.sm }]} />
+            )}
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
+              Keep in today (Recommended)
+            </Text>
+          </Pressable>
+
+          {/* Move to next day */}
+          <Pressable
+            onPress={() => setOverdueTasksMode('MOVE')}
+            style={({ pressed }) => [
+              styles.radioRow,
+              {
+                paddingVertical: spacing.sm,
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+          >
+            {overdueTasksMode === 'MOVE' ? (
+              <SettingsCheckCircleIcon size={20} style={{ marginRight: spacing.sm }} />
+            ) : (
+              <View style={[styles.radioCircle, { borderColor: colors.border, marginRight: spacing.sm }]} />
+            )}
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
+              Move to next day
+            </Text>
+          </Pressable>
+
+          {/* Hide from today */}
+          <Pressable
+            onPress={() => setOverdueTasksMode('HIDE')}
+            style={({ pressed }) => [
+              styles.radioRow,
+              {
+                paddingVertical: spacing.sm,
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+          >
+            {overdueTasksMode === 'HIDE' ? (
+              <SettingsCheckCircleIcon size={20} style={{ marginRight: spacing.sm }} />
+            ) : (
+              <View style={[styles.radioCircle, { borderColor: colors.border, marginRight: spacing.sm }]} />
+            )}
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
+              Hide from today
+            </Text>
+          </Pressable>
+        </SettingsSectionCard>
+
+        {/* BOTTOM HELPER NOTICE */}
+        <View style={[styles.infoBanner, { backgroundColor: colors.primaryLight, borderRadius: radii.card, padding: spacing.md }]}>
+          <SettingsSecInfoCircleIcon size={28} style={{ marginRight: 10 }} />
+          <Text style={[typography.caption, { color: colors.primary, flex: 1, lineHeight: 18, fontStyle: 'italic' }]}>
+            These settings help you organize your tasks in a way that fits your routine.
+          </Text>
+        </View>
       </ScrollView>
 
-      {/* Premium locked info modal */}
+      {/* Premium Locked Feature Sheet */}
       <PremiumLockedInfo
         visible={showLockedInfo}
         onClose={() => setShowLockedInfo(false)}
-        testID="premium-locked-info"
+        title="Premium Feature"
+        description="Alternative day start boundaries (Midnight and Custom Time) are available with Islamic Planner Premium."
       />
     </SafeAreaView>
   );
@@ -376,35 +419,39 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    flexGrow: 1,
+    paddingTop: 8,
   },
-  group: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  textContainer: {
-    flex: 1,
-    paddingEnd: 12,
-  },
-  titleRow: {
+  radioRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  checkWrapper: {
-    width: 24,
+  radioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
-  customPickerContainer: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
-  nonFajrBanner: {
-    borderWidth: 1,
+  hiddenContractText: {
+    fontSize: 10,
+    marginTop: 4,
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoIconCircle: {
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
   },
 });

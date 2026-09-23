@@ -3,10 +3,10 @@ import { typography } from './typography';
 
 export const lightColors: ThemeColors = {
   // Brand
-  primary: '#1B7A4D', // Deep Islamic green
+  primary: '#0F9F4A', // Vibrant Islamic emerald from today1.png
   primaryLight: '#E8F5EE', // Pale mint surface
-  primaryDark: '#145C3A',
-  primaryPressed: '#145C3A',
+  primaryDark: '#0C833D',
+  primaryPressed: '#0C833D',
 
   // Backgrounds & Surfaces
   background: '#FAFBFC', // Warm white
@@ -49,9 +49,9 @@ export const lightColors: ThemeColors = {
   // Controls & Overlays
   overlay: 'rgba(0, 0, 0, 0.4)',
   tabInactive: '#687483', // WCAG AA 4.59:1 on bg, 4.76:1 on surface (M21)
-  tabActive: '#1B7A4D',
+  tabActive: '#0F9F4A',
   checkboxUnchecked: '#CBD2DC',
-  checkboxChecked: '#1B7A4D',
+  checkboxChecked: '#0F9F4A',
   disabledBackground: '#E8ECF0',
   disabledText: '#A0AAB8',
 };

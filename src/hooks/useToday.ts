@@ -108,6 +108,48 @@ export function useToday(options: UseTodayOptions = {}) {
   }, []);
 
   /**
+   * Fast-path initial load: skips GPS, uses last committed location snapshot.
+   * Renders the Today screen immediately, then fires a background full refresh
+   * (with GPS) to catch any location change. Only used on mount.
+   */
+  const performFastInitialLoad = useCallback(async () => {
+    const token = useTodayStore.getState().startRefresh();
+    try {
+      const now = DateTime.now();
+
+      // Step A: Run the full pipeline using the *last committed* snapshot (no GPS wait).
+      // PlannerRefreshCoordinator.fullRefresh reads from DB — already fast.
+      const result = await coordinatorRef.current.fullRefresh(now);
+      if (result.status === 'SETUP_REQUIRED') {
+        useTodayStore.getState().setSetupRequired(token);
+        // Still attempt GPS in background so next foreground event works
+        locationRefreshRef.current.resolve(now).catch(() => {});
+        return;
+      }
+
+      // Commit immediately — user sees the Today screen
+      useTodayStore.getState().commitRefresh(
+        token,
+        { viewModel: result.viewModel, runtime: result.runtime },
+        true
+      );
+
+      // Step B: GPS update in the background. If location changed materially,
+      // fire another full refresh (user already has content — no spinner).
+      locationRefreshRef.current.resolve(now).then(locResult => {
+        if (locResult.status === 'READY' && locResult.changed) {
+          // Location changed — re-render with updated prayer times
+          performFullRefresh(false);
+        }
+      }).catch(() => {/* GPS failure is non-fatal */});
+
+    } catch (err: any) {
+      useTodayStore.getState().setError(token, err?.message ?? 'Failed to load Today screen');
+    }
+  }, [performFullRefresh]);
+
+
+  /**
    * Re-projection executor for prayer-only transitions (M11 §11):
    * 1. obtain/use current temporal inputs
    * 2. lifecycle sweep
@@ -137,10 +179,10 @@ export function useToday(options: UseTodayOptions = {}) {
     []
   );
 
-  // Initial load
+  // Initial load — fast path: render immediately with cached location, GPS in background
   useEffect(() => {
-    performFullRefresh(true);
-  }, [performFullRefresh]);
+    performFastInitialLoad();
+  }, [performFastInitialLoad]);
 
   // App foreground: full refresh and sync selectedPrayer = currentPrayer
   useAppForeground(

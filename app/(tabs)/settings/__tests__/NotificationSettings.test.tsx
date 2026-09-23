@@ -4,6 +4,13 @@ import { Linking, Platform } from 'react-native';
 import { ThemeProvider } from '@/theme';
 import NotificationSettingsScreen from '../notifications';
 
+jest.mock('expo-router', () => ({
+  useRouter: jest.fn(() => ({
+    push: jest.fn(),
+    back: jest.fn(),
+  })),
+}));
+
 describe('NotificationSettingsScreen', () => {
   let mockAdapter: any;
   let mockChannelManager: any;

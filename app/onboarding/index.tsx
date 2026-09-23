@@ -291,7 +291,7 @@ export default function OnboardingScreen({
   // Render Step 1: SALAH INTRO
   if (step === 'SALAH_INTRO') {
     return (
-      <SafeArea testID="screen-salah-intro" style={styles.container}>
+      <SafeArea testID="screen-salah-intro" edges={['top', 'bottom', 'left', 'right']} style={styles.container}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.headerContainer}>
             <Text style={[theme.typography.headlineLarge, { color: theme.colors.textPrimary, textAlign: 'center' }]}>
@@ -333,7 +333,7 @@ export default function OnboardingScreen({
   // Render Step 2: ADAPTIVE SCHEDULE
   if (step === 'SCHEDULE_EXAMPLE') {
     return (
-      <SafeArea testID="screen-schedule-example" style={styles.container}>
+      <SafeArea testID="screen-schedule-example" edges={['top', 'bottom', 'left', 'right']} style={styles.container}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.headerContainer}>
             <Text style={[theme.typography.headlineLarge, { color: theme.colors.textPrimary, textAlign: 'center' }]}>
@@ -397,7 +397,7 @@ export default function OnboardingScreen({
     const calcMethodLabel = CALCULATION_METHOD_LABELS[draftMethod]?.label ?? draftMethod;
 
     return (
-      <SafeArea testID="screen-prayer-setup" style={styles.container}>
+      <SafeArea testID="screen-prayer-setup" edges={['top', 'bottom', 'left', 'right']} style={styles.container}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.headerContainer}>
             <Text style={[theme.typography.headlineLarge, { color: theme.colors.textPrimary, textAlign: 'center' }]}>
@@ -631,7 +631,7 @@ export default function OnboardingScreen({
   const calcMethodLabel = CALCULATION_METHOD_LABELS[draftMethod]?.label ?? draftMethod;
 
   return (
-    <SafeArea testID="screen-make-it-yours" style={styles.container}>
+    <SafeArea testID="screen-make-it-yours" edges={['top', 'bottom', 'left', 'right']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerContainer}>
           <Text style={[theme.typography.headlineLarge, { color: theme.colors.textPrimary, textAlign: 'center' }]}>

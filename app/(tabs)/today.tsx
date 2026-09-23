@@ -1,16 +1,21 @@
 import React from 'react';
-import { StyleSheet, ActivityIndicator, Text, Pressable } from 'react-native';
+import { View, StyleSheet, Text, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useTheme } from '@/theme';
+import type { Prayer } from '@/constants/prayers';
 import { useToday } from '@/hooks/useToday';
+import { useLocation } from '@/hooks/useLocation';
 import { SetupRequiredState } from '@/components/today/SetupRequiredState';
 import { PrayerHeader } from '@/components/prayer/PrayerHeader';
 import { PrayerTabBar } from '@/components/prayer/PrayerTabBar';
 import { PrayerTransitionBanner } from '@/components/prayer/PrayerTransitionBanner';
 import { TaskList } from '@/components/task/TaskList';
+import { getTodayDateSubtitle } from '@/utils/todayDateSubtitle';
 
 export default function TodayScreen() {
   const { colors, spacing, typography, radii, touchTargets } = useTheme();
+  const router = useRouter();
   const {
     viewModel,
     status,
@@ -28,6 +33,12 @@ export default function TodayScreen() {
     completeTask,
     refresh,
   } = useToday();
+
+  const { locationName } = useLocation();
+
+  const handleSelectPrayer = (prayer: Prayer) => {
+    setSelectedPrayer(prayer);
+  };
 
   if (status === 'setup_required') {
     return (
@@ -96,17 +107,26 @@ export default function TodayScreen() {
   const currentTab =
     viewModel.tabs.find(tab => tab.prayer === activePrayer) ?? viewModel.tabs[0];
 
+  const dateSubtitle = getTodayDateSubtitle();
+
+  const handlePressLocation = () => {
+    router.push('/(tabs)/settings/prayer-calculation');
+  };
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top', 'left', 'right']}
       testID="today-screen"
     >
-      {/* 1. Prominent Islamic Current Prayer Header with countdown */}
+      {/* 1. Header with Screen Title, Dynamic Gregorian & Hijri Date Subtitle, Location, and Mosque Skyline */}
       <PrayerHeader
         currentPrayer={viewModel.currentPrayer}
         nextPrayer={viewModel.nextPrayer}
         countdownDisplay={countdownDisplay}
+        locationName={locationName ?? 'Current Location'}
+        dateSubtitle={dateSubtitle}
+        onPressLocation={handlePressLocation}
       />
 
       {/* 2. Prayer transition banner (if mid-session prayer changed) */}
@@ -118,26 +138,30 @@ export default function TodayScreen() {
         />
       )}
 
-      {/* 3. Exactly 5 Prayer Tabs */}
-      <PrayerTabBar
-        tabs={viewModel.tabs}
-        selectedPrayer={activePrayer}
-        onSelectPrayer={setSelectedPrayer}
-      />
-
-      {/* 4. Task list for the selected prayer tab */}
-      {currentTab && (
-        <TaskList
-          tab={currentTab}
+      {/* 3. Exactly 5 Prayer Capsules with vector astronomical icons and integrated time */}
+      <View style={styles.tabBarWrapper}>
+        <PrayerTabBar
+          tabs={viewModel.tabs}
           selectedPrayer={activePrayer}
-          currentPrayer={viewModel.currentPrayer}
-          nextPrayer={viewModel.nextPrayer?.prayer ?? null}
-          completedCollapsed={completedCollapsed[activePrayer] ?? true}
-          anytimeCollapsed={anytimeCollapsed}
-          onToggleCompletedCollapsed={() => toggleCompletedCollapsed(activePrayer)}
-          onToggleAnytimeCollapsed={toggleAnytimeCollapsed}
-          onCompleteTask={completeTask}
+          onSelectPrayer={handleSelectPrayer}
         />
+      </View>
+
+      {/* 4. Task list for the selected prayer tab with Anytime Today and Add Task button */}
+      {currentTab && (
+        <View style={styles.taskListWrapper}>
+          <TaskList
+            tab={currentTab}
+            selectedPrayer={activePrayer}
+            currentPrayer={viewModel.currentPrayer}
+            nextPrayer={viewModel.nextPrayer?.prayer ?? null}
+            completedCollapsed={completedCollapsed[activePrayer] ?? true}
+            anytimeCollapsed={anytimeCollapsed}
+            onToggleCompletedCollapsed={() => toggleCompletedCollapsed(activePrayer)}
+            onToggleAnytimeCollapsed={toggleAnytimeCollapsed}
+            onCompleteTask={completeTask}
+          />
+        </View>
       )}
     </SafeAreaView>
   );
@@ -145,6 +169,15 @@ export default function TodayScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFill,
+  },
+  tabBarWrapper: {
+    zIndex: 2,
+  },
+  taskListWrapper: {
     flex: 1,
   },
   center: {

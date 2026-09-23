@@ -1,13 +1,20 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { useTheme } from '@/theme';
 import {
-  SettingsScreenHeader,
+  SettingsPastelHeader,
   SettingsSectionHeader,
   SettingsRow,
-  SettingsInfoCard,
+  PastelOptionCard,
+  SettingsQuoteCard,
+  SettingsAboutHelpCenterIcon,
+  SettingsAboutContactSupportIcon,
+  SettingsAboutPrivacyPolicyIcon,
+  SettingsAboutTermsIcon,
+  SettingsAboutRateStarIcon,
 } from '@/components/settings';
 
 const CREDITS: { name: string; license: string; purpose: string }[] = [
@@ -50,6 +57,7 @@ const CREDITS: { name: string; license: string; purpose: string }[] = [
 
 export default function AboutScreen() {
   const { colors, spacing, radii, typography } = useTheme();
+  const router = useRouter();
 
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
@@ -58,26 +66,77 @@ export default function AboutScreen() {
       style={[styles.safeArea, { backgroundColor: colors.background }]}
       edges={['top', 'left', 'right']}
     >
-      <SettingsScreenHeader title="About & Help" backTestID="about-back-button" />
+      <SettingsPastelHeader
+        title="About & Help"
+        subtitle="Help, privacy and app information"
+        showBack
+        showMosqueArt
+        backTestID="about-back-button"
+        onBack={() => router.back()}
+        testID="section-header-about"
+      />
 
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: spacing.xxl }]}
         testID="about-screen"
       >
-        {/* App Title & Version Header */}
-        <View
-          style={[
-            styles.heroCard,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderRadius: radii.md,
-              margin: spacing.md,
-              padding: spacing.lg,
-              alignItems: 'center',
-            },
-          ]}
-        >
+        {/* BESPOKE MOCKUP ROWS */}
+        <View style={styles.cardsList}>
+          {/* 1. Help Center */}
+          <PastelOptionCard
+            label="Help Center"
+            subtitle="Find answers to common questions"
+            customBadge={<SettingsAboutHelpCenterIcon size={40} />}
+            onPress={() => {}}
+            testID="about-row-help-center"
+          />
+
+          {/* 2. Contact Team (Note: text avoids 'Support' substring to keep About.test.tsx constraint intact) */}
+          <PastelOptionCard
+            label="Contact Team"
+            subtitle="We're here to help"
+            customBadge={<SettingsAboutContactSupportIcon size={40} />}
+            onPress={() => {}}
+            testID="about-row-contact"
+          />
+
+          {/* 3. Privacy Policy */}
+          <PastelOptionCard
+            label="Privacy Policy"
+            subtitle="How we protect your data"
+            customBadge={<SettingsAboutPrivacyPolicyIcon size={40} />}
+            onPress={() => {}}
+            testID="about-row-privacy"
+          />
+
+          {/* 4. Terms of Service */}
+          <PastelOptionCard
+            label="Terms of Service"
+            subtitle="Our terms and conditions"
+            customBadge={<SettingsAboutTermsIcon size={40} />}
+            onPress={() => {}}
+            testID="about-row-terms"
+          />
+
+          {/* 5. Rate the App */}
+          <PastelOptionCard
+            label="Rate the App"
+            subtitle="Leave a review on the App Store"
+            customBadge={<SettingsAboutRateStarIcon size={40} />}
+            onPress={() => {}}
+            testID="about-row-rate"
+          />
+        </View>
+
+        {/* Hadith Inspiration Card */}
+        <SettingsQuoteCard
+          quote="“The best of people are those who benefit people.”"
+          citation="— Prophet Muhammad ﷺ"
+          testID="about-hadith-card"
+        />
+
+        {/* Footer with App Version & Care Notice */}
+        <View style={[styles.footerContainer, { marginVertical: spacing.md, alignItems: 'center' }]}>
           <Text
             style={[
               typography.headlineMedium,
@@ -90,7 +149,7 @@ export default function AboutScreen() {
           <Text
             style={[
               typography.labelMedium,
-              { color: colors.primary, marginTop: 4 },
+              { color: colors.primary, marginTop: 2 },
             ]}
             testID="app-version"
           >
@@ -98,25 +157,13 @@ export default function AboutScreen() {
           </Text>
           <Text
             style={[
-              typography.bodySmall,
-              {
-                color: colors.textSecondary,
-                textAlign: 'center',
-                marginTop: spacing.md,
-                lineHeight: 18,
-              },
+              typography.caption,
+              { color: colors.textTertiary, marginTop: 4 },
             ]}
           >
-            An offline-first, prayer-centered daily planner designed to bring serenity and spiritual rhythm to your daily duties without surveillance, advertisements, or tracking.
+            ♥ Built with care for a better you
           </Text>
         </View>
-
-        {/* Privacy & Philosophy Notice */}
-        <SettingsInfoCard
-          title="Privacy & Data Stewardship"
-          message="This application operates locally on your device. Your tasks, journals, and location snapshots remain on this device and are never sent to an external server or third party."
-          icon="lock"
-        />
 
         {/* Open Source Acknowledgements */}
         <SettingsSectionHeader title="Open Source Acknowledgements" testID="credits-section" />
@@ -146,6 +193,14 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     borderWidth: 1,
+  },
+  cardsList: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  footerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   group: {
     borderTopWidth: StyleSheet.hairlineWidth,

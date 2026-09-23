@@ -17,6 +17,9 @@ module.exports = function (api) {
 
   return {
     presets: [expoPreset],
-    plugins: [['inline-import', { extensions: ['.sql'] }]],
+    plugins: [
+      ['inline-import', { extensions: ['.sql'] }],
+      'react-native-reanimated/plugin',
+    ],
   };
 };

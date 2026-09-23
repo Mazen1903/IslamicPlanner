@@ -395,7 +395,7 @@ export function compareCompletedTasks(a: TaskCardViewModel, b: TaskCardViewModel
  * ANYTIME_TODAY tasks do not influence scheduled-prayer empty-state classification.
  */
 export function computeEmptyState(tab: PrayerTabViewModel): EmptyStateType {
-  const hasScheduled = tab.scheduledTasks.length > 0;
+  const hasScheduled = tab.scheduledTasks.length > 0 || (tab.anytimeTasks?.length ?? 0) > 0;
   const hasMissed = tab.missedTasks.length > 0;
   const hasCompleted = tab.completedTasks.length > 0;
 
