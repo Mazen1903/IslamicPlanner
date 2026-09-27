@@ -3,12 +3,13 @@ import type { Config } from 'jest';
 const config: Config = {
   preset: 'jest-expo',
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|expo-widgets|react-native-android-widget|react-native-reanimated)',
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|expo-widgets|react-native-android-widget|react-native-reanimated|standard-navigation)',
   ],
   setupFilesAfterEnv: [],
   testTimeout: 10000,
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^expo-router$': '<rootDir>/src/__mocks__/expo-router.ts',
     '^expo-crypto$': '<rootDir>/src/__mocks__/expo-crypto.ts',
     '^expo-local-authentication$': '<rootDir>/src/__mocks__/expo-local-authentication.ts',
     '^expo-widgets$': '<rootDir>/src/__mocks__/expo-widgets.ts',

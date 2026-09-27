@@ -14,6 +14,8 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
+import { PrayerTabIcon } from '@/components/prayer/PrayerTabBar';
+import type { Prayer } from '@/constants/prayers';
 import {
   SettingsPastelHeader,
   SettingsSectionCard,
@@ -25,6 +27,9 @@ import {
   SettingsSecAdjustSlidersIcon,
   SettingsRowPreviewClockIcon,
   SettingsSecInfoCircleIcon,
+  SettingsStepperMinusIcon,
+  SettingsStepperPlusIcon,
+  SettingsRowChevronDownIcon,
 } from '@/components/settings';
 import { useLocation } from '@/hooks/useLocation';
 import { useUserSettings } from '@/hooks/useUserSettings';
@@ -58,7 +63,6 @@ export default function PrayerLocationScreen() {
     latitude,
     longitude,
     locationName,
-    timezone,
     isLoading: isLocationLoading,
     error: locationError,
     requestAutoLocation,
@@ -84,7 +88,7 @@ export default function PrayerLocationScreen() {
       // fallback
     }
     return { fajr: 0, sunrise: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 };
-  }, [settings?.prayerAdjustments]);
+  }, [settings]);
 
   // Current calculation and asr methods
   const currentMethod = (settings?.calculationMethod as CalculationMethodKey) || 'ISNA';
@@ -198,7 +202,7 @@ export default function PrayerLocationScreen() {
                 Automatic (Recommended)
               </Text>
               <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                Use your device's location
+                Use your device&apos;s location
               </Text>
             </View>
             <Switch
@@ -315,7 +319,10 @@ export default function PrayerLocationScreen() {
                 {CALCULATION_METHOD_LABELS[currentMethod]?.description || 'Fajr 15°, Isha 15°'}
               </Text>
             </View>
-            <Icon name={showMethodPicker ? 'chevron-up' : 'chevron-down'} size="sm" color={colors.textSecondary} decorative />
+            <SettingsRowChevronDownIcon
+              size={18}
+              style={showMethodPicker ? { transform: [{ rotate: '180deg' }] } : undefined}
+            />
           </Pressable>
 
           {/* Expanded Method List */}
@@ -382,7 +389,7 @@ export default function PrayerLocationScreen() {
             >
               <View style={styles.asrCardHeader}>
                 <Text style={[typography.labelMedium, { color: currentAsrMethod === 'SHAFI' ? colors.primary : colors.textPrimary, flex: 1 }]}>
-                  Standard (Shafi'i, Maliki, Hanbali)
+                  Standard (Shafi&apos;i, Maliki, Hanbali)
                 </Text>
                 {currentAsrMethod === 'SHAFI' && <SettingsRowAsrCheckIcon size={20} />}
               </View>
@@ -435,9 +442,12 @@ export default function PrayerLocationScreen() {
               const displayName = p.charAt(0).toUpperCase() + p.slice(1);
               return (
                 <View key={p} style={[styles.adjustmentRow, { borderBottomColor: colors.border }]}>
-                  <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
-                    {displayName}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <PrayerTabIcon prayer={p.toUpperCase() as Prayer} size={22} style={{ marginEnd: spacing.sm }} />
+                    <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
+                      {displayName}
+                    </Text>
+                  </View>
                   <View style={styles.stepperContainer}>
                     <Text style={[styles.stepperText, typography.labelMedium, { color: colors.textSecondary }]}>
                       {val > 0 ? `+ ${val} min` : val < 0 ? `- ${Math.abs(val)} min` : '+ 0 min'}
@@ -448,14 +458,12 @@ export default function PrayerLocationScreen() {
                       style={({ pressed }) => [
                         styles.stepperBtn,
                         {
-                          backgroundColor: pressed ? colors.surfaceSecondary : colors.surface,
-                          borderColor: colors.border,
-                          borderRadius: radii.sm,
+                          opacity: pressed ? 0.7 : 1,
                         },
                       ]}
                       accessibilityLabel={`Decrease ${displayName}`}
                     >
-                      <Icon name="minus" size="xs" color={colors.textPrimary} decorative />
+                      <SettingsStepperMinusIcon size={30} />
                     </Pressable>
 
                     <Pressable
@@ -463,14 +471,12 @@ export default function PrayerLocationScreen() {
                       style={({ pressed }) => [
                         styles.stepperBtn,
                         {
-                          backgroundColor: pressed ? colors.surfaceSecondary : colors.surface,
-                          borderColor: colors.border,
-                          borderRadius: radii.sm,
+                          opacity: pressed ? 0.7 : 1,
                         },
                       ]}
                       accessibilityLabel={`Increase ${displayName}`}
                     >
-                      <Icon name="plus" size="xs" color={colors.textPrimary} decorative />
+                      <SettingsStepperPlusIcon size={30} />
                     </Pressable>
                   </View>
                 </View>
@@ -497,7 +503,7 @@ export default function PrayerLocationScreen() {
         >
           <SettingsRowPreviewClockIcon size={36} style={{ marginRight: spacing.sm }} />
           <Text style={[typography.labelLarge, { color: colors.textPrimary, fontStyle: 'italic', flex: 1 }]}>
-            Preview Today's Prayer Times
+            Preview Today&apos;s Prayer Times
           </Text>
           <Icon name="chevron-right" size="sm" color={colors.textTertiary} decorative />
         </Pressable>
@@ -598,7 +604,6 @@ const styles = StyleSheet.create({
     height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
   },
   stepperText: {
     minWidth: 54,

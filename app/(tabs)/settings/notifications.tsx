@@ -11,6 +11,7 @@ import {
   ScrollView,
   Switch,
 } from 'react-native';
+import { TimePickerInput } from '@/components/task-form/DateTimePickerInput';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
@@ -20,9 +21,11 @@ import {
   SettingsSectionCard,
   SettingsSecPrayerAlertsIcon,
   SettingsSecTaskRemindersIcon,
-  SettingsSecWorshipStarIcon,
+  SettingsSecJournalReminderIcon,
   SettingsSecGeneralBellIcon,
 } from '@/components/settings';
+import { useUserSettings } from '@/hooks/useUserSettings';
+import { userSettingsRepository } from '@/data/repositories/UserSettingsRepository';
 import {
   notificationSchedulerAdapter,
   type PermissionStatusResult,
@@ -41,20 +44,103 @@ export default function NotificationSettingsScreen({
   channelManager = notificationChannelManager,
   reconciliationService = notificationReconciliationService,
 }: NotificationSettingsProps) {
-  const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
+  const { colors, spacing, radii, typography, touchTargets, shadows, isDark } = useTheme();
   const router = useRouter();
+
+  const { settings, reload } = useUserSettings();
 
   const [permission, setPermission] = useState<PermissionStatusResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRequesting, setIsRequesting] = useState(false);
 
-  // Exact mockup toggles
+  // Exact settings toggles
   const [prayerNotifications, setPrayerNotifications] = useState(true);
   const [prayerVibration, setPrayerVibration] = useState(true);
   const [taskReminders, setTaskReminders] = useState(true);
   const [taskVibration, setTaskVibration] = useState(true);
-  const [worshipSuggestions, setWorshipSuggestions] = useState(true);
   const [quietHours, setQuietHours] = useState(false);
+  const [journalReminderEnabled, setJournalReminderEnabled] = useState(false);
+  const [journalReminderTime, setJournalReminderTime] = useState('21:30');
+
+  useEffect(() => {
+    if (settings) {
+      if (settings.prayerAlertsEnabled !== undefined) setPrayerNotifications(settings.prayerAlertsEnabled);
+      if (settings.prayerVibrationEnabled !== undefined) setPrayerVibration(settings.prayerVibrationEnabled);
+      if (settings.taskRemindersEnabled !== undefined) setTaskReminders(settings.taskRemindersEnabled);
+      if (settings.taskVibrationEnabled !== undefined) setTaskVibration(settings.taskVibrationEnabled);
+      if (settings.quietHoursEnabled !== undefined) setQuietHours(settings.quietHoursEnabled);
+      if (settings.journalReminderEnabled !== undefined) setJournalReminderEnabled(settings.journalReminderEnabled);
+      if (settings.journalReminderTime !== undefined) setJournalReminderTime(settings.journalReminderTime);
+    }
+  }, [settings]);
+
+  const handlePrayerNotificationsChange = async (val: boolean) => {
+    setPrayerNotifications(val);
+    try {
+      await userSettingsRepository.upsert({ prayerAlertsEnabled: val });
+      await reload();
+      if (permission?.canSchedule) {
+        await reconciliationService.reconcile();
+      }
+    } catch (err) {
+      console.warn('[NotificationSettings] Failed to save prayerAlertsEnabled:', err);
+    }
+  };
+
+  const handlePrayerVibrationChange = async (val: boolean) => {
+    setPrayerVibration(val);
+    try {
+      await userSettingsRepository.upsert({ prayerVibrationEnabled: val });
+      await reload();
+    } catch (err) {
+      console.warn('[NotificationSettings] Failed to save prayerVibrationEnabled:', err);
+    }
+  };
+
+  const handleTaskRemindersChange = async (val: boolean) => {
+    setTaskReminders(val);
+    try {
+      await userSettingsRepository.upsert({ taskRemindersEnabled: val });
+      await reload();
+      if (permission?.canSchedule) {
+        await reconciliationService.reconcile();
+      }
+    } catch (err) {
+      console.warn('[NotificationSettings] Failed to save taskRemindersEnabled:', err);
+    }
+  };
+
+  const handleTaskVibrationChange = async (val: boolean) => {
+    setTaskVibration(val);
+    try {
+      await userSettingsRepository.upsert({ taskVibrationEnabled: val });
+      await reload();
+    } catch (err) {
+      console.warn('[NotificationSettings] Failed to save taskVibrationEnabled:', err);
+    }
+  };
+
+  const handleQuietHoursChange = async (val: boolean) => {
+    setQuietHours(val);
+    try {
+      await userSettingsRepository.upsert({ quietHoursEnabled: val });
+      await reload();
+    } catch (err) {
+      console.warn('[NotificationSettings] Failed to save quietHoursEnabled:', err);
+    }
+  };
+
+  const handleJournalReminderChange = async (val: boolean) => {
+    setJournalReminderEnabled(val);
+    try {
+      await userSettingsRepository.upsert({ journalReminderEnabled: val });
+      await reload();
+    } catch (err) {
+      console.warn('[NotificationSettings] Failed to save journalReminderEnabled:', err);
+    }
+  };
+
+
 
   const refreshPermissionStatus = useCallback(async () => {
     try {
@@ -150,8 +236,9 @@ export default function NotificationSettingsScreen({
           subtitle="Get notified for prayer times."
           rightElement={
             <Switch
+              testID="prayer-notifications-switch"
               value={prayerNotifications}
-              onValueChange={setPrayerNotifications}
+              onValueChange={handlePrayerNotificationsChange}
               trackColor={{ false: colors.border, true: colors.primary }}
               thumbColor={colors.surface}
             />
@@ -174,8 +261,9 @@ export default function NotificationSettingsScreen({
           <View style={[styles.subRow, { borderBottomColor: colors.border, paddingVertical: spacing.sm }]}>
             <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Vibration</Text>
             <Switch
+              testID="prayer-vibration-switch"
               value={prayerVibration}
-              onValueChange={setPrayerVibration}
+              onValueChange={handlePrayerVibrationChange}
               trackColor={{ false: colors.border, true: colors.primary }}
               thumbColor={colors.surface}
             />
@@ -201,8 +289,9 @@ export default function NotificationSettingsScreen({
           subtitle="Get reminders for your tasks."
           rightElement={
             <Switch
+              testID="task-reminders-switch"
               value={taskReminders}
-              onValueChange={setTaskReminders}
+              onValueChange={handleTaskRemindersChange}
               trackColor={{ false: colors.border, true: colors.primary }}
               thumbColor={colors.surface}
             />
@@ -292,40 +381,46 @@ export default function NotificationSettingsScreen({
           <View style={[styles.subRow, { paddingVertical: spacing.sm }]}>
             <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Vibration</Text>
             <Switch
+              testID="task-vibration-switch"
               value={taskVibration}
-              onValueChange={setTaskVibration}
+              onValueChange={handleTaskVibrationChange}
               trackColor={{ false: colors.border, true: colors.primary }}
               thumbColor={colors.surface}
             />
           </View>
         </SettingsSectionCard>
 
-        {/* CARD 3: WORSHIP SUGGESTIONS */}
+        {/* CARD 3: DAILY JOURNAL REMINDER */}
         <SettingsSectionCard
-          customBadge={<SettingsSecWorshipStarIcon size={40} />}
-          title="Worship Suggestions"
-          subtitle="Get notified for suggested acts of worship."
+          customBadge={<SettingsSecJournalReminderIcon size={40} />}
+          title="Daily Journal"
+          subtitle="Get a gentle evening reminder for your reflection."
           rightElement={
             <Switch
-              value={worshipSuggestions}
-              onValueChange={setWorshipSuggestions}
+              testID="journal-reminder-switch"
+              value={journalReminderEnabled}
+              onValueChange={handleJournalReminderChange}
               trackColor={{ false: colors.border, true: colors.primary }}
               thumbColor={colors.surface}
             />
           }
-          testID="worship-suggestions-section-card"
+          testID="journal-reminder-section-card"
         >
-          {/* Sub-row: Daily Reminders */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.subRow,
-              { paddingVertical: spacing.sm, opacity: pressed ? 0.8 : 1 },
-            ]}
-          >
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Daily Reminders</Text>
-            <Text style={[typography.bodySmall, { color: colors.textSecondary, marginRight: 6 }]}>Morning & Evening</Text>
-            <Icon name="chevron-right" size="sm" color={colors.textTertiary} decorative />
-          </Pressable>
+          {/* Sub-row: Reminder Time */}
+          <TimePickerInput
+            value={journalReminderTime}
+            onChange={async (newTimeStr) => {
+              setJournalReminderTime(newTimeStr);
+              try {
+                await userSettingsRepository.upsert({ journalReminderTime: newTimeStr });
+                await reload();
+              } catch (err) {
+                console.warn('[NotificationSettings] Failed to save journalReminderTime:', err);
+              }
+            }}
+            label="Reminder Time"
+            testID="journal-reminder-time-row"
+          />
         </SettingsSectionCard>
 
         {/* CARD 4: GENERAL */}
@@ -343,8 +438,9 @@ export default function NotificationSettingsScreen({
               </Text>
             </View>
             <Switch
+              testID="quiet-hours-switch"
               value={quietHours}
-              onValueChange={setQuietHours}
+              onValueChange={handleQuietHoursChange}
               trackColor={{ false: colors.border, true: colors.primary }}
               thumbColor={colors.surface}
             />

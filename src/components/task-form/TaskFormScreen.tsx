@@ -27,12 +27,13 @@ import type {
 } from '@/features/task-form/types';
 import type { TaskDefinition, TaskOccurrence } from '@/domain/task/types';
 import type { TodayTemporalInputProvider } from '@/services/types';
-import { M7BootstrapInputProvider } from '@/services/TodayTemporalInputProvider';
+import { LocationAwareTodayTemporalInputProvider } from '@/services/TodayTemporalInputProvider';
 import { TaskHeaderBanner } from './TaskHeaderBanner';
 import { ScheduleModeCards } from './ScheduleModeCards';
 import { RelativePrayerSubView } from './RelativePrayerSubView';
 import { RecurrenceSubView } from './RecurrenceSubView';
 import { MoreOptionsSubView } from './MoreOptionsSubView';
+import { SubtasksSection } from './SubtasksSection';
 import { EditScopeSheet } from './EditScopeSheet';
 import { SuccessScreen } from './SuccessScreen';
 import { PartialSuccessView } from './PartialSuccessView';
@@ -52,7 +53,7 @@ export interface TaskFormScreenProps {
   onCancel: () => void;
 }
 
-const defaultInputProvider = new M7BootstrapInputProvider();
+const defaultInputProvider = new LocationAwareTodayTemporalInputProvider();
 
 function getRecurrenceLabel(preset: string, specificDaysCount: number, calendar: string): string {
   switch (preset) {
@@ -410,6 +411,83 @@ export function TaskFormScreen({
               onRequestRelativeView={() => setCurrentView('RELATIVE_PRAYER')}
             />
 
+            {/* Reminder Section (Surfaced on MAIN view) */}
+            <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
+              Reminder
+            </Text>
+            {state.scheduleMode === 'ANYTIME_TODAY' ? (
+              <Text
+                style={[typography.caption, { color: colors.textTertiary, fontStyle: 'italic', marginStart: spacing.xs }]}
+                testID="anytime-reminder-helper"
+              >
+                Set a time to add a reminder
+              </Text>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ flexDirection: 'row', paddingVertical: 4 }}
+                testID="reminder-presets-row"
+              >
+                {[
+                  { val: null, label: 'None' },
+                  { val: 0, label: 'At time' },
+                  { val: 5, label: '5m' },
+                  { val: 10, label: '10m' },
+                  { val: 15, label: '15m' },
+                  { val: 20, label: '20m' },
+                  { val: 30, label: '30m' },
+                  { val: 45, label: '45m' },
+                  { val: 60, label: '1h' },
+                  { val: 120, label: '2h' },
+                ].map(item => {
+                  const isSelected = state.reminderMinutes === item.val;
+                  return (
+                    <Pressable
+                      key={item.label}
+                      onPress={() => dispatch({ type: 'SET_REMINDER_MINUTES', payload: item.val })}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isSelected }}
+                      accessibilityLabel={`Reminder: ${item.label}`}
+                      testID={`reminder-preset-${item.val === null ? 'none' : item.val}`}
+                      style={({ pressed }) => [
+                        styles.reminderChip,
+                        {
+                          backgroundColor: isSelected ? colors.primary : colors.surface,
+                          borderColor: isSelected ? colors.primary : colors.border,
+                          borderRadius: radii.pill,
+                          marginEnd: spacing.xs,
+                          paddingVertical: spacing.xs,
+                          paddingHorizontal: spacing.md,
+                          minHeight: touchTargets.min,
+                          opacity: pressed ? 0.8 : 1,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          typography.labelMedium,
+                          {
+                            color: isSelected ? colors.textOnPrimary : colors.textPrimary,
+                            fontWeight: isSelected ? '700' : '600',
+                          },
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )}
+
+            {/* Steps / Subtasks Section (Surfaced on MAIN view) */}
+            <SubtasksSection
+              subtasks={state.subtasks}
+              dispatch={dispatch}
+              style={{ marginTop: spacing.md }}
+            />
+
             {/* Repeat Row Entry Card (Tapping opens add task3.png) */}
             <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
               Repeat
@@ -433,7 +511,7 @@ export function TaskFormScreen({
               ]}
             >
               <View style={styles.entryIconBox}>
-                <Icon name="refresh" size={24} color={colors.textSecondary} decorative />
+                <Icon name="refresh" size={28} color={colors.textSecondary} decorative />
               </View>
               <View style={styles.entryContent}>
                 <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
@@ -466,14 +544,14 @@ export function TaskFormScreen({
               ]}
             >
               <View style={styles.entryIconBox}>
-                <Icon name="options" size={24} color={colors.textSecondary} decorative />
+                <Icon name="options" size={28} color={colors.textSecondary} decorative />
               </View>
               <View style={styles.entryContent}>
                 <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
                   More options
                 </Text>
                 <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                  Reminder, Priority, Duration, Notes, Subtasks, Attachment
+                  Priority, Notes, Attachment, Habit Tracker
                 </Text>
               </View>
               <Icon name="chevron-right" size={18} color={colors.primary} directional decorative />
@@ -660,5 +738,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     minHeight: 80,
     textAlignVertical: 'top',
+  },
+  reminderChip: {
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

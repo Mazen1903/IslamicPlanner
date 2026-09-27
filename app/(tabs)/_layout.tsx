@@ -10,8 +10,10 @@ import { PlannerRefreshCoordinator } from '@/services/PlannerRefreshCoordinator'
 import { LocationAwareTodayTemporalInputProvider } from '@/services/TodayTemporalInputProvider';
 import { todayOrchestrator } from '@/services/TodayOrchestrator';
 import { DateTime } from 'luxon';
+import { useTheme } from '@/theme';
 
 export default function TabLayout() {
+  const { colors } = useTheme();
   const isOpen = useAddTaskModalStore(s => s.isOpen);
   const origin = useAddTaskModalStore(s => s.origin);
   const closeModal = useAddTaskModalStore(s => s.closeModal);
@@ -62,7 +64,7 @@ export default function TabLayout() {
   }, []);
 
   return (
-    <View ref={containerRef} style={styles.container} onLayout={onContainerLayout}>
+    <View ref={containerRef} style={[styles.container, { backgroundColor: colors.background }]} onLayout={onContainerLayout}>
       <Tabs
         tabBar={props => <BottomNavBar {...props} />}
         screenOptions={{

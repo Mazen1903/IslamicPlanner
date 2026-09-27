@@ -23,10 +23,10 @@ const PRESET_OPTIONS: {
   preset: RecurrencePreset;
   title: string;
   subtitle: string;
-  icon: 'edit' | 'calendar' | 'moon' | 'calendar-star';
+  icon: 'refresh' | 'edit' | 'calendar' | 'moon' | 'calendar-star';
   hasChevron?: boolean;
 }[] = [
-  { preset: 'NONE', title: "Doesn't repeat", subtitle: 'Only once', icon: 'edit' },
+  { preset: 'NONE', title: "Doesn't repeat", subtitle: 'Only once', icon: 'refresh' },
   { preset: 'DAILY', title: 'Daily', subtitle: 'Repeats every day', icon: 'calendar' },
   { preset: 'WEEKDAYS', title: 'Weekdays', subtitle: 'Every Monday to Friday', icon: 'calendar' },
   { preset: 'WEEKLY', title: 'Weekly', subtitle: 'Repeats every week', icon: 'calendar', hasChevron: true },

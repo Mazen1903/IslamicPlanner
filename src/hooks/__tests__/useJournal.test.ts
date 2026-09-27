@@ -200,7 +200,7 @@ describe('useJournal Hook', () => {
         updatedAt: '2026-09-15T10:00:00Z',
       },
     ];
-    mockService.listHistory.mockResolvedValueOnce(mockList);
+    mockService.listHistory.mockResolvedValue(mockList);
 
     const { result } = await renderHook(() =>
       useJournal({
@@ -213,6 +213,8 @@ describe('useJournal Hook', () => {
     await waitFor(() => {
       expect(result.current.mode).toBe('READY');
     });
+
+    mockService.listHistory.mockClear();
 
     await act(async () => {
       await result.current.onHistoryOpen();
@@ -328,5 +330,68 @@ describe('useJournal Hook', () => {
 
     expect(mockAutosaveController.flush).toHaveBeenCalled();
     expect(mockLockController.onBackground).toHaveBeenCalledTimes(1);
+  });
+
+  it('updates draftPayload mood and enqueues edit on onMoodChange', async () => {
+    const { result } = await renderHook(() =>
+      useJournal({
+        service: mockService,
+        lockController: mockLockController,
+        autosaveController: mockAutosaveController,
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.mode).toBe('READY');
+    });
+
+    await act(async () => {
+      result.current.onMoodChange('grateful');
+    });
+
+    expect(result.current.draftPayload.mood).toBe('grateful');
+    expect(mockAutosaveController.enqueueEdit).toHaveBeenCalledWith(
+      expect.objectContaining({ mood: 'grateful' })
+    );
+
+    await act(async () => {
+      result.current.onMoodChange(undefined);
+    });
+
+    expect(result.current.draftPayload.mood).toBeUndefined();
+  });
+
+  it('computes streak from history entries', async () => {
+    const historyData = [
+      {
+        id: 'h-1',
+        planningDayKey: '2026-09-16',
+        revision: 1,
+        createdAt: '2026-09-16T10:00:00Z',
+        updatedAt: '2026-09-16T10:00:00Z',
+      },
+      {
+        id: 'h-2',
+        planningDayKey: '2026-09-15',
+        revision: 1,
+        createdAt: '2026-09-15T10:00:00Z',
+        updatedAt: '2026-09-15T10:00:00Z',
+      },
+    ];
+    mockService.listHistory.mockResolvedValue(historyData);
+
+    const { result } = await renderHook(() =>
+      useJournal({
+        service: mockService,
+        lockController: mockLockController,
+        autosaveController: mockAutosaveController,
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.mode).toBe('READY');
+    });
+
+    expect(result.current.streak).toBe(2);
   });
 });

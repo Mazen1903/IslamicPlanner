@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Linking, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
@@ -61,6 +61,31 @@ export default function AboutScreen() {
 
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
+  const openUrl = async (url: string) => {
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Unable to open link', 'Could not open the requested page.', [{ text: 'OK' }]);
+    }
+  };
+
+  const handleRateApp = async () => {
+    const storeUrl =
+      Platform.OS === 'ios'
+        ? 'https://apps.apple.com'
+        : 'market://details?id=com.islamicplanner.app';
+    try {
+      const canOpen = await Linking.canOpenURL(storeUrl);
+      if (canOpen) {
+        await Linking.openURL(storeUrl);
+      } else {
+        await Linking.openURL('https://play.google.com/store/apps/details?id=com.islamicplanner.app');
+      }
+    } catch {
+      Alert.alert('Unable to open store', 'Could not open the store page.', [{ text: 'OK' }]);
+    }
+  };
+
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.background }]}
@@ -87,7 +112,7 @@ export default function AboutScreen() {
             label="Help Center"
             subtitle="Find answers to common questions"
             customBadge={<SettingsAboutHelpCenterIcon size={40} />}
-            onPress={() => {}}
+            onPress={() => openUrl('https://islamicplanner.app/help')}
             testID="about-row-help-center"
           />
 
@@ -96,7 +121,7 @@ export default function AboutScreen() {
             label="Contact Team"
             subtitle="We're here to help"
             customBadge={<SettingsAboutContactSupportIcon size={40} />}
-            onPress={() => {}}
+            onPress={() => openUrl('mailto:contact@islamicplanner.app?subject=Feedback')}
             testID="about-row-contact"
           />
 
@@ -105,7 +130,7 @@ export default function AboutScreen() {
             label="Privacy Policy"
             subtitle="How we protect your data"
             customBadge={<SettingsAboutPrivacyPolicyIcon size={40} />}
-            onPress={() => {}}
+            onPress={() => openUrl('https://islamicplanner.app/privacy')}
             testID="about-row-privacy"
           />
 
@@ -114,7 +139,7 @@ export default function AboutScreen() {
             label="Terms of Service"
             subtitle="Our terms and conditions"
             customBadge={<SettingsAboutTermsIcon size={40} />}
-            onPress={() => {}}
+            onPress={() => openUrl('https://islamicplanner.app/terms')}
             testID="about-row-terms"
           />
 
@@ -123,7 +148,7 @@ export default function AboutScreen() {
             label="Rate the App"
             subtitle="Leave a review on the App Store"
             customBadge={<SettingsAboutRateStarIcon size={40} />}
-            onPress={() => {}}
+            onPress={handleRateApp}
             testID="about-row-rate"
           />
         </View>

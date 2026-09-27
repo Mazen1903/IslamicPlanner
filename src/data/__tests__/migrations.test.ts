@@ -55,6 +55,10 @@ function createMockClient(nodeDb: DatabaseSync) {
         },
       };
     },
+    getAllSync<T>(sql: string, ...params: any[]): T[] {
+      const stmt = nodeDb.prepare(sql);
+      return stmt.all(...params) as T[];
+    },
   };
 }
 
@@ -130,7 +134,10 @@ describe('Drizzle Migrations & Discovery (MG Suite)', () => {
       expect(postMigrationTables).toContain(appTable);
     }
     expect(postMigrationTables).toContain(expectedDrizzleTable);
-    expect(postMigrationTables).toHaveLength(9);
+    // 9 expected tables: 8 app tables + 1 drizzle migrations ledger.
+    // sqlite_sequence may also appear when AUTOINCREMENT is used — filter it out for the count.
+    const countedTables = postMigrationTables.filter(t => t !== 'sqlite_sequence');
+    expect(countedTables).toHaveLength(9);
 
     // Verify task_occurrences columns include window_start and window_end
     const columns = (
@@ -350,6 +357,8 @@ describe('Drizzle Migrations & Discovery (MG Suite)', () => {
       expect(postMigrationTables).toContain(appTable);
     }
     expect(postMigrationTables).toContain(expectedDrizzleTable);
-    expect(postMigrationTables).toHaveLength(9);
+    // sqlite_sequence is created automatically when AUTOINCREMENT is used. Filter it out.
+    const countedTables = postMigrationTables.filter(t => t !== 'sqlite_sequence');
+    expect(countedTables).toHaveLength(9);
   });
 });

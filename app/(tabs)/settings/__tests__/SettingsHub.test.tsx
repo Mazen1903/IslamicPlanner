@@ -33,6 +33,12 @@ describe('SettingsHubScreen (Pastel UI Mockup)', () => {
         hijriGlobalAdjustment: 0,
         worshipSuggestionsEnabled: true,
         prayerAlertsEnabled: true,
+        completedTasksMode: 'KEEP',
+        overdueTasksMode: 'KEEP',
+        prayerVibrationEnabled: true,
+        taskRemindersEnabled: true,
+        taskVibrationEnabled: true,
+        quietHoursEnabled: false,
         themeMode: 'SYSTEM',
         isPremium: false,
         onboardingCompleted: false,
@@ -96,9 +102,8 @@ describe('SettingsHubScreen (Pastel UI Mockup)', () => {
     expect(screen.getByText('Calendar')).toBeTruthy();
     expect(screen.getByTestId('settings-row-hijri-calendar')).toBeTruthy();
 
-    // 6. Worship Suggestions
-    expect(screen.getByText('Worship Suggestions')).toBeTruthy();
-    expect(screen.getByTestId('settings-row-worship')).toBeTruthy();
+    // 6. Worship Suggestions removed
+    expect(screen.queryByTestId('settings-row-worship')).toBeNull();
 
     // 7. Account & Sync
     expect(screen.getByText('Account & Sync')).toBeTruthy();

@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, StyleSheet, Text, Pressable, ActivityIndicator } from 'react-native';
+import React, { useCallback, useRef, useEffect } from 'react';
+import { View, StyleSheet, Text, Pressable, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/theme';
 import type { Prayer } from '@/constants/prayers';
 import { useToday } from '@/hooks/useToday';
@@ -9,13 +9,17 @@ import { useLocation } from '@/hooks/useLocation';
 import { SetupRequiredState } from '@/components/today/SetupRequiredState';
 import { PrayerHeader } from '@/components/prayer/PrayerHeader';
 import { PrayerTabBar } from '@/components/prayer/PrayerTabBar';
+import { ActivePrayerHeroCard } from '@/components/prayer/ActivePrayerHeroCard';
 import { PrayerTransitionBanner } from '@/components/prayer/PrayerTransitionBanner';
 import { TaskList } from '@/components/task/TaskList';
+import { Icon } from '@/components/common/Icon';
 import { getTodayDateSubtitle } from '@/utils/todayDateSubtitle';
+import { useUserSettings } from '@/hooks/useUserSettings';
 
 export default function TodayScreen() {
-  const { colors, spacing, typography, radii, touchTargets } = useTheme();
+  const { colors, spacing, typography, radii, touchTargets, activeIslamicTheme, shadows } = useTheme();
   const router = useRouter();
+  const { settings } = useUserSettings();
   const {
     viewModel,
     status,
@@ -35,6 +39,21 @@ export default function TodayScreen() {
   } = useToday();
 
   const { locationName } = useLocation();
+
+  // Use a ref to hold the latest refresh so the useFocusEffect callback is stable.
+  // Without this, [refresh] as a dep recreates the callback every render, triggering
+  // useFocusEffect → refresh → setState → re-render → useFocusEffect → ∞ loop.
+  const refreshRef = useRef(refresh);
+  useEffect(() => {
+    refreshRef.current = refresh;
+  });
+
+  // Refresh schedule whenever user navigates back to Today tab
+  useFocusEffect(
+    useCallback(() => {
+      refreshRef.current();
+    }, []) // stable — never changes
+  );
 
   const handleSelectPrayer = (prayer: Prayer) => {
     setSelectedPrayer(prayer);
@@ -113,57 +132,106 @@ export default function TodayScreen() {
     router.push('/(tabs)/settings/prayer-calculation');
   };
 
-  return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top', 'left', 'right']}
-      testID="today-screen"
-    >
-      {/* 1. Header with Screen Title, Dynamic Gregorian & Hijri Date Subtitle, Location, and Mosque Skyline */}
-      <PrayerHeader
-        currentPrayer={viewModel.currentPrayer}
-        nextPrayer={viewModel.nextPrayer}
-        countdownDisplay={countdownDisplay}
-        locationName={locationName ?? 'Current Location'}
-        dateSubtitle={dateSubtitle}
-        onPressLocation={handlePressLocation}
-      />
+  const handleAddTask = (prayer?: Prayer) => {
+    router.push({
+      pathname: '/task/add',
+      params: { prayer: prayer ?? activePrayer },
+    });
+  };
 
-      {/* 2. Prayer transition banner (if mid-session prayer changed) */}
-      {prayerTransition && (
-        <PrayerTransitionBanner
-          transition={prayerTransition}
-          onViewPress={viewTransitionPrayer}
-          onDismissPress={dismissPrayerTransition}
+  return (
+    <View style={styles.container} testID="today-screen">
+      {activeIslamicTheme?.wallpaperAsset && (
+        <Image
+          source={activeIslamicTheme.wallpaperAsset}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
         />
       )}
-
-      {/* 3. Exactly 5 Prayer Capsules with vector astronomical icons and integrated time */}
-      <View style={styles.tabBarWrapper}>
-        <PrayerTabBar
-          tabs={viewModel.tabs}
-          selectedPrayer={activePrayer}
-          onSelectPrayer={handleSelectPrayer}
+      <SafeAreaView
+        style={[
+          styles.container,
+          !activeIslamicTheme?.wallpaperAsset && { backgroundColor: colors.background },
+        ]}
+        edges={['top', 'left', 'right']}
+      >
+        {/* 1. Header with Screen Title, Dynamic Gregorian & Hijri Date Subtitle, Location, and Mosque Skyline */}
+        <PrayerHeader
+          currentPrayer={viewModel.currentPrayer}
+          nextPrayer={viewModel.nextPrayer}
+          countdownDisplay={countdownDisplay}
+          locationName={locationName ?? 'Current Location'}
+          dateSubtitle={dateSubtitle}
+          onPressLocation={handlePressLocation}
         />
-      </View>
 
-      {/* 4. Task list for the selected prayer tab with Anytime Today and Add Task button */}
-      {currentTab && (
-        <View style={styles.taskListWrapper}>
-          <TaskList
-            tab={currentTab}
+        {/* 2. Prayer transition banner (if mid-session prayer changed) */}
+        {prayerTransition && (
+          <PrayerTransitionBanner
+            transition={prayerTransition}
+            onViewPress={viewTransitionPrayer}
+            onDismissPress={dismissPrayerTransition}
+          />
+        )}
+
+        {/* 3. Exactly 5 Prayer Capsules with vector icons and integrated time */}
+        <View style={styles.tabBarWrapper}>
+          <PrayerTabBar
+            tabs={viewModel.tabs}
             selectedPrayer={activePrayer}
-            currentPrayer={viewModel.currentPrayer}
-            nextPrayer={viewModel.nextPrayer?.prayer ?? null}
-            completedCollapsed={completedCollapsed[activePrayer] ?? true}
-            anytimeCollapsed={anytimeCollapsed}
-            onToggleCompletedCollapsed={() => toggleCompletedCollapsed(activePrayer)}
-            onToggleAnytimeCollapsed={toggleAnytimeCollapsed}
-            onCompleteTask={completeTask}
+            onSelectPrayer={handleSelectPrayer}
           />
         </View>
-      )}
-    </SafeAreaView>
+
+        {/* 4. Active Prayer Hero Card with Squircle Artwork, Time Window & Mint Countdown Badge */}
+        {currentTab && (
+          <ActivePrayerHeroCard
+            currentTab={currentTab}
+            allTabs={viewModel.tabs}
+            currentPrayer={viewModel.currentPrayer}
+            nextPrayer={viewModel.nextPrayer}
+            countdownDisplay={countdownDisplay}
+          />
+        )}
+
+        {/* 5. Task list for the selected prayer tab with Anytime Today */}
+        {currentTab && (
+          <View style={styles.taskListWrapper}>
+            <TaskList
+              tab={currentTab}
+              selectedPrayer={activePrayer}
+              currentPrayer={viewModel.currentPrayer}
+              nextPrayer={viewModel.nextPrayer?.prayer ?? null}
+              completedCollapsed={completedCollapsed[activePrayer] ?? true}
+              anytimeCollapsed={anytimeCollapsed}
+              onToggleCompletedCollapsed={() => toggleCompletedCollapsed(activePrayer)}
+              onToggleAnytimeCollapsed={toggleAnytimeCollapsed}
+              onCompleteTask={completeTask}
+              onAddTask={handleAddTask}
+              completedTasksMode={(settings?.completedTasksMode as any) ?? 'KEEP'}
+              overdueTasksMode={(settings?.overdueTasksMode as any) ?? 'KEEP'}
+            />
+          </View>
+        )}
+
+        {/* 6. Floating Action Button (FAB) at bottom-right corner */}
+        <Pressable
+          onPress={() => handleAddTask(activePrayer)}
+          style={({ pressed }) => [
+            styles.fab,
+            shadows.card,
+            {
+              backgroundColor: pressed ? colors.primaryPressed : colors.primary,
+            },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Add new task"
+          testID="today-fab-add"
+        >
+          <Icon name="plus" size={28} color={colors.textOnPrimary} decorative />
+        </Pressable>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -187,5 +255,21 @@ const styles = StyleSheet.create({
   retryButton: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    zIndex: 10,
   },
 });

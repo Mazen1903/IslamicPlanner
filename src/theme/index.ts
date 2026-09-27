@@ -4,3 +4,4 @@ export * from './lightTheme';
 export * from './darkTheme';
 export * from './ThemeProvider';
 export * from './useTheme';
+export * from './islamicThemes';

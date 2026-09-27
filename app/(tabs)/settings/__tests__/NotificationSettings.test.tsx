@@ -1,8 +1,9 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { Linking, Platform } from 'react-native';
 import { ThemeProvider } from '@/theme';
 import NotificationSettingsScreen from '../notifications';
+
 
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(() => ({
@@ -139,6 +140,113 @@ describe('NotificationSettingsScreen', () => {
           'Android may delay reminder delivery according to system battery and alarm policies when exact-alarm capability is unavailable.'
         )
       ).toBeTruthy();
+    });
+  });
+
+  it('does not render worship suggestions card', async () => {
+    await renderScreen();
+
+    expect(screen.queryByTestId('worship-suggestions-section-card')).toBeNull();
+    expect(screen.queryByText('Worship Suggestions')).toBeNull();
+  });
+
+  it('persists notification toggle changes via userSettingsRepository', async () => {
+    const { userSettingsRepository } = require('@/data/repositories/UserSettingsRepository');
+    const upsertSpy = jest.spyOn(userSettingsRepository, 'upsert').mockResolvedValue({} as any);
+
+    await renderScreen();
+
+    // Toggle prayer vibration
+    fireEvent(screen.getByTestId('prayer-vibration-switch'), 'valueChange', false);
+    await waitFor(() => {
+      expect(upsertSpy).toHaveBeenCalledWith({ prayerVibrationEnabled: false });
+    });
+
+    // Toggle task reminders
+    fireEvent(screen.getByTestId('task-reminders-switch'), 'valueChange', false);
+    await waitFor(() => {
+      expect(upsertSpy).toHaveBeenCalledWith({ taskRemindersEnabled: false });
+    });
+
+    // Toggle task vibration
+    fireEvent(screen.getByTestId('task-vibration-switch'), 'valueChange', false);
+    await waitFor(() => {
+      expect(upsertSpy).toHaveBeenCalledWith({ taskVibrationEnabled: false });
+    });
+
+    // Toggle quiet hours
+    fireEvent(screen.getByTestId('quiet-hours-switch'), 'valueChange', true);
+    await waitFor(() => {
+      expect(upsertSpy).toHaveBeenCalledWith({ quietHoursEnabled: true });
+    });
+
+    // Toggle journal reminder
+    fireEvent(screen.getByTestId('journal-reminder-switch'), 'valueChange', true);
+    await waitFor(() => {
+      expect(upsertSpy).toHaveBeenCalledWith({ journalReminderEnabled: true });
+    });
+  });
+
+  it('renders daily journal reminder card with reminder time', async () => {
+    await renderScreen();
+
+    expect(screen.getByTestId('journal-reminder-section-card')).toBeTruthy();
+    expect(screen.getByText('Daily Journal')).toBeTruthy();
+    // Default time '21:30' should be formatted as '9:30 PM'
+    expect(screen.getByTestId('journal-reminder-time-row-display')).toBeTruthy();
+    expect(screen.getByText('9:30 PM')).toBeTruthy();
+  });
+
+  it('opens time picker when reminder time row is tapped', async () => {
+    await renderScreen();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('journal-reminder-time-row')).toBeTruthy();
+    });
+
+    // Picker should not be visible initially
+    expect(screen.queryByTestId('journal-reminder-time-row-picker')).toBeNull();
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('journal-reminder-time-row'));
+    });
+
+    // Picker container should now be visible
+    await waitFor(() => {
+      expect(screen.getByTestId('journal-reminder-time-row-picker')).toBeTruthy();
+    });
+  });
+
+  it('persists new journal reminder time when picker selection changes', async () => {
+    const { userSettingsRepository } = require('@/data/repositories/UserSettingsRepository');
+    const upsertSpy = jest.spyOn(userSettingsRepository, 'upsert').mockResolvedValue({} as any);
+
+    await renderScreen();
+
+    // Open picker
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('journal-reminder-time-row'));
+    });
+
+    // Picker should be shown
+    await waitFor(() => {
+      expect(screen.getByTestId('journal-reminder-time-row-picker')).toBeTruthy();
+    });
+
+    // Select Hour 8 (8:30 PM)
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('time-hour-8'));
+    });
+
+    // Select Minute 00 (8:00 PM = 20:00)
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('time-minute-00'));
+    });
+
+    await waitFor(() => {
+      expect(upsertSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ journalReminderTime: '20:00' }),
+      );
     });
   });
 });

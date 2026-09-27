@@ -12,6 +12,8 @@ export default function TabAddScreen() {
 
   const civilToday = DateTime.now().toFormat('yyyy-MM-dd');
   const planningDayKey = viewModel?.planningDayKey ?? civilToday;
+  const selectedPrayer = useTodayStore(s => s.selectedPrayer);
+  const activePrayer = selectedPrayer ?? viewModel?.currentPrayer;
 
   const handleSuccess = async () => {
     await refresh();
@@ -26,6 +28,7 @@ export default function TabAddScreen() {
     <TaskFormScreen
       initialCivilSeedDate={civilToday}
       initialPlanningDayDate={planningDayKey}
+      initialPrayerTab={activePrayer ?? undefined}
       onSuccess={handleSuccess}
       onCancel={handleCancel}
     />

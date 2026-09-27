@@ -37,7 +37,7 @@ export function RelativePrayerSubView({
   const offsetMinutes = state.relativeDraft.offsetMinutes;
 
   const handleStepOffset = (delta: number) => {
-    const nextOffset = Math.max(0, Math.min(180, offsetMinutes + delta));
+    const nextOffset = Math.max(0, Math.min(240, offsetMinutes + delta));
     dispatch({ type: 'UPDATE_RELATIVE_DRAFT', payload: { offsetMinutes: nextOffset } });
   };
 
@@ -109,7 +109,8 @@ export function RelativePrayerSubView({
               <PrayerTabIcon
                 prayer={p}
                 isSelected={isSelected}
-                size={22}
+                size={28}
+                style={{ marginBottom: 4 }}
               />
               <Text
                 style={[
@@ -179,6 +180,48 @@ export function RelativePrayerSubView({
         })}
       </View>
 
+      {/* Exact Prayer Time Shortcut */}
+      <Pressable
+        onPress={() => {
+          dispatch({ type: 'UPDATE_RELATIVE_DRAFT', payload: { offsetMinutes: 0, relation: 'AFTER' } });
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="At Prayer Time"
+        testID="relative-exact-shortcut"
+        style={({ pressed }) => [
+          styles.exactShortcutButton,
+          shadows.card,
+          {
+            backgroundColor: offsetMinutes === 0 ? colors.primary : colors.surface,
+            borderColor: offsetMinutes === 0 ? colors.primary : colors.border,
+            borderRadius: radii.pill,
+            paddingVertical: spacing.sm,
+            paddingHorizontal: spacing.md,
+            marginTop: spacing.md,
+            opacity: pressed ? 0.8 : 1,
+          },
+        ]}
+      >
+        <Icon
+          name="task-time"
+          size={18}
+          color={offsetMinutes === 0 ? colors.textOnPrimary : colors.primary}
+          decorative
+          style={{ marginEnd: spacing.xs }}
+        />
+        <Text
+          style={[
+            typography.labelLarge,
+            {
+              color: offsetMinutes === 0 ? colors.textOnPrimary : colors.textPrimary,
+              fontWeight: '700',
+            },
+          ]}
+        >
+          At Prayer Time
+        </Text>
+      </Pressable>
+
       {/* Offset Stepper Card */}
       <View
         style={[
@@ -188,7 +231,8 @@ export function RelativePrayerSubView({
             backgroundColor: colors.surface,
             borderColor: colors.border,
             borderRadius: radii.card,
-            paddingHorizontal: spacing.lg,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
             marginTop: spacing.md,
           },
         ]}
@@ -197,39 +241,91 @@ export function RelativePrayerSubView({
           {offsetMinutes === 0 ? 'Exact prayer time' : `${offsetMinutes} minutes`}
         </Text>
 
-        <View style={styles.stepperArrows}>
-          <Pressable
-            onPress={() => handleStepOffset(15)}
-            accessibilityRole="button"
-            accessibilityLabel="Increase offset by 15 minutes"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={styles.arrowButton}
-          >
-            <Icon name="chevron-up" size={20} color={colors.primary} />
-          </Pressable>
+        <View style={styles.stepperControls}>
           <Pressable
             onPress={() => handleStepOffset(-15)}
             accessibilityRole="button"
             accessibilityLabel="Decrease offset by 15 minutes"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={styles.arrowButton}
+            testID="stepper-minus-15"
+            style={[styles.stepBtn, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md }]}
           >
-            <Icon name="chevron-down" size={20} color={colors.primary} />
+            <Text style={[typography.labelMedium, { color: colors.primary, fontWeight: '700' }]}>-15</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handleStepOffset(-5)}
+            accessibilityRole="button"
+            accessibilityLabel="Decrease offset by 5 minutes"
+            testID="stepper-minus-5"
+            style={[styles.stepBtn, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md }]}
+          >
+            <Text style={[typography.labelMedium, { color: colors.primary, fontWeight: '700' }]}>-5</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handleStepOffset(5)}
+            accessibilityRole="button"
+            accessibilityLabel="Increase offset by 5 minutes"
+            testID="stepper-plus-5"
+            style={[styles.stepBtn, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md }]}
+          >
+            <Text style={[typography.labelMedium, { color: colors.primary, fontWeight: '700' }]}>+5</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handleStepOffset(15)}
+            accessibilityRole="button"
+            accessibilityLabel="Increase offset by 15 minutes"
+            testID="stepper-plus-15"
+            style={[styles.stepBtn, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md }]}
+          >
+            <Text style={[typography.labelMedium, { color: colors.primary, fontWeight: '700' }]}>+15</Text>
           </Pressable>
         </View>
       </View>
 
-      {/* Hidden/Helper Preset Chips for Test Contracts */}
-      <View style={styles.hiddenPresetRow} importantForAccessibility="no">
-        {[0, 15, 30, 45, 60].map(min => (
-          <Pressable
-            key={min}
-            onPress={() => dispatch({ type: 'UPDATE_RELATIVE_DRAFT', payload: { offsetMinutes: min } })}
-            testID={`relative-offset-${min}`}
-            style={{ width: 1, height: 1, opacity: 0 }}
-          />
-        ))}
-      </View>
+      {/* Preset Offset Chips (Visible) */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={[styles.presetChipsScroll, { marginTop: spacing.md }]}
+        testID="relative-offset-presets"
+      >
+        {[0, 5, 10, 15, 20, 30, 45, 60, 90, 120].map(min => {
+          const isSelected = offsetMinutes === min;
+          return (
+            <Pressable
+              key={min}
+              onPress={() => dispatch({ type: 'UPDATE_RELATIVE_DRAFT', payload: { offsetMinutes: min } })}
+              accessibilityRole="button"
+              accessibilityLabel={min === 0 ? 'Exact prayer time' : `${min} minutes`}
+              accessibilityState={{ selected: isSelected }}
+              testID={`relative-offset-${min}`}
+              style={({ pressed }) => [
+                styles.presetChip,
+                {
+                  backgroundColor: isSelected ? colors.primary : colors.surface,
+                  borderColor: isSelected ? colors.primary : colors.border,
+                  borderRadius: radii.pill,
+                  marginEnd: spacing.xs,
+                  paddingVertical: spacing.xs,
+                  paddingHorizontal: spacing.md,
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  typography.labelMedium,
+                  {
+                    color: isSelected ? colors.textOnPrimary : colors.textPrimary,
+                    fontWeight: isSelected ? '700' : '600',
+                  },
+                ]}
+              >
+                {min === 0 ? 'Exact' : `${min}m`}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
       {/* 4. Live Schedule Summary Card */}
       <View
@@ -264,9 +360,13 @@ export function RelativePrayerSubView({
               ]}
             >
               <Text style={[typography.labelLarge, { color: colors.primary, fontWeight: '700' }]}>
-                {previewResult && previewResult.status === 'READY'
-                  ? previewResult.primaryLabel
-                  : `${prayerName} ${relation === 'BEFORE' ? '-' : '+'} ${offsetMinutes}m`}
+                {offsetMinutes === 0
+                  ? (previewResult && previewResult.status === 'READY'
+                      ? previewResult.primaryLabel
+                      : `At ${prayerName}`)
+                  : (previewResult && previewResult.status === 'READY'
+                      ? previewResult.primaryLabel
+                      : `${prayerName} ${relation === 'BEFORE' ? '-' : '+'} ${offsetMinutes}m`)}
               </Text>
             </View>
 
@@ -376,32 +476,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepperCard: {
+  exactShortcutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 60,
     borderWidth: 1,
-    position: 'relative',
+    alignSelf: 'flex-start',
+  },
+  stepperCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 56,
+    borderWidth: 1,
   },
   stepperValue: {
     fontWeight: '700',
-    fontSize: 18,
-    textAlign: 'center',
+    fontSize: 16,
   },
-  stepperArrows: {
-    position: 'absolute',
-    right: 16,
-    flexDirection: 'column',
+  stepperControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  stepBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  arrowButton: {
-    padding: 1,
+  presetChipsScroll: {
+    flexDirection: 'row',
+    paddingVertical: 4,
   },
-  hiddenPresetRow: {
-    height: 0,
-    overflow: 'hidden',
+  presetChip: {
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   summaryCard: {
     borderWidth: 1,

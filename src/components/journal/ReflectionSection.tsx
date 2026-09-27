@@ -21,6 +21,11 @@ export function ReflectionSection({
   const { colors, spacing, radii, typography, shadows, touchTargets } = useTheme();
   const [expanded, setExpanded] = useState(initialExpanded);
 
+  // Count filled reflections
+  const filledCount = Object.values(reflections).filter(
+    val => typeof val === 'string' && val.trim().length > 0
+  ).length;
+
   return (
     <View
       style={[
@@ -39,7 +44,7 @@ export function ReflectionSection({
       <Pressable
         onPress={() => setExpanded(prev => !prev)}
         accessibilityRole="button"
-        accessibilityLabel={`Reflections section. Currently ${expanded ? 'expanded' : 'collapsed'}.`}
+        accessibilityLabel={`Reflections section. Currently ${expanded ? 'expanded' : 'collapsed'}. ${filledCount} of 4 answered.`}
         accessibilityState={{ expanded }}
         style={({ pressed }) => [
           styles.headerPressable,
@@ -53,12 +58,34 @@ export function ReflectionSection({
         testID="reflection-section-toggle"
       >
         <View style={styles.headerTitleContainer}>
-          <Text style={[typography.headlineMedium, { color: colors.textPrimary }]}>
+          <Text style={styles.headerEmoji}>🪞</Text>
+          <Text style={[typography.headlineMedium, { color: colors.textPrimary, marginStart: spacing.xs }]}>
             Reflections
           </Text>
-          <Text style={[typography.caption, { color: colors.textTertiary, marginStart: spacing.sm }]}>
-            (Optional)
-          </Text>
+          <View
+            style={[
+              styles.counterBadge,
+              {
+                backgroundColor: filledCount > 0 ? colors.primaryLight : colors.surfaceSecondary,
+                borderColor: filledCount > 0 ? colors.primary : colors.border,
+                borderRadius: radii.pill,
+                marginStart: spacing.sm,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                typography.caption,
+                {
+                  color: filledCount > 0 ? colors.primaryDark : colors.textTertiary,
+                  fontWeight: '700',
+                  fontSize: 10,
+                },
+              ]}
+            >
+              {filledCount}/4
+            </Text>
+          </View>
         </View>
 
         <Icon
@@ -84,7 +111,7 @@ export function ReflectionSection({
           testID="reflection-section-content"
         >
           <ReflectionField
-            label="Gratitude"
+            label="🤲 Gratitude"
             placeholder="What are you grateful for today?"
             value={reflections.gratitude}
             onChangeText={text => onChangeReflection('gratitude', text)}
@@ -92,7 +119,7 @@ export function ReflectionSection({
           />
 
           <ReflectionField
-            label="What went well"
+            label="✅ What went well"
             placeholder="What went well today?"
             value={reflections.wentWell}
             onChangeText={text => onChangeReflection('wentWell', text)}
@@ -100,7 +127,7 @@ export function ReflectionSection({
           />
 
           <ReflectionField
-            label="What can I improve tomorrow?"
+            label="📈 For tomorrow"
             placeholder="What could be better tomorrow?"
             value={reflections.improvement}
             onChangeText={text => onChangeReflection('improvement', text)}
@@ -108,7 +135,7 @@ export function ReflectionSection({
           />
 
           <ReflectionField
-            label="Dua"
+            label="🌙 Heartfelt Dua"
             placeholder="Any duas on your heart today?"
             value={reflections.dua}
             onChangeText={text => onChangeReflection('dua', text)}
@@ -133,6 +160,16 @@ const styles = StyleSheet.create({
   headerTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  headerEmoji: {
+    fontSize: 18,
+  },
+  counterBadge: {
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   fieldsContainer: {
     width: '100%',

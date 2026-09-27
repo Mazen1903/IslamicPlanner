@@ -22,6 +22,7 @@ import {
 } from '@/components/settings';
 import { Button } from '@/components/common/Button';
 import { Icon } from '@/components/common/Icon';
+import { PrayerTabIcon } from '@/components/prayer/PrayerTabBar';
 import {
   CALCULATION_METHOD_LABELS,
 } from '@/domain/prayer/calculationMethods';
@@ -203,37 +204,55 @@ function PrayerCalculationForm({ settings, reload }: PrayerCalculationFormProps)
           </Text>
           <View style={styles.previewGrid}>
             <View style={styles.previewItem}>
-              <Text style={[typography.labelSmall, { color: colors.textSecondary }]}>Fajr</Text>
+              <View style={styles.previewHeaderRow}>
+                <PrayerTabIcon prayer="FAJR" size={18} style={{ marginEnd: 4 }} />
+                <Text style={[typography.labelSmall, { color: colors.textSecondary }]}>Fajr</Text>
+              </View>
               <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
                 {preview.fajr.toFormat('HH:mm')}
               </Text>
             </View>
             <View style={styles.previewItem}>
-              <Text style={[typography.labelSmall, { color: colors.textTertiary }]}>Sunrise</Text>
+              <View style={styles.previewHeaderRow}>
+                <Icon name="sun" size={14} color={colors.textTertiary} style={{ marginEnd: 4 }} decorative />
+                <Text style={[typography.labelSmall, { color: colors.textTertiary }]}>Sunrise</Text>
+              </View>
               <Text style={[typography.bodyMedium, { color: colors.textSecondary }]}>
                 {preview.sunrise.toFormat('HH:mm')}
               </Text>
             </View>
             <View style={styles.previewItem}>
-              <Text style={[typography.labelSmall, { color: colors.textSecondary }]}>Dhuhr</Text>
+              <View style={styles.previewHeaderRow}>
+                <PrayerTabIcon prayer="DHUHR" size={18} style={{ marginEnd: 4 }} />
+                <Text style={[typography.labelSmall, { color: colors.textSecondary }]}>Dhuhr</Text>
+              </View>
               <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
                 {preview.dhuhr.toFormat('HH:mm')}
               </Text>
             </View>
             <View style={styles.previewItem}>
-              <Text style={[typography.labelSmall, { color: colors.textSecondary }]}>Asr</Text>
+              <View style={styles.previewHeaderRow}>
+                <PrayerTabIcon prayer="ASR" size={18} style={{ marginEnd: 4 }} />
+                <Text style={[typography.labelSmall, { color: colors.textSecondary }]}>Asr</Text>
+              </View>
               <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
                 {preview.asr.toFormat('HH:mm')}
               </Text>
             </View>
             <View style={styles.previewItem}>
-              <Text style={[typography.labelSmall, { color: colors.textSecondary }]}>Maghrib</Text>
+              <View style={styles.previewHeaderRow}>
+                <PrayerTabIcon prayer="MAGHRIB" size={18} style={{ marginEnd: 4 }} />
+                <Text style={[typography.labelSmall, { color: colors.textSecondary }]}>Maghrib</Text>
+              </View>
               <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
                 {preview.maghrib.toFormat('HH:mm')}
               </Text>
             </View>
             <View style={styles.previewItem}>
-              <Text style={[typography.labelSmall, { color: colors.textSecondary }]}>Isha</Text>
+              <View style={styles.previewHeaderRow}>
+                <PrayerTabIcon prayer="ISHA" size={18} style={{ marginEnd: 4 }} />
+                <Text style={[typography.labelSmall, { color: colors.textSecondary }]}>Isha</Text>
+              </View>
               <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
                 {preview.isha.toFormat('HH:mm')}
               </Text>
@@ -476,6 +495,11 @@ const styles = StyleSheet.create({
   previewItem: {
     width: '30%',
     paddingVertical: 6,
+  },
+  previewHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
   },
   advancedToggle: {
     flexDirection: 'row',

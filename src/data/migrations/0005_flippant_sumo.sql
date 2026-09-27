@@ -1,0 +1,2 @@
+ALTER TABLE `user_settings` ADD `journal_reminder_enabled` integer DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE `user_settings` ADD `journal_reminder_time` text DEFAULT '21:30' NOT NULL;

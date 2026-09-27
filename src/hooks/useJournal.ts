@@ -20,10 +20,12 @@ import {
   formatHijriJournalDate,
   loadUserHijriAdjustmentConfig,
 } from '@/services/journal/journalDateUtils';
+import { computeCurrentStreak } from '@/utils/journalStreakUtils';
 import type {
   JournalEntryMetadata,
   JournalPayload,
   JournalReflections,
+  MoodKey,
 } from '@/domain/journal/types';
 import type { HijriAdjustmentConfig } from '@/domain/calendar/types';
 
@@ -62,8 +64,10 @@ export interface UseJournalReturn {
   hasDayRolledOver: boolean;
   loadError: string | null;
   hijriAdjustment?: HijriAdjustmentConfig;
+  streak: number;
   // Actions
   onBodyChange: (text: string) => void;
+  onMoodChange: (mood: MoodKey | undefined) => void;
   onReflectionChange: (field: keyof JournalReflections, text: string) => void;
   onHistoryOpen: () => Promise<void>;
   onSelectHistoryEntry: (metadata: JournalEntryMetadata) => Promise<void>;
@@ -103,7 +107,12 @@ export function useJournal(options: UseJournalOptions = {}): UseJournalReturn {
   const controller = useMemo(
     () =>
       options.autosaveController ??
-      new JournalAutosaveController(service, 2000, state => setSaveState(state)),
+      new JournalAutosaveController(service, 2000, state => {
+        setSaveState(state);
+        if (state === 'saved') {
+          service.listHistory().then(setHistoryEntries).catch(() => {});
+        }
+      }),
     [options.autosaveController, service]
   );
 
@@ -123,7 +132,11 @@ export function useJournal(options: UseJournalOptions = {}): UseJournalReturn {
         const entry = await service.loadEntry(dayKey);
         controller.beginSession(dayKey, entry);
         const initialPayload = entry
-          ? { body: entry.payload.body, reflections: { ...entry.payload.reflections } }
+          ? {
+              body: entry.payload.body,
+              reflections: { ...entry.payload.reflections },
+              mood: entry.payload.mood,
+            }
           : createDefaultJournalPayload();
 
         setDraftPayload(initialPayload);
@@ -166,6 +179,14 @@ export function useJournal(options: UseJournalOptions = {}): UseJournalReturn {
     // If day changed during background/idle
     if (activeKeyRef.current && activeKeyRef.current !== currentKey) {
       setHasDayRolledOver(true);
+    }
+
+    // Load history entries for streak calculation
+    try {
+      const historyList = await service.listHistory();
+      setHistoryEntries(historyList);
+    } catch {
+      // non-fatal
     }
 
     // Load entry for pinned planning day if not already in a session
@@ -249,6 +270,18 @@ export function useJournal(options: UseJournalOptions = {}): UseJournalReturn {
     [controller]
   );
 
+  // Mood change
+  const onMoodChange = useCallback(
+    (mood: MoodKey | undefined) => {
+      setDraftPayload(prev => {
+        const updated = { ...prev, mood };
+        controller.enqueueEdit(updated);
+        return updated;
+      });
+    },
+    [controller]
+  );
+
   // Reflection field change
   const onReflectionChange = useCallback(
     (field: keyof JournalReflections, text: string) => {
@@ -320,6 +353,14 @@ export function useJournal(options: UseJournalOptions = {}): UseJournalReturn {
         // Blank editor for today
         setDraftPayload(createDefaultJournalPayload());
       }
+
+      // Refresh history list so streak updates
+      try {
+        const list = await service.listHistory();
+        setHistoryEntries(list);
+      } catch {
+        // non-fatal
+      }
     } finally {
       setIsDeleting(false);
     }
@@ -388,6 +429,12 @@ export function useJournal(options: UseJournalOptions = {}): UseJournalReturn {
     }
   }, [activePlanningDayKey, isHistorical, loadDayEntry, bootstrapSession]);
 
+  // Streak calculation
+  const streak = useMemo(() => {
+    const todayKey = pinnedPlanningDayKey ?? activePlanningDayKey ?? '';
+    return computeCurrentStreak(historyEntries, todayKey);
+  }, [historyEntries, pinnedPlanningDayKey, activePlanningDayKey]);
+
   // Display date formatting
   const displayKey = activePlanningDayKey ?? pinnedPlanningDayKey ?? '';
   const gregorianDisplay = displayKey ? formatGregorianJournalDate(displayKey) : '';
@@ -412,7 +459,9 @@ export function useJournal(options: UseJournalOptions = {}): UseJournalReturn {
     hasDayRolledOver,
     loadError,
     hijriAdjustment,
+    streak,
     onBodyChange,
+    onMoodChange,
     onReflectionChange,
     onHistoryOpen,
     onSelectHistoryEntry,

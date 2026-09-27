@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import { JournalSaveStatus } from './JournalSaveStatus';
+import { StreakBanner } from './StreakBanner';
 import type { SaveState } from '@/services/journal/JournalAutosaveController';
 
 export interface JournalHeaderProps {
@@ -11,6 +12,7 @@ export interface JournalHeaderProps {
   saveState: SaveState;
   isHistorical?: boolean;
   lockEnabled?: boolean;
+  streak?: number;
   onHistoryPress?: () => void;
   onPrivacyPress?: () => void;
   onReturnToTodayPress?: () => void;
@@ -23,12 +25,22 @@ export function JournalHeader({
   saveState,
   isHistorical = false,
   lockEnabled = false,
+  streak,
   onHistoryPress,
   onPrivacyPress,
   onReturnToTodayPress,
   testID = 'journal-header',
 }: JournalHeaderProps) {
   const { colors, spacing, typography, touchTargets, radii } = useTheme();
+
+  // Dynamic greeting based on device hour
+  const getGreeting = () => {
+    if (isHistorical) return 'Past Reflection 📜';
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Morning Reflection 🌅';
+    if (hour < 17) return 'Afternoon Reflection ☀️';
+    return 'Evening Muhasaba 🌙';
+  };
 
   return (
     <View style={[styles.container, { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }]} testID={testID}>
@@ -37,6 +49,15 @@ export function JournalHeader({
         <View>
           <Text style={[typography.displaySmall, { color: colors.textPrimary }]}>
             Journal
+          </Text>
+          <Text
+            style={[
+              typography.labelSmall,
+              { color: colors.primaryDark, marginTop: spacing.xxs, fontWeight: '600' },
+            ]}
+            testID="journal-greeting-text"
+          >
+            {getGreeting()}
           </Text>
         </View>
 
@@ -88,6 +109,13 @@ export function JournalHeader({
           )}
         </View>
       </View>
+
+      {/* Streak Banner Row */}
+      {streak !== undefined && !isHistorical && (
+        <View style={[styles.streakRow, { marginTop: spacing.xs }]}>
+          <StreakBanner streak={streak} onPress={onHistoryPress} />
+        </View>
+      )}
 
       {/* Date row */}
       <View style={styles.dateRow}>
@@ -154,11 +182,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginStart: 4,
   },
+  streakRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   dateRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginTop: 6,
+    marginTop: 8,
   },
   dateTextContainer: {
     flex: 1,

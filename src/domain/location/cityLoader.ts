@@ -44,11 +44,43 @@ async function readAssetUri(uri: string): Promise<string> {
     }
   }
 
-  const response = await fetch(uri);
-  if (!response.ok && response.status !== 0) {
-    throw new Error(`Failed to read city dataset asset from ${uri}: HTTP ${response.status}`);
+  // Strategy: try fetch() first (works on newer Expo/Android for both http and
+  // file:// URIs). If it fails with a network-level error, fall back to
+  // XMLHttpRequest which uses RN's native file loader.
+  try {
+    const response = await fetch(uri);
+    // status 0 = file:// success (no HTTP layer); 200 = http(s)// success
+    if (response.ok || response.status === 0) {
+      return await response.text();
+    }
+    // Fall through to XHR fallback if fetch returned an error status
+  } catch {
+    // fetch threw (e.g. network error on file://), try XHR
   }
-  return await response.text();
+
+  return new Promise<string>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.onload = () => {
+      if (xhr.status === 200 || xhr.status === 0) {
+        resolve(xhr.responseText);
+      } else {
+        reject(
+          new Error(
+            `Failed to read city dataset asset from ${uri}: HTTP ${xhr.status}`
+          )
+        );
+      }
+    };
+    xhr.onerror = () =>
+      reject(
+        new Error(
+          `Failed to read city dataset asset from ${uri}: network error`
+        )
+      );
+    xhr.open('GET', uri);
+    xhr.send();
+  });
+
 }
 
 /**

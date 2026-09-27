@@ -129,6 +129,24 @@ export const userSettings = sqliteTable('user_settings', {
   prayerAlertsEnabled: integer('prayer_alerts_enabled', { mode: 'boolean' })
     .notNull()
     .default(true),
+  completedTasksMode: text('completed_tasks_mode').notNull().default('KEEP'),
+  overdueTasksMode: text('overdue_tasks_mode').notNull().default('KEEP'),
+  prayerVibrationEnabled: integer('prayer_vibration_enabled', { mode: 'boolean' })
+    .notNull()
+    .default(true),
+  taskRemindersEnabled: integer('task_reminders_enabled', { mode: 'boolean' })
+    .notNull()
+    .default(true),
+  taskVibrationEnabled: integer('task_vibration_enabled', { mode: 'boolean' })
+    .notNull()
+    .default(true),
+  quietHoursEnabled: integer('quiet_hours_enabled', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  journalReminderEnabled: integer('journal_reminder_enabled', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  journalReminderTime: text('journal_reminder_time').notNull().default('21:30'),
   themeMode: text('theme_mode').notNull().default('SYSTEM'),
   isPremium: integer('is_premium', { mode: 'boolean' }).notNull().default(false),
   onboardingCompleted: integer('onboarding_completed', { mode: 'boolean' })

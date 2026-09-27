@@ -14,6 +14,8 @@ import { useTheme, type ThemeMode } from '@/theme';
 import { SafeArea } from '@/components/layout/SafeArea';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
+import { PrayerTabIcon } from '@/components/prayer/PrayerTabBar';
+import type { Prayer } from '@/constants/prayers';
 import { useLocation } from '@/hooks/useLocation';
 import {
   userSettingsRepository,
@@ -306,12 +308,17 @@ export default function OnboardingScreen({
             {FIVE_PRAYERS.map(p => (
               <Card key={p.key} style={styles.prayerCard}>
                 <View style={styles.prayerRow}>
-                  <Text style={[theme.typography.headlineMedium, { color: theme.colors.primary }]}>
-                    {p.name}
-                  </Text>
-                  <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>
-                    {p.description}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <PrayerTabIcon prayer={p.key as Prayer} size={36} style={{ marginEnd: theme.spacing.md }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[theme.typography.headlineMedium, { color: theme.colors.primary }]}>
+                        {p.name}
+                      </Text>
+                      <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>
+                        {p.description}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               </Card>
             ))}

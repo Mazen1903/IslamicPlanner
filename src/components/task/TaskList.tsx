@@ -1,5 +1,7 @@
 import React from 'react';
-import { StyleSheet, ScrollView } from 'react-native';
+import { StyleSheet, ScrollView, View, Text, Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useTheme } from '@/theme';
 import type { Prayer } from '@/constants/prayers';
 import type { PrayerTabViewModel } from '@/services/types';
 import { TaskCard } from './TaskCard';
@@ -8,7 +10,6 @@ import { CompletedSection } from './CompletedSection';
 import { AnytimeTodaySection } from './AnytimeTodaySection';
 import { EmptyPrayerState } from './EmptyPrayerState';
 import { AllDoneState } from './AllDoneState';
-import { AddTaskButton } from './AddTaskButton';
 import { computeEmptyState } from '@/services/TodayViewModelProjection';
 
 export interface TaskListProps {
@@ -21,6 +22,9 @@ export interface TaskListProps {
   onToggleCompletedCollapsed: () => void;
   onToggleAnytimeCollapsed?: () => void;
   onCompleteTask: (occurrenceId: string) => void;
+  onAddTask?: (prayer: Prayer) => void;
+  completedTasksMode?: 'KEEP' | 'MOVE' | 'HIDE';
+  overdueTasksMode?: 'KEEP' | 'MOVE' | 'HIDE';
 }
 
 export function TaskList({
@@ -33,8 +37,29 @@ export function TaskList({
   onToggleCompletedCollapsed,
   onToggleAnytimeCollapsed,
   onCompleteTask,
+  onAddTask,
+  completedTasksMode = 'KEEP',
+  overdueTasksMode = 'KEEP',
 }: TaskListProps) {
-  const emptyState = computeEmptyState(tab);
+  const router = useRouter();
+  const { colors, spacing, typography, radii, isDark } = useTheme();
+
+  const effectiveMissedTasks = overdueTasksMode === 'HIDE' ? [] : tab.missedTasks;
+  const effectiveCompletedTasks = completedTasksMode === 'HIDE' ? [] : tab.completedTasks;
+
+  const emptyState = computeEmptyState({
+    ...tab,
+    missedTasks: effectiveMissedTasks,
+    completedTasks: effectiveCompletedTasks,
+  });
+
+  const handlePressAddTask = () => {
+    if (onAddTask) {
+      onAddTask(selectedPrayer);
+    } else {
+      router.push({ pathname: '/task/add', params: { prayer: selectedPrayer } });
+    }
+  };
 
   return (
     <ScrollView
@@ -53,7 +78,7 @@ export function TaskList({
       ))}
 
       {/* 2. Missed tasks */}
-      {tab.missedTasks.map(task => (
+      {effectiveMissedTasks.map(task => (
         <MissedTaskRow key={task.occurrenceId} task={task} />
       ))}
 
@@ -63,6 +88,7 @@ export function TaskList({
           selectedPrayer={selectedPrayer}
           currentPrayer={currentPrayer}
           nextPrayer={nextPrayer}
+          onAddTask={handlePressAddTask}
         />
       )}
 
@@ -84,15 +110,40 @@ export function TaskList({
         />
       )}
 
-      {/* 5. Completed tasks (collapsible) */}
-      <CompletedSection
-        tasks={tab.completedTasks}
-        collapsed={completedCollapsed}
-        onToggleCollapsed={onToggleCompletedCollapsed}
-      />
+      {/* 5. Inline "+ Add Task" pill button when there are scheduled or anytime tasks */}
+      {emptyState !== 'NOTHING_SCHEDULED' && (
+        <View style={[styles.inlineAddContainer, { paddingHorizontal: spacing.lg, marginVertical: spacing.md }]}>
+          <Pressable
+            onPress={handlePressAddTask}
+            style={({ pressed }) => [
+              styles.inlineAddButton,
+              {
+                backgroundColor: pressed
+                  ? (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)')
+                  : (isDark ? 'rgba(28, 35, 43, 0.8)' : 'rgba(255, 255, 255, 0.85)'),
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+                borderRadius: radii.card,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Add task for ${selectedPrayer}`}
+            testID="inline-add-task-button"
+          >
+            <Text style={[typography.labelLarge, styles.inlineAddText, { color: colors.primary }]}>
+              + Add Task
+            </Text>
+          </Pressable>
+        </View>
+      )}
 
-      {/* 6. + Add Task Button */}
-      <AddTaskButton />
+      {/* 6. Completed tasks (collapsible) */}
+      {completedTasksMode !== 'HIDE' && (
+        <CompletedSection
+          tasks={effectiveCompletedTasks}
+          collapsed={completedCollapsed}
+          onToggleCollapsed={onToggleCompletedCollapsed}
+        />
+      )}
     </ScrollView>
   );
 }
@@ -102,7 +153,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingTop: 12,
-    paddingBottom: 32,
+    paddingTop: 8,
+    paddingBottom: 80,
+  },
+  inlineAddContainer: {
+    width: '100%',
+  },
+  inlineAddButton: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inlineAddText: {
+    fontWeight: '700',
+    fontSize: 15,
   },
 });

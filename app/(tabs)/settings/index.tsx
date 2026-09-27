@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Modal, Text, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
@@ -12,14 +12,12 @@ import {
   SettingsHubNotificationsIcon,
   SettingsHubAppearanceIcon,
   SettingsHubCalendarIcon,
-  SettingsHubWorshipIcon,
   SettingsHubAccountIcon,
   SettingsHubPremiumIcon,
   SettingsHubAboutIcon,
   SettingsPremCrownIcon,
   SettingsCheckCircleIcon,
 } from '@/components/settings';
-import { Icon } from '@/components/common/Icon';
 
 export default function SettingsHubScreen() {
   const { colors, spacing, radii, typography, shadows, touchTargets } = useTheme();
@@ -102,19 +100,7 @@ export default function SettingsHubScreen() {
           testID="settings-row-hijri-calendar"
         />
 
-        {/* 6. Worship Suggestions */}
-        <PastelOptionCard
-          label="Worship Suggestions"
-          subtitle="Manage recommended acts of worship"
-          icon="bulb"
-          iconColor={colors.warning}
-          badgeColor={colors.prayerDhuhr}
-          customBadge={<SettingsHubWorshipIcon size={44} />}
-          onPress={() => router.push('/(tabs)/settings/notifications' as any)}
-          testID="settings-row-worship"
-        />
-
-        {/* 7. Account & Sync */}
+        {/* 6. Account & Sync */}
         <PastelOptionCard
           label="Account & Sync"
           subtitle="Backup, devices and account settings"

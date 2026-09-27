@@ -58,6 +58,12 @@ describe('PlanningDayScreen', () => {
         hijriGlobalAdjustment: 0,
         worshipSuggestionsEnabled: true,
         prayerAlertsEnabled: true,
+        completedTasksMode: 'KEEP',
+        overdueTasksMode: 'KEEP',
+        prayerVibrationEnabled: true,
+        taskRemindersEnabled: true,
+        taskVibrationEnabled: true,
+        quietHoursEnabled: false,
         themeMode: 'SYSTEM',
         isPremium: false,
         onboardingCompleted: false,
@@ -148,6 +154,30 @@ describe('PlanningDayScreen', () => {
         expect.stringContaining('automatically'),
         expect.any(Array)
       );
+    });
+  });
+
+  it('persists completed tasks mode when a radio option is pressed', async () => {
+    const { userSettingsRepository } = require('@/data/repositories/UserSettingsRepository');
+    const upsertSpy = jest.spyOn(userSettingsRepository, 'upsert').mockResolvedValue({} as any);
+    await renderScreen('FAJR');
+
+    fireEvent.press(screen.getByTestId('completed-tasks-mode-hide'));
+    await waitFor(() => {
+      expect(upsertSpy).toHaveBeenCalledWith({ completedTasksMode: 'HIDE' });
+      expect(mockReload).toHaveBeenCalled();
+    });
+  });
+
+  it('persists overdue tasks mode when a radio option is pressed', async () => {
+    const { userSettingsRepository } = require('@/data/repositories/UserSettingsRepository');
+    const upsertSpy = jest.spyOn(userSettingsRepository, 'upsert').mockResolvedValue({} as any);
+    await renderScreen('FAJR');
+
+    fireEvent.press(screen.getByTestId('overdue-tasks-mode-move'));
+    await waitFor(() => {
+      expect(upsertSpy).toHaveBeenCalledWith({ overdueTasksMode: 'MOVE' });
+      expect(mockReload).toHaveBeenCalled();
     });
   });
 });

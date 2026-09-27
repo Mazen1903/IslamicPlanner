@@ -22,6 +22,8 @@ import {
   TagsTagIcon,
   PrivateEyeIcon,
   HabitRepeatIcon,
+  TaskDateCalendarIcon,
+  TaskTimeClockIcon,
 } from './icons/TaskIcons';
 
 export * from './icons/TaskIcons';
@@ -30,6 +32,8 @@ export type IconName =
   | 'calendar'
   | 'calendar-star'
   | 'clock'
+  | 'task-date'
+  | 'task-time'
   | 'check'
   | 'settings'
   | 'prayer'
@@ -123,6 +127,8 @@ const ICON_DEF_MAP: Record<IconName, ResolvedIconDef> = {
   calendar: { lib: 'mci', name: 'calendar-month-outline' },
   'calendar-star': { lib: 'mci', name: 'calendar-star-outline' },
   clock: { lib: 'ionicons', name: 'time-outline' },
+  'task-date': { lib: 'mci', name: 'calendar-month-outline' },
+  'task-time': { lib: 'ionicons', name: 'time-outline' },
   sun: { lib: 'mci', name: 'weather-sunny' },
   edit: { lib: 'mci', name: 'pencil-outline' },
   pencil: { lib: 'mci', name: 'pencil-outline' },
@@ -237,6 +243,17 @@ export function Icon({
     );
   }
 
+  if (name === 'task-time') {
+    return (
+      <TaskTimeClockIcon
+        {...a11yProps}
+        size={resolvedSize}
+        color={resolvedColor}
+        style={[style as any, rtlStyle]}
+      />
+    );
+  }
+
   if (name === 'calendar') {
     return (
       <PrayerCalendarIcon
@@ -244,6 +261,28 @@ export function Icon({
         size={resolvedSize}
         color={resolvedColor}
         dotColor={dotColor ?? theme.colors.primary}
+        style={[style as any, rtlStyle]}
+      />
+    );
+  }
+
+  if (name === 'task-date') {
+    return (
+      <TaskDateCalendarIcon
+        {...a11yProps}
+        size={resolvedSize}
+        color={resolvedColor}
+        style={[style as any, rtlStyle]}
+      />
+    );
+  }
+
+  if (name === 'prayer' || name === 'mosque') {
+    return (
+      <TaskMosqueIcon
+        {...a11yProps}
+        size={resolvedSize}
+        color={resolvedColor}
         style={[style as any, rtlStyle]}
       />
     );

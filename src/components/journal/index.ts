@@ -8,3 +8,8 @@ export * from './JournalHistory';
 export * from './JournalLockedState';
 export * from './JournalPrivacySheet';
 export * from './JournalDeleteDialog';
+export * from './MoodPicker';
+export * from './PromptDeck';
+export * from './StreakBanner';
+export * from './JournalStatsStrip';
+export * from './JournalCalendar';

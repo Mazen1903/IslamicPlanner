@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import { useTheme } from '@/theme';
-import { Icon } from '@/components/common/Icon';
+import { SettingsBackButtonIcon } from './SettingsIcons';
 
 export interface SettingsPastelHeaderProps {
   title: string;
@@ -43,7 +43,7 @@ export function SettingsPastelHeader({
               },
             ]}
           >
-            <Icon name="chevron-left" size="md" color={colors.textPrimary} />
+            <SettingsBackButtonIcon size={32} />
           </Pressable>
         )}
         <Text style={[typography.displayLarge, { color: colors.textPrimary }]} numberOfLines={1}>

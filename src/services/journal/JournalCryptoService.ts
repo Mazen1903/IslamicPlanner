@@ -73,6 +73,7 @@ export class JournalCryptoService {
 
       return {
         body: parsed.body,
+        mood: parsed.mood,
         reflections: {
           gratitude: parsed.reflections.gratitude ?? '',
           wentWell: parsed.reflections.wentWell ?? '',

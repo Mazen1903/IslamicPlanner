@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
 import { DateTime } from 'luxon';
 import { useTheme, type ThemeColors } from '@/theme';
 import type { TaskCardViewModel } from '@/services/types';
@@ -13,28 +14,86 @@ export interface TaskCardProps {
   onComplete?: (occurrenceId: string) => void;
 }
 
-function getCategoryTheme(title: string, colors: ThemeColors): { icon: IconName; bg: string; color: string } {
+function getCategoryTheme(
+  title: string,
+  colors: ThemeColors,
+  isDark: boolean
+): { icon: IconName; bg: string; color: string } {
   const lower = title.toLowerCase();
-  if (lower.includes('lunch') || lower.includes('dinner') || lower.includes('breakfast') || lower.includes('food') || lower.includes('eat')) {
-    return { icon: 'restaurant', bg: colors.primaryLight, color: colors.primary };
+  if (
+    lower.includes('lunch') ||
+    lower.includes('dinner') ||
+    lower.includes('breakfast') ||
+    lower.includes('food') ||
+    lower.includes('eat')
+  ) {
+    return {
+      icon: 'restaurant',
+      bg: isDark ? '#14382B' : '#E8F8F0',
+      color: isDark ? '#34D399' : '#059669',
+    };
   }
-  if (lower.includes('meet') || lower.includes('work') || lower.includes('team') || lower.includes('sync') || lower.includes('laptop')) {
-    return { icon: 'laptop', bg: colors.surfaceSecondary, color: colors.info };
+  if (
+    lower.includes('meet') ||
+    lower.includes('work') ||
+    lower.includes('team') ||
+    lower.includes('sync') ||
+    lower.includes('laptop')
+  ) {
+    return {
+      icon: 'laptop',
+      bg: isDark ? '#1E293B' : '#E0F2FE',
+      color: isDark ? '#60A5FA' : '#0284C7',
+    };
   }
-  if (lower.includes('qur') || lower.includes('read') || lower.includes('dhikr') || lower.includes('surah') || lower.includes('book')) {
-    return { icon: 'book', bg: colors.prayerFajr, color: colors.primary };
+  if (
+    lower.includes('qur') ||
+    lower.includes('read') ||
+    lower.includes('dhikr') ||
+    lower.includes('surah') ||
+    lower.includes('book')
+  ) {
+    return {
+      icon: 'book',
+      bg: isDark ? '#2E1065' : '#F3E8FF',
+      color: isDark ? '#C084FC' : '#7C3AED',
+    };
   }
-  if (lower.includes('call') || lower.includes('phone') || lower.includes('mom') || lower.includes('dad')) {
-    return { icon: 'call', bg: colors.primaryLight, color: colors.primary };
+  if (
+    lower.includes('call') ||
+    lower.includes('phone') ||
+    lower.includes('mom') ||
+    lower.includes('dad')
+  ) {
+    return {
+      icon: 'call',
+      bg: isDark ? '#14382B' : '#E8F8F0',
+      color: isDark ? '#34D399' : '#059669',
+    };
   }
-  if (lower.includes('gym') || lower.includes('workout') || lower.includes('exercise') || lower.includes('run') || lower.includes('fitness')) {
-    return { icon: 'barbell', bg: colors.primaryLight, color: colors.primary };
+  if (
+    lower.includes('gym') ||
+    lower.includes('workout') ||
+    lower.includes('exercise') ||
+    lower.includes('run') ||
+    lower.includes('fitness')
+  ) {
+    return {
+      icon: 'barbell',
+      bg: isDark ? '#134E4A' : '#CCFBF1',
+      color: isDark ? '#2DD4BF' : '#0D9488',
+    };
   }
-  return { icon: 'check', bg: colors.primaryLight, color: colors.primary };
+  return {
+    icon: 'check',
+    bg: isDark ? '#1F2937' : '#F3F4F6',
+    color: colors.primary,
+  };
 }
 
 export function TaskCard({ task, onComplete }: TaskCardProps) {
-  const { colors, spacing, radii, typography, shadows } = useTheme();
+  const { colors, spacing, radii, typography, shadows, isDark } = useTheme();
+  const router = useRouter();
 
   const isCompleted = task.status === 'COMPLETED';
   const isMissed = task.status === 'MISSED';
@@ -44,7 +103,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
   const now = useMemo(() => DateTime.fromMillis(nowMs), [nowMs]);
   const overdueState = deriveOverdueState(task, now);
 
-  const category = getCategoryTheme(task.title, colors);
+  const category = getCategoryTheme(task.title, colors, isDark);
 
   const compositeLabel = useMemo(() => {
     let label = task.title;
@@ -52,9 +111,10 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
       label += '. Important.';
     }
     if (isPending && overdueState.isOverdue) {
-      label += overdueState.overdueMinutes >= 1
-        ? `. ${overdueState.overdueMinutes} min overdue.`
-        : '. Overdue.';
+      label +=
+        overdueState.overdueMinutes >= 1
+          ? `. ${overdueState.overdueMinutes} min overdue.`
+          : '. Overdue.';
     } else if (isMissed) {
       label += '. Missed.';
     } else if (isCompleted) {
@@ -63,18 +123,35 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
     return label;
   }, [task.title, task.priority, isPending, overdueState, isMissed, isCompleted]);
 
+  const handleCardPress = () => {
+    if (task.taskDefinitionId) {
+      router.push(`/task/${task.taskDefinitionId}`);
+    }
+  };
+
   return (
-    <View
-      style={[
+    <Pressable
+      onPress={handleCardPress}
+      accessibilityRole="button"
+      accessibilityLabel={`View task details: ${task.title}`}
+      style={({ pressed }) => [
         styles.card,
         shadows.card,
         {
-          backgroundColor: isCompleted ? colors.surfaceSecondary : colors.surface,
+          backgroundColor: isCompleted
+            ? colors.surfaceSecondary
+            : pressed
+            ? isDark
+              ? 'rgba(38, 48, 60, 0.95)'
+              : 'rgba(249, 250, 251, 0.98)'
+            : isDark
+            ? 'rgba(28, 35, 43, 0.95)'
+            : 'rgba(255, 255, 255, 0.98)',
           borderRadius: radii.card,
-          paddingVertical: spacing.md,
-          paddingHorizontal: spacing.md,
-          marginBottom: spacing.sm,
-          borderColor: colors.border,
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+          marginBottom: 8,
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
           borderWidth: 1,
         },
       ]}
@@ -94,7 +171,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
           testID={`checkbox-${task.occurrenceId}`}
         />
 
-        {/* Category Icon Badge */}
+        {/* Category Icon Badge with soft circle */}
         <View style={[styles.categoryCircle, { backgroundColor: category.bg }]}>
           <Icon name={category.icon} size={18} color={category.color} decorative />
         </View>
@@ -112,8 +189,8 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
                 {
                   color: isCompleted ? colors.textMuted : colors.textPrimary,
                   textDecorationLine: isCompleted ? 'line-through' : 'none',
-                  fontWeight: '600',
-                  fontSize: 15,
+                  fontWeight: '700',
+                  fontSize: 16,
                   flex: 1,
                 },
               ]}
@@ -121,34 +198,20 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
             >
               {task.title}
             </Text>
-
-            {task.priority === 'IMPORTANT' && (
-              <View
-                style={[
-                  styles.badge,
-                  {
-                    backgroundColor: colors.dangerSurface,
-                    borderColor: colors.danger,
-                    borderRadius: radii.pill,
-                    borderWidth: 1,
-                    paddingHorizontal: spacing.xs,
-                    marginStart: spacing.xs,
-                  },
-                ]}
-                testID={`important-badge-${task.occurrenceId}`}
-              >
-                <Text style={[typography.caption, { color: colors.danger, fontWeight: '700' }]}>
-                  IMPORTANT
-                </Text>
-              </View>
-            )}
           </View>
 
           <View style={styles.metaRow}>
             {task.scheduleLabel ? (
               <View style={styles.metaItem}>
-                <Icon name="clock" size={12} color={colors.textTertiary} style={{ marginEnd: 4 }} decorative />
-                <Text style={[typography.caption, { color: colors.textSecondary }]}>
+                <Text
+                  style={[
+                    typography.caption,
+                    {
+                      color: isCompleted ? colors.textMuted : colors.textSecondary,
+                      fontWeight: '600',
+                    },
+                  ]}
+                >
                   {task.scheduleLabel}
                 </Text>
               </View>
@@ -156,7 +219,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
 
             {task.estimatedMinutes ? (
               <View style={[styles.metaItem, { marginStart: spacing.sm }]}>
-                <Text style={[typography.caption, { color: colors.textTertiary }]}>
+                <Text style={[typography.caption, { color: colors.textTertiary, fontWeight: '600' }]}>
                   {task.estimatedMinutes}m
                 </Text>
               </View>
@@ -227,12 +290,30 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
           </View>
         </View>
 
-        {/* Right side indicators: Chevron */}
+        {/* Right side indicators: Priority Circle & Chevron */}
         <View style={styles.rightActions}>
-          <Icon name="chevron-right" size={18} color={colors.textTertiary} decorative />
+          {task.priority === 'IMPORTANT' && (
+            <View
+              style={styles.priorityCircle}
+              testID={`important-badge-${task.occurrenceId}`}
+              accessibilityLabel="Important task"
+            >
+              <Text style={styles.priorityExclamation}>!</Text>
+              <Text style={styles.srOnly}>IMPORTANT</Text>
+            </View>
+          )}
+
+          <Icon
+            name="chevron-right"
+            size={18}
+            color={colors.textTertiary}
+            directional
+            decorative
+            style={{ marginStart: 4 }}
+          />
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -245,16 +326,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   categoryCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: 4,
+    marginHorizontal: 6,
   },
   contentContainer: {
     flex: 1,
-    marginStart: 8,
+    marginStart: 4,
+    justifyContent: 'center',
   },
   titleRow: {
     flexDirection: 'row',
@@ -263,19 +345,42 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 3,
+    marginTop: 2,
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   badge: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignSelf: 'flex-start',
+    paddingVertical: 1,
   },
   rightActions: {
     flexDirection: 'row',
     alignItems: 'center',
     marginStart: 8,
+  },
+  priorityCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginEnd: 4,
+  },
+  priorityExclamation: {
+    color: '#DC2626',
+    fontSize: 13,
+    fontWeight: '900',
+    lineHeight: 16,
+  },
+  srOnly: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    opacity: 0,
   },
 });

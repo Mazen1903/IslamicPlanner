@@ -2,7 +2,7 @@ import { TaskEngine } from '@/domain/task/TaskEngine';
 import { taskEngine as defaultTaskEngine } from '@/domain/task';
 import type { TaskDefinition } from '@/domain/task/types';
 import type { TodayTemporalInputProvider } from '@/services/types';
-import { M7BootstrapInputProvider } from '@/services/TodayTemporalInputProvider';
+import { LocationAwareTodayTemporalInputProvider } from '@/services/TodayTemporalInputProvider';
 import type {
   EditScope,
   FormState,
@@ -35,7 +35,7 @@ export class TaskFormOrchestrator {
     private taskEngine: TaskEngine = defaultTaskEngine,
     private syncService: TaskFormSyncService = taskFormSyncService,
     private horizonSync: RecurringHorizonSync = defaultRecurringHorizonSync,
-    private inputProvider: TodayTemporalInputProvider = new M7BootstrapInputProvider()
+    private inputProvider: TodayTemporalInputProvider = new LocationAwareTodayTemporalInputProvider()
   ) {}
 
   /**

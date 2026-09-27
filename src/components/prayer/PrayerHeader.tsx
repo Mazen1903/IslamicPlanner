@@ -23,7 +23,7 @@ export function PrayerHeader({
   dateSubtitle,
   onPressLocation,
 }: PrayerHeaderProps) {
-  const { colors, spacing, typography } = useTheme();
+  const { colors, spacing, typography, islamicThemeId } = useTheme();
   const effectiveDateSubtitle = dateSubtitle ?? getTodayDateSubtitle();
 
   const currentPrayerName = PRAYER_NAMES[currentPrayer] ?? currentPrayer;
@@ -39,7 +39,7 @@ export function PrayerHeader({
       style={[
         styles.container,
         {
-          backgroundColor: colors.background,
+          backgroundColor: islamicThemeId ? 'transparent' : colors.background,
           paddingHorizontal: spacing.lg,
           paddingTop: spacing.sm,
           paddingBottom: spacing.sm,
@@ -76,18 +76,20 @@ export function PrayerHeader({
             </Pressable>
           </View>
 
-          {/* Right: Mosque skyline artwork */}
-          <View
-            style={styles.artworkWrapper}
-            importantForAccessibility="no"
-            accessibilityElementsHidden={true}
-          >
-            <Image
-              source={require('../../../assets/mosque_header.png')}
-              style={styles.mosqueImage}
-              resizeMode="contain"
-            />
-          </View>
+          {/* Right: Mosque skyline artwork (shown only when no custom Islamic wallpaper is active) */}
+          {!islamicThemeId && (
+            <View
+              style={styles.artworkWrapper}
+              importantForAccessibility="no"
+              accessibilityElementsHidden={true}
+            >
+              <Image
+                source={require('../../../assets/mosque_header.png')}
+                style={styles.mosqueImage}
+                resizeMode="contain"
+              />
+            </View>
+          )}
         </View>
 
         {/* Hidden Arabic Name preserved for test contracts & accessibility specs */}

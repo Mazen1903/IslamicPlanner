@@ -11,6 +11,7 @@ import { userSettingsRepository } from '@/data/repositories/UserSettingsReposito
 import { initNotificationHandler } from '@/services/notification/NotificationBootstrap';
 import { useOnboardingStore } from '@/stores/useOnboardingStore';
 import * as Font from 'expo-font';
+import * as SecureStore from 'expo-secure-store';
 
 export type BootstrapState = 'LOADING' | 'READY' | 'ERROR';
 
@@ -110,6 +111,7 @@ export function RootGate() {
 
 export default function RootLayout() {
   const [themeMode, setThemeMode] = useState<ThemeMode>('SYSTEM');
+  const [islamicThemeId, setIslamicThemeId] = useState<string | null>(null);
   const [bootstrapState, setBootstrapState] = useState<BootstrapState>('LOADING');
   const [retryTrigger, setRetryTrigger] = useState(0);
 
@@ -125,6 +127,13 @@ export default function RootLayout() {
       // Step 0: Font loading
       try {
         await Font.loadAsync({
+          'ComicSansMS-Bold': require('../assets/fonts/ComicSansMS-Bold.ttf'),
+          ComicSansMS: require('../assets/fonts/ComicSansMS.ttf'),
+          'ComicSansMS-Regular': require('../assets/fonts/ComicSansMS.ttf'),
+          'ComicSansMS-Italic': require('../assets/fonts/ComicSansMS-Italic.ttf'),
+          'ComicSansMS-BoldItalic': require('../assets/fonts/ComicSansMS-BoldItalic.ttf'),
+          'Comic Sans MS': require('../assets/fonts/ComicSansMS.ttf'),
+          'Comic Sans MS-Bold': require('../assets/fonts/ComicSansMS-Bold.ttf'),
           Mali: require('../assets/fonts/Mali-Regular.ttf'),
           'Mali-Regular': require('../assets/fonts/Mali-Regular.ttf'),
           'Mali-Bold': require('../assets/fonts/Mali-Bold.ttf'),
@@ -165,6 +174,16 @@ export default function RootLayout() {
         // Non-fatal: app falls back to SYSTEM mode
       }
 
+      // Step 3b: Load persisted Islamic theme from SecureStore
+      try {
+        const savedIslamicTheme = await SecureStore.getItemAsync('app_islamic_theme_id_v1');
+        if (savedIslamicTheme && !cancelled) {
+          setIslamicThemeId(savedIslamicTheme);
+        }
+      } catch (err) {
+        console.warn('[RootLayout] Failed to load persisted Islamic theme:', err);
+      }
+
       // Step 4: Complete bootstrap lifecycle
       if (!cancelled) {
         setBootstrapState('READY');
@@ -187,9 +206,27 @@ export default function RootLayout() {
     }
   }, []);
 
+  const handleIslamicThemeChange = useCallback(async (themeId: string | null) => {
+    setIslamicThemeId(themeId);
+    try {
+      if (themeId) {
+        await SecureStore.setItemAsync('app_islamic_theme_id_v1', themeId);
+      } else {
+        await SecureStore.deleteItemAsync('app_islamic_theme_id_v1');
+      }
+    } catch (err) {
+      console.warn('[RootLayout] Failed to persist Islamic theme:', err);
+    }
+  }, []);
+
   return (
     <SafeAreaProvider>
-      <ThemeProvider mode={themeMode} onModeChange={handleModeChange}>
+      <ThemeProvider
+        mode={themeMode}
+        onModeChange={handleModeChange}
+        islamicThemeId={islamicThemeId}
+        onIslamicThemeChange={handleIslamicThemeChange}
+      >
         <ThemedStatusBar />
         {bootstrapState === 'READY' && <RootGate />}
         {bootstrapState === 'LOADING' && <BootstrapLoadingView />}

@@ -22,7 +22,7 @@ describe('JournalHistory', () => {
     },
   ];
 
-  it('renders history entries and triggers onSelectEntry', async () => {
+  it('renders history entries, stats strip, calendar, and triggers onSelectEntry', async () => {
     const onSelectEntry = jest.fn();
     const onBackToToday = jest.fn();
 
@@ -37,6 +37,9 @@ describe('JournalHistory', () => {
     );
 
     expect(screen.getByText('History')).toBeTruthy();
+    expect(screen.getByTestId('journal-stats-strip')).toBeTruthy();
+    expect(screen.getByTestId('journal-calendar')).toBeTruthy();
+    expect(screen.getByText('All Entries')).toBeTruthy();
     expect(screen.getByTestId('journal-history-row-2026-09-16')).toBeTruthy();
     expect(screen.getByTestId('journal-history-row-2026-09-15')).toBeTruthy();
 

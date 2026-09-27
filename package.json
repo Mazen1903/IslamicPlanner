@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "jest --passWithNoTests",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "postinstall": "node scripts/patch-gesture-handler.js"
   },
   "dependencies": {
     "@expo/ui": "~57.0.19",

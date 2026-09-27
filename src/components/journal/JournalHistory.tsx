@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, FlatList, Pressable } from 'react-native';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import { JournalHistoryRow } from './JournalHistoryRow';
+import { JournalStatsStrip } from './JournalStatsStrip';
+import { JournalCalendar } from './JournalCalendar';
 import {
   formatGregorianJournalDate,
   formatHijriJournalDate,
@@ -13,6 +15,7 @@ import type { HijriAdjustmentConfig } from '@/domain/calendar/types';
 export interface JournalHistoryProps {
   entries: JournalEntryMetadata[];
   selectedPlanningDayKey?: string | null;
+  activePlanningDayKey?: string | null;
   hijriAdjustment?: HijriAdjustmentConfig;
   onSelectEntry: (metadata: JournalEntryMetadata) => void;
   onBackToToday: () => void;
@@ -22,6 +25,7 @@ export interface JournalHistoryProps {
 export function JournalHistory({
   entries,
   selectedPlanningDayKey,
+  activePlanningDayKey,
   hijriAdjustment,
   onSelectEntry,
   onBackToToday,
@@ -59,7 +63,7 @@ export function JournalHistory({
         </Text>
       </View>
 
-      {/* FlatList */}
+      {/* Empty State */}
       {entries.length === 0 ? (
         <View style={[styles.emptyContainer, { padding: spacing.xl }]} testID="journal-history-empty">
           <Icon name="calendar" size={36} color={colors.textTertiary} decorative />
@@ -71,6 +75,30 @@ export function JournalHistory({
         <FlatList
           data={entries}
           keyExtractor={item => item.id}
+          ListHeaderComponent={
+            <View style={styles.listHeader}>
+              {/* Stats Strip */}
+              <JournalStatsStrip
+                entries={entries}
+                activePlanningDayKey={activePlanningDayKey ?? selectedPlanningDayKey}
+              />
+
+              {/* Calendar Heatmap Grid */}
+              <JournalCalendar
+                entries={entries}
+                selectedPlanningDayKey={selectedPlanningDayKey}
+                activePlanningDayKey={activePlanningDayKey}
+                onSelectEntry={onSelectEntry}
+              />
+
+              {/* Section Header */}
+              <View style={[styles.sectionHeader, { paddingHorizontal: spacing.lg, marginTop: spacing.xs, marginBottom: spacing.sm }]}>
+                <Text style={[typography.headlineMedium, { color: colors.textPrimary }]}>
+                  All Entries
+                </Text>
+              </View>
+            </View>
+          }
           renderItem={({ item }) => (
             <JournalHistoryRow
               metadata={item}
@@ -103,8 +131,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderWidth: 1,
   },
+  listHeader: {
+    paddingTop: 4,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   listContent: {
-    paddingTop: 8,
+    paddingTop: 4,
   },
   emptyContainer: {
     flex: 1,

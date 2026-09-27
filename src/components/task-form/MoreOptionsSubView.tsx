@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -29,66 +29,15 @@ export function MoreOptionsSubView({
 }: MoreOptionsSubViewProps) {
   const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
 
-  // Expansion states for interactive inline entry
+  // Expansion state for notes inline drawer
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   const toggleSection = (section: string) => {
     setExpandedSection(prev => (prev === section ? null : section));
   };
 
-  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-  const newSubtaskRef = useRef('');
-  const [newTagText, setNewTagText] = useState('');
-  const newTagRef = useRef('');
-
-  // Local visual toggle state for Private Task and Habit Tracker (from mockup)
-  const [isPrivate, setIsPrivate] = useState(false);
+  // Local visual toggle state for Habit Tracker
   const [isHabit, setIsHabit] = useState(false);
-
-  const handleAddSubtask = () => {
-    const text = newSubtaskRef.current || newSubtaskTitle;
-    if (text.trim()) {
-      dispatch({ type: 'ADD_SUBTASK', payload: { title: text.trim() } });
-      newSubtaskRef.current = '';
-      setNewSubtaskTitle('');
-    }
-  };
-
-  const handleRemoveSubtask = (id: string) => {
-    dispatch({ type: 'REMOVE_SUBTASK', payload: { id } });
-  };
-
-  const handleToggleSubtask = (id: string) => {
-    dispatch({ type: 'TOGGLE_SUBTASK', payload: { id } });
-  };
-
-  const handleAddTag = () => {
-    const text = newTagRef.current || newTagText;
-    if (text.trim()) {
-      const formatted = text.trim().toLowerCase();
-      if (!state.tags.includes(formatted)) {
-        dispatch({ type: 'SET_TAGS', payload: [...state.tags, formatted] });
-      }
-      newTagRef.current = '';
-      setNewTagText('');
-    }
-  };
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    dispatch({ type: 'SET_TAGS', payload: state.tags.filter(t => t !== tagToRemove) });
-  };
-
-  const getReminderText = () => {
-    if (state.reminderMinutes === null) return 'No reminder';
-    if (state.reminderMinutes === 0) return 'At time';
-    return `${state.reminderMinutes} min before`;
-  };
-
-  const getDurationText = () => {
-    if (!state.estimatedMinutes) return '30 minutes';
-    if (state.estimatedMinutes === 60) return '1 hour';
-    return `${state.estimatedMinutes} minutes`;
-  };
 
   return (
     <ScrollView
@@ -125,101 +74,7 @@ export function MoreOptionsSubView({
 
       {/* 2. Options List */}
       <View style={styles.optionsList}>
-        {/* Row 1: Reminder */}
-        <View style={styles.rowCardWrapper}>
-          <Pressable
-            onPress={() => toggleSection('reminder')}
-            accessibilityRole="button"
-            accessibilityLabel={`Reminder: ${getReminderText()}`}
-            style={({ pressed }) => [
-              styles.optionRow,
-              shadows.card,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                borderRadius: radii.card,
-                padding: spacing.md,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            <View style={[styles.badgeBox, { backgroundColor: colors.primaryLight, borderRadius: radii.md }]}>
-              <Icon name="bell" size={24} color={colors.primary} decorative />
-            </View>
-            <View style={styles.textContent}>
-              <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
-                Reminder
-              </Text>
-              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                Get notified before the task
-              </Text>
-            </View>
-            <View style={styles.trailingRow}>
-              <Text style={[typography.labelMedium, { color: colors.textSecondary, marginEnd: spacing.xs }]}>
-                {getReminderText()}
-              </Text>
-              <Icon name="chevron-right" size={18} color={colors.textTertiary} directional decorative />
-            </View>
-          </Pressable>
-
-          {expandedSection === 'reminder' && (
-            <View style={[styles.expandedDrawer, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md, padding: spacing.md }]}>
-              {state.scheduleMode === 'ANYTIME_TODAY' ? (
-                <Text
-                  style={[typography.caption, { color: colors.textTertiary, fontStyle: 'italic' }]}
-                  testID="anytime-reminder-helper"
-                >
-                  Reminders require a specific time.
-                </Text>
-              ) : (
-                <View style={styles.chipsRow}>
-                  {[
-                    { val: null, label: 'None' },
-                    { val: 0, label: 'At time' },
-                    { val: 10, label: '10m before' },
-                    { val: 15, label: '15m before' },
-                    { val: 30, label: '30m before' },
-                  ].map(item => {
-                    const isSelected = state.reminderMinutes === item.val;
-                    return (
-                      <Pressable
-                        key={item.label}
-                        onPress={() => dispatch({ type: 'SET_REMINDER_MINUTES', payload: item.val })}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: isSelected }}
-                        accessibilityLabel={`Reminder: ${item.label}`}
-                        testID={`reminder-preset-${item.val === null ? 'none' : item.val}`}
-                        style={[
-                          styles.choiceChip,
-                          {
-                            backgroundColor: isSelected ? colors.primary : colors.surface,
-                            borderColor: isSelected ? colors.primary : colors.border,
-                            borderRadius: radii.sm,
-                            minHeight: touchTargets.min,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            typography.caption,
-                            {
-                              color: isSelected ? colors.textOnPrimary : colors.textPrimary,
-                              fontWeight: isSelected ? '700' : '500',
-                            },
-                          ]}
-                        >
-                          {item.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              )}
-            </View>
-          )}
-        </View>
-
-        {/* Row 2: Priority */}
+        {/* Row 1: Priority */}
         <View
           style={[
             styles.optionRow,
@@ -232,8 +87,8 @@ export function MoreOptionsSubView({
             },
           ]}
         >
-          <View style={[styles.badgeBox, { backgroundColor: colors.dangerSurface, borderRadius: radii.md }]}>
-            <Icon name="flag" size={24} color={colors.danger} decorative />
+          <View style={styles.badgeBox}>
+            <Icon name="flag" size={40} decorative />
           </View>
           <View style={styles.textContent}>
             <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
@@ -262,86 +117,7 @@ export function MoreOptionsSubView({
           </Pressable>
         </View>
 
-        {/* Row 3: Duration */}
-        <View style={styles.rowCardWrapper}>
-          <Pressable
-            onPress={() => toggleSection('duration')}
-            accessibilityRole="button"
-            accessibilityLabel={`Duration: ${getDurationText()}`}
-            style={({ pressed }) => [
-              styles.optionRow,
-              shadows.card,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                borderRadius: radii.card,
-                padding: spacing.md,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            <View style={[styles.badgeBox, { backgroundColor: colors.prayerIsha, borderRadius: radii.md }]}>
-              <Icon name="duration" size={24} decorative />
-            </View>
-            <View style={styles.textContent}>
-              <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
-                Duration
-              </Text>
-              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                Set an estimated time
-              </Text>
-            </View>
-            <View style={styles.trailingRow}>
-              <Text style={[typography.labelMedium, { color: colors.textSecondary, marginEnd: spacing.xs }]}>
-                {getDurationText()}
-              </Text>
-              <Icon name="chevron-right" size={18} color={colors.textTertiary} directional decorative />
-            </View>
-          </Pressable>
-
-          {expandedSection === 'duration' && (
-            <View style={[styles.expandedDrawer, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md, padding: spacing.md }]}>
-              <View style={styles.chipsRow}>
-                {[15, 30, 45, 60].map(mins => {
-                  const isSelected = state.estimatedMinutes === mins;
-                  return (
-                    <Pressable
-                      key={mins}
-                      onPress={() => dispatch({ type: 'SET_ESTIMATED_MINUTES', payload: isSelected ? null : mins })}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: isSelected }}
-                      accessibilityLabel={`Duration: ${mins} minutes`}
-                      testID={`duration-${mins}`}
-                      style={[
-                        styles.choiceChip,
-                        {
-                          backgroundColor: isSelected ? colors.primary : colors.surface,
-                          borderColor: isSelected ? colors.primary : colors.border,
-                          borderRadius: radii.sm,
-                          minHeight: touchTargets.min,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          typography.caption,
-                          {
-                            color: isSelected ? colors.textOnPrimary : colors.textPrimary,
-                            fontWeight: isSelected ? '700' : '500',
-                          },
-                        ]}
-                      >
-                        {mins === 60 ? '1h' : `${mins}m`}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Row 4: Notes */}
+        {/* Row 2: Notes */}
         <View style={styles.rowCardWrapper}>
           <Pressable
             onPress={() => toggleSection('notes')}
@@ -359,8 +135,8 @@ export function MoreOptionsSubView({
               },
             ]}
           >
-            <View style={[styles.badgeBox, { backgroundColor: colors.prayerAsr, borderRadius: radii.md }]}>
-              <Icon name="document" size={24} color={colors.warning} decorative />
+            <View style={styles.badgeBox}>
+              <Icon name="document" size={40} decorative />
             </View>
             <View style={styles.textContent}>
               <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
@@ -400,147 +176,7 @@ export function MoreOptionsSubView({
           )}
         </View>
 
-        {/* Row 5: Subtasks */}
-        <View style={styles.rowCardWrapper}>
-          <Pressable
-            onPress={() => toggleSection('subtasks')}
-            accessibilityRole="button"
-            accessibilityLabel={`Subtasks: ${state.subtasks.length} subtasks`}
-            style={({ pressed }) => [
-              styles.optionRow,
-              shadows.card,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                borderRadius: radii.card,
-                padding: spacing.md,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            <View style={[styles.badgeBox, { backgroundColor: colors.prayerFajr, borderRadius: radii.md }]}>
-              <Icon name="checkbox" size={24} color={colors.primaryDark} decorative />
-            </View>
-            <View style={styles.textContent}>
-              <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
-                Subtasks
-              </Text>
-              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                Break it into smaller steps
-              </Text>
-            </View>
-            <View style={styles.trailingRow}>
-              <Text style={[typography.labelMedium, { color: colors.textSecondary, marginEnd: spacing.xs }]}>
-                {`${state.subtasks.length} subtasks`}
-              </Text>
-              <Icon name="chevron-right" size={18} color={colors.textTertiary} directional decorative />
-            </View>
-          </Pressable>
-
-          {expandedSection === 'subtasks' && (
-            <View style={[styles.expandedDrawer, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md, padding: spacing.md }]}>
-              {state.subtasks.map(subtask => (
-                <View
-                  key={subtask.id}
-                  style={[
-                    styles.subtaskRow,
-                    {
-                      backgroundColor: colors.surface,
-                      borderRadius: radii.sm,
-                      paddingHorizontal: spacing.sm,
-                      marginTop: spacing.xs,
-                    },
-                  ]}
-                  testID={`subtask-item-${subtask.id}`}
-                >
-                  <Pressable
-                    onPress={() => handleToggleSubtask(subtask.id)}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: subtask.isCompleted }}
-                    accessibilityLabel={`Subtask: ${subtask.title}`}
-                    testID={`toggle-subtask-${subtask.id}`}
-                    style={styles.subtaskCheck}
-                  >
-                    <Icon
-                      name={subtask.isCompleted ? 'check' : 'circle'}
-                      size={18}
-                      color={subtask.isCompleted ? colors.primary : colors.textTertiary}
-                      decorative
-                    />
-                  </Pressable>
-                  <Text
-                    style={[
-                      typography.bodyMedium,
-                      {
-                        color: subtask.isCompleted ? colors.textTertiary : colors.textPrimary,
-                        textDecorationLine: subtask.isCompleted ? 'line-through' : 'none',
-                        flex: 1,
-                      },
-                    ]}
-                  >
-                    {subtask.title}
-                  </Text>
-                  <Pressable
-                    onPress={() => handleRemoveSubtask(subtask.id)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Remove subtask: ${subtask.title}`}
-                    testID={`remove-subtask-${subtask.id}`}
-                    style={styles.subtaskDelete}
-                  >
-                    <Icon name="close" size={16} color={colors.textTertiary} decorative />
-                  </Pressable>
-                </View>
-              ))}
-
-              <View style={[styles.inputRow, { marginTop: spacing.sm }]}>
-                <TextInput
-                  value={newSubtaskTitle}
-                  onChangeText={text => {
-                    newSubtaskRef.current = text;
-                    setNewSubtaskTitle(text);
-                  }}
-                  onSubmitEditing={handleAddSubtask}
-                  placeholder="Add a step..."
-                  placeholderTextColor={colors.textTertiary}
-                  accessibilityLabel="New subtask title"
-                  testID="new-subtask-input"
-                  style={[
-                    styles.subtaskInput,
-                    typography.bodyMedium,
-                    {
-                      borderColor: colors.border,
-                      borderRadius: radii.md,
-                      backgroundColor: colors.surface,
-                      color: colors.textPrimary,
-                      paddingHorizontal: spacing.md,
-                    },
-                  ]}
-                />
-                <Pressable
-                  onPress={handleAddSubtask}
-                  accessibilityRole="button"
-                  accessibilityLabel="Add step"
-                  testID="add-subtask-button"
-                  style={[
-                    styles.addBtn,
-                    {
-                      backgroundColor: colors.primary,
-                      borderRadius: radii.md,
-                      minHeight: touchTargets.min,
-                      paddingHorizontal: spacing.md,
-                    },
-                  ]}
-                >
-                  <Text style={[typography.labelMedium, { color: colors.textOnPrimary, fontWeight: '700' }]}>
-                    Add
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Row 6: Attachment */}
+        {/* Row 3: Attachment */}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Attachment"
@@ -556,8 +192,8 @@ export function MoreOptionsSubView({
             },
           ]}
         >
-          <View style={[styles.badgeBox, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md }]}>
-            <Icon name="attach" size={24} color={colors.textSecondary} decorative />
+          <View style={styles.badgeBox}>
+            <Icon name="attach" size={40} decorative />
           </View>
           <View style={styles.textContent}>
             <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
@@ -570,129 +206,7 @@ export function MoreOptionsSubView({
           <Icon name="chevron-right" size={18} color={colors.textTertiary} directional decorative />
         </Pressable>
 
-        {/* Row 7: Tags */}
-        <View style={styles.rowCardWrapper}>
-          <Pressable
-            onPress={() => toggleSection('tags')}
-            accessibilityRole="button"
-            accessibilityLabel={`Tags: ${state.tags.length} tags`}
-            style={({ pressed }) => [
-              styles.optionRow,
-              shadows.card,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                borderRadius: radii.card,
-                padding: spacing.md,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            <View style={[styles.badgeBox, { backgroundColor: colors.primaryLight, borderRadius: radii.md }]}>
-              <Icon name="pricetag" size={24} color={colors.primary} decorative />
-            </View>
-            <View style={styles.textContent}>
-              <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
-                Tags
-              </Text>
-              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                Organize with tags
-              </Text>
-            </View>
-            <View style={styles.trailingRow}>
-              {state.tags.length > 0 && (
-                <Text style={[typography.labelMedium, { color: colors.textSecondary, marginEnd: spacing.xs }]}>
-                  {`${state.tags.length} tags`}
-                </Text>
-              )}
-              <Icon name="chevron-right" size={18} color={colors.textTertiary} directional decorative />
-            </View>
-          </Pressable>
-
-          {expandedSection === 'tags' && (
-            <View style={[styles.expandedDrawer, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md, padding: spacing.md }]}>
-              {state.tags.length > 0 && (
-                <View style={styles.tagsRow}>
-                  {state.tags.map(tag => (
-                    <View
-                      key={tag}
-                      style={[
-                        styles.tagBadge,
-                        {
-                          backgroundColor: colors.primaryLight,
-                          borderColor: colors.primary,
-                          borderRadius: radii.pill,
-                          paddingVertical: spacing.xs,
-                          paddingHorizontal: spacing.sm,
-                        },
-                      ]}
-                    >
-                      <Text style={[typography.caption, { color: colors.primaryDark, fontWeight: '600' }]}>
-                        #{tag}
-                      </Text>
-                      <Pressable
-                        onPress={() => handleRemoveTag(tag)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Remove tag ${tag}`}
-                        testID={`remove-tag-${tag}`}
-                        style={styles.tagDelete}
-                      >
-                        <Icon name="close" size={12} color={colors.primaryDark} decorative />
-                      </Pressable>
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              <View style={[styles.inputRow, { marginTop: spacing.sm }]}>
-                <TextInput
-                  value={newTagText}
-                  onChangeText={text => {
-                    newTagRef.current = text;
-                    setNewTagText(text);
-                  }}
-                  onSubmitEditing={handleAddTag}
-                  placeholder="Add tag (e.g. ibadah, family)..."
-                  placeholderTextColor={colors.textTertiary}
-                  accessibilityLabel="New tag name"
-                  testID="new-tag-input"
-                  style={[
-                    styles.subtaskInput,
-                    typography.bodyMedium,
-                    {
-                      borderColor: colors.border,
-                      borderRadius: radii.md,
-                      backgroundColor: colors.surface,
-                      color: colors.textPrimary,
-                      paddingHorizontal: spacing.md,
-                    },
-                  ]}
-                />
-                <Pressable
-                  onPress={handleAddTag}
-                  accessibilityRole="button"
-                  accessibilityLabel="Add tag"
-                  testID="add-tag-button"
-                  style={[
-                    styles.addBtn,
-                    {
-                      backgroundColor: colors.primary,
-                      borderRadius: radii.md,
-                      minHeight: touchTargets.min,
-                      paddingHorizontal: spacing.md,
-                    },
-                  ]}
-                >
-                  <Text style={[typography.labelMedium, { color: colors.textOnPrimary, fontWeight: '700' }]}>
-                    Add
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Row 8: Private Task */}
+        {/* Row 4: Add to Habit Tracker */}
         <View
           style={[
             styles.optionRow,
@@ -705,41 +219,8 @@ export function MoreOptionsSubView({
             },
           ]}
         >
-          <View style={[styles.badgeBox, { backgroundColor: colors.dangerSurface, borderRadius: radii.md }]}>
-            <Icon name="eye" size={24} color={colors.danger} decorative />
-          </View>
-          <View style={styles.textContent}>
-            <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
-              Private Task
-            </Text>
-            <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-              Keep this task hidden from others
-            </Text>
-          </View>
-          <Switch
-            value={isPrivate}
-            onValueChange={setIsPrivate}
-            trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor={colors.surface}
-            accessibilityLabel="Private Task toggle"
-          />
-        </View>
-
-        {/* Row 9: Add to Habit Tracker */}
-        <View
-          style={[
-            styles.optionRow,
-            shadows.card,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderRadius: radii.card,
-              padding: spacing.md,
-            },
-          ]}
-        >
-          <View style={[styles.badgeBox, { backgroundColor: colors.primaryLight, borderRadius: radii.md }]}>
-            <Icon name="sync" size={24} color={colors.primary} decorative />
+          <View style={styles.badgeBox}>
+            <Icon name="sync" size={40} decorative />
           </View>
           <View style={styles.textContent}>
             <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
@@ -811,7 +292,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionsList: {
-    gap: 10,
+    gap: 12,
   },
   rowCardWrapper: {
     width: '100%',
@@ -820,11 +301,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    minHeight: 64,
+    minHeight: 72,
   },
   badgeBox: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -832,77 +313,21 @@ const styles = StyleSheet.create({
   textContent: {
     flex: 1,
   },
-  trailingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   dropdownPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
     paddingVertical: 6,
+    paddingHorizontal: 12,
   },
   expandedDrawer: {
-    marginTop: 4,
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  choiceChip: {
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
+    marginTop: 8,
   },
   notesInput: {
     borderWidth: 1,
-    minHeight: 70,
+    minHeight: 80,
     textAlignVertical: 'top',
   },
-  subtaskRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 40,
-  },
-  subtaskCheck: {
-    padding: 6,
-    marginRight: 4,
-  },
-  subtaskDelete: {
-    padding: 6,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-  },
-  subtaskInput: {
-    flex: 1,
-    borderWidth: 1,
-    minHeight: 44,
-  },
-  addBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tagsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  tagBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  tagDelete: {
-    padding: 2,
-    marginLeft: 4,
-  },
   saveButton: {
-    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },

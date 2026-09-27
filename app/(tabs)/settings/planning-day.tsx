@@ -6,6 +6,7 @@ import { useTheme } from '@/theme';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useEntitlement } from '@/hooks/useEntitlement';
 import { usePlanningDayMutation } from '@/hooks/usePlanningDayMutation';
+import { userSettingsRepository } from '@/data/repositories/UserSettingsRepository';
 import {
   SettingsPastelHeader,
   SettingsSectionCard,
@@ -30,6 +31,37 @@ export default function PlanningDayScreen() {
   const [showLockedInfo, setShowLockedInfo] = useState(false);
   const [completedTasksMode, setCompletedTasksMode] = useState<'KEEP' | 'MOVE' | 'HIDE'>('KEEP');
   const [overdueTasksMode, setOverdueTasksMode] = useState<'KEEP' | 'MOVE' | 'HIDE'>('KEEP');
+
+  React.useEffect(() => {
+    if (settings) {
+      if (settings.completedTasksMode) {
+        setCompletedTasksMode(settings.completedTasksMode as 'KEEP' | 'MOVE' | 'HIDE');
+      }
+      if (settings.overdueTasksMode) {
+        setOverdueTasksMode(settings.overdueTasksMode as 'KEEP' | 'MOVE' | 'HIDE');
+      }
+    }
+  }, [settings]);
+
+  const handleCompletedTasksModeChange = async (mode: 'KEEP' | 'MOVE' | 'HIDE') => {
+    setCompletedTasksMode(mode);
+    try {
+      await userSettingsRepository.upsert({ completedTasksMode: mode });
+      await reload();
+    } catch (err) {
+      console.warn('Failed to persist completedTasksMode:', err);
+    }
+  };
+
+  const handleOverdueTasksModeChange = async (mode: 'KEEP' | 'MOVE' | 'HIDE') => {
+    setOverdueTasksMode(mode);
+    try {
+      await userSettingsRepository.upsert({ overdueTasksMode: mode });
+      await reload();
+    } catch (err) {
+      console.warn('Failed to persist overdueTasksMode:', err);
+    }
+  };
 
   const currentMode = settings?.planningDayStart ?? 'FAJR';
   const isFajr = currentMode === 'FAJR';
@@ -261,7 +293,8 @@ export default function PlanningDayScreen() {
         >
           {/* Keep in today (move to bottom) */}
           <Pressable
-            onPress={() => setCompletedTasksMode('KEEP')}
+            testID="completed-tasks-mode-keep"
+            onPress={() => handleCompletedTasksModeChange('KEEP')}
             style={({ pressed }) => [
               styles.radioRow,
               {
@@ -282,7 +315,8 @@ export default function PlanningDayScreen() {
 
           {/* Move to completed list */}
           <Pressable
-            onPress={() => setCompletedTasksMode('MOVE')}
+            testID="completed-tasks-mode-move"
+            onPress={() => handleCompletedTasksModeChange('MOVE')}
             style={({ pressed }) => [
               styles.radioRow,
               {
@@ -303,7 +337,8 @@ export default function PlanningDayScreen() {
 
           {/* Hide from today */}
           <Pressable
-            onPress={() => setCompletedTasksMode('HIDE')}
+            testID="completed-tasks-mode-hide"
+            onPress={() => handleCompletedTasksModeChange('HIDE')}
             style={({ pressed }) => [
               styles.radioRow,
               {
@@ -332,7 +367,8 @@ export default function PlanningDayScreen() {
         >
           {/* Keep in today (Recommended) */}
           <Pressable
-            onPress={() => setOverdueTasksMode('KEEP')}
+            testID="overdue-tasks-mode-keep"
+            onPress={() => handleOverdueTasksModeChange('KEEP')}
             style={({ pressed }) => [
               styles.radioRow,
               {
@@ -353,7 +389,8 @@ export default function PlanningDayScreen() {
 
           {/* Move to next day */}
           <Pressable
-            onPress={() => setOverdueTasksMode('MOVE')}
+            testID="overdue-tasks-mode-move"
+            onPress={() => handleOverdueTasksModeChange('MOVE')}
             style={({ pressed }) => [
               styles.radioRow,
               {
@@ -374,7 +411,8 @@ export default function PlanningDayScreen() {
 
           {/* Hide from today */}
           <Pressable
-            onPress={() => setOverdueTasksMode('HIDE')}
+            testID="overdue-tasks-mode-hide"
+            onPress={() => handleOverdueTasksModeChange('HIDE')}
             style={({ pressed }) => [
               styles.radioRow,
               {

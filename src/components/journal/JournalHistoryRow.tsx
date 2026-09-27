@@ -45,6 +45,22 @@ export function JournalHistoryRow({
       testID={testID}
     >
       <View style={styles.content}>
+        {/* Left icon badge */}
+        <View
+          style={[
+            styles.iconBadge,
+            {
+              backgroundColor: isSelected ? colors.primary : colors.surfaceSecondary,
+              borderColor: colors.border,
+              borderRadius: radii.md,
+              marginEnd: spacing.md,
+            },
+          ]}
+        >
+          <Text style={styles.badgeEmoji}>✍️</Text>
+        </View>
+
+        {/* Date texts */}
         <View style={styles.textContainer}>
           <Text
             style={[
@@ -88,6 +104,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  iconBadge: {
+    width: 38,
+    height: 38,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeEmoji: {
+    fontSize: 16,
   },
   textContainer: {
     flex: 1,

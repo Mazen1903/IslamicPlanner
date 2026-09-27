@@ -25,6 +25,7 @@ export function createDefaultJournalPayload(): JournalPayload {
 export function isJournalPayloadEmpty(payload?: JournalPayload | null): boolean {
   if (!payload) return true;
   if (payload.body.trim().length > 0) return false;
+  if (payload.mood) return false;
   const { reflections } = payload;
   if (!reflections) return true;
   return (
@@ -43,6 +44,7 @@ export function arePayloadsEqual(
   if (!a || !b) return false;
   return (
     a.body === b.body &&
+    a.mood === b.mood &&
     a.reflections?.gratitude === b.reflections?.gratitude &&
     a.reflections?.wentWell === b.reflections?.wentWell &&
     a.reflections?.improvement === b.reflections?.improvement &&
@@ -132,10 +134,12 @@ export class JournalAutosaveController {
       this._draftPayload = {
         body: initialEntry.payload.body,
         reflections: { ...initialEntry.payload.reflections },
+        mood: initialEntry.payload.mood,
       };
       this._savedPayload = {
         body: initialEntry.payload.body,
         reflections: { ...initialEntry.payload.reflections },
+        mood: initialEntry.payload.mood,
       };
     } else {
       this._revision = undefined;
@@ -156,6 +160,7 @@ export class JournalAutosaveController {
     this._draftPayload = {
       body: payload.body,
       reflections: { ...payload.reflections },
+      mood: payload.mood,
     };
 
     if (this._isSaving) {
@@ -199,6 +204,7 @@ export class JournalAutosaveController {
     const payloadToSave: JournalPayload = {
       body: this._draftPayload.body,
       reflections: { ...this._draftPayload.reflections },
+      mood: this._draftPayload.mood,
     };
 
     // EMPTY DRAFT SAFETY:
@@ -277,6 +283,7 @@ export class JournalAutosaveController {
         ? {
             body: this._draftPayload.body,
             reflections: { ...this._draftPayload.reflections },
+            mood: this._draftPayload.mood,
           }
         : payload;
 

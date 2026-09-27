@@ -43,7 +43,11 @@ export default function JournalScreen() {
     hasDayRolledOver,
     loadError,
     hijriAdjustment,
+    streak,
+    activePlanningDayKey,
+    pinnedPlanningDayKey,
     onBodyChange,
+    onMoodChange,
     onReflectionChange,
     onHistoryOpen,
     onSelectHistoryEntry,
@@ -157,6 +161,8 @@ export default function JournalScreen() {
       >
         <JournalHistory
           entries={historyEntries}
+          selectedPlanningDayKey={activePlanningDayKey}
+          activePlanningDayKey={pinnedPlanningDayKey ?? activePlanningDayKey}
           hijriAdjustment={hijriAdjustment}
           onSelectEntry={onSelectHistoryEntry}
           onBackToToday={onReturnToToday}
@@ -188,6 +194,7 @@ export default function JournalScreen() {
             saveState={saveState}
             isHistorical={isHistorical}
             lockEnabled={lockEnabled}
+            streak={streak}
             onHistoryPress={onHistoryOpen}
             onPrivacyPress={onPrivacySheetOpen}
             onReturnToTodayPress={onReturnToToday}
@@ -232,12 +239,16 @@ export default function JournalScreen() {
           <JournalEditor
             value={draftPayload.body}
             onChangeText={onBodyChange}
+            selectedMood={draftPayload.mood}
+            onSelectMood={onMoodChange}
+            dayKey={activePlanningDayKey ?? pinnedPlanningDayKey ?? undefined}
           />
 
           {/* Reflections */}
           <ReflectionSection
             reflections={draftPayload.reflections}
             onChangeReflection={onReflectionChange}
+            initialExpanded={true}
           />
 
           {/* Delete Action (Explicit confirmed delete) */}

@@ -17,7 +17,7 @@ describe('JournalHeader', () => {
     jest.clearAllMocks();
   });
 
-  it('renders title and dates correctly', async () => {
+  it('renders title, greeting, and dates correctly', async () => {
     await render(
       <ThemeProvider>
         <JournalHeader {...defaultProps} />
@@ -25,8 +25,31 @@ describe('JournalHeader', () => {
     );
 
     expect(screen.getByText('Journal')).toBeTruthy();
+    expect(screen.getByTestId('journal-greeting-text')).toBeTruthy();
     expect(screen.getByText('Monday, 16 Sep 2026')).toBeTruthy();
     expect(screen.getByText('18 Rabi al-Awwal 1448 AH')).toBeTruthy();
+  });
+
+  it('renders StreakBanner when streak is provided in current-day mode', async () => {
+    await render(
+      <ThemeProvider>
+        <JournalHeader {...defaultProps} streak={4} />
+      </ThemeProvider>
+    );
+
+    expect(screen.getByTestId('streak-banner')).toBeTruthy();
+    expect(screen.getByText('4 Day Streak')).toBeTruthy();
+  });
+
+  it('does not render StreakBanner in historical mode', async () => {
+    await render(
+      <ThemeProvider>
+        <JournalHeader {...defaultProps} streak={4} isHistorical={true} />
+      </ThemeProvider>
+    );
+
+    expect(screen.queryByTestId('streak-banner')).toBeNull();
+    expect(screen.getByText('Past Reflection 📜')).toBeTruthy();
   });
 
   it('triggers onHistoryPress when history button is tapped', async () => {

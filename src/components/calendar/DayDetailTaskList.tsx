@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '@/theme';
 import type { SelectedDayDetailModel } from '@/services/CalendarMonthOrchestrator';
 import { TaskCard } from '@/components/task/TaskCard';
+import { PrayerTabIcon } from '@/components/prayer/PrayerTabBar';
 
 export interface DayDetailTaskListProps {
   selectedDayDetail: SelectedDayDetailModel | null;
@@ -61,6 +62,11 @@ export function DayDetailTaskList({
               {/* Section Header */}
               <View style={styles.sectionHeaderRow}>
                 <View style={styles.sectionTitleGroup}>
+                  <PrayerTabIcon
+                    prayer={section.prayer}
+                    size={24}
+                    style={{ marginEnd: spacing.xs }}
+                  />
                   <Text style={[typography.headlineMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
                     {section.name}
                   </Text>
@@ -166,7 +172,7 @@ const styles = StyleSheet.create({
   },
   sectionTitleGroup: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
   },
   tasksContainer: {
     width: '100%',

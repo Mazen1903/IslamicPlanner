@@ -6,6 +6,7 @@ import { ThemeProvider } from '../ThemeProvider';
 import { useTheme } from '../useTheme';
 import { lightColors, lightTheme } from '../lightTheme';
 import { darkColors, darkTheme } from '../darkTheme';
+import { ISLAMIC_THEMES, ISLAMIC_THEMES_MAP } from '../islamicThemes';
 
 // Pure test-only WCAG 2.1 contrast helper (no production dependency)
 function parseHex(hex: string): [number, number, number] {
@@ -318,5 +319,159 @@ describe('ThemeProvider & Scheme Resolution Matrix', () => {
     expect(screen.getByTestId('theme-mode').props.children).toBe('DARK');
     expect(screen.getByTestId('is-dark').props.children).toBe('true');
     expect(screen.getByTestId('primary-color').props.children).toBe(darkTheme.colors.primary);
+  });
+});
+
+describe('Islamic Themes Registry & Provider Integration', () => {
+  const expectedThemeIds = [
+    'fajr_awakening',
+    'rawdah_emerald',
+    'tahajjud_noor',
+    'andalusian_oasis',
+    'sacred_tawaf',
+    'blessed_olive',
+    'samarkand_turquoise',
+    'celestial_caravan',
+    'maghrib_lantern',
+    'al_aqsa_sunset',
+  ];
+
+  it('contains exactly 10 Islamic themes with valid metadata', () => {
+    expect(ISLAMIC_THEMES).toHaveLength(10);
+    const ids = ISLAMIC_THEMES.map(t => t.id);
+    expect(ids).toEqual(expectedThemeIds);
+
+    ISLAMIC_THEMES.forEach(theme => {
+      expect(theme.name).toBeTruthy();
+      expect(theme.arabicName).toBeTruthy();
+      expect(theme.tagline).toBeTruthy();
+      expect(typeof theme.isDark).toBe('boolean');
+      expect(theme.previewColors.primary).toMatch(/^#[0-9A-Fa-f]{6}$/);
+      expect(theme.previewColors.background).toMatch(/^#[0-9A-Fa-f]{6}$/);
+      expect(theme.previewColors.surface).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    });
+  });
+
+  it('ensures each Islamic theme has identical key set matching lightColors', () => {
+    const canonicalKeys = Object.keys(lightColors).sort();
+    ISLAMIC_THEMES.forEach(theme => {
+      const themeKeys = Object.keys(theme.colors).sort();
+      expect(themeKeys).toEqual(canonicalKeys);
+    });
+  });
+
+  it('satisfies WCAG AA contrast for textPrimary on background for all 10 Islamic themes', () => {
+    ISLAMIC_THEMES.forEach(theme => {
+      const ratio = getContrastRatio(theme.colors.textPrimary, theme.colors.background);
+      expect(ratio).toBeGreaterThanOrEqual(4.5);
+    });
+  });
+
+  it('resolves initialIslamicThemeId in ThemeProvider to custom colors and dark status', async () => {
+    function IslamicConsumer() {
+      const theme = useTheme();
+      return (
+        <>
+          <Text testID="islamic-theme-id">{theme.islamicThemeId ?? 'none'}</Text>
+          <Text testID="is-dark">{String(theme.isDark)}</Text>
+          <Text testID="primary-color">{theme.colors.primary}</Text>
+          <Text testID="bg-color">{theme.colors.background}</Text>
+        </>
+      );
+    }
+
+    const fajr = ISLAMIC_THEMES_MAP['fajr_awakening'];
+    await render(
+      <ThemeProvider initialIslamicThemeId="fajr_awakening">
+        <IslamicConsumer />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByTestId('islamic-theme-id').props.children).toBe('fajr_awakening');
+    expect(screen.getByTestId('is-dark').props.children).toBe(String(fajr.isDark));
+    expect(screen.getByTestId('primary-color').props.children).toBe(fajr.colors.primary);
+    expect(screen.getByTestId('bg-color').props.children).toBe(fajr.colors.background);
+  });
+
+  it('allows dynamic switching of Islamic themes at runtime', async () => {
+    function DynamicIslamicSwitcher() {
+      const theme = useTheme();
+      return (
+        <>
+          <Text testID="active-theme">{theme.islamicThemeId ?? 'none'}</Text>
+          <Text testID="primary-color">{theme.colors.primary}</Text>
+          <Text testID="btn-rawdah" onPress={() => theme.setIslamicThemeId('rawdah_emerald')}>
+            Rawdah
+          </Text>
+          <Text testID="btn-tahajjud" onPress={() => theme.setIslamicThemeId('tahajjud_noor')}>
+            Tahajjud
+          </Text>
+          <Text testID="btn-reset" onPress={() => theme.setIslamicThemeId(null)}>
+            Reset
+          </Text>
+        </>
+      );
+    }
+
+    await render(
+      <ThemeProvider>
+        <DynamicIslamicSwitcher />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByTestId('active-theme').props.children).toBe('none');
+
+    const rawdah = ISLAMIC_THEMES_MAP['rawdah_emerald'];
+    await act(async () => {
+      screen.getByTestId('btn-rawdah').props.onPress();
+    });
+    expect(screen.getByTestId('active-theme').props.children).toBe('rawdah_emerald');
+    expect(screen.getByTestId('primary-color').props.children).toBe(rawdah.colors.primary);
+
+    const tahajjud = ISLAMIC_THEMES_MAP['tahajjud_noor'];
+    await act(async () => {
+      screen.getByTestId('btn-tahajjud').props.onPress();
+    });
+    expect(screen.getByTestId('active-theme').props.children).toBe('tahajjud_noor');
+    expect(screen.getByTestId('primary-color').props.children).toBe(tahajjud.colors.primary);
+
+    await act(async () => {
+      screen.getByTestId('btn-reset').props.onPress();
+    });
+    expect(screen.getByTestId('active-theme').props.children).toBe('none');
+    expect(screen.getByTestId('primary-color').props.children).toBe(lightTheme.colors.primary);
+  });
+
+  it('resets islamicThemeId when setThemeMode is explicitly called', async () => {
+    function ModeResetter() {
+      const theme = useTheme();
+      return (
+        <>
+          <Text testID="active-theme">{theme.islamicThemeId ?? 'none'}</Text>
+          <Text testID="btn-set-islamic" onPress={() => theme.setIslamicThemeId('sacred_tawaf')}>
+            Tawaf
+          </Text>
+          <Text testID="btn-set-mode" onPress={() => theme.setThemeMode('DARK')}>
+            Dark Mode
+          </Text>
+        </>
+      );
+    }
+
+    await render(
+      <ThemeProvider>
+        <ModeResetter />
+      </ThemeProvider>,
+    );
+
+    await act(async () => {
+      screen.getByTestId('btn-set-islamic').props.onPress();
+    });
+    expect(screen.getByTestId('active-theme').props.children).toBe('sacred_tawaf');
+
+    await act(async () => {
+      screen.getByTestId('btn-set-mode').props.onPress();
+    });
+    expect(screen.getByTestId('active-theme').props.children).toBe('none');
   });
 });

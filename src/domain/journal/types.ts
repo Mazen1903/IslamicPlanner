@@ -1,3 +1,11 @@
+export type MoodKey = 'hard' | 'okay' | 'good' | 'great' | 'grateful';
+
+export interface MoodOption {
+  key: MoodKey;
+  emoji: string;
+  label: string;
+}
+
 export interface JournalReflections {
   gratitude: string;
   wentWell: string;
@@ -8,6 +16,7 @@ export interface JournalReflections {
 export interface JournalPayload {
   body: string;
   reflections: JournalReflections;
+  mood?: MoodKey;
 }
 
 export interface JournalEntry {

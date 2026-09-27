@@ -6,3 +6,4 @@ config.resolver.assetExts.push('dat');
 config.resolver.sourceExts.push('sql');
 
 module.exports = config;
+

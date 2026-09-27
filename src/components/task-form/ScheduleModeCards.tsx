@@ -105,7 +105,7 @@ export function ScheduleModeCards({
               >
                 <Icon
                   name={item.icon}
-                  size={28}
+                  size={32}
                   color={
                     item.mode === 'ANYTIME_TODAY'
                       ? colors.warning

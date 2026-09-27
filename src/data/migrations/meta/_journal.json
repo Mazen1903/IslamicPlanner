@@ -29,6 +29,20 @@
       "when": 1789690471537,
       "tag": "0003_colorful_gorilla_man",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790288906343,
+      "tag": "0004_daily_mandroid",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1790294033031,
+      "tag": "0005_flippant_sumo",
+      "breakpoints": true
     }
   ]
 }

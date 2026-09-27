@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, type StyleProp, type ViewStyle, type ImageSourcePropType } from 'react-native';
+import { View, Text, Image, type StyleProp, type ViewStyle, type ImageSourcePropType } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
@@ -35,6 +35,10 @@ export const SETTINGS_ICONS = {
   secAdjustSliders: require('../../../assets/icons/settings/sec_adjust_sliders.png') as ImageSourcePropType,
   rowPreviewClock: require('../../../assets/icons/settings/row_preview_clock.png') as ImageSourcePropType,
   secInfoCircle: require('../../../assets/icons/settings/sec_info_circle.png') as ImageSourcePropType,
+  btnBack: require('../../../assets/icons/settings/btn_back.png') as ImageSourcePropType,
+  stepperMinus: require('../../../assets/icons/settings/stepper_minus.png') as ImageSourcePropType,
+  stepperPlus: require('../../../assets/icons/settings/stepper_plus.png') as ImageSourcePropType,
+  rowChevronDown: require('../../../assets/icons/settings/row_chevron_down.png') as ImageSourcePropType,
 
   // Planner Settings Section Badges & Elements
   secDayStartClock: require('../../../assets/icons/settings/sec_day_start_clock.png') as ImageSourcePropType,
@@ -151,148 +155,148 @@ function createSettingsBadgeIcon({
   };
 }
 
+/**
+ * Factory for creating crisp image-based squircle badges from assets
+ */
+function createSettingsHubImageIcon({
+  source,
+  label,
+  defaultSize = 44,
+}: {
+  source: ImageSourcePropType;
+  label: string;
+  defaultSize?: number;
+}) {
+  return function SettingsHubImageIconComponent({
+    size = defaultSize,
+    style,
+    testID,
+    accessibilityLabel = label,
+  }: SettingsIconProps) {
+    return (
+      <View
+        style={[
+          {
+            width: size,
+            height: size,
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+          style,
+        ]}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityRole="image"
+        testID={testID}
+      >
+        <Image
+          source={source}
+          style={{ width: size, height: size }}
+          resizeMode="contain"
+        />
+      </View>
+    );
+  };
+}
+
 // ─── 1. Main Hub Badges ───────────────────────────────────────────────────────
-export const SettingsHubMosqueIcon = createSettingsBadgeIcon({
-  defaultSize: 44,
+export const SettingsHubMosqueIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.hubMosque,
   label: 'Prayer & Location',
-  getBgColor: colors => colors.primaryLight,
-  renderIcon: (size, colors) => <FontAwesome5 name="mosque" size={size} color={colors.primary} />,
 });
 
-export const SettingsHubPlannerIcon = createSettingsBadgeIcon({
-  defaultSize: 44,
+export const SettingsHubPlannerIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.hubPlanner,
   label: 'Planner',
-  getBgColor: colors => colors.primaryLight,
-  renderIcon: (size, colors) => (
-    <MaterialCommunityIcons name="calendar-check-outline" size={size} color={colors.primary} />
-  ),
 });
 
-export const SettingsHubNotificationsIcon = createSettingsBadgeIcon({
-  defaultSize: 44,
+export const SettingsHubNotificationsIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.hubNotifications,
   label: 'Notifications',
-  getBgColor: colors => colors.dangerSurface,
-  renderIcon: (size, colors) => <Ionicons name="notifications-outline" size={size} color={colors.danger} />,
 });
 
-export const SettingsHubAppearanceIcon = createSettingsBadgeIcon({
-  defaultSize: 44,
+export const SettingsHubAppearanceIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.hubAppearance,
   label: 'Appearance',
-  getBgColor: colors => colors.prayerFajr,
-  renderIcon: (size, colors) => <Ionicons name="color-palette-outline" size={size} color={colors.info} />,
 });
 
-export const SettingsHubCalendarIcon = createSettingsBadgeIcon({
-  defaultSize: 44,
+export const SettingsHubCalendarIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.hubCalendar,
   label: 'Calendar',
-  getBgColor: colors => colors.prayerIsha,
-  renderIcon: (size, colors) => (
-    <MaterialCommunityIcons name="calendar-month-outline" size={size} color={colors.info} />
-  ),
 });
 
-export const SettingsHubWorshipIcon = createSettingsBadgeIcon({
-  defaultSize: 44,
+export const SettingsHubWorshipIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.hubWorship,
   label: 'Worship Suggestions',
-  getBgColor: colors => colors.primaryLight,
-  renderIcon: (size, colors) => (
-    <MaterialCommunityIcons name="star-crescent" size={size} color={colors.primary} />
-  ),
 });
 
-export const SettingsHubAccountIcon = createSettingsBadgeIcon({
-  defaultSize: 44,
+export const SettingsHubAccountIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.hubAccount,
   label: 'Account & Sync',
-  getBgColor: colors => colors.surfaceSecondary,
-  renderIcon: (size, colors) => <Ionicons name="person-outline" size={size} color={colors.textSecondary} />,
 });
 
-export const SettingsHubPremiumIcon = createSettingsBadgeIcon({
-  defaultSize: 44,
+export const SettingsHubPremiumIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.hubPremium,
   label: 'Premium',
-  getBgColor: colors => colors.prayerAsr,
-  renderIcon: (size, colors) => <FontAwesome5 name="crown" size={size} color={colors.warning} />,
 });
 
-export const SettingsHubAboutIcon = createSettingsBadgeIcon({
-  defaultSize: 44,
+export const SettingsHubAboutIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.hubAbout,
   label: 'About',
-  getBgColor: colors => colors.surfaceSecondary,
-  renderIcon: (size, colors) => (
-    <Ionicons name="information-circle-outline" size={size} color={colors.textSecondary} />
-  ),
 });
 
 // ─── 2. Sub-Screen Section Badges ─────────────────────────────────────────────
-export const SettingsSecLocationIcon = createSettingsBadgeIcon({
-  defaultSize: 40,
+export const SettingsSecLocationIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.secLocation,
   label: 'Location',
-  getBgColor: colors => colors.primaryLight,
-  renderIcon: (size, colors) => <Ionicons name="location-outline" size={size} color={colors.primary} />,
+  defaultSize: 40,
 });
 
-export const SettingsSecCalculatorIcon = createSettingsBadgeIcon({
-  defaultSize: 40,
+export const SettingsSecCalculatorIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.secCalculator,
   label: 'Calculation Method',
-  getBgColor: colors => colors.primaryLight,
-  renderIcon: (size, colors) => (
-    <MaterialCommunityIcons name="calculator-variant-outline" size={size} color={colors.primary} />
-  ),
+  defaultSize: 40,
 });
 
-export const SettingsSecAsrSunIcon = createSettingsBadgeIcon({
-  defaultSize: 40,
+export const SettingsSecAsrSunIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.secAsrSun,
   label: 'Asr Calculation Method',
-  getBgColor: colors => colors.prayerAsr,
-  renderIcon: (size, colors) => (
-    <MaterialCommunityIcons name="weather-sunny" size={size} color={colors.warning} />
-  ),
+  defaultSize: 40,
 });
 
-export const SettingsSecAdjustSlidersIcon = createSettingsBadgeIcon({
-  defaultSize: 40,
+export const SettingsSecAdjustSlidersIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.secAdjustSliders,
   label: 'Adjust Prayer Times',
-  getBgColor: colors => colors.surfaceSecondary,
-  renderIcon: (size, colors) => (
-    <MaterialCommunityIcons name="tune-variant" size={size} color={colors.primary} />
-  ),
+  defaultSize: 40,
 });
 
-export const SettingsSecDayStartClockIcon = createSettingsBadgeIcon({
-  defaultSize: 40,
+export const SettingsSecDayStartClockIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.secDayStartClock,
   label: 'Day Start',
-  getBgColor: colors => colors.primaryLight,
-  renderIcon: (size, colors) => <Ionicons name="time-outline" size={size} color={colors.primary} />,
+  defaultSize: 40,
 });
 
-export const SettingsSecCompletedCheckIcon = createSettingsBadgeIcon({
-  defaultSize: 40,
+export const SettingsSecCompletedCheckIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.secCompletedCheck,
   label: 'Completed Tasks',
-  getBgColor: colors => colors.primaryLight,
-  renderIcon: (size, colors) => (
-    <Ionicons name="checkmark-done-circle-outline" size={size} color={colors.primary} />
-  ),
+  defaultSize: 40,
 });
 
-export const SettingsSecOverdueBoltIcon = createSettingsBadgeIcon({
-  defaultSize: 40,
+export const SettingsSecOverdueBoltIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.secOverdueBolt,
   label: 'Overdue Tasks',
-  getBgColor: colors => colors.dangerSurface,
-  renderIcon: (size, colors) => <Ionicons name="flash-outline" size={size} color={colors.danger} />,
+  defaultSize: 40,
 });
 
-export const SettingsSecPrayerAlertsIcon = createSettingsBadgeIcon({
-  defaultSize: 40,
+export const SettingsSecPrayerAlertsIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.secPrayerAlertsMosque,
   label: 'Prayer Alerts',
-  getBgColor: colors => colors.primaryLight,
-  renderIcon: (size, colors) => <FontAwesome5 name="mosque" size={size} color={colors.primary} />,
+  defaultSize: 40,
 });
 
-export const SettingsSecTaskRemindersIcon = createSettingsBadgeIcon({
-  defaultSize: 40,
+export const SettingsSecTaskRemindersIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.secTaskRemindersCheck,
   label: 'Task Reminders',
-  getBgColor: colors => colors.primaryLight,
-  renderIcon: (size, colors) => <Ionicons name="checkbox-outline" size={size} color={colors.primary} />,
+  defaultSize: 40,
 });
 
 export const SettingsSecWorshipStarIcon = createSettingsBadgeIcon({
@@ -302,41 +306,41 @@ export const SettingsSecWorshipStarIcon = createSettingsBadgeIcon({
   renderIcon: (size, colors) => <Ionicons name="star-outline" size={size} color={colors.warning} />,
 });
 
-export const SettingsSecGeneralBellIcon = createSettingsBadgeIcon({
+export const SettingsSecJournalReminderIcon = createSettingsBadgeIcon({
   defaultSize: 40,
-  label: 'General',
-  getBgColor: colors => colors.dangerSurface,
-  renderIcon: (size, colors) => <Ionicons name="notifications-outline" size={size} color={colors.danger} />,
-});
-
-export const SettingsSecThemePaletteIcon = createSettingsBadgeIcon({
-  defaultSize: 40,
-  label: 'Theme',
-  getBgColor: colors => colors.prayerFajr,
-  renderIcon: (size, colors) => <Ionicons name="color-palette-outline" size={size} color={colors.info} />,
-});
-
-export const SettingsSecColorBrushIcon = createSettingsBadgeIcon({
-  defaultSize: 40,
-  label: 'Color',
+  label: 'Daily Journal',
   getBgColor: colors => colors.primaryLight,
-  renderIcon: (size, colors) => <Ionicons name="brush-outline" size={size} color={colors.primary} />,
+  renderIcon: (size, colors) => <Ionicons name="book-outline" size={size} color={colors.primary} />,
 });
 
-export const SettingsSecBgImageIcon = createSettingsBadgeIcon({
+export const SettingsSecGeneralBellIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.secGeneralBell,
+  label: 'General',
   defaultSize: 40,
+});
+
+export const SettingsSecThemePaletteIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.secThemePalette,
+  label: 'Theme',
+  defaultSize: 40,
+});
+
+export const SettingsSecColorBrushIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.secColorBrush,
+  label: 'Color',
+  defaultSize: 40,
+});
+
+export const SettingsSecBgImageIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.secBgImage,
   label: 'Background',
-  getBgColor: colors => colors.prayerIsha,
-  renderIcon: (size, colors) => <Ionicons name="image-outline" size={size} color={colors.info} />,
+  defaultSize: 40,
 });
 
-export const SettingsSecDisplayAaIcon = createSettingsBadgeIcon({
-  defaultSize: 40,
+export const SettingsSecDisplayAaIcon = createSettingsHubImageIcon({
+  source: SETTINGS_ICONS.secDisplayAa,
   label: 'Display',
-  getBgColor: colors => colors.surfaceSecondary,
-  renderIcon: (size, colors) => (
-    <MaterialCommunityIcons name="format-font" size={size} color={colors.textSecondary} />
-  ),
+  defaultSize: 40,
 });
 
 export const SettingsCalDateSystemIcon = createSettingsBadgeIcon({
@@ -480,13 +484,12 @@ export const SettingsAboutRateStarIcon = createSettingsBadgeIcon({
 });
 
 // ─── 3. Standalone Icons ──────────────────────────────────────────────────────
-export function SettingsRowManualPinIcon({
-  size = 28,
+export function SettingsBackButtonIcon({
+  size = 32,
   style,
   testID,
-  accessibilityLabel = 'Manual Location Pin',
+  accessibilityLabel = 'Back',
 }: SettingsIconProps) {
-  const { colors } = useTheme();
   return (
     <View
       style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}
@@ -494,7 +497,33 @@ export function SettingsRowManualPinIcon({
       accessibilityRole="image"
       testID={testID}
     >
-      <Ionicons name="location" size={size} color={colors.primary} />
+      <Image
+        source={SETTINGS_ICONS.btnBack}
+        style={{ width: size, height: size }}
+        resizeMode="contain"
+      />
+    </View>
+  );
+}
+
+export function SettingsRowManualPinIcon({
+  size = 28,
+  style,
+  testID,
+  accessibilityLabel = 'Manual Location Pin',
+}: SettingsIconProps) {
+  return (
+    <View
+      style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="image"
+      testID={testID}
+    >
+      <Image
+        source={SETTINGS_ICONS.rowManualPin}
+        style={{ width: size, height: size }}
+        resizeMode="contain"
+      />
     </View>
   );
 }
@@ -505,7 +534,6 @@ export function SettingsRowAsrCheckIcon({
   testID,
   accessibilityLabel = 'Selected',
 }: SettingsIconProps) {
-  const { colors } = useTheme();
   return (
     <View
       style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}
@@ -513,7 +541,11 @@ export function SettingsRowAsrCheckIcon({
       accessibilityRole="image"
       testID={testID}
     >
-      <Ionicons name="checkmark-circle" size={size} color={colors.primary} />
+      <Image
+        source={SETTINGS_ICONS.rowAsrCheck}
+        style={{ width: size, height: size }}
+        resizeMode="contain"
+      />
     </View>
   );
 }
@@ -524,7 +556,6 @@ export function SettingsCheckCircleIcon({
   testID,
   accessibilityLabel = 'Selected',
 }: SettingsIconProps) {
-  const { colors } = useTheme();
   return (
     <View
       style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}
@@ -532,7 +563,11 @@ export function SettingsCheckCircleIcon({
       accessibilityRole="image"
       testID={testID}
     >
-      <Ionicons name="checkmark-circle" size={size} color={colors.primary} />
+      <Image
+        source={SETTINGS_ICONS.rowAsrCheck}
+        style={{ width: size, height: size }}
+        resizeMode="contain"
+      />
     </View>
   );
 }
@@ -543,7 +578,6 @@ export function SettingsRowPreviewClockIcon({
   testID,
   accessibilityLabel = 'Preview Clock',
 }: SettingsIconProps) {
-  const { colors } = useTheme();
   return (
     <View
       style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}
@@ -551,7 +585,11 @@ export function SettingsRowPreviewClockIcon({
       accessibilityRole="image"
       testID={testID}
     >
-      <Ionicons name="time-outline" size={size} color={colors.primary} />
+      <Image
+        source={SETTINGS_ICONS.rowPreviewClock}
+        style={{ width: size, height: size }}
+        resizeMode="contain"
+      />
     </View>
   );
 }
@@ -562,7 +600,6 @@ export function SettingsSecInfoCircleIcon({
   testID,
   accessibilityLabel = 'Info',
 }: SettingsIconProps) {
-  const { colors } = useTheme();
   return (
     <View
       style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}
@@ -570,7 +607,77 @@ export function SettingsSecInfoCircleIcon({
       accessibilityRole="image"
       testID={testID}
     >
-      <Ionicons name="information-circle-outline" size={size} color={colors.textTertiary} />
+      <Image
+        source={SETTINGS_ICONS.secInfoCircle}
+        style={{ width: size, height: size }}
+        resizeMode="contain"
+      />
+    </View>
+  );
+}
+
+export function SettingsStepperMinusIcon({
+  size = 32,
+  style,
+  testID,
+  accessibilityLabel = 'Decrease',
+}: SettingsIconProps) {
+  return (
+    <View
+      style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="image"
+      testID={testID}
+    >
+      <Image
+        source={SETTINGS_ICONS.stepperMinus}
+        style={{ width: size, height: size }}
+        resizeMode="contain"
+      />
+    </View>
+  );
+}
+
+export function SettingsStepperPlusIcon({
+  size = 32,
+  style,
+  testID,
+  accessibilityLabel = 'Increase',
+}: SettingsIconProps) {
+  return (
+    <View
+      style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="image"
+      testID={testID}
+    >
+      <Image
+        source={SETTINGS_ICONS.stepperPlus}
+        style={{ width: size, height: size }}
+        resizeMode="contain"
+      />
+    </View>
+  );
+}
+
+export function SettingsRowChevronDownIcon({
+  size = 20,
+  style,
+  testID,
+  accessibilityLabel = 'Expand',
+}: SettingsIconProps) {
+  return (
+    <View
+      style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="image"
+      testID={testID}
+    >
+      <Image
+        source={SETTINGS_ICONS.rowChevronDown}
+        style={{ width: size, height: size }}
+        resizeMode="contain"
+      />
     </View>
   );
 }
