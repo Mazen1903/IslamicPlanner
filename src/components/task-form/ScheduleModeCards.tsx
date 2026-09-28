@@ -125,7 +125,6 @@ export function ScheduleModeCards({
                   styles.modeLabel,
                   {
                     color: isSelected ? colors.primaryDark : colors.textPrimary,
-                    fontWeight: isSelected ? '700' : '600',
                     textAlign: 'center',
                   },
                 ]}
@@ -223,7 +222,7 @@ export function ScheduleModeCards({
                     <Text
                       style={[
                         typography.labelMedium,
-                        { color: isAnchorSelected ? colors.textOnPrimary : colors.textPrimary, fontWeight: '600' },
+                        { color: isAnchorSelected ? colors.textOnPrimary : colors.textPrimary },
                       ]}
                     >
                       {p.charAt(0) + p.slice(1).toLowerCase()}
@@ -262,7 +261,7 @@ export function ScheduleModeCards({
                     <Text
                       style={[
                         typography.labelLarge,
-                        { color: isDirSelected ? colors.primaryDark : colors.textSecondary, fontWeight: '600' },
+                        { color: isDirSelected ? colors.primaryDark : colors.textSecondary },
                       ]}
                     >
                       {dir === 'BEFORE' ? 'Before' : 'After'}
@@ -354,7 +353,7 @@ export function ScheduleModeCards({
                     <Text
                       style={[
                         typography.labelMedium,
-                        { color: isStartSelected ? colors.textOnPrimary : colors.textPrimary, fontWeight: '600' },
+                        { color: isStartSelected ? colors.textOnPrimary : colors.textPrimary },
                       ]}
                     >
                       {p.charAt(0) + p.slice(1).toLowerCase()}
@@ -392,7 +391,7 @@ export function ScheduleModeCards({
                     <Text
                       style={[
                         typography.labelMedium,
-                        { color: isEndSelected ? colors.textOnPrimary : colors.textPrimary, fontWeight: '600' },
+                        { color: isEndSelected ? colors.textOnPrimary : colors.textPrimary },
                       ]}
                     >
                       {p.charAt(0) + p.slice(1).toLowerCase()}
@@ -443,11 +442,11 @@ export function ScheduleModeCards({
       >
         <View style={styles.previewHeader}>
           <Icon name="clock" size={16} color={colors.primary} style={{ marginEnd: spacing.xs }} decorative />
-          <Text style={[typography.labelMedium, { color: colors.primaryDark, fontWeight: '700' }]}>
+          <Text style={[typography.labelMedium, { color: colors.primaryDark }]}>
             Schedule Preview
           </Text>
         </View>
-        <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600', marginTop: 2 }]}>
+        <Text style={[typography.bodyMedium, { color: colors.textPrimary, marginTop: 2 }]}>
           {previewResult.primaryLabel}
         </Text>
         {previewResult.secondaryLabel ? (

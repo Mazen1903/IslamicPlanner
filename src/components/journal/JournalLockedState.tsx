@@ -16,7 +16,7 @@ export function JournalLockedState({
   errorMessage,
   testID = 'journal-locked-state',
 }: JournalLockedStateProps) {
-  const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
+  const { colors, spacing, radii, typography, touchTargets, shadows, isDark } = useTheme();
 
   return (
     <View style={[styles.container, { padding: spacing.xl }]} testID={testID}>
@@ -25,15 +25,24 @@ export function JournalLockedState({
           styles.card,
           shadows.elevated,
           {
-            backgroundColor: colors.surface,
+            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.85)' : colors.surface,
             borderRadius: radii.card,
             padding: spacing.xxl,
-            borderColor: colors.border,
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : colors.border,
           },
         ]}
       >
-        <View style={[styles.iconCircle, { backgroundColor: colors.primaryLight, borderRadius: radii.pill }]}>
-          <Icon name="journal" size={36} color={colors.primary} />
+        <View
+          style={[
+            styles.iconCircle,
+            {
+              backgroundColor: isDark ? 'rgba(15, 159, 74, 0.2)' : colors.primaryLight,
+              borderColor: isDark ? 'rgba(15, 159, 74, 0.4)' : colors.primary,
+              borderRadius: radii.pill,
+            },
+          ]}
+        >
+          <Icon name="lock" size={32} color={colors.primary} />
         </View>
 
         <Text style={[typography.headlineMedium, styles.title, { color: colors.textPrimary, marginTop: spacing.lg }]}>
@@ -85,7 +94,7 @@ export function JournalLockedState({
           {isUnlocking ? (
             <ActivityIndicator size="small" color={colors.textOnPrimary} />
           ) : (
-            <Text style={[typography.labelLarge, { color: colors.textOnPrimary }]}>
+            <Text style={[typography.labelLarge, { color: colors.textOnPrimary, fontWeight: '700' }]}>
               Unlock Journal
             </Text>
           )}
@@ -108,16 +117,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   iconCircle: {
-    width: 72,
-    height: 72,
+    width: 68,
+    height: 68,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1.5,
   },
   title: {
     textAlign: 'center',
+    letterSpacing: -0.3,
   },
   subtitle: {
-    lineHeight: 20,
+    lineHeight: 22,
   },
   errorText: {
     lineHeight: 18,

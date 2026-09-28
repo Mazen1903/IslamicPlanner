@@ -31,12 +31,12 @@ export function JournalHistory({
   onBackToToday,
   testID = 'journal-history-list',
 }: JournalHistoryProps) {
-  const { colors, spacing, radii, typography, touchTargets } = useTheme();
+  const { colors, spacing, radii, typography, touchTargets, isDark } = useTheme();
 
   return (
     <View style={styles.container} testID={testID}>
       {/* Top Header / Back Action */}
-      <View style={[styles.headerRow, { paddingHorizontal: spacing.lg, paddingBottom: spacing.md }]}>
+      <View style={[styles.headerRow, { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }]}>
         <Pressable
           onPress={onBackToToday}
           accessibilityRole="button"
@@ -44,21 +44,23 @@ export function JournalHistory({
           style={({ pressed }) => [
             styles.backButton,
             {
-              backgroundColor: pressed ? colors.primaryLight : colors.surface,
-              borderColor: colors.border,
+              backgroundColor: pressed
+                ? colors.primaryLight
+                : (isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surface),
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : colors.border,
               minHeight: touchTargets.min,
-              borderRadius: radii.sm,
+              borderRadius: radii.pill,
             },
           ]}
           testID="journal-history-back-btn"
         >
-          <Icon name="chevron-left" size={18} color={colors.primary} decorative directional />
-          <Text style={[typography.labelMedium, { color: colors.primary, marginStart: spacing.xs }]}>
+          <Icon name="chevron-left" size={16} color={colors.primary} decorative directional />
+          <Text style={[typography.labelMedium, { color: colors.primary, marginStart: spacing.xs, fontWeight: '700' }]}>
             Back to Today
           </Text>
         </Pressable>
 
-        <Text style={[typography.headlineMedium, { color: colors.textPrimary }]}>
+        <Text style={[typography.headlineMedium, styles.title, { color: colors.textPrimary }]}>
           History
         </Text>
       </View>
@@ -66,7 +68,7 @@ export function JournalHistory({
       {/* Empty State */}
       {entries.length === 0 ? (
         <View style={[styles.emptyContainer, { padding: spacing.xl }]} testID="journal-history-empty">
-          <Icon name="calendar" size={36} color={colors.textTertiary} decorative />
+          <Text style={styles.emptyEmoji}>📜</Text>
           <Text style={[typography.bodyMedium, { color: colors.textSecondary, marginTop: spacing.md, textAlign: 'center' }]}>
             No previous journal entries yet.
           </Text>
@@ -93,7 +95,7 @@ export function JournalHistory({
 
               {/* Section Header */}
               <View style={[styles.sectionHeader, { paddingHorizontal: spacing.lg, marginTop: spacing.xs, marginBottom: spacing.sm }]}>
-                <Text style={[typography.headlineMedium, { color: colors.textPrimary }]}>
+                <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary }]}>
                   All Entries
                 </Text>
               </View>
@@ -128,8 +130,13 @@ const styles = StyleSheet.create({
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     borderWidth: 1,
+  },
+  title: {
+    fontWeight: '700',
+    fontSize: 18,
+    letterSpacing: -0.3,
   },
   listHeader: {
     paddingTop: 4,
@@ -138,6 +145,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
   listContent: {
     paddingTop: 4,
   },
@@ -145,6 +157,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 200,
+    minHeight: 250,
+  },
+  emptyEmoji: {
+    fontSize: 40,
   },
 });

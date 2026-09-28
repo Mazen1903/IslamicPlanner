@@ -197,7 +197,6 @@ export function BottomNavBar(props: BottomNavBarProps) {
                 typography.caption,
                 {
                   color: isFocused ? colors.tabActive : colors.tabInactive,
-                  fontWeight: isFocused ? '700' : '500',
                   marginTop: spacing.xxs,
                 },
               ]}

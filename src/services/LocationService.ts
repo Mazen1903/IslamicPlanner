@@ -60,13 +60,41 @@ export class LocationService implements ILocationService {
 
   async getCurrentCoordinates(): Promise<Coordinates | null> {
     try {
-      const position = await Location.getCurrentPositionAsync({
+      // 1. Try last known position first (fastest, typically < 5ms)
+      if (typeof Location.getLastKnownPositionAsync === 'function') {
+        const lastKnown = await Location.getLastKnownPositionAsync({
+          maxAge: 300000,
+        }).catch(() => null);
+        if (lastKnown?.coords) {
+          return {
+            latitude: lastKnown.coords.latitude,
+            longitude: lastKnown.coords.longitude,
+          };
+        }
+      }
+
+      // 2. Request fresh position with a 4-second timeout to prevent UI freezes
+      const positionPromise = Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-      return {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      };
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const position = await Promise.race([
+          positionPromise,
+          new Promise<null>((resolve) => {
+            timer = setTimeout(() => resolve(null), 4000);
+          }),
+        ]);
+        if (position && 'coords' in position) {
+          return {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
+        }
+        return null;
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
     } catch {
       return null;
     }

@@ -37,6 +37,9 @@ import { SubtasksSection } from './SubtasksSection';
 import { EditScopeSheet } from './EditScopeSheet';
 import { SuccessScreen } from './SuccessScreen';
 import { PartialSuccessView } from './PartialSuccessView';
+import { IconPickerModal } from './IconPickerModal';
+import { TaskCategoryIcon } from '@/components/task/TaskCategoryIcon';
+import { detectTaskIcon } from '@/constants/taskIcons';
 
 export type FormView = 'MAIN' | 'RELATIVE_PRAYER' | 'REPEAT' | 'MORE_OPTIONS';
 
@@ -102,6 +105,7 @@ export function TaskFormScreen({
   const [showScopeSheet, setShowScopeSheet] = useState(
     isEdit && isRecurringSeries && !initialScope
   );
+  const [showIconPicker, setShowIconPicker] = useState(false);
 
   const defaultDate = DateTime.now().toFormat('yyyy-MM-dd');
 
@@ -355,7 +359,7 @@ export function TaskFormScreen({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
       >
-        {/* Task Title Input Card with Pencil Icon */}
+        {/* Task Title Input Card with Icon Picker Badge */}
         <View style={[styles.titleSection, { marginBottom: spacing.md }]}>
           <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary, marginBottom: spacing.xs }]}>
             Task name
@@ -368,12 +372,31 @@ export function TaskFormScreen({
                 backgroundColor: colors.surface,
                 borderColor: state.validationErrors.title ? colors.danger : colors.border,
                 borderRadius: radii.card,
-                paddingHorizontal: spacing.md,
+                paddingHorizontal: spacing.sm,
                 paddingVertical: spacing.xs,
               },
             ]}
           >
-            <Icon name="edit" size={20} color={colors.textSecondary} decorative style={{ marginEnd: spacing.sm }} />
+            <Pressable
+              onPress={() => setShowIconPicker(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Choose task icon"
+              testID="task-icon-picker-button"
+              style={[
+                styles.iconPickerButton,
+                {
+                  backgroundColor: colors.surfaceSecondary,
+                  borderColor: colors.border,
+                  borderRadius: radii.md,
+                  marginEnd: spacing.sm,
+                },
+              ]}
+            >
+              <TaskCategoryIcon iconId={state.icon || detectTaskIcon(state.title)} size={24} />
+              <View style={[styles.iconEditPencilBadge, { backgroundColor: colors.primary }]}>
+                <Icon name="edit" size={9} color={colors.textOnPrimary} decorative />
+              </View>
+            </Pressable>
             <TextInput
               value={state.title}
               onChangeText={text => dispatch({ type: 'SET_TITLE', payload: text })}
@@ -411,82 +434,167 @@ export function TaskFormScreen({
               onRequestRelativeView={() => setCurrentView('RELATIVE_PRAYER')}
             />
 
-            {/* Reminder Section (Surfaced on MAIN view) */}
-            <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
-              Reminder
-            </Text>
-            {state.scheduleMode === 'ANYTIME_TODAY' ? (
-              <Text
-                style={[typography.caption, { color: colors.textTertiary, fontStyle: 'italic', marginStart: spacing.xs }]}
-                testID="anytime-reminder-helper"
-              >
-                Set a time to add a reminder
-              </Text>
-            ) : (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ flexDirection: 'row', paddingVertical: 4 }}
-                testID="reminder-presets-row"
-              >
-                {[
-                  { val: null, label: 'None' },
-                  { val: 0, label: 'At time' },
-                  { val: 5, label: '5m' },
-                  { val: 10, label: '10m' },
-                  { val: 15, label: '15m' },
-                  { val: 20, label: '20m' },
-                  { val: 30, label: '30m' },
-                  { val: 45, label: '45m' },
-                  { val: 60, label: '1h' },
-                  { val: 120, label: '2h' },
-                ].map(item => {
-                  const isSelected = state.reminderMinutes === item.val;
-                  return (
-                    <Pressable
-                      key={item.label}
-                      onPress={() => dispatch({ type: 'SET_REMINDER_MINUTES', payload: item.val })}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: isSelected }}
-                      accessibilityLabel={`Reminder: ${item.label}`}
-                      testID={`reminder-preset-${item.val === null ? 'none' : item.val}`}
-                      style={({ pressed }) => [
-                        styles.reminderChip,
+            {/* Redesigned Reminder Card */}
+            <View
+              style={[
+                styles.reminderCard,
+                shadows.card,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderRadius: radii.card,
+                  padding: spacing.md,
+                  marginTop: spacing.md,
+                },
+              ]}
+            >
+              <View style={styles.reminderHeaderRow}>
+                <View
+                  style={[
+                    styles.reminderIconBadge,
+                    {
+                      backgroundColor:
+                        state.reminderMinutes !== null ? colors.primaryLight : colors.surfaceSecondary,
+                      borderRadius: radii.pill,
+                    },
+                  ]}
+                >
+                  <Icon
+                    name="bell"
+                    size={20}
+                    color={state.reminderMinutes !== null ? colors.primary : colors.textSecondary}
+                    decorative
+                  />
+                </View>
+                <View style={styles.reminderHeaderTextContainer}>
+                  <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
+                    Reminder
+                  </Text>
+                  <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 1 }]}>
+                    {state.scheduleMode === 'ANYTIME_TODAY'
+                      ? 'Requires a scheduled time'
+                      : state.reminderMinutes !== null
+                      ? state.reminderMinutes === 0
+                        ? 'At time of task'
+                        : `${state.reminderMinutes} minutes before`
+                      : 'No notification set'}
+                  </Text>
+                </View>
+                {state.scheduleMode !== 'ANYTIME_TODAY' && (
+                  <Pressable
+                    onPress={() =>
+                      dispatch({
+                        type: 'SET_REMINDER_MINUTES',
+                        payload: state.reminderMinutes !== null ? null : 10,
+                      })
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      state.reminderMinutes !== null ? 'Turn reminder off' : 'Turn reminder on'
+                    }
+                    style={[
+                      styles.reminderToggleBtn,
+                      {
+                        backgroundColor:
+                          state.reminderMinutes !== null ? colors.primary : colors.surfaceSecondary,
+                        borderRadius: radii.pill,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        typography.labelSmall,
                         {
-                          backgroundColor: isSelected ? colors.primary : colors.surface,
-                          borderColor: isSelected ? colors.primary : colors.border,
-                          borderRadius: radii.pill,
-                          marginEnd: spacing.xs,
-                          paddingVertical: spacing.xs,
-                          paddingHorizontal: spacing.md,
-                          minHeight: touchTargets.min,
-                          opacity: pressed ? 0.8 : 1,
+                          color:
+                            state.reminderMinutes !== null ? colors.textOnPrimary : colors.textSecondary,
+                          fontWeight: '700',
                         },
                       ]}
                     >
-                      <Text
-                        style={[
-                          typography.labelMedium,
+                      {state.reminderMinutes !== null ? 'ON' : 'OFF'}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+
+              {state.scheduleMode === 'ANYTIME_TODAY' ? (
+                <View
+                  style={[
+                    styles.reminderHelperBanner,
+                    {
+                      backgroundColor: colors.surfaceSecondary,
+                      borderRadius: radii.md,
+                      marginTop: spacing.sm,
+                      padding: spacing.sm,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[typography.caption, { color: colors.textTertiary, fontStyle: 'italic' }]}
+                    testID="anytime-reminder-helper"
+                  >
+                    Set a time or prayer window above to add a reminder
+                  </Text>
+                </View>
+              ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ flexDirection: 'row', paddingTop: spacing.sm }}
+                  testID="reminder-presets-row"
+                >
+                  {[
+                    { val: null, label: 'None' },
+                    { val: 0, label: 'At time' },
+                    { val: 5, label: '5m' },
+                    { val: 10, label: '10m' },
+                    { val: 15, label: '15m' },
+                    { val: 20, label: '20m' },
+                    { val: 30, label: '30m' },
+                    { val: 45, label: '45m' },
+                    { val: 60, label: '1h' },
+                    { val: 120, label: '2h' },
+                  ].map(item => {
+                    const isSelected = state.reminderMinutes === item.val;
+                    return (
+                      <Pressable
+                        key={item.label}
+                        onPress={() => dispatch({ type: 'SET_REMINDER_MINUTES', payload: item.val })}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: isSelected }}
+                        accessibilityLabel={`Reminder: ${item.label}`}
+                        testID={`reminder-preset-${item.val === null ? 'none' : item.val}`}
+                        style={({ pressed }) => [
+                          styles.reminderChip,
                           {
-                            color: isSelected ? colors.textOnPrimary : colors.textPrimary,
-                            fontWeight: isSelected ? '700' : '600',
+                            backgroundColor: isSelected ? colors.primary : colors.surfaceSecondary,
+                            borderColor: isSelected ? colors.primary : colors.border,
+                            borderRadius: radii.pill,
+                            marginEnd: spacing.xs,
+                            paddingVertical: spacing.xs,
+                            paddingHorizontal: spacing.md,
+                            minHeight: 34,
+                            opacity: pressed ? 0.8 : 1,
                           },
                         ]}
                       >
-                        {item.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            )}
-
-            {/* Steps / Subtasks Section (Surfaced on MAIN view) */}
-            <SubtasksSection
-              subtasks={state.subtasks}
-              dispatch={dispatch}
-              style={{ marginTop: spacing.md }}
-            />
+                        <Text
+                          style={[
+                            typography.labelMedium,
+                            {
+                              color: isSelected ? colors.textOnPrimary : colors.textPrimary,
+                              fontWeight: isSelected ? '700' : '600',
+                            },
+                          ]}
+                        >
+                          {item.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              )}
+            </View>
 
             {/* Repeat Row Entry Card (Tapping opens add task3.png) */}
             <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
@@ -551,7 +659,7 @@ export function TaskFormScreen({
                   More options
                 </Text>
                 <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                  Priority, Notes, Attachment, Habit Tracker
+                  Priority, Notes, Subtasks, Attachment
                 </Text>
               </View>
               <Icon name="chevron-right" size={18} color={colors.primary} directional decorative />
@@ -670,6 +778,17 @@ export function TaskFormScreen({
         )}
       </ScrollView>
 
+      {/* Icon Picker Modal */}
+      <IconPickerModal
+        visible={showIconPicker}
+        selectedIconId={state.icon}
+        onSelectIcon={iconId => {
+          dispatch({ type: 'SET_ICON', payload: iconId });
+          setShowIconPicker(false);
+        }}
+        onClose={() => setShowIconPicker(false)}
+      />
+
       {/* Edit Scope Modal Sheet for recurring tasks */}
       <EditScopeSheet
         visible={showScopeSheet}
@@ -699,12 +818,54 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     minHeight: 56,
   },
+  iconPickerButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    borderWidth: 1,
+  },
+  iconEditPencilBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   titleTextInput: {
     flex: 1,
     paddingVertical: 4,
   },
   titleIconBox: {
     paddingLeft: 8,
+  },
+  reminderCard: {
+    borderWidth: 1,
+  },
+  reminderHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reminderIconBadge: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  reminderHeaderTextContainer: {
+    flex: 1,
+  },
+  reminderToggleBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  reminderHelperBanner: {
+    borderWidth: 0,
   },
   navEntryCard: {
     flexDirection: 'row',

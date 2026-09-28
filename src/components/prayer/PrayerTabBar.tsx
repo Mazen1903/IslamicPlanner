@@ -150,9 +150,9 @@ function PrayerTabItem({
             borderColor: isSelected
               ? colors.primary
               : isCurrent
-              ? colors.primary + '66'
+              ? colors.primary
               : colors.border,
-            borderWidth: 1,
+            borderWidth: 1.5,
             shadowColor: isSelected ? colors.primary : '#000',
             shadowOpacity: isSelected ? 0.2 : 0.04,
           },
@@ -170,7 +170,7 @@ function PrayerTabItem({
             style={[
               typography.labelMedium,
               styles.tabName,
-              { color: nameColor, fontWeight: isSelected || isCurrent ? '700' : '600' },
+              { color: nameColor },
             ]}
             numberOfLines={1}
             adjustsFontSizeToFit
@@ -210,10 +210,19 @@ function PrayerTabItem({
 
 // ─── PrayerTabBar ─────────────────────────────────────────────────────────────
 export function PrayerTabBar({ tabs, selectedPrayer, onSelectPrayer }: PrayerTabBarProps) {
-  const { spacing } = useTheme();
+  const { colors, spacing } = useTheme();
 
   return (
-    <View style={styles.outerWrapper}>
+    <View
+      style={[
+        styles.outerWrapper,
+        {
+          paddingBottom: spacing.xs,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.border,
+        },
+      ]}
+    >
       <View
         style={[
           styles.track,

@@ -4,21 +4,25 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { TaskFormScreen } from '@/components/task-form/TaskFormScreen';
+import { TaskDetailScreen } from '@/components/task-detail/TaskDetailScreen';
 import { useToday } from '@/hooks/useToday';
 import { taskOccurrenceRepository } from '@/data/repositories/TaskOccurrenceRepository';
 import { taskDefinitionRepository } from '@/data/repositories/TaskDefinitionRepository';
+import { taskEngine } from '@/domain/task/TaskEngine';
+import { generateUuid } from '@/utils/uuid';
 import type { TaskDefinition, TaskOccurrence } from '@/domain/task/types';
 
 export default function TaskEditScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, typography, spacing } = useTheme();
-  const { refresh } = useToday();
+  const { refresh, toggleSubtask } = useToday();
 
   const [loading, setLoading] = useState(true);
   const [definition, setDefinition] = useState<TaskDefinition | null>(null);
   const [occurrence, setOccurrence] = useState<TaskOccurrence | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isEditingFull, setIsEditingFull] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -89,20 +93,83 @@ export default function TaskEditScreen() {
 
   const handleSuccess = async () => {
     await refresh();
-    router.back();
+    // Reload definition and occurrence
+    const updatedDef = await taskDefinitionRepository.findById(definition.id);
+    if (updatedDef) setDefinition(updatedDef);
+    if (occurrence) {
+      const updatedOcc = await taskOccurrenceRepository.findById(occurrence.id);
+      if (updatedOcc) setOccurrence(updatedOcc);
+    }
+    setIsEditingFull(false);
   };
 
-  const handleCancel = () => {
-    router.back();
+  const handleToggleSubtask = async (occId: string, subtaskId: string) => {
+    await toggleSubtask(occId, subtaskId);
+    const updatedOcc = await taskOccurrenceRepository.findById(occId);
+    if (updatedOcc) setOccurrence(updatedOcc);
   };
+
+  const handleAddSubtask = async (title: string) => {
+    const newSubtask = { id: generateUuid(), title };
+    const updatedSubtasks = [...(definition.subtasks ?? []), newSubtask];
+    await taskDefinitionRepository.update(definition.id, { subtasks: updatedSubtasks });
+    setDefinition(prev => prev ? { ...prev, subtasks: updatedSubtasks } : null);
+    await refresh();
+  };
+
+  const handleUpdateNotes = async (newNotes: string) => {
+    if (occurrence) {
+      await taskEngine.updateOccurrenceOverride(occurrence.id, {
+        ...(occurrence.overrideData ?? {}),
+        notes: newNotes,
+      });
+      const updatedOcc = await taskOccurrenceRepository.findById(occurrence.id);
+      if (updatedOcc) setOccurrence(updatedOcc);
+    } else {
+      await taskDefinitionRepository.update(definition.id, { notes: newNotes });
+      setDefinition(prev => prev ? { ...prev, notes: newNotes } : null);
+    }
+    await refresh();
+  };
+
+  const handleDelete = async () => {
+    try {
+      if (occurrence) {
+        await taskOccurrenceRepository.deleteIfPending(occurrence.id).catch(() => {});
+      }
+      const isRecurring = Boolean(definition.recurrenceRule || definition.hijriRecurrence);
+      if (!isRecurring) {
+        await taskDefinitionRepository.delete(definition.id).catch(() => {});
+      }
+      await refresh();
+      router.back();
+    } catch (err) {
+      console.warn('Delete error:', err);
+    }
+  };
+
+  if (isEditingFull) {
+    return (
+      <TaskFormScreen
+        initialDefinition={definition}
+        initialOccurrence={occurrence ?? undefined}
+        initialCivilSeedDate={occurrence?.localDate ?? definition.startDate}
+        onSuccess={handleSuccess}
+        onCancel={() => setIsEditingFull(false)}
+      />
+    );
+  }
 
   return (
-    <TaskFormScreen
-      initialDefinition={definition}
-      initialOccurrence={occurrence ?? undefined}
-      initialCivilSeedDate={occurrence?.localDate ?? definition.startDate}
-      onSuccess={handleSuccess}
-      onCancel={handleCancel}
+    <TaskDetailScreen
+      definition={definition}
+      occurrence={occurrence}
+      onEditFull={() => setIsEditingFull(true)}
+      onDelete={handleDelete}
+      onBack={() => router.back()}
+      onToggleSubtask={handleToggleSubtask}
+      onAddSubtask={handleAddSubtask}
+      onUpdateNotes={handleUpdateNotes}
     />
   );
 }

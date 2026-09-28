@@ -6,12 +6,15 @@ import { useTheme, type ThemeColors } from '@/theme';
 import type { TaskCardViewModel } from '@/services/types';
 import { TaskCheckbox } from './TaskCheckbox';
 import { Icon, type IconName } from '@/components/common/Icon';
+import { TaskCategoryIcon } from './TaskCategoryIcon';
+import { hasCustomTaskIcon } from '@/constants/taskIconAssets';
 import { useTodayStore } from '@/stores/useTodayStore';
 import { deriveOverdueState } from '@/services/TodayViewModelProjection';
 
 export interface TaskCardProps {
   task: TaskCardViewModel;
   onComplete?: (occurrenceId: string) => void;
+  onToggleSubtask?: (occurrenceId: string, subtaskId: string) => void;
 }
 
 function getCategoryTheme(
@@ -91,7 +94,7 @@ function getCategoryTheme(
   };
 }
 
-export function TaskCard({ task, onComplete }: TaskCardProps) {
+export function TaskCard({ task, onComplete, onToggleSubtask }: TaskCardProps) {
   const { colors, spacing, radii, typography, shadows, isDark } = useTheme();
   const router = useRouter();
 
@@ -124,8 +127,11 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
   }, [task.title, task.priority, isPending, overdueState, isMissed, isCompleted]);
 
   const handleCardPress = () => {
-    if (task.taskDefinitionId) {
-      router.push(`/task/${task.taskDefinitionId}`);
+    if (task.occurrenceId || task.taskDefinitionId) {
+      router.push({
+        pathname: '/task/[id]',
+        params: { id: task.occurrenceId || task.taskDefinitionId, defId: task.taskDefinitionId },
+      });
     }
   };
 
@@ -151,7 +157,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
           paddingVertical: 12,
           paddingHorizontal: 14,
           marginBottom: 8,
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+          borderColor: colors.border,
           borderWidth: 1,
         },
       ]}
@@ -171,27 +177,35 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
           testID={`checkbox-${task.occurrenceId}`}
         />
 
-        {/* Category Icon Badge with soft circle */}
-        <View style={[styles.categoryCircle, { backgroundColor: category.bg }]}>
-          <Icon name={category.icon} size={18} color={category.color} decorative />
-        </View>
-
-        {/* Title and metadata block */}
+        {/* Title, Subtasks, and metadata block */}
         <View
           style={styles.contentContainer}
           accessible={true}
           accessibilityLabel={compositeLabel}
         >
+          {/* Title row with Icon right next to the task name */}
           <View style={styles.titleRow}>
+            <View
+              style={[
+                styles.taskIconBadge,
+                { backgroundColor: hasCustomTaskIcon(task.icon) ? 'transparent' : category.bg },
+              ]}
+              testID={`task-icon-badge-${task.occurrenceId}`}
+            >
+              <TaskCategoryIcon
+                iconId={task.icon}
+                size={hasCustomTaskIcon(task.icon) ? 24 : 15}
+                color={category.color}
+              />
+            </View>
+
             <Text
               style={[
                 typography.bodyLarge,
+                styles.titleText,
                 {
                   color: isCompleted ? colors.textMuted : colors.textPrimary,
                   textDecorationLine: isCompleted ? 'line-through' : 'none',
-                  fontWeight: '700',
-                  fontSize: 16,
-                  flex: 1,
                 },
               ]}
               numberOfLines={1}
@@ -199,6 +213,53 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
               {task.title}
             </Text>
           </View>
+
+          {/* Subtasks under task name */}
+          {task.subtasks && task.subtasks.length > 0 && (
+            <View style={styles.subtasksContainer} testID={`task-subtasks-${task.occurrenceId}`}>
+              {task.subtasks.map(subtask => (
+                <Pressable
+                  key={subtask.id}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onToggleSubtask?.(task.occurrenceId, subtask.id);
+                  }}
+                  style={styles.subtaskRow}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: subtask.isCompleted }}
+                  accessibilityLabel={`Subtask: ${subtask.title}`}
+                  testID={`subtask-item-${task.occurrenceId}-${subtask.id}`}
+                >
+                  <View
+                    style={[
+                      styles.subtaskCheckbox,
+                      {
+                        borderColor: subtask.isCompleted ? colors.primary : colors.border,
+                        backgroundColor: subtask.isCompleted ? colors.primary : 'transparent',
+                      },
+                    ]}
+                  >
+                    {subtask.isCompleted && (
+                      <Icon name="check" size={10} color={colors.textOnPrimary} decorative />
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      typography.bodySmall,
+                      styles.subtaskText,
+                      {
+                        color: subtask.isCompleted ? colors.textMuted : colors.textPrimary,
+                        textDecorationLine: subtask.isCompleted ? 'line-through' : 'none',
+                      },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {subtask.title}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
 
           <View style={styles.metaRow}>
             {task.scheduleLabel ? (
@@ -208,7 +269,6 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
                     typography.caption,
                     {
                       color: isCompleted ? colors.textMuted : colors.textSecondary,
-                      fontWeight: '600',
                     },
                   ]}
                 >
@@ -219,7 +279,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
 
             {task.estimatedMinutes ? (
               <View style={[styles.metaItem, { marginStart: spacing.sm }]}>
-                <Text style={[typography.caption, { color: colors.textTertiary, fontWeight: '600' }]}>
+                <Text style={[typography.caption, { color: colors.textTertiary }]}>
                   {task.estimatedMinutes}m
                 </Text>
               </View>
@@ -341,6 +401,39 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  taskIconBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
+  },
+  titleText: {
+    flex: 1,
+  },
+  subtasksContainer: {
+    marginTop: 4,
+    marginBottom: 2,
+    gap: 3,
+  },
+  subtaskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  subtaskCheckbox: {
+    width: 14,
+    height: 14,
+    borderRadius: 3,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
+  },
+  subtaskText: {
+    flex: 1,
   },
   metaRow: {
     flexDirection: 'row',

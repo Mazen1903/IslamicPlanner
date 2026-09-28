@@ -6,8 +6,8 @@ let loadPromise: Promise<CityRecord[]> | null = null;
 
 /**
  * Reads text content from a resolved asset URI across:
- * - Production React Native (Android / iOS) via native fetch which supports file://, http(s)://, and asset://
- * - Web runtime via browser fetch
+ * - Production React Native (Android / iOS) via expo-file-system for file:// URIs
+ * - Web runtime via browser fetch for http(s):// URIs
  * - Node / Jest test runner with fallback to filesystem for local test runs
  */
 async function readAssetUri(uri: string): Promise<string> {
@@ -44,43 +44,23 @@ async function readAssetUri(uri: string): Promise<string> {
     }
   }
 
-  // Strategy: try fetch() first (works on newer Expo/Android for both http and
-  // file:// URIs). If it fails with a network-level error, fall back to
-  // XMLHttpRequest which uses RN's native file loader.
-  try {
-    const response = await fetch(uri);
-    // status 0 = file:// success (no HTTP layer); 200 = http(s)// success
-    if (response.ok || response.status === 0) {
-      return await response.text();
-    }
-    // Fall through to XHR fallback if fetch returned an error status
-  } catch {
-    // fetch threw (e.g. network error on file://), try XHR
+  // On native (Android / iOS), file:// URIs point to the app's private cache directory.
+  // XHR and fetch both fail on Android for cross-directory file:// access.
+  // expo-file-system's readAsStringAsync uses the native FS API and works reliably.
+  if (uri.startsWith('file://')) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const FileSystem = require('expo-file-system');
+    return FileSystem.readAsStringAsync(uri, { encoding: 'utf8' });
   }
 
-  return new Promise<string>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.onload = () => {
-      if (xhr.status === 200 || xhr.status === 0) {
-        resolve(xhr.responseText);
-      } else {
-        reject(
-          new Error(
-            `Failed to read city dataset asset from ${uri}: HTTP ${xhr.status}`
-          )
-        );
-      }
-    };
-    xhr.onerror = () =>
-      reject(
-        new Error(
-          `Failed to read city dataset asset from ${uri}: network error`
-        )
-      );
-    xhr.open('GET', uri);
-    xhr.send();
-  });
-
+  // For http(s):// URIs (web / remote assets), use standard fetch.
+  const response = await fetch(uri);
+  if (response.ok || response.status === 0) {
+    return response.text();
+  }
+  throw new Error(
+    `Failed to read city dataset asset from ${uri}: HTTP ${response.status}`
+  );
 }
 
 /**

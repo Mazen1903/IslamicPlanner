@@ -24,7 +24,7 @@ export function JournalCalendar({
   onSelectDate,
   testID = 'journal-calendar',
 }: JournalCalendarProps) {
-  const { colors, spacing, radii, typography, shadows, touchTargets } = useTheme();
+  const { colors, spacing, radii, typography, shadows, touchTargets, isDark } = useTheme();
 
   const todayKey = activePlanningDayKey ?? DateTime.local().toISODate()!;
   const todayDt = DateTime.fromISO(todayKey);
@@ -125,9 +125,9 @@ export function JournalCalendar({
         styles.card,
         shadows.card,
         {
-          backgroundColor: colors.surface,
+          backgroundColor: isDark ? 'rgba(30, 41, 59, 0.72)' : colors.surface,
           borderRadius: radii.card,
-          borderColor: colors.border,
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.border,
           marginHorizontal: spacing.lg,
           padding: spacing.md,
           marginBottom: spacing.md,
@@ -145,6 +145,7 @@ export function JournalCalendar({
             styles.navButton,
             {
               borderRadius: radii.pill,
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
               opacity: pressed ? 0.6 : 1,
               minWidth: touchTargets.min,
               minHeight: touchTargets.min,
@@ -156,7 +157,14 @@ export function JournalCalendar({
         </Pressable>
 
         <View style={styles.titleContainer}>
-          <Text style={[typography.headlineMedium, { color: colors.textPrimary }]} testID="journal-calendar-month-title">
+          <Text
+            style={[
+              typography.headlineMedium,
+              styles.monthTitle,
+              { color: colors.textPrimary },
+            ]}
+            testID="journal-calendar-month-title"
+          >
             {browsedDate.toFormat('MMMM yyyy')}
           </Text>
           {!isCurrentMonthView && (
@@ -190,6 +198,7 @@ export function JournalCalendar({
             styles.navButton,
             {
               borderRadius: radii.pill,
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
               opacity: pressed ? 0.6 : 1,
               minWidth: touchTargets.min,
               minHeight: touchTargets.min,
@@ -202,10 +211,19 @@ export function JournalCalendar({
       </View>
 
       {/* Weekday Row */}
-      <View style={[styles.weekdayRow, { borderBottomColor: colors.divider }]}>
+      <View style={[styles.weekdayRow, { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.divider }]}>
         {WEEKDAYS.map((day, idx) => (
           <View key={`weekday-${idx}`} style={styles.weekdayCell}>
-            <Text style={[typography.caption, { color: colors.textTertiary, fontWeight: '700' }]}>
+            <Text
+              style={[
+                typography.caption,
+                {
+                  color: idx === 5 ? colors.primary : colors.textTertiary,
+                  fontWeight: '700',
+                  fontSize: 11,
+                },
+              ]}
+            >
               {day}
             </Text>
           </View>
@@ -243,14 +261,14 @@ export function JournalCalendar({
                 {
                   borderRadius: radii.md,
                   backgroundColor: isSelected
-                    ? colors.primaryLight
+                    ? (isDark ? 'rgba(15, 159, 74, 0.25)' : colors.primaryLight)
                     : isToday
-                    ? colors.surfaceSecondary
+                    ? (isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surfaceSecondary)
                     : 'transparent',
                   borderColor: isSelected
                     ? colors.primary
                     : isToday
-                    ? colors.primaryLight
+                    ? colors.primary
                     : 'transparent',
                   borderWidth: isSelected ? 2 : isToday ? 1 : 0,
                   opacity: pressed ? 0.7 : 1,
@@ -268,19 +286,23 @@ export function JournalCalendar({
                       ? colors.primary
                       : colors.textPrimary,
                     fontWeight: isSelected || isToday ? '700' : '500',
+                    fontSize: 13,
                   },
                 ]}
               >
                 {cell.dayNumber}
               </Text>
 
-              {/* Entry Dot indicator */}
+              {/* Elevated Entry Dot indicator */}
               {cell.hasEntry ? (
                 <View
                   style={[
                     styles.entryDot,
                     {
                       backgroundColor: isSelected ? colors.primaryDark : colors.primary,
+                      shadowColor: colors.primary,
+                      shadowOpacity: 0.4,
+                      shadowRadius: 3,
                     },
                   ]}
                   testID={`calendar-dot-${cell.dateKey}`}
@@ -309,6 +331,11 @@ const styles = StyleSheet.create({
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  monthTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   navButton: {
     alignItems: 'center',

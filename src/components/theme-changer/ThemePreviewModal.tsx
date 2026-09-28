@@ -6,20 +6,15 @@ import {
   Pressable,
   Modal,
   ScrollView,
-  Image,
   Dimensions,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import { PhonePreviewCard } from './PhonePreviewCard';
 import {
   type ThemeGalleryItem,
-  type ThemeCategory,
   PURE_COLOR_THEMES,
-  TEXTURE_THEMES,
-  SCENERY_THEMES,
-  ALL_GALLERY_THEMES,
 } from './types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -40,11 +35,10 @@ export function ThemePreviewModal({
   onClose,
   onApplyTheme,
 }: ThemePreviewModalProps) {
+  const { colors } = useTheme();
+
   const [selectedItem, setSelectedItem] = useState<ThemeGalleryItem>(
     initialItem ?? PURE_COLOR_THEMES[0],
-  );
-  const [activeCategory, setActiveCategory] = useState<ThemeCategory>(
-    initialItem?.category ?? 'pure_color',
   );
 
   const scrollRef = useRef<ScrollView>(null);
@@ -53,28 +47,19 @@ export function ThemePreviewModal({
   useEffect(() => {
     if (initialItem) {
       setSelectedItem(initialItem);
-      setActiveCategory(initialItem.category);
     }
   }, [initialItem]);
 
-  // Current items for the active category
-  const currentCategoryItems =
-    activeCategory === 'pure_color'
-      ? PURE_COLOR_THEMES
-      : activeCategory === 'texture'
-      ? TEXTURE_THEMES
-      : SCENERY_THEMES;
-
   // Auto-scroll phone carousel to selected item index
   useEffect(() => {
-    const index = currentCategoryItems.findIndex((i) => i.id === selectedItem.id);
+    const index = PURE_COLOR_THEMES.findIndex((i) => i.id === selectedItem.id);
     if (index >= 0 && scrollRef.current) {
       scrollRef.current.scrollTo({
         x: index * SNAP_INTERVAL,
         animated: true,
       });
     }
-  }, [selectedItem.id, activeCategory]);
+  }, [selectedItem.id]);
 
   const handleSelectSwatch = (item: ThemeGalleryItem) => {
     setSelectedItem(item);
@@ -92,7 +77,9 @@ export function ThemePreviewModal({
       presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView
+        style={[styles.safeArea, { backgroundColor: colors.background }]}
+      >
         {/* Top Navigation Bar: [✕]   Tap to Choose a Theme   [✓] */}
         <View style={styles.header}>
           <Pressable
@@ -103,10 +90,12 @@ export function ThemePreviewModal({
             style={styles.headerButton}
             testID="theme-preview-close"
           >
-            <Icon name="close" size={24} color="#1E293B" decorative />
+            <Icon name="close" size={24} color={colors.textPrimary} decorative />
           </Pressable>
 
-          <Text style={styles.headerTitle}>Tap to Choose a Theme</Text>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+            Tap to Choose a Theme
+          </Text>
 
           <Pressable
             onPress={handleApply}
@@ -116,11 +105,11 @@ export function ThemePreviewModal({
             style={styles.headerButton}
             testID="theme-preview-apply"
           >
-            <Icon name="check" size={26} color="#00A3FF" decorative />
+            <Icon name="check" size={26} color={colors.primary} decorative />
           </Pressable>
         </View>
 
-        {/* Center: Interactive Phone Preview Carousel with peeking edges */}
+        {/* Center: Interactive Phone Preview Carousel */}
         <View style={styles.carouselContainer}>
           <ScrollView
             ref={scrollRef}
@@ -133,7 +122,7 @@ export function ThemePreviewModal({
               { paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2 - CARD_MARGIN },
             ]}
           >
-            {currentCategoryItems.map((item) => {
+            {PURE_COLOR_THEMES.map((item) => {
               const isCurrent = item.id === selectedItem.id;
               return (
                 <View
@@ -156,46 +145,11 @@ export function ThemePreviewModal({
           </ScrollView>
         </View>
 
-        {/* Category Switcher Tabs */}
-        <View style={styles.categoryTabRow}>
-          {(['pure_color', 'texture', 'scenery'] as ThemeCategory[]).map((cat) => {
-            const isCatActive = activeCategory === cat;
-            const label =
-              cat === 'pure_color'
-                ? 'Pure Color'
-                : cat === 'texture'
-                ? 'Texture 👑'
-                : 'Scenery 👑';
-            return (
-              <Pressable
-                key={cat}
-                onPress={() => {
-                  setActiveCategory(cat);
-                  const firstInCat =
-                    cat === 'pure_color'
-                      ? PURE_COLOR_THEMES[0]
-                      : cat === 'texture'
-                      ? TEXTURE_THEMES[0]
-                      : SCENERY_THEMES[0];
-                  setSelectedItem(firstInCat);
-                }}
-                style={[
-                  styles.categoryTab,
-                  isCatActive && styles.categoryTabActive,
-                ]}
-                testID={`category-tab-${cat}`}
-              >
-                <Text
-                  style={[
-                    styles.categoryTabText,
-                    isCatActive && styles.categoryTabTextActive,
-                  ]}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
+        {/* Section label */}
+        <View style={styles.sectionLabelRow}>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+            Pure Color
+          </Text>
         </View>
 
         {/* Bottom Horizontal Swatch Strip */}
@@ -205,7 +159,7 @@ export function ThemePreviewModal({
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.swatchScrollContent}
           >
-            {currentCategoryItems.map((item) => {
+            {PURE_COLOR_THEMES.map((item) => {
               const isSelected = item.id === selectedItem.id;
               return (
                 <Pressable
@@ -219,69 +173,22 @@ export function ThemePreviewModal({
                   ]}
                   testID={`swatch-thumb-${item.id}`}
                 >
-                  {/* Swatch Content */}
-                  {item.category === 'pure_color' ? (
-                    <View
-                      style={[
-                        styles.colorSwatchBox,
-                        { backgroundColor: item.color },
-                      ]}
-                    >
-                      {/* Checkmark badge inside if selected */}
-                      {isSelected && (
-                        <View style={styles.checkmarkBadgeInner}>
-                          <Icon name="check" size={16} color="#FFFFFF" decorative />
-                        </View>
-                      )}
-                    </View>
-                  ) : item.category === 'texture' ? (
-                    <View style={styles.textureSwatchBox}>
-                      {item.thumbnailAsset ? (
-                        <Image
-                          source={item.thumbnailAsset}
-                          style={styles.textureSwatchImage}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View
-                          style={[
-                            styles.textureSwatchFallback,
-                            { backgroundColor: item.background },
-                          ]}
-                        />
-                      )}
-                      {/* Accent center dot */}
-                      <View
-                        style={[
-                          styles.textureDot,
-                          { backgroundColor: item.dotColor ?? item.color },
-                        ]}
-                      />
-                      {/* Checkmark badge inside if selected */}
-                      {isSelected && (
-                        <View style={styles.checkmarkBadgeCorner}>
-                          <Icon name="check" size={12} color="#FFFFFF" decorative />
-                        </View>
-                      )}
-                    </View>
-                  ) : (
-                    /* Scenery thumbnail */
-                    <View style={styles.scenerySwatchBox}>
-                      {item.thumbnailAsset && (
-                        <Image
-                          source={item.thumbnailAsset}
-                          style={styles.scenerySwatchImage}
-                          resizeMode="cover"
-                        />
-                      )}
-                      {/* Checkmark badge at bottom-right corner if selected */}
-                      {isSelected && (
-                        <View style={styles.checkmarkBadgeCorner}>
-                          <Icon name="check" size={12} color="#FFFFFF" decorative />
-                        </View>
-                      )}
-                    </View>
-                  )}
+                  <View
+                    style={[
+                      styles.colorSwatchBox,
+                      {
+                        backgroundColor: item.color,
+                        borderColor: isSelected ? colors.primary : 'rgba(0,0,0,0.06)',
+                        borderWidth: isSelected ? 2.5 : 1,
+                      },
+                    ]}
+                  >
+                    {isSelected && (
+                      <View style={styles.checkmarkBadgeInner}>
+                        <Icon name="check" size={16} color="#FFFFFF" decorative />
+                      </View>
+                    )}
+                  </View>
 
                   {/* PRO Badge on top-left */}
                   {item.isPro && (
@@ -302,7 +209,6 @@ export function ThemePreviewModal({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#DDF2FB',
   },
   header: {
     height: 52,
@@ -320,7 +226,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1E293B',
   },
   carouselContainer: {
     flex: 1,
@@ -336,38 +241,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  categoryTabRow: {
-    flexDirection: 'row',
+  sectionLabelRow: {
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 6,
+    paddingVertical: 4,
   },
-  categoryTab: {
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.45)',
-  },
-  categoryTabActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  categoryTabText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#64748B',
-  },
-  categoryTabTextActive: {
-    color: '#0284C7',
-    fontWeight: '700',
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   bottomSwatchSection: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 8,
   },
   swatchScrollContent: {
@@ -389,49 +274,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-  },
-  textureSwatchBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
-    overflow: 'hidden',
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
-  },
-  textureSwatchImage: {
-    width: '100%',
-    height: '100%',
-  },
-  textureSwatchFallback: {
-    width: '100%',
-    height: '100%',
-  },
-  textureDot: {
-    position: 'absolute',
-    bottom: 8,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-  },
-  scenerySwatchBox: {
-    width: 76,
-    height: 52,
-    borderRadius: 12,
-    overflow: 'hidden',
-    position: 'relative',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
-  },
-  scenerySwatchImage: {
-    width: '100%',
-    height: '100%',
   },
   checkmarkBadgeInner: {
     width: 26,
@@ -440,20 +282,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  checkmarkBadgeCorner: {
-    position: 'absolute',
-    bottom: 4,
-    right: 4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#00A3FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
-    zIndex: 10,
   },
   proBadge: {
     position: 'absolute',

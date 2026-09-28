@@ -37,7 +37,6 @@ export function CalendarMonthGrid({
                 typography.caption,
                 {
                   color: idx === 0 || idx === 6 ? colors.textSecondary : colors.textTertiary,
-                  fontWeight: '600',
                   textAlign: 'center',
                 },
               ]}

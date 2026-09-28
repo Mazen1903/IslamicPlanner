@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, ScrollView, View, Text, Pressable } from 'react-native';
+import { StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/theme';
 import type { Prayer } from '@/constants/prayers';
@@ -22,6 +22,7 @@ export interface TaskListProps {
   onToggleCompletedCollapsed: () => void;
   onToggleAnytimeCollapsed?: () => void;
   onCompleteTask: (occurrenceId: string) => void;
+  onToggleSubtask?: (occurrenceId: string, subtaskId: string) => void;
   onAddTask?: (prayer: Prayer) => void;
   completedTasksMode?: 'KEEP' | 'MOVE' | 'HIDE';
   overdueTasksMode?: 'KEEP' | 'MOVE' | 'HIDE';
@@ -37,6 +38,7 @@ export function TaskList({
   onToggleCompletedCollapsed,
   onToggleAnytimeCollapsed,
   onCompleteTask,
+  onToggleSubtask,
   onAddTask,
   completedTasksMode = 'KEEP',
   overdueTasksMode = 'KEEP',
@@ -74,6 +76,7 @@ export function TaskList({
           key={task.occurrenceId}
           task={task}
           onComplete={onCompleteTask}
+          onToggleSubtask={onToggleSubtask}
         />
       ))}
 
@@ -110,33 +113,7 @@ export function TaskList({
         />
       )}
 
-      {/* 5. Inline "+ Add Task" pill button when there are scheduled or anytime tasks */}
-      {emptyState !== 'NOTHING_SCHEDULED' && (
-        <View style={[styles.inlineAddContainer, { paddingHorizontal: spacing.lg, marginVertical: spacing.md }]}>
-          <Pressable
-            onPress={handlePressAddTask}
-            style={({ pressed }) => [
-              styles.inlineAddButton,
-              {
-                backgroundColor: pressed
-                  ? (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)')
-                  : (isDark ? 'rgba(28, 35, 43, 0.8)' : 'rgba(255, 255, 255, 0.85)'),
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-                borderRadius: radii.card,
-              },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={`Add task for ${selectedPrayer}`}
-            testID="inline-add-task-button"
-          >
-            <Text style={[typography.labelLarge, styles.inlineAddText, { color: colors.primary }]}>
-              + Add Task
-            </Text>
-          </Pressable>
-        </View>
-      )}
-
-      {/* 6. Completed tasks (collapsible) */}
+      {/* 5. Completed tasks (collapsible) */}
       {completedTasksMode !== 'HIDE' && (
         <CompletedSection
           tasks={effectiveCompletedTasks}
@@ -155,19 +132,5 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingTop: 8,
     paddingBottom: 80,
-  },
-  inlineAddContainer: {
-    width: '100%',
-  },
-  inlineAddButton: {
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inlineAddText: {
-    fontWeight: '700',
-    fontSize: 15,
   },
 });

@@ -9,10 +9,8 @@ import { useLocation } from '@/hooks/useLocation';
 import { SetupRequiredState } from '@/components/today/SetupRequiredState';
 import { PrayerHeader } from '@/components/prayer/PrayerHeader';
 import { PrayerTabBar } from '@/components/prayer/PrayerTabBar';
-import { ActivePrayerHeroCard } from '@/components/prayer/ActivePrayerHeroCard';
 import { PrayerTransitionBanner } from '@/components/prayer/PrayerTransitionBanner';
 import { TaskList } from '@/components/task/TaskList';
-import { Icon } from '@/components/common/Icon';
 import { getTodayDateSubtitle } from '@/utils/todayDateSubtitle';
 import { useUserSettings } from '@/hooks/useUserSettings';
 
@@ -35,6 +33,7 @@ export default function TodayScreen() {
     toggleAnytimeCollapsed,
     countdownDisplay,
     completeTask,
+    toggleSubtask,
     refresh,
   } = useToday();
 
@@ -48,9 +47,15 @@ export default function TodayScreen() {
     refreshRef.current = refresh;
   });
 
-  // Refresh schedule whenever user navigates back to Today tab
+  const isFirstFocusRef = useRef(true);
+
+  // Refresh schedule whenever user navigates back to Today tab (skips initial mount handled by useToday)
   useFocusEffect(
     useCallback(() => {
+      if (isFirstFocusRef.current) {
+        isFirstFocusRef.current = false;
+        return;
+      }
       refreshRef.current();
     }, []) // stable — never changes
   );
@@ -183,18 +188,7 @@ export default function TodayScreen() {
           />
         </View>
 
-        {/* 4. Active Prayer Hero Card with Squircle Artwork, Time Window & Mint Countdown Badge */}
-        {currentTab && (
-          <ActivePrayerHeroCard
-            currentTab={currentTab}
-            allTabs={viewModel.tabs}
-            currentPrayer={viewModel.currentPrayer}
-            nextPrayer={viewModel.nextPrayer}
-            countdownDisplay={countdownDisplay}
-          />
-        )}
-
-        {/* 5. Task list for the selected prayer tab with Anytime Today */}
+        {/* 4. Task list for the selected prayer tab with Anytime Today */}
         {currentTab && (
           <View style={styles.taskListWrapper}>
             <TaskList
@@ -207,29 +201,13 @@ export default function TodayScreen() {
               onToggleCompletedCollapsed={() => toggleCompletedCollapsed(activePrayer)}
               onToggleAnytimeCollapsed={toggleAnytimeCollapsed}
               onCompleteTask={completeTask}
+              onToggleSubtask={toggleSubtask}
               onAddTask={handleAddTask}
               completedTasksMode={(settings?.completedTasksMode as any) ?? 'KEEP'}
               overdueTasksMode={(settings?.overdueTasksMode as any) ?? 'KEEP'}
             />
           </View>
         )}
-
-        {/* 6. Floating Action Button (FAB) at bottom-right corner */}
-        <Pressable
-          onPress={() => handleAddTask(activePrayer)}
-          style={({ pressed }) => [
-            styles.fab,
-            shadows.card,
-            {
-              backgroundColor: pressed ? colors.primaryPressed : colors.primary,
-            },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Add new task"
-          testID="today-fab-add"
-        >
-          <Icon name="plus" size={28} color={colors.textOnPrimary} decorative />
-        </Pressable>
       </SafeAreaView>
     </View>
   );
@@ -255,21 +233,5 @@ const styles = StyleSheet.create({
   retryButton: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    zIndex: 10,
   },
 });

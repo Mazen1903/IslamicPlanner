@@ -51,6 +51,8 @@ describe('LocationEdgeCases (LE-01 to LE-09)', () => {
       taskRemindersEnabled: true,
       taskVibrationEnabled: true,
       quietHoursEnabled: false,
+      journalReminderEnabled: false,
+      journalReminderTime: '21:30',
       themeMode: 'SYSTEM',
       isPremium: false,
       onboardingCompleted: true,

@@ -142,7 +142,7 @@ export type ThemeMode = 'LIGHT' | 'DARK' | 'SYSTEM';
 export interface TypographyStyle {
   fontFamily: string;
   fontSize: number;
-  fontWeight: TextStyle['fontWeight'];
+  fontWeight?: TextStyle['fontWeight'];
   lineHeight: number;
 }
 

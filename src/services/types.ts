@@ -1,12 +1,12 @@
 import type { Prayer } from '@/constants/prayers';
 import type { Coordinates, PrayerCalculationParams, PrayerTimeline } from '@/domain/prayer/types';
 import type { PlanningDay, PlanningDayConfig } from '@/domain/planning-day/types';
-import type { ScheduleType, OccurrenceStatus } from '@/domain/task/types';
+import type { ScheduleType, OccurrenceStatus, OccurrenceSubtask } from '@/domain/task/types';
 
 export type { Prayer } from '@/constants/prayers';
 export type { PlanningDay, PlanningDayConfig } from '@/domain/planning-day/types';
 export type { PrayerTimeline, Coordinates, PrayerCalculationParams } from '@/domain/prayer/types';
-export type { ScheduleType, OccurrenceStatus } from '@/domain/task/types';
+export type { ScheduleType, OccurrenceStatus, OccurrenceSubtask } from '@/domain/task/types';
 
 /**
  * Inputs required to construct PrayerTimeline, resolve PlanningDay,
@@ -43,6 +43,7 @@ export interface TaskCardViewModel {
   occurrenceId: string;
   taskDefinitionId: string;
   title: string;
+  icon?: string | null;
   scheduleType: ScheduleType;
   scheduleLabel: string;
   priority: 'NORMAL' | 'IMPORTANT';
@@ -54,6 +55,8 @@ export interface TaskCardViewModel {
   missedAt: string | null;
   dueAt: string | null;
   expiresAt: string | null;
+  subtasks?: OccurrenceSubtask[];
+  notes?: string | null;
 }
 
 /**

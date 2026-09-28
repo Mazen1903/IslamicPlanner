@@ -9,8 +9,10 @@ import type {
   TaskCardViewModel,
   PrayerTabTemporalState,
   EmptyStateType,
+  OccurrenceSubtask,
 } from './types';
 import { getCurrentPrayer, getNextPrayer } from '@/domain/prayer/PrayerEngine';
+import { detectTaskIcon } from '@/constants/taskIcons';
 
 export const PRAYER_ARABIC_NAMES: Record<Prayer, string> = {
   FAJR: 'الفجر',
@@ -204,10 +206,19 @@ export function buildTaskCardViewModel(
     expiresAt = null;
   }
 
+  const completedSubtaskIds = new Set(occ.overrideData?.completedSubtaskIds ?? []);
+  const subtasks: OccurrenceSubtask[] = (def.subtasks ?? []).map(st => ({
+    id: st.id,
+    title: st.title,
+    isCompleted: completedSubtaskIds.has(st.id),
+  }));
+  const icon = detectTaskIcon(def.title, def.tags);
+
   return {
     occurrenceId: occ.id,
     taskDefinitionId: def.id,
     title: def.title,
+    icon,
     scheduleType: def.scheduleType,
     scheduleLabel: formatScheduleLabel(def, occ, timezone),
     priority: def.priority,
@@ -219,6 +230,8 @@ export function buildTaskCardViewModel(
     missedAt: occ.missedAt ?? null,
     dueAt,
     expiresAt,
+    subtasks,
+    notes: occ.overrideData?.notes ?? def.notes ?? null,
   };
 }
 

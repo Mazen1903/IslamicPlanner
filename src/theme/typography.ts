@@ -20,13 +20,13 @@ export const fontNames = {
  * System fallback font families per platform
  */
 export const fallbackFonts = {
-  display: Platform.select({ ios: 'Comic Sans MS', android: 'sans-serif-medium', default: 'Comic Sans MS, cursive, sans-serif' }),
-  displayRegular: Platform.select({ ios: 'Comic Sans MS', android: 'sans-serif', default: 'Comic Sans MS, cursive, sans-serif' }),
-  displayBold: Platform.select({ ios: 'Comic Sans MS', android: 'sans-serif-medium', default: 'Comic Sans MS, cursive, sans-serif' }),
-  body: Platform.select({ ios: 'Comic Sans MS', android: 'sans-serif', default: 'Comic Sans MS, cursive, sans-serif' }),
-  bodyRegular: Platform.select({ ios: 'Comic Sans MS', android: 'sans-serif', default: 'Comic Sans MS, cursive, sans-serif' }),
-  bodyBold: Platform.select({ ios: 'Comic Sans MS', android: 'sans-serif-medium', default: 'Comic Sans MS, cursive, sans-serif' }),
-  bodyItalic: Platform.select({ ios: 'Comic Sans MS', android: 'sans-serif', default: 'Comic Sans MS, cursive, sans-serif' }),
+  display: Platform.select({ ios: 'Comic Sans MS', android: 'ComicSansMS-Bold', default: 'Comic Sans MS, cursive, sans-serif' }),
+  displayRegular: Platform.select({ ios: 'Comic Sans MS', android: 'ComicSansMS', default: 'Comic Sans MS, cursive, sans-serif' }),
+  displayBold: Platform.select({ ios: 'Comic Sans MS', android: 'ComicSansMS-Bold', default: 'Comic Sans MS, cursive, sans-serif' }),
+  body: Platform.select({ ios: 'Comic Sans MS', android: 'ComicSansMS-Bold', default: 'Comic Sans MS, cursive, sans-serif' }),
+  bodyRegular: Platform.select({ ios: 'Comic Sans MS', android: 'ComicSansMS', default: 'Comic Sans MS, cursive, sans-serif' }),
+  bodyBold: Platform.select({ ios: 'Comic Sans MS', android: 'ComicSansMS-Bold', default: 'Comic Sans MS, cursive, sans-serif' }),
+  bodyItalic: Platform.select({ ios: 'Comic Sans MS', android: 'ComicSansMS-BoldItalic', default: 'Comic Sans MS, cursive, sans-serif' }),
   mono: Platform.select({ ios: 'Courier', android: 'monospace', default: 'monospace' }),
 } as const;
 
@@ -55,24 +55,31 @@ export function createTypographyScale(resolvedFontFamilies?: {
   const displayFont = resolvedFontFamilies?.display ?? getFontFamily('display');
   const bodyFont = resolvedFontFamilies?.body ?? getFontFamily('body');
 
+  // On Android, passing a numeric or 'bold' fontWeight alongside custom font assets
+  // causes ReactFontManager to fail resolution and revert to the device's system font.
+  // Since ComicSansMS-Bold is already bold at the font level, we omit fontWeight on Android.
+  const boldWeight = Platform.OS === 'android' ? undefined : '700';
+  const mediumWeight = Platform.OS === 'android' ? undefined : '600';
+  const regularWeight = Platform.OS === 'android' ? undefined : '400';
+
   return {
     // Display — decorative font
     displayLarge: {
       fontFamily: displayFont,
       fontSize: 32,
-      fontWeight: '800',
+      fontWeight: boldWeight,
       lineHeight: 40,
     },
     displayMedium: {
       fontFamily: displayFont,
       fontSize: 24,
-      fontWeight: '800',
+      fontWeight: boldWeight,
       lineHeight: 32,
     },
     displaySmall: {
       fontFamily: displayFont,
       fontSize: 20,
-      fontWeight: '800',
+      fontWeight: boldWeight,
       lineHeight: 28,
     },
 
@@ -80,13 +87,13 @@ export function createTypographyScale(resolvedFontFamilies?: {
     headlineLarge: {
       fontFamily: displayFont,
       fontSize: 18,
-      fontWeight: '800',
+      fontWeight: boldWeight,
       lineHeight: 24,
     },
     headlineMedium: {
       fontFamily: displayFont,
       fontSize: 16,
-      fontWeight: '800',
+      fontWeight: boldWeight,
       lineHeight: 22,
     },
 
@@ -94,19 +101,19 @@ export function createTypographyScale(resolvedFontFamilies?: {
     bodyLarge: {
       fontFamily: bodyFont,
       fontSize: 16,
-      fontWeight: '800',
+      fontWeight: regularWeight,
       lineHeight: 24,
     },
     bodyMedium: {
       fontFamily: bodyFont,
       fontSize: 14,
-      fontWeight: '800',
+      fontWeight: regularWeight,
       lineHeight: 20,
     },
     bodySmall: {
       fontFamily: bodyFont,
       fontSize: 12,
-      fontWeight: '800',
+      fontWeight: regularWeight,
       lineHeight: 16,
     },
 
@@ -114,19 +121,19 @@ export function createTypographyScale(resolvedFontFamilies?: {
     labelLarge: {
       fontFamily: displayFont,
       fontSize: 14,
-      fontWeight: '800',
+      fontWeight: mediumWeight,
       lineHeight: 20,
     },
     labelMedium: {
       fontFamily: bodyFont,
       fontSize: 12,
-      fontWeight: '800',
+      fontWeight: mediumWeight,
       lineHeight: 16,
     },
     labelSmall: {
       fontFamily: bodyFont,
       fontSize: 10,
-      fontWeight: '800',
+      fontWeight: mediumWeight,
       lineHeight: 14,
     },
 
@@ -134,7 +141,7 @@ export function createTypographyScale(resolvedFontFamilies?: {
     caption: {
       fontFamily: bodyFont,
       fontSize: 11,
-      fontWeight: '800',
+      fontWeight: regularWeight,
       lineHeight: 14,
     },
   };

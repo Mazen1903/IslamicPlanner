@@ -19,7 +19,7 @@ export function JournalStatsStrip({
   activePlanningDayKey,
   testID = 'journal-stats-strip',
 }: JournalStatsStripProps) {
-  const { colors, spacing, radii, typography, shadows } = useTheme();
+  const { colors, spacing, radii, typography, shadows, isDark } = useTheme();
 
   const todayKey = activePlanningDayKey ?? DateTime.local().toISODate()!;
   const totalEntries = entries.length;
@@ -40,8 +40,8 @@ export function JournalStatsStrip({
           styles.statCard,
           shadows.card,
           {
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
+            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.72)' : colors.surface,
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.border,
             borderRadius: radii.card,
             padding: spacing.md,
           },
@@ -52,7 +52,8 @@ export function JournalStatsStrip({
         <Text
           style={[
             typography.headlineMedium,
-            { color: colors.textPrimary, fontWeight: '700', marginTop: spacing.xxs },
+            styles.statNumber,
+            { color: colors.textPrimary, marginTop: spacing.xxs },
           ]}
         >
           {totalEntries}
@@ -73,8 +74,12 @@ export function JournalStatsStrip({
           styles.statCard,
           shadows.card,
           {
-            backgroundColor: currentStreak > 0 ? colors.primaryLight : colors.surface,
-            borderColor: currentStreak > 0 ? colors.primary : colors.border,
+            backgroundColor: currentStreak > 0
+              ? (isDark ? 'rgba(15, 159, 74, 0.22)' : colors.primaryLight)
+              : (isDark ? 'rgba(30, 41, 59, 0.72)' : colors.surface),
+            borderColor: currentStreak > 0
+              ? colors.primary
+              : (isDark ? 'rgba(255, 255, 255, 0.08)' : colors.border),
             borderRadius: radii.card,
             padding: spacing.md,
           },
@@ -85,9 +90,9 @@ export function JournalStatsStrip({
         <Text
           style={[
             typography.headlineMedium,
+            styles.statNumber,
             {
               color: currentStreak > 0 ? colors.primaryDark : colors.textPrimary,
-              fontWeight: '700',
               marginTop: spacing.xxs,
             },
           ]}
@@ -101,6 +106,7 @@ export function JournalStatsStrip({
               color: currentStreak > 0 ? colors.primaryDark : colors.textSecondary,
               marginTop: spacing.xxs,
               fontSize: 11,
+              fontWeight: currentStreak > 0 ? '700' : '400',
             },
           ]}
         >
@@ -114,8 +120,8 @@ export function JournalStatsStrip({
           styles.statCard,
           shadows.card,
           {
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
+            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.72)' : colors.surface,
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.border,
             borderRadius: radii.card,
             padding: spacing.md,
           },
@@ -126,7 +132,8 @@ export function JournalStatsStrip({
         <Text
           style={[
             typography.headlineMedium,
-            { color: colors.textPrimary, fontWeight: '700', marginTop: spacing.xxs },
+            styles.statNumber,
+            { color: colors.textPrimary, marginTop: spacing.xxs },
           ]}
         >
           {longestStreak}
@@ -162,5 +169,10 @@ const styles = StyleSheet.create({
   statEmoji: {
     fontSize: 20,
     lineHeight: 24,
+  },
+  statNumber: {
+    fontWeight: '700',
+    fontSize: 20,
+    letterSpacing: -0.5,
   },
 });

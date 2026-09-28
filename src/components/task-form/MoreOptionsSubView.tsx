@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   Pressable,
-  Switch,
   StyleSheet,
   ScrollView,
   ActivityIndicator,
@@ -12,6 +11,7 @@ import {
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import type { FormState, FormAction } from '@/features/task-form/types';
+import { SubtasksSection } from './SubtasksSection';
 
 interface MoreOptionsSubViewProps {
   state: FormState;
@@ -29,15 +29,12 @@ export function MoreOptionsSubView({
 }: MoreOptionsSubViewProps) {
   const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
 
-  // Expansion state for notes inline drawer
+  // Expansion state for inline drawers
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   const toggleSection = (section: string) => {
     setExpandedSection(prev => (prev === section ? null : section));
   };
-
-  // Local visual toggle state for Habit Tracker
-  const [isHabit, setIsHabit] = useState(false);
 
   return (
     <ScrollView
@@ -176,7 +173,55 @@ export function MoreOptionsSubView({
           )}
         </View>
 
-        {/* Row 3: Attachment */}
+        {/* Row 3: Subtasks */}
+        <View style={styles.rowCardWrapper}>
+          <Pressable
+            onPress={() => toggleSection('subtasks')}
+            accessibilityRole="button"
+            accessibilityLabel="Subtasks"
+            style={({ pressed }) => [
+              styles.optionRow,
+              shadows.card,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderRadius: radii.card,
+                padding: spacing.md,
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+          >
+            <View style={styles.badgeBox}>
+              <Icon name="checkbox" size={40} decorative />
+            </View>
+            <View style={styles.textContent}>
+              <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
+                Subtasks
+              </Text>
+              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+                {state.subtasks.length > 0 ? `${state.subtasks.length} item${state.subtasks.length === 1 ? '' : 's'}` : 'Break into smaller steps'}
+              </Text>
+            </View>
+            <Icon
+              name={expandedSection === 'subtasks' ? 'chevron-down' : 'chevron-right'}
+              size={18}
+              color={colors.textTertiary}
+              directional
+              decorative
+            />
+          </Pressable>
+
+          {expandedSection === 'subtasks' && (
+            <View style={[styles.expandedDrawer, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md, padding: spacing.md }]}>
+              <SubtasksSection
+                subtasks={state.subtasks}
+                dispatch={dispatch}
+              />
+            </View>
+          )}
+        </View>
+
+        {/* Row 4: Attachment */}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Attachment"
@@ -205,39 +250,6 @@ export function MoreOptionsSubView({
           </View>
           <Icon name="chevron-right" size={18} color={colors.textTertiary} directional decorative />
         </Pressable>
-
-        {/* Row 4: Add to Habit Tracker */}
-        <View
-          style={[
-            styles.optionRow,
-            shadows.card,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderRadius: radii.card,
-              padding: spacing.md,
-            },
-          ]}
-        >
-          <View style={styles.badgeBox}>
-            <Icon name="sync" size={40} decorative />
-          </View>
-          <View style={styles.textContent}>
-            <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
-              Add to Habit Tracker
-            </Text>
-            <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-              Track this as a habit
-            </Text>
-          </View>
-          <Switch
-            value={isHabit}
-            onValueChange={setIsHabit}
-            trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor={colors.surface}
-            accessibilityLabel="Add to Habit Tracker toggle"
-          />
-        </View>
       </View>
 
       {/* 3. Bottom Full-width Save Button */}

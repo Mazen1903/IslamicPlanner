@@ -30,6 +30,9 @@ import { widgetTaskHandler } from './widgets/android/widgetTaskHandler';
 // Register handler BEFORE any React runtime initializes
 registerWidgetTaskHandler(widgetTaskHandler);
 
+// Install global font defaults for Comic Sans MS
+import './src/theme/installFontDefaults';
+
 // Initialize app bundle (must be last)
 // eslint-disable-next-line import/first
 import 'expo-router/entry';

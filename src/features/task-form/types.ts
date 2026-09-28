@@ -91,6 +91,7 @@ export interface FormState {
   notes: string;
   subtasks: SubtaskDraft[];
   tags: string[];
+  icon?: string | null;
   reminderMinutes: number | null;
   existingReminderRule: ReminderRule | null;
 
@@ -102,6 +103,7 @@ export interface FormState {
 
 export type FormAction =
   | { type: 'SET_TITLE'; payload: string }
+  | { type: 'SET_ICON'; payload: string | null }
   | { type: 'SET_CIVIL_SEED_DATE'; payload: string }
   | { type: 'SET_PLANNING_DAY_DATE'; payload: string }
   | { type: 'SET_SCHEDULE_MODE'; payload: ScheduleMode }

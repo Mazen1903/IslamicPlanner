@@ -80,9 +80,9 @@ describe('Task Form Rework (All 5 Approved Phases)', () => {
     });
   });
 
-  describe('Phase 4: Subtasks (Steps) on MAIN view', () => {
-    it('surfaces Steps section directly on MAIN view without navigating to More Options', async () => {
-      const { getByTestId, getByText } = await render(
+  describe('Phase 4: Steps removed from MAIN view and managed in More Options', () => {
+    it('does not display Steps section directly on MAIN view', async () => {
+      const { queryByText, queryByTestId } = await render(
         <ThemeProvider>
           <TaskFormScreen
             initialCivilSeedDate={civilToday}
@@ -94,15 +94,8 @@ describe('Task Form Rework (All 5 Approved Phases)', () => {
         </ThemeProvider>
       );
 
-      expect(getByText('Steps')).toBeTruthy();
-      expect(getByTestId('new-subtask-input')).toBeTruthy();
-      expect(getByTestId('add-subtask-button')).toBeTruthy();
-
-      // Add a step
-      await fireEvent.changeText(getByTestId('new-subtask-input'), 'Review Ayah');
-      await fireEvent.press(getByTestId('add-subtask-button'));
-
-      expect(getByText('Review Ayah')).toBeTruthy();
+      expect(queryByText('Steps')).toBeNull();
+      expect(queryByTestId('new-subtask-input')).toBeNull();
     });
   });
 
@@ -248,18 +241,17 @@ describe('Task Form Rework (All 5 Approved Phases)', () => {
       // Retained features
       expect(getByText('Priority')).toBeTruthy();
       expect(getByText('Notes')).toBeTruthy();
+      expect(getByText('Subtasks')).toBeTruthy();
       expect(getByText('Attachment')).toBeTruthy();
-      expect(getByText('Add to Habit Tracker')).toBeTruthy();
+
+      // Habit tracker removed per redesign
+      expect(queryByText('Add to Habit Tracker')).toBeNull();
 
       // Removed clutter from this subview
       expect(queryByText('Reminder')).toBeNull();
       expect(queryByText('Duration')).toBeNull();
-      expect(queryByText('Subtasks')).toBeNull();
       expect(queryByText('Tags')).toBeNull();
       expect(queryByText('Private Task')).toBeNull();
-
-      expect(queryByTestId('new-subtask-input')).toBeNull();
-      expect(queryByTestId('new-tag-input')).toBeNull();
     });
   });
 });

@@ -21,7 +21,7 @@ export function JournalHistoryRow({
   onPress,
   testID = `journal-history-row-${metadata.planningDayKey}`,
 }: JournalHistoryRowProps) {
-  const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
+  const { colors, spacing, radii, typography, touchTargets, shadows, isDark } = useTheme();
 
   return (
     <Pressable
@@ -32,14 +32,19 @@ export function JournalHistoryRow({
         styles.container,
         shadows.card,
         {
-          backgroundColor: isSelected ? colors.primaryLight : colors.surface,
+          backgroundColor: isSelected
+            ? (isDark ? 'rgba(15, 159, 74, 0.2)' : colors.primaryLight)
+            : (isDark ? 'rgba(30, 41, 59, 0.75)' : colors.surface),
           borderRadius: radii.card,
-          borderColor: isSelected ? colors.primary : colors.border,
+          borderColor: isSelected
+            ? colors.primary
+            : (isDark ? 'rgba(255, 255, 255, 0.08)' : colors.border),
+          borderWidth: isSelected ? 1.5 : 1,
           marginHorizontal: spacing.lg,
           marginBottom: spacing.sm,
           padding: spacing.md,
           minHeight: touchTargets.comfortable,
-          opacity: pressed ? 0.7 : 1,
+          opacity: pressed ? 0.75 : 1,
         },
       ]}
       testID={testID}
@@ -50,14 +55,16 @@ export function JournalHistoryRow({
           style={[
             styles.iconBadge,
             {
-              backgroundColor: isSelected ? colors.primary : colors.surfaceSecondary,
-              borderColor: colors.border,
+              backgroundColor: isSelected
+                ? colors.primary
+                : (isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surfaceSecondary),
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : colors.border,
               borderRadius: radii.md,
               marginEnd: spacing.md,
             },
           ]}
         >
-          <Text style={styles.badgeEmoji}>✍️</Text>
+          <Text style={styles.badgeEmoji}>📖</Text>
         </View>
 
         {/* Date texts */}
@@ -72,24 +79,43 @@ export function JournalHistoryRow({
             {gregorianDisplay}
           </Text>
           {hijriDisplay.length > 0 && (
-            <Text
-              style={[
-                typography.caption,
-                { color: isSelected ? colors.primary : colors.textSecondary, marginTop: 2 },
-              ]}
-            >
-              {hijriDisplay}
-            </Text>
+            <View style={styles.hijriRow}>
+              <Text
+                style={[
+                  typography.caption,
+                  {
+                    color: isSelected ? colors.primaryDark : colors.textSecondary,
+                    marginTop: 2,
+                    fontSize: 11,
+                  },
+                ]}
+              >
+                {hijriDisplay}
+              </Text>
+            </View>
           )}
         </View>
 
-        <Icon
-          name="chevron-right"
-          size={18}
-          color={isSelected ? colors.primary : colors.textTertiary}
-          decorative
-          directional
-        />
+        {/* Right Arrow indicator */}
+        <View
+          style={[
+            styles.arrowCircle,
+            {
+              backgroundColor: isSelected
+                ? colors.primaryLight
+                : (isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.03)'),
+              borderRadius: radii.pill,
+            },
+          ]}
+        >
+          <Icon
+            name="chevron-right"
+            size={14}
+            color={isSelected ? colors.primary : colors.textTertiary}
+            decorative
+            directional
+          />
+        </View>
       </View>
     </Pressable>
   );
@@ -97,7 +123,6 @@ export function JournalHistoryRow({
 
 const styles = StyleSheet.create({
   container: {
-    borderWidth: 1,
     justifyContent: 'center',
   },
   content: {
@@ -106,19 +131,31 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   iconBadge: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   badgeEmoji: {
-    fontSize: 16,
+    fontSize: 18,
   },
   textContainer: {
     flex: 1,
   },
   gregorianDate: {
-    fontWeight: '600',
+    fontWeight: '700',
+    fontSize: 15,
+    letterSpacing: -0.2,
+  },
+  hijriRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  arrowCircle: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

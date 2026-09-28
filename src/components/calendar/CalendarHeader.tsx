@@ -26,10 +26,10 @@ export function CalendarHeader({
     <View style={[styles.container, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md }]} testID={testID}>
       <View style={styles.topRow}>
         <View style={styles.titleContainer}>
-          <Text style={[typography.headlineMedium, { color: colors.textPrimary, fontWeight: '700' }]} accessibilityRole="header">
+          <Text style={[typography.headlineMedium, { color: colors.textPrimary }]} accessibilityRole="header">
             {gregorianTitle}
           </Text>
-          <Text style={[typography.bodySmall, { color: colors.primary, marginTop: spacing.xxs, fontWeight: '500' }]}>
+          <Text style={[typography.bodySmall, { color: colors.primary, marginTop: spacing.xxs }]}>
             {hijriHeaderSpan}
           </Text>
         </View>
@@ -51,7 +51,7 @@ export function CalendarHeader({
             accessibilityLabel="Jump to today"
             testID="calendar-today-button"
           >
-            <Text style={[typography.labelMedium, { color: colors.primary, fontWeight: '600' }]}>Today</Text>
+            <Text style={[typography.labelMedium, { color: colors.primary }]}>Today</Text>
           </Pressable>
 
           <View style={styles.navButtonsGroup}>

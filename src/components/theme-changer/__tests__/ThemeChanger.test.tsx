@@ -5,8 +5,6 @@ import {
   ThemeGalleryScreen,
   ThemePreviewModal,
   PURE_COLOR_THEMES,
-  TEXTURE_THEMES,
-  SCENERY_THEMES,
 } from '../index';
 
 jest.mock('expo-router', () => ({
@@ -17,7 +15,7 @@ jest.mock('expo-router', () => ({
 }));
 
 describe('ThemeGalleryScreen', () => {
-  it('renders Theme header, Pure Color, Texture, and Scenery sections', async () => {
+  it('renders Theme header and Pure Color section', async () => {
     await render(
       <ThemeProvider>
         <ThemeGalleryScreen />
@@ -27,11 +25,9 @@ describe('ThemeGalleryScreen', () => {
     expect(screen.getByText('Theme')).toBeTruthy();
     expect(screen.getByTestId('theme-back-button')).toBeTruthy();
     expect(screen.getByText('Pure Color')).toBeTruthy();
-    expect(screen.getByText('Texture')).toBeTruthy();
-    expect(screen.getByText('Scenery')).toBeTruthy();
   });
 
-  it('renders all pure color swatches, texture items, and scenery cards', async () => {
+  it('renders all pure color swatches', async () => {
     await render(
       <ThemeProvider>
         <ThemeGalleryScreen />
@@ -41,16 +37,6 @@ describe('ThemeGalleryScreen', () => {
     // Verify pure colors
     PURE_COLOR_THEMES.forEach((theme) => {
       expect(screen.getByTestId(`theme-pure-color-${theme.id}`)).toBeTruthy();
-    });
-
-    // Verify textures
-    TEXTURE_THEMES.forEach((theme) => {
-      expect(screen.getByTestId(`theme-texture-${theme.id}`)).toBeTruthy();
-    });
-
-    // Verify scenery cards
-    SCENERY_THEMES.forEach((theme) => {
-      expect(screen.getByTestId(`theme-scenery-${theme.id}`)).toBeTruthy();
     });
   });
 
@@ -123,7 +109,7 @@ describe('ThemePreviewModal', () => {
     expect(mockClose).toHaveBeenCalled();
   });
 
-  it('switches categories between Pure Color, Texture, and Scenery', async () => {
+  it('shows all pure color swatches', async () => {
     await render(
       <ThemePreviewModal
         visible={true}
@@ -133,19 +119,9 @@ describe('ThemePreviewModal', () => {
       />
     );
 
-    // Switch to Scenery
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('category-tab-scenery'));
+    // All pure color swatches should be rendered
+    PURE_COLOR_THEMES.forEach((theme) => {
+      expect(screen.getByTestId(`swatch-thumb-${theme.id}`)).toBeTruthy();
     });
-
-    // Scenery swatches should be rendered
-    expect(screen.getByTestId(`swatch-thumb-${SCENERY_THEMES[0].id}`)).toBeTruthy();
-
-    // Switch to Texture
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('category-tab-texture'));
-    });
-
-    expect(screen.getByTestId(`swatch-thumb-${TEXTURE_THEMES[0].id}`)).toBeTruthy();
   });
 });

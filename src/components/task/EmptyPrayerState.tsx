@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { useTheme } from '@/theme';
 import type { Prayer } from '@/constants/prayers';
 import { PRAYER_NAMES } from '@/constants/prayers';
@@ -26,9 +25,8 @@ export function EmptyPrayerState({
   selectedPrayer,
   currentPrayer,
   nextPrayer,
-  onAddTask,
+  onAddTask: _onAddTask,
 }: EmptyPrayerStateProps) {
-  const router = useRouter();
   const { colors, spacing, typography, radii, shadows, isDark } = useTheme();
 
   const prayerName = PRAYER_NAMES[selectedPrayer] ?? selectedPrayer;
@@ -38,14 +36,6 @@ export function EmptyPrayerState({
     currentPrayer,
     nextPrayer
   );
-
-  const handlePressAdd = () => {
-    if (onAddTask) {
-      onAddTask(selectedPrayer);
-    } else {
-      router.push({ pathname: '/task/add', params: { prayer: selectedPrayer } });
-    }
-  };
 
   const asset = PRAYER_HERO_ASSETS[selectedPrayer];
 
@@ -57,7 +47,7 @@ export function EmptyPrayerState({
           shadows.card,
           {
             backgroundColor: isDark ? 'rgba(28, 35, 43, 0.9)' : 'rgba(255, 255, 255, 0.95)',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+            borderColor: colors.border,
             borderRadius: radii.card,
             padding: spacing.xl,
           },
@@ -102,24 +92,6 @@ export function EmptyPrayerState({
         >
           Align your daily tasks with your prayers. Plan ahead or take this time for dhikr and reflection.
         </Text>
-
-        <Pressable
-          onPress={handlePressAdd}
-          style={({ pressed }) => [
-            styles.addButton,
-            {
-              backgroundColor: pressed ? colors.primaryPressed : colors.primary,
-              borderRadius: radii.pill,
-            },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={`Add Task for ${prayerName}`}
-          testID="empty-state-add-button"
-        >
-          <Text style={[typography.labelLarge, { color: colors.textOnPrimary }]}>
-            {`+ Add Task for ${prayerName}`}
-          </Text>
-        </Pressable>
       </View>
     </View>
   );
@@ -170,14 +142,8 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 8,
     lineHeight: 18,
     maxWidth: 290,
-  },
-  addButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

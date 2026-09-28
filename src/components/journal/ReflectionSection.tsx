@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
-import { ReflectionField } from './ReflectionField';
+import { ReflectionCard } from './ReflectionCard';
 import type { JournalReflections } from '@/domain/journal/types';
 
 export interface ReflectionSectionProps {
@@ -18,7 +18,7 @@ export function ReflectionSection({
   initialExpanded = false,
   testID = 'reflection-section',
 }: ReflectionSectionProps) {
-  const { colors, spacing, radii, typography, shadows, touchTargets } = useTheme();
+  const { colors, spacing, radii, typography, isDark } = useTheme();
   const [expanded, setExpanded] = useState(initialExpanded);
 
   // Count filled reflections
@@ -27,49 +27,36 @@ export function ReflectionSection({
   ).length;
 
   return (
-    <View
-      style={[
-        styles.card,
-        shadows.card,
-        {
-          backgroundColor: colors.surface,
-          borderRadius: radii.card,
-          borderColor: colors.border,
-          marginHorizontal: spacing.lg,
-          marginTop: spacing.md,
-        },
-      ]}
-      testID={testID}
-    >
+    <View style={[styles.container, { marginHorizontal: spacing.lg, marginTop: spacing.md }]} testID={testID}>
+      {/* Section Header */}
       <Pressable
         onPress={() => setExpanded(prev => !prev)}
         accessibilityRole="button"
         accessibilityLabel={`Reflections section. Currently ${expanded ? 'expanded' : 'collapsed'}. ${filledCount} of 4 answered.`}
         accessibilityState={{ expanded }}
         style={({ pressed }) => [
-          styles.headerPressable,
+          styles.headerRow,
           {
-            minHeight: touchTargets.min,
-            paddingHorizontal: spacing.lg,
-            paddingVertical: spacing.md,
+            paddingVertical: spacing.xs + 2,
             opacity: pressed ? 0.7 : 1,
           },
         ]}
         testID="reflection-section-toggle"
       >
-        <View style={styles.headerTitleContainer}>
+        <View style={styles.headerLeft}>
           <Text style={styles.headerEmoji}>🪞</Text>
-          <Text style={[typography.headlineMedium, { color: colors.textPrimary, marginStart: spacing.xs }]}>
-            Reflections
+          <Text style={[typography.headlineMedium, styles.headerTitle, { color: colors.textPrimary }]}>
+            Daily Muhasaba
           </Text>
           <View
             style={[
               styles.counterBadge,
               {
-                backgroundColor: filledCount > 0 ? colors.primaryLight : colors.surfaceSecondary,
+                backgroundColor: filledCount > 0
+                  ? (isDark ? 'rgba(15, 159, 74, 0.25)' : colors.primaryLight)
+                  : (isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surfaceSecondary),
                 borderColor: filledCount > 0 ? colors.primary : colors.border,
                 borderRadius: radii.pill,
-                marginStart: spacing.sm,
               },
             ]}
           >
@@ -88,57 +75,63 @@ export function ReflectionSection({
           </View>
         </View>
 
-        <Icon
-          name={expanded ? 'chevron-down' : 'chevron-right'}
-          size={18}
-          color={colors.textSecondary}
-          decorative
-        />
+        <View style={styles.headerRight}>
+          <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 12, marginEnd: 4 }]}>
+            {expanded ? 'Hide' : 'Show'}
+          </Text>
+          <Icon
+            name={expanded ? 'chevron-down' : 'chevron-right'}
+            size={16}
+            color={colors.textSecondary}
+            decorative
+          />
+        </View>
       </Pressable>
 
+      {/* Individual Cards Grid */}
       {expanded && (
-        <View
-          style={[
-            styles.fieldsContainer,
-            {
-              paddingHorizontal: spacing.lg,
-              paddingBottom: spacing.lg,
-              borderTopWidth: 1,
-              borderTopColor: colors.border,
-              paddingTop: spacing.md,
-            },
-          ]}
-          testID="reflection-section-content"
-        >
-          <ReflectionField
-            label="🤲 Gratitude"
+        <View style={styles.cardsContainer} testID="reflection-section-content">
+          <ReflectionCard
+            label="Gratitude"
+            emoji="🤲"
             placeholder="What are you grateful for today?"
             value={reflections.gratitude}
             onChangeText={text => onChangeReflection('gratitude', text)}
+            accentColor="#D97706"
+            bgLight="rgba(217, 119, 6, 0.12)"
             testID="reflection-field-gratitude"
           />
 
-          <ReflectionField
-            label="✅ What went well"
+          <ReflectionCard
+            label="What Went Well"
+            emoji="✅"
             placeholder="What went well today?"
             value={reflections.wentWell}
             onChangeText={text => onChangeReflection('wentWell', text)}
+            accentColor="#059669"
+            bgLight="rgba(5, 150, 105, 0.12)"
             testID="reflection-field-wentWell"
           />
 
-          <ReflectionField
-            label="📈 For tomorrow"
+          <ReflectionCard
+            label="For Tomorrow"
+            emoji="📈"
             placeholder="What could be better tomorrow?"
             value={reflections.improvement}
             onChangeText={text => onChangeReflection('improvement', text)}
+            accentColor="#0284C7"
+            bgLight="rgba(2, 132, 199, 0.12)"
             testID="reflection-field-improvement"
           />
 
-          <ReflectionField
-            label="🌙 Heartfelt Dua"
-            placeholder="Any duas on your heart today?"
+          <ReflectionCard
+            label="Heartfelt Dua"
+            emoji="🌙"
+            placeholder="Any prayers or duas on your heart today?"
             value={reflections.dua}
             onChangeText={text => onChangeReflection('dua', text)}
+            accentColor="#8B5CF6"
+            bgLight="rgba(139, 92, 246, 0.12)"
             testID="reflection-field-dua"
           />
         </View>
@@ -148,21 +141,27 @@ export function ReflectionSection({
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderWidth: 1,
-    overflow: 'hidden',
+  container: {
+    width: 'auto',
   },
-  headerPressable: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  headerTitleContainer: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
   headerEmoji: {
     fontSize: 18,
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   counterBadge: {
     borderWidth: 1,
@@ -171,7 +170,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  fieldsContainer: {
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardsContainer: {
     width: '100%',
+    paddingTop: 2,
   },
 });

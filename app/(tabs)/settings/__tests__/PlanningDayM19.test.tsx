@@ -63,6 +63,8 @@ describe('PlanningDayScreen M19 UI Specifications', () => {
         taskRemindersEnabled: true,
         taskVibrationEnabled: true,
         quietHoursEnabled: false,
+        journalReminderEnabled: false,
+        journalReminderTime: '21:30',
         themeMode: 'SYSTEM',
         isPremium: false,
         onboardingCompleted: false,

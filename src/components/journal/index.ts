@@ -1,7 +1,9 @@
 export * from './JournalSaveStatus';
 export * from './JournalHeader';
 export * from './JournalEditor';
+export * from './JournalWriteModal';
 export * from './ReflectionField';
+export * from './ReflectionCard';
 export * from './ReflectionSection';
 export * from './JournalHistoryRow';
 export * from './JournalHistory';
@@ -11,5 +13,6 @@ export * from './JournalDeleteDialog';
 export * from './MoodPicker';
 export * from './PromptDeck';
 export * from './StreakBanner';
+export * from './StreakRing';
 export * from './JournalStatsStrip';
 export * from './JournalCalendar';

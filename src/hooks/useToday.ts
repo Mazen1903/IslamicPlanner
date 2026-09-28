@@ -28,6 +28,7 @@ import {
   notificationReconciliationService as defaultNotificationService,
 } from '@/services/notification/NotificationReconciliationService';
 import { widgetSyncCoordinator } from '@/services/widget/WidgetSyncCoordinator';
+import { taskOccurrenceRepository } from '@/data/repositories/TaskOccurrenceRepository';
 
 export interface UseTodayOptions {
   inputProvider?: TodayTemporalInputProvider;
@@ -77,20 +78,43 @@ export function useToday(options: UseTodayOptions = {}) {
   /**
    * Full refresh executor.
    * syncSelected: true on initial load and app foreground; false on mid-session rollover.
+   * Uses optimistic fast-path with committed location first, checking GPS in background.
    */
   const performFullRefresh = useCallback(async (syncSelected: boolean = false) => {
     const token = useTodayStore.getState().startRefresh();
     try {
       const now = DateTime.now();
 
-      // 1. Resolve / update effective location environment (AUTO GPS or MANUAL snapshot)
+      // Step 1: Fast-path: Check if committed location in DB is already READY (no GPS wait)
+      const cachedResult = await coordinatorRef.current.fullRefresh(now);
+      if (cachedResult.status === 'READY') {
+        useTodayStore.getState().commitRefresh(
+          token,
+          { viewModel: cachedResult.viewModel, runtime: cachedResult.runtime },
+          syncSelected
+        );
+
+        // Step 2: Background GPS check for material location change (non-blocking)
+        locationRefreshRef.current
+          .resolve(now)
+          .then(locResult => {
+            if (locResult.status === 'READY' && locResult.changed) {
+              // Location changed materially — re-run to update prayer times
+              performFullRefresh(false);
+            }
+          })
+          .catch(() => {});
+        return;
+      }
+
+      // Step 3: If committed location was missing (SETUP_REQUIRED), resolve location
       const locResult = await locationRefreshRef.current.resolve(now);
       if (locResult.status === 'SETUP_REQUIRED') {
         useTodayStore.getState().setSetupRequired(token);
         return;
       }
 
-      // 2. Canonical full refresh pipeline (RecurringHorizonSync -> refreshToday -> sweepExpired)
+      // Retry canonical full refresh pipeline with newly resolved location
       const result = await coordinatorRef.current.fullRefresh(now);
       if (result.status === 'SETUP_REQUIRED') {
         useTodayStore.getState().setSetupRequired(token);
@@ -108,44 +132,10 @@ export function useToday(options: UseTodayOptions = {}) {
   }, []);
 
   /**
-   * Fast-path initial load: skips GPS, uses last committed location snapshot.
-   * Renders the Today screen immediately, then fires a background full refresh
-   * (with GPS) to catch any location change. Only used on mount.
+   * Fast-path initial load: delegates to performFullRefresh with syncSelected=true.
    */
   const performFastInitialLoad = useCallback(async () => {
-    const token = useTodayStore.getState().startRefresh();
-    try {
-      const now = DateTime.now();
-
-      // Step A: Run the full pipeline using the *last committed* snapshot (no GPS wait).
-      // PlannerRefreshCoordinator.fullRefresh reads from DB — already fast.
-      const result = await coordinatorRef.current.fullRefresh(now);
-      if (result.status === 'SETUP_REQUIRED') {
-        useTodayStore.getState().setSetupRequired(token);
-        // Still attempt GPS in background so next foreground event works
-        locationRefreshRef.current.resolve(now).catch(() => {});
-        return;
-      }
-
-      // Commit immediately — user sees the Today screen
-      useTodayStore.getState().commitRefresh(
-        token,
-        { viewModel: result.viewModel, runtime: result.runtime },
-        true
-      );
-
-      // Step B: GPS update in the background. If location changed materially,
-      // fire another full refresh (user already has content — no spinner).
-      locationRefreshRef.current.resolve(now).then(locResult => {
-        if (locResult.status === 'READY' && locResult.changed) {
-          // Location changed — re-render with updated prayer times
-          performFullRefresh(false);
-        }
-      }).catch(() => {/* GPS failure is non-fatal */});
-
-    } catch (err: any) {
-      useTodayStore.getState().setError(token, err?.message ?? 'Failed to load Today screen');
-    }
+    await performFullRefresh(true);
   }, [performFullRefresh]);
 
 
@@ -231,6 +221,30 @@ export function useToday(options: UseTodayOptions = {}) {
     });
   }, []);
 
+  const toggleSubtask = useCallback(async (occurrenceId: string, subtaskId: string) => {
+    try {
+      const occ = await taskOccurrenceRepository.findById(occurrenceId);
+      if (!occ) return;
+      const completedIds = occ.overrideData?.completedSubtaskIds ?? [];
+      const isCompleted = completedIds.includes(subtaskId);
+      await engineRef.current.toggleSubtaskCompletion(occurrenceId, subtaskId, !isCompleted);
+
+      const runtime = useTodayStore.getState().runtime;
+      if (runtime) {
+        const token = useTodayStore.getState().startReproject();
+        try {
+          const now = DateTime.now();
+          const vm = await orchestratorRef.current.queryAndProject(runtime, now);
+          useTodayStore.getState().commitReproject(token, vm);
+        } catch {
+          // Leave previous state
+        }
+      }
+    } catch (err) {
+      console.warn('[useToday] toggleSubtask failed:', err);
+    }
+  }, []);
+
   const viewTransitionPrayer = useCallback(() => {
     useTodayStore.getState().syncSelectedToCurrent();
     useTodayStore.getState().dismissPrayerTransition();
@@ -253,6 +267,7 @@ export function useToday(options: UseTodayOptions = {}) {
     toggleAnytimeCollapsed: store.toggleAnytimeCollapsed,
     countdownDisplay: store.countdownDisplay,
     completeTask,
+    toggleSubtask,
     refresh: () => performFullRefresh(false),
   };
 }

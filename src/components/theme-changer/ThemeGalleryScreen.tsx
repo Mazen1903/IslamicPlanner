@@ -14,10 +14,6 @@ import { useTheme, type ThemeMode } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import {
   PURE_COLOR_THEMES,
-  TEXTURE_THEMES,
-  SCENERY_THEMES,
-  ALL_GALLERY_THEMES,
-  GALLERY_THEMES_MAP,
   type ThemeGalleryItem,
 } from './types';
 import { ThemePreviewModal } from './ThemePreviewModal';
@@ -38,9 +34,6 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
   const router = useRouter();
   const {
     colors,
-    spacing,
-    radii,
-    typography,
     themeMode,
     setThemeMode,
     islamicThemeId,
@@ -88,7 +81,10 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
       {/* Top Header: ←   Theme */}
       <View style={styles.header}>
         <Pressable
@@ -99,9 +95,9 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
           style={styles.backButton}
           testID="theme-back-button"
         >
-          <Icon name="arrow-left" size={24} color="#1E293B" decorative />
+          <Icon name="arrow-left" size={24} color={colors.textPrimary} decorative />
         </Pressable>
-        <Text style={styles.headerTitle}>Theme</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Theme</Text>
       </View>
 
       <ScrollView
@@ -110,10 +106,192 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
         testID="appearance-screen"
       >
         {/* ======================================================== */}
-        {/* SECTION 1: PURE COLOR                                     */}
+        {/* HERO SECTION: ISLAMIC THEMES & APPEARANCE MODE           */}
+        {/* Placed at the top as the primary hero experience         */}
+        {/* ======================================================== */}
+        <View
+          style={[
+            styles.heritageSection,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderWidth: 1,
+            },
+          ]}
+          testID="islamic-themes-section-card"
+        >
+          <View style={styles.heritageHeader}>
+            <SettingsSecThemePaletteIcon size={32} />
+            <View style={styles.heritageHeaderTextCol}>
+              <Text style={[styles.heritageTitle, { color: colors.textPrimary }]}>
+                Islamic Themes
+              </Text>
+              <Text style={[styles.heritageSubtitle, { color: colors.textSecondary }]}>
+                Palettes inspired by sacred places & times.
+              </Text>
+            </View>
+          </View>
+
+          {/* Mode Selector */}
+          <View style={styles.modeRow}>
+            {/* Light */}
+            <Pressable
+              onPress={() => handleSelectMode('LIGHT')}
+              accessibilityRole="button"
+              accessibilityLabel="Light Mode"
+              style={[
+                styles.modeBtn,
+                {
+                  backgroundColor: colors.surfaceElevated,
+                  borderColor: isLightActive ? colors.primary : colors.border,
+                  borderWidth: isLightActive ? 2 : 1,
+                },
+              ]}
+              testID="theme-option-light"
+            >
+              <SettingsOptThemeSun size={28} />
+              <Text style={[styles.modeBtnText, { color: colors.textPrimary }]}>Light</Text>
+              <Text style={styles.hiddenTestText}>Light Mode</Text>
+            </Pressable>
+
+            {/* Dark */}
+            <Pressable
+              onPress={() => handleSelectMode('DARK')}
+              accessibilityRole="button"
+              accessibilityLabel="Dark Mode"
+              style={[
+                styles.modeBtn,
+                {
+                  backgroundColor: colors.surfaceElevated,
+                  borderColor: isDarkActive ? colors.primary : colors.border,
+                  borderWidth: isDarkActive ? 2 : 1,
+                },
+              ]}
+              testID="theme-option-dark"
+            >
+              <SettingsOptThemeMoon size={28} />
+              <Text style={[styles.modeBtnText, { color: colors.textPrimary }]}>Dark</Text>
+              <Text style={styles.hiddenTestText}>Dark Mode</Text>
+            </Pressable>
+
+            {/* System */}
+            <Pressable
+              onPress={() => handleSelectMode('SYSTEM')}
+              accessibilityRole="button"
+              accessibilityLabel="System Default"
+              style={[
+                styles.modeBtn,
+                {
+                  backgroundColor: colors.surfaceElevated,
+                  borderColor: isSystemActive ? colors.primary : colors.border,
+                  borderWidth: isSystemActive ? 2 : 1,
+                },
+              ]}
+              testID="theme-option-system"
+            >
+              <SettingsOptThemeMonitor size={28} />
+              <Text style={[styles.modeBtnText, { color: colors.textPrimary }]}>System</Text>
+              <Text style={styles.hiddenTestText}>System Default</Text>
+            </Pressable>
+          </View>
+
+          {/* Horizontal scroll of Islamic Themes */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.islamicScroll}
+          >
+            {islamicThemes.map((theme) => {
+              const isSelected = islamicThemeId === theme.id;
+              return (
+                <Pressable
+                  key={theme.id}
+                  onPress={() => setIslamicThemeId(isSelected ? null : theme.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${theme.name} Islamic Theme`}
+                  style={[
+                    styles.islamicCard,
+                    {
+                      backgroundColor: colors.surfaceElevated,
+                      borderColor: isSelected ? colors.primary : colors.border,
+                      borderWidth: isSelected ? 2 : 1,
+                    },
+                  ]}
+                  testID={`islamic-theme-${theme.id}`}
+                >
+                  <View
+                    style={[
+                      styles.islamicCardThumbnail,
+                      { backgroundColor: theme.previewColors.background },
+                    ]}
+                  >
+                    {theme.wallpaperAsset && (
+                      <Image
+                        source={theme.wallpaperAsset}
+                        style={StyleSheet.absoluteFill}
+                        resizeMode="cover"
+                      />
+                    )}
+                    <View
+                      style={[
+                        styles.islamicColorBar,
+                        { backgroundColor: theme.previewColors.primary },
+                      ]}
+                    />
+                    {isSelected && (
+                      <View
+                        style={[
+                          styles.islamicCheckBadge,
+                          { backgroundColor: colors.primary },
+                        ]}
+                      >
+                        <Icon name="check" size={13} color="#FFFFFF" decorative />
+                      </View>
+                    )}
+                  </View>
+                  <Text
+                    style={[styles.islamicThemeName, { color: colors.textPrimary }]}
+                    numberOfLines={1}
+                  >
+                    {theme.name}
+                  </Text>
+                  <Text
+                    style={[styles.islamicArabicName, { color: colors.textSecondary }]}
+                    numberOfLines={1}
+                  >
+                    {theme.arabicName}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {/* Active Islamic Theme Banner */}
+          {activeIslamicTheme && (
+            <View
+              style={[
+                styles.taglineBanner,
+                {
+                  backgroundColor: colors.surfaceElevated,
+                  borderColor: colors.primary,
+                  borderWidth: 1,
+                },
+              ]}
+            >
+              <Text style={[styles.taglineText, { color: colors.primary }]}>
+                "{activeIslamicTheme.tagline}"
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* ======================================================== */}
+        {/* SECTION 2: PURE COLOR                                     */}
         {/* ======================================================== */}
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Pure Color</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            Pure Color
+          </Text>
 
           <View style={styles.pureColorGrid}>
             {PURE_COLOR_THEMES.map((theme) => {
@@ -140,7 +318,7 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
                     </View>
                   )}
 
-                  {/* Tiny Crown Badge on Purple or Pro */}
+                  {/* Tiny Crown Badge on Pro colors */}
                   {theme.isPro && (
                     <View style={styles.pureColorCrownBadge}>
                       <Text style={styles.crownEmojiText}>👑</Text>
@@ -150,258 +328,6 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
               );
             })}
           </View>
-        </View>
-
-        {/* ======================================================== */}
-        {/* SECTION 2: TEXTURE                                        */}
-        {/* ======================================================== */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionTitleRow}>
-            <Text style={styles.sectionTitle}>Texture</Text>
-            <Text style={styles.sectionTitleCrown}>👑</Text>
-          </View>
-
-          <View style={styles.textureRow}>
-            {TEXTURE_THEMES.map((theme) => {
-              const isSelected = selectedGalleryId === theme.id;
-              return (
-                <Pressable
-                  key={theme.id}
-                  onPress={() => handleOpenPreview(theme)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${theme.name} texture theme`}
-                  style={({ pressed }) => [
-                    styles.textureSquircle,
-                    {
-                      opacity: pressed ? 0.85 : 1,
-                    },
-                  ]}
-                  testID={`theme-texture-${theme.id}`}
-                >
-                  {theme.thumbnailAsset ? (
-                    <Image
-                      source={theme.thumbnailAsset}
-                      style={styles.textureThumbImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View
-                      style={[
-                        styles.textureFallback,
-                        { backgroundColor: theme.background },
-                      ]}
-                    />
-                  )}
-
-                  {/* Accent center dot */}
-                  <View
-                    style={[
-                      styles.textureAccentDot,
-                      { backgroundColor: theme.dotColor ?? theme.color },
-                    ]}
-                  />
-
-                  {/* Selected checkmark badge */}
-                  {isSelected && (
-                    <View style={styles.textureCheckBadge}>
-                      <Icon name="check" size={13} color="#FFFFFF" decorative />
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* ======================================================== */}
-        {/* SECTION 3: SCENERY                                        */}
-        {/* ======================================================== */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionTitleRow}>
-            <Text style={styles.sectionTitle}>Scenery</Text>
-            <Text style={styles.sectionTitleCrown}>👑</Text>
-          </View>
-
-          <View style={styles.sceneryGrid}>
-            {SCENERY_THEMES.map((theme) => {
-              const isSelected = selectedGalleryId === theme.id;
-              return (
-                <Pressable
-                  key={theme.id}
-                  onPress={() => handleOpenPreview(theme)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${theme.name} scenery theme`}
-                  style={({ pressed }) => [
-                    styles.sceneryCard,
-                    {
-                      opacity: pressed ? 0.88 : 1,
-                    },
-                  ]}
-                  testID={`theme-scenery-${theme.id}`}
-                >
-                  {theme.thumbnailAsset && (
-                    <Image
-                      source={theme.thumbnailAsset}
-                      style={styles.sceneryImage}
-                      resizeMode="cover"
-                    />
-                  )}
-
-                  {/* Selected Blue Checkmark Badge at bottom-right corner */}
-                  {isSelected && (
-                    <View style={styles.sceneryCheckBadge}>
-                      <Icon name="check" size={14} color="#FFFFFF" decorative />
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* ======================================================== */}
-        {/* ACCESSIBLE SECTION: THEME MODE & ISLAMIC HERITAGE        */}
-        {/* Preserves backward-compatibility and tests               */}
-        {/* ======================================================== */}
-        <View
-          style={[styles.heritageSection, { backgroundColor: 'rgba(255, 255, 255, 0.65)' }]}
-          testID="islamic-themes-section-card"
-        >
-          <View style={styles.heritageHeader}>
-            <SettingsSecThemePaletteIcon size={32} />
-            <View style={{ marginLeft: 10, flex: 1 }}>
-              <Text style={styles.heritageTitle}>Islamic Themes</Text>
-              <Text style={styles.heritageSubtitle}>
-                Palettes inspired by sacred places & times.
-              </Text>
-            </View>
-          </View>
-
-          {/* Mode Selector */}
-          <View style={styles.modeRow}>
-            {/* Light */}
-            <Pressable
-              onPress={() => handleSelectMode('LIGHT')}
-              accessibilityRole="button"
-              accessibilityLabel="Light Mode"
-              style={[
-                styles.modeBtn,
-                {
-                  backgroundColor: '#FFFFFF',
-                  borderColor: isLightActive ? colors.primary : '#E2E8F0',
-                  borderWidth: isLightActive ? 2 : 1,
-                },
-              ]}
-              testID="theme-option-light"
-            >
-              <SettingsOptThemeSun size={28} />
-              <Text style={styles.modeBtnText}>Light</Text>
-              <Text style={styles.hiddenTestText}>Light Mode</Text>
-            </Pressable>
-
-            {/* Dark */}
-            <Pressable
-              onPress={() => handleSelectMode('DARK')}
-              accessibilityRole="button"
-              accessibilityLabel="Dark Mode"
-              style={[
-                styles.modeBtn,
-                {
-                  backgroundColor: '#FFFFFF',
-                  borderColor: isDarkActive ? colors.primary : '#E2E8F0',
-                  borderWidth: isDarkActive ? 2 : 1,
-                },
-              ]}
-              testID="theme-option-dark"
-            >
-              <SettingsOptThemeMoon size={28} />
-              <Text style={styles.modeBtnText}>Dark</Text>
-              <Text style={styles.hiddenTestText}>Dark Mode</Text>
-            </Pressable>
-
-            {/* System */}
-            <Pressable
-              onPress={() => handleSelectMode('SYSTEM')}
-              accessibilityRole="button"
-              accessibilityLabel="System Default"
-              style={[
-                styles.modeBtn,
-                {
-                  backgroundColor: '#FFFFFF',
-                  borderColor: isSystemActive ? colors.primary : '#E2E8F0',
-                  borderWidth: isSystemActive ? 2 : 1,
-                },
-              ]}
-              testID="theme-option-system"
-            >
-              <SettingsOptThemeMonitor size={28} />
-              <Text style={styles.modeBtnText}>System</Text>
-              <Text style={styles.hiddenTestText}>System Default</Text>
-            </Pressable>
-          </View>
-
-          {/* Horizontal scroll of Islamic Themes */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.islamicScroll}
-          >
-            {islamicThemes.map((theme) => {
-              const isSelected = islamicThemeId === theme.id;
-              return (
-                <Pressable
-                  key={theme.id}
-                  onPress={() => setIslamicThemeId(isSelected ? null : theme.id)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${theme.name} Islamic Theme`}
-                  style={[
-                    styles.islamicCard,
-                    {
-                      borderColor: isSelected ? colors.primary : '#CBD5E1',
-                      borderWidth: isSelected ? 2 : 1,
-                    },
-                  ]}
-                  testID={`islamic-theme-${theme.id}`}
-                >
-                  <View
-                    style={[
-                      styles.islamicCardThumbnail,
-                      { backgroundColor: theme.previewColors.background },
-                    ]}
-                  >
-                    {theme.wallpaperAsset && (
-                      <Image
-                        source={theme.wallpaperAsset}
-                        style={StyleSheet.absoluteFill}
-                        resizeMode="cover"
-                      />
-                    )}
-                    <View
-                      style={[
-                        styles.islamicColorBar,
-                        { backgroundColor: theme.previewColors.primary },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.islamicThemeName} numberOfLines={1}>
-                    {theme.name}
-                  </Text>
-                  <Text style={styles.islamicArabicName} numberOfLines={1}>
-                    {theme.arabicName}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {/* Active Islamic Theme Banner */}
-          {activeIslamicTheme && (
-            <View style={styles.taglineBanner}>
-              <Text style={styles.taglineText}>
-                "{activeIslamicTheme.tagline}"
-              </Text>
-            </View>
-          )}
         </View>
       </ScrollView>
 
@@ -419,7 +345,6 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#DDF2FB',
   },
   header: {
     height: 52,
@@ -435,9 +360,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   headerTitle: {
+    fontFamily: 'ComicSansMS-Bold',
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1E293B',
   },
   scrollContent: {
     paddingHorizontal: 18,
@@ -448,9 +372,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
+    fontFamily: 'ComicSansMS-Bold',
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1E293B',
     marginBottom: 12,
   },
   sectionTitleRow: {
@@ -546,7 +469,6 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#00A3FF',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
@@ -582,50 +504,55 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#00A3FF',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
     zIndex: 10,
   },
-  // Heritage & Mode section
+  // Heritage & Mode hero section
   heritageSection: {
     borderRadius: 20,
-    padding: 14,
-    marginTop: 8,
-    marginBottom: 20,
+    padding: 16,
+    marginBottom: 24,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   heritageHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
+  },
+  heritageHeaderTextCol: {
+    marginLeft: 10,
+    flex: 1,
   },
   heritageTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontFamily: 'ComicSansMS-Bold',
+    fontSize: 16,
   },
   heritageSubtitle: {
     fontSize: 12,
-    color: '#64748B',
+    marginTop: 2,
   },
   modeRow: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   modeBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 14,
   },
   modeBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1E293B',
     marginTop: 4,
   },
   hiddenTestText: {
@@ -635,19 +562,23 @@ const styles = StyleSheet.create({
   },
   islamicScroll: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
     paddingVertical: 4,
   },
   islamicCard: {
-    width: 105,
-    backgroundColor: '#FFFFFF',
+    width: 112,
     borderRadius: 14,
     padding: 6,
     alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   islamicCardThumbnail: {
-    width: 93,
-    height: 62,
+    width: 98,
+    height: 68,
     borderRadius: 10,
     overflow: 'hidden',
     position: 'relative',
@@ -657,29 +588,39 @@ const styles = StyleSheet.create({
     height: 4,
     width: '100%',
   },
+  islamicCheckBadge: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    zIndex: 10,
+  },
   islamicThemeName: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#1E293B',
+    fontWeight: '700',
     marginTop: 6,
     textAlign: 'center',
   },
   islamicArabicName: {
     fontSize: 10,
-    color: '#64748B',
     marginTop: 1,
     textAlign: 'center',
   },
   taglineBanner: {
-    backgroundColor: '#E0F2FE',
-    borderRadius: 10,
-    padding: 8,
-    marginTop: 10,
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 14,
   },
   taglineText: {
     fontSize: 12,
-    color: '#0369A1',
     textAlign: 'center',
     fontStyle: 'italic',
+    fontWeight: '500',
   },
 });

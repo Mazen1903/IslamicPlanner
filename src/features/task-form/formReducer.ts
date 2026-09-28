@@ -15,6 +15,7 @@ import type {
 import { generateUuid } from '@/utils/uuid';
 import { parseRecurrenceRule } from '@/domain/recurrence/rruleAdapter';
 import { isoWeekday } from '@/domain/recurrence/dateUtils';
+import { getIconIdFromTags, setIconInTags } from '@/constants/taskIcons';
 
 export interface CreateFormInitialParams {
   civilSeedDate: string;
@@ -256,6 +257,7 @@ export function createInitialFormState(params: CreateFormInitialParams): FormSta
       notes,
       subtasks,
       tags: initialDefinition.tags ? [...initialDefinition.tags] : [],
+      icon: initialDefinition.tags ? getIconIdFromTags(initialDefinition.tags) : null,
       reminderMinutes: scheduleMode === 'ANYTIME_TODAY' ? null : (initialDefinition.reminderRule?.offsetMinutes ?? null),
       existingReminderRule: scheduleMode === 'ANYTIME_TODAY' ? null : (initialDefinition.reminderRule ?? null),
       isDirty: false,
@@ -287,6 +289,7 @@ export function createInitialFormState(params: CreateFormInitialParams): FormSta
     notes: '',
     subtasks: [],
     tags: [],
+    icon: null,
     reminderMinutes: null,
     existingReminderRule: null,
     isDirty: false,
@@ -304,6 +307,16 @@ export function formReducer(state: FormState, action: FormAction): FormState {
         isDirty: true,
         validationErrors: { ...state.validationErrors, title: '' },
       };
+
+    case 'SET_ICON': {
+      const updatedTags = setIconInTags(state.tags, action.payload);
+      return {
+        ...state,
+        icon: action.payload,
+        tags: updatedTags,
+        isDirty: true,
+      };
+    }
 
     case 'SET_CIVIL_SEED_DATE':
       return {
@@ -449,6 +462,7 @@ export function formReducer(state: FormState, action: FormAction): FormState {
       return {
         ...state,
         tags: action.payload,
+        icon: getIconIdFromTags(action.payload),
         isDirty: true,
       };
 

@@ -76,6 +76,8 @@ describe('HijriCalendarScreen', () => {
         taskRemindersEnabled: true,
         taskVibrationEnabled: true,
         quietHoursEnabled: false,
+        journalReminderEnabled: false,
+        journalReminderTime: '21:30',
         themeMode: 'SYSTEM',
         isPremium: false,
         onboardingCompleted: false,

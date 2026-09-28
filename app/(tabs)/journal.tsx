@@ -25,7 +25,7 @@ import {
 import { Icon } from '@/components/common/Icon';
 
 export default function JournalScreen() {
-  const { colors, spacing, typography, touchTargets, radii } = useTheme();
+  const { colors, spacing, typography, touchTargets, radii, isDark } = useTheme();
   const {
     mode,
     isHistorical,
@@ -106,6 +106,9 @@ export default function JournalScreen() {
         testID="journal-loading-state"
       >
         <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[typography.caption, { color: colors.textTertiary, marginTop: spacing.md }]}>
+          Loading your journal...
+        </Text>
       </SafeAreaView>
     );
   }
@@ -206,7 +209,7 @@ export default function JournalScreen() {
               style={[
                 styles.rolloverBanner,
                 {
-                  backgroundColor: colors.primaryLight,
+                  backgroundColor: isDark ? 'rgba(15, 159, 74, 0.2)' : colors.primaryLight,
                   borderColor: colors.primary,
                   marginHorizontal: spacing.lg,
                   marginBottom: spacing.md,
@@ -242,6 +245,9 @@ export default function JournalScreen() {
             selectedMood={draftPayload.mood}
             onSelectMood={onMoodChange}
             dayKey={activePlanningDayKey ?? pinnedPlanningDayKey ?? undefined}
+            gregorianDisplay={gregorianDisplay}
+            hijriDisplay={hijriDisplay}
+            saveState={saveState}
           />
 
           {/* Reflections */}

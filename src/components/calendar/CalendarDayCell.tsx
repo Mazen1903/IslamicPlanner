@@ -60,7 +60,6 @@ export const CalendarDayCell = React.memo(function CalendarDayCell({
                 : isToday
                 ? colors.primary
                 : colors.textPrimary,
-              fontWeight: isSelected || isToday ? '700' : '500',
             },
           ]}
         >
