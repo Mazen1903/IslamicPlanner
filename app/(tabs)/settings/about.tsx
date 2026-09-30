@@ -73,13 +73,13 @@ export default function AboutScreen() {
     const storeUrl =
       Platform.OS === 'ios'
         ? 'https://apps.apple.com'
-        : 'market://details?id=com.islamicplanner.app';
+        : 'market://details?id=com.mm1903.islamicplannerapp';
     try {
       const canOpen = await Linking.canOpenURL(storeUrl);
       if (canOpen) {
         await Linking.openURL(storeUrl);
       } else {
-        await Linking.openURL('https://play.google.com/store/apps/details?id=com.islamicplanner.app');
+        await Linking.openURL('https://play.google.com/store/apps/details?id=com.mm1903.islamicplannerapp');
       }
     } catch {
       Alert.alert('Unable to open store', 'Could not open the store page.', [{ text: 'OK' }]);
@@ -112,7 +112,7 @@ export default function AboutScreen() {
             label="Help Center"
             subtitle="Find answers to common questions"
             customBadge={<SettingsAboutHelpCenterIcon size={40} />}
-            onPress={() => openUrl('https://islamicplanner.app/help')}
+            onPress={() => openUrl('mailto:contact@islamicplanner.app?subject=Help')}
             testID="about-row-help-center"
           />
 
@@ -130,7 +130,7 @@ export default function AboutScreen() {
             label="Privacy Policy"
             subtitle="How we protect your data"
             customBadge={<SettingsAboutPrivacyPolicyIcon size={40} />}
-            onPress={() => openUrl('https://islamicplanner.app/privacy')}
+            onPress={() => openUrl('mailto:contact@islamicplanner.app?subject=Privacy%20Policy')}
             testID="about-row-privacy"
           />
 
@@ -139,7 +139,7 @@ export default function AboutScreen() {
             label="Terms of Service"
             subtitle="Our terms and conditions"
             customBadge={<SettingsAboutTermsIcon size={40} />}
-            onPress={() => openUrl('https://islamicplanner.app/terms')}
+            onPress={() => openUrl('mailto:contact@islamicplanner.app?subject=Terms%20of%20Service')}
             testID="about-row-terms"
           />
 
@@ -215,9 +215,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-  },
-  heroCard: {
-    borderWidth: 1,
   },
   cardsList: {
     paddingHorizontal: 16,

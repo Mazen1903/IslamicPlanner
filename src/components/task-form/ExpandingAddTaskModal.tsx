@@ -25,7 +25,7 @@ export interface ExpandingAddTaskModalProps {
   origin: FabOrigin;
   initialPrayerTab?: Prayer;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: () => void | Promise<void>;
 }
 
 export function ExpandingAddTaskModal({
@@ -154,7 +154,7 @@ export function ExpandingAddTaskModal({
   }, [morphAnim, dragAnim, onClose]);
 
   const handleSuccess = useCallback(async () => {
-    onSuccess();
+    await onSuccess();
     handleClose();
   }, [onSuccess, handleClose]);
 

@@ -224,10 +224,10 @@ export function ThemePreviewModal({
                         style={[
                           StyleSheet.absoluteFill,
                           styles.defaultThumbCenter,
-                          { backgroundColor: colors.surfaceSecondary },
+                          { backgroundColor: '#0E442B' },
                         ]}
                       >
-                        <Icon name="refresh" size={18} color={colors.textSecondary} decorative />
+                        <Icon name="mosque" size={18} color="#FFFFFF" decorative />
                       </View>
                     )}
 
@@ -239,7 +239,7 @@ export function ThemePreviewModal({
                           { backgroundColor: colors.primary },
                         ]}
                       >
-                        <Icon name="check" size={11} color="#FFFFFF" decorative />
+                        <Icon name="check" size={10} color="#FFFFFF" decorative />
                       </View>
                     )}
                   </View>
@@ -337,23 +337,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   thumbCardContainer: {
-    width: 74,
+    width: 66,
     alignItems: 'center',
   },
   thumbCardSelected: {
     transform: [{ scale: 1.05 }],
   },
   thumbBox: {
-    width: 70,
-    height: 52,
+    width: 58,
+    height: 74,
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   defaultThumbCenter: {
     alignItems: 'center',
@@ -361,19 +361,20 @@ const styles = StyleSheet.create({
   },
   thumbCheckmarkBadge: {
     position: 'absolute',
-    bottom: 3,
-    right: 3,
-    width: 17,
-    height: 17,
-    borderRadius: 8.5,
+    top: 4,
+    right: 4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.2,
     borderColor: '#FFFFFF',
+    zIndex: 10,
   },
   thumbCardTitle: {
     fontSize: 9.5,
-    marginTop: 4,
+    marginTop: 5,
     textAlign: 'center',
   },
 });

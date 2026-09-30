@@ -56,7 +56,7 @@ describe('TaskDetailScreen', () => {
     },
   };
 
-  it('renders task details with name, subtasks, notes, and attachments', async () => {
+  it('renders task details with name, subtasks, and notes', async () => {
     const { getByText, getByTestId } = await render(
       <ThemeProvider>
         <TaskDetailScreen
@@ -77,7 +77,6 @@ describe('TaskDetailScreen', () => {
     expect(getByText('Last 10 ayat')).toBeTruthy();
     expect(getByText('Notes')).toBeTruthy();
     expect(getByText('Read with tafsir')).toBeTruthy();
-    expect(getByText('Attachments')).toBeTruthy();
     expect(getByTestId('task-detail-more-button')).toBeTruthy();
   });
 

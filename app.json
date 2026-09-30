@@ -1,12 +1,17 @@
 {
   "expo": {
-    "name": "islamic-planner-app",
+    "name": "Islamic Daily Planner",
     "slug": "islamic-planner-app",
     "scheme": "islamic-planner",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0E442B"
+    },
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.mm1903.islamicplannerapp"

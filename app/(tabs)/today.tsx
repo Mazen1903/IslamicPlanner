@@ -13,6 +13,7 @@ import { PrayerTransitionBanner } from '@/components/prayer/PrayerTransitionBann
 import { TaskList } from '@/components/task/TaskList';
 import { getTodayDateSubtitle } from '@/utils/todayDateSubtitle';
 import { useUserSettings } from '@/hooks/useUserSettings';
+import { useAddTaskModalStore } from '@/stores/useAddTaskModalStore';
 
 export default function TodayScreen() {
   const { colors, spacing, typography, radii, touchTargets, activeIslamicTheme, shadows } = useTheme();
@@ -138,10 +139,7 @@ export default function TodayScreen() {
   };
 
   const handleAddTask = (prayer?: Prayer) => {
-    router.push({
-      pathname: '/task/add',
-      params: { prayer: prayer ?? activePrayer },
-    });
+    useAddTaskModalStore.getState().openModal(undefined, prayer ?? activePrayer);
   };
 
   return (
@@ -216,9 +214,6 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFill,
   },
   tabBarWrapper: {
     zIndex: 2,

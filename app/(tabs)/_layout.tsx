@@ -16,6 +16,7 @@ export default function TabLayout() {
   const { colors } = useTheme();
   const isOpen = useAddTaskModalStore(s => s.isOpen);
   const origin = useAddTaskModalStore(s => s.origin);
+  const initialPrayer = useAddTaskModalStore(s => s.initialPrayer);
   const closeModal = useAddTaskModalStore(s => s.closeModal);
   const insets = useSafeAreaInsets();
 
@@ -106,6 +107,7 @@ export default function TabLayout() {
       <ExpandingAddTaskModal
         visible={isOpen}
         origin={adjustedOrigin ?? defaultOrigin}
+        initialPrayerTab={initialPrayer ?? undefined}
         onClose={closeModal}
         onSuccess={handleSuccess}
       />

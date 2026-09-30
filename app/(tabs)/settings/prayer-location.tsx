@@ -503,7 +503,7 @@ export default function PrayerLocationScreen() {
             },
             shadows.card,
           ]}
-          onPress={() => router.push('/(tabs)/prayer' as any)}
+          onPress={() => router.back()}
         >
           <SettingsRowPreviewClockIcon size={36} style={{ marginRight: spacing.sm }} />
           <Text style={[typography.labelLarge, { color: colors.textPrimary, fontStyle: 'italic', flex: 1 }]}>

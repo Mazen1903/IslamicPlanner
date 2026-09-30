@@ -23,6 +23,9 @@ import { notificationSchedulerAdapter as defaultAdapter } from './NotificationSc
 import type { NotificationChannelManagerAPI } from './NotificationChannelManager';
 import { notificationChannelManager as defaultChannelManager } from './NotificationChannelManager';
 
+import type { UserSettingsRepository } from '@/data/repositories/UserSettingsRepository';
+import { userSettingsRepository as defaultSettingsRepo } from '@/data/repositories/UserSettingsRepository';
+
 export interface Clock {
   nowMs(): number;
 }
@@ -36,7 +39,8 @@ export class NotificationReconciliationService {
     private readonly defRepo: TaskDefinitionRepository = defaultDefRepo,
     private readonly adapter: NotificationSchedulerAdapterAPI = defaultAdapter,
     private readonly channelManager: NotificationChannelManagerAPI = defaultChannelManager,
-    private readonly clock: Clock = { nowMs: () => Date.now() }
+    private readonly clock: Clock = { nowMs: () => Date.now() },
+    private readonly settingsRepo: UserSettingsRepository = defaultSettingsRepo
   ) {}
 
   /**
@@ -119,6 +123,31 @@ export class NotificationReconciliationService {
         // Recoverable
       }
       return result;
+    }
+
+    // 1b. Respect user-level task reminders toggle
+    try {
+      const settings = await this.settingsRepo.get();
+      if (settings && settings.taskRemindersEnabled === false) {
+        // Cancel all existing app-owned notifications
+        try {
+          const scheduledList = await this.adapter.getAllScheduledNotifications();
+          const appOwned = scheduledList.filter(s => isAppOwnedNotificationId(s.identifier));
+          for (const notif of appOwned) {
+            try {
+              await this.adapter.cancelScheduledNotification(notif.identifier);
+              result.cancelled.push(notif.identifier);
+            } catch (err) {
+              result.failed.push({ identifier: notif.identifier, action: 'CANCEL', error: err });
+            }
+          }
+        } catch {
+          // Recoverable
+        }
+        return result;
+      }
+    } catch {
+      // Recoverable — proceed if settings DB fails or is uninitialized
     }
 
     // 2. Ensure Android channel lazily

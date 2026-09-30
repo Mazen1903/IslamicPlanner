@@ -42,9 +42,9 @@ export default function PremiumScreen() {
 
   const handleUpgrade = () => {
     Alert.alert(
-      'Coming Soon',
-      'In-app purchases and subscriptions will be available in the next release.',
-      [{ text: 'OK' }]
+      'Coming Soon 🌙',
+      "Premium features are in development. You'll be notified when they're available.",
+      [{ text: 'Got it' }]
     );
   };
 
@@ -110,11 +110,11 @@ export default function PremiumScreen() {
             ))}
           </View>
 
-          {/* Upgrade Now Button */}
+          {/* Notify Me When Available Button */}
           <Pressable
             onPress={handleUpgrade}
             accessibilityRole="button"
-            accessibilityLabel="Upgrade Now"
+            accessibilityLabel="Notify Me When Available"
             style={({ pressed }) => [
               styles.upgradeBtn,
               {
@@ -128,7 +128,7 @@ export default function PremiumScreen() {
             testID="premium-upgrade-button"
           >
             <Text style={[typography.labelLarge, { color: colors.textOnPrimary, fontWeight: '700' }]}>
-              Upgrade Now
+              Notify Me When Available
             </Text>
           </Pressable>
         </View>

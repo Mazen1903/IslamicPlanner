@@ -270,6 +270,7 @@ describe('NotificationSchedulerAdapter', () => {
         identifier: desired.identifier,
         content: {
           title: desired.title,
+          body: 'Tap to view your task',
           sound: 'default',
           data: desired.data,
         },

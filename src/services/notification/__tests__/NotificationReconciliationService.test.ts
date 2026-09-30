@@ -14,6 +14,7 @@ describe('NotificationReconciliationService', () => {
   let mockDefRepo: any;
   let mockAdapter: jest.Mocked<NotificationSchedulerAdapterAPI>;
   let mockChannelManager: jest.Mocked<NotificationChannelManagerAPI>;
+  let mockSettingsRepo: { get: jest.Mock };
   let currentTimeMs: number;
   let service: NotificationReconciliationService;
 
@@ -91,12 +92,17 @@ describe('NotificationReconciliationService', () => {
       ensureChannel: jest.fn().mockResolvedValue(undefined),
     };
 
+    mockSettingsRepo = {
+      get: jest.fn().mockResolvedValue({ taskRemindersEnabled: true }),
+    };
+
     service = new NotificationReconciliationService(
       mockOccRepo as any,
       mockDefRepo as any,
       mockAdapter,
       mockChannelManager,
-      { nowMs: () => currentTimeMs }
+      { nowMs: () => currentTimeMs },
+      mockSettingsRepo as any
     );
   });
 
@@ -378,6 +384,43 @@ describe('NotificationReconciliationService', () => {
 
       const result = await service.reconcile();
       expect(result.scheduled).toEqual(['task-reminder:occ-1:default']);
+    });
+  });
+
+  describe('UserSettings taskRemindersEnabled Toggle', () => {
+    it('cancels app-owned notifications and returns early when taskRemindersEnabled is false', async () => {
+      mockSettingsRepo.get.mockResolvedValueOnce({ taskRemindersEnabled: false });
+      mockAdapter.getAllScheduledNotifications.mockResolvedValueOnce([
+        {
+          identifier: 'task-reminder:occ-1:default',
+          title: 'Task 1',
+          triggerAtMs: currentTimeMs + 10000,
+        },
+        {
+          identifier: 'other-app:notif',
+          title: 'Other',
+          triggerAtMs: currentTimeMs + 10000,
+        },
+      ]);
+
+      const result = await service.reconcile();
+
+      expect(result.cancelled).toEqual(['task-reminder:occ-1:default']);
+      expect(mockAdapter.cancelScheduledNotification).toHaveBeenCalledWith('task-reminder:occ-1:default');
+      expect(mockAdapter.cancelScheduledNotification).not.toHaveBeenCalledWith('other-app:notif');
+      expect(mockOccRepo.findAllMaterializedPending).not.toHaveBeenCalled();
+      expect(mockAdapter.scheduleNotification).not.toHaveBeenCalled();
+    });
+
+    it('proceeds with reconciliation when taskRemindersEnabled is true', async () => {
+      mockSettingsRepo.get.mockResolvedValueOnce({ taskRemindersEnabled: true });
+      mockOccRepo.findAllMaterializedPending!.mockResolvedValueOnce([makeOcc('occ-1', 'def-1')]);
+      mockDefRepo.findById!.mockResolvedValueOnce(makeDef('def-1', 'Task 1'));
+      mockAdapter.getAllScheduledNotifications.mockResolvedValueOnce([]);
+
+      const result = await service.reconcile();
+      expect(result.scheduled).toEqual(['task-reminder:occ-1:default']);
+      expect(mockAdapter.scheduleNotification).toHaveBeenCalled();
     });
   });
 

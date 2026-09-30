@@ -25,6 +25,7 @@ import {
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GRID_GAP = 12;
 const CARD_WIDTH = (SCREEN_WIDTH - 32 - GRID_GAP) / 2;
+const CARD_HEIGHT = Math.round(CARD_WIDTH * 1.34);
 
 interface ThemeGalleryScreenProps {
   onBack?: () => void;
@@ -297,8 +298,8 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
                   accessibilityLabel="Classic Default Theme"
                   style={[
                     styles.gridCard,
+                    styles.defaultGridCard,
                     {
-                      backgroundColor: colors.surfaceElevated,
                       borderColor: isDefaultActive ? colors.primary : colors.border,
                       borderWidth: isDefaultActive ? 2.5 : 1,
                     },
@@ -306,26 +307,24 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
                   testID="islamic-theme-default"
                 >
                   <View style={styles.defaultCardInner}>
-                    <View
-                      style={[
-                        styles.defaultIconCircle,
-                        { backgroundColor: colors.primaryLight ?? 'rgba(15, 138, 82, 0.12)' },
-                      ]}
-                    >
-                      <Icon name="refresh" size={24} color={colors.primary} decorative />
+                    <View style={styles.defaultIconCircle}>
+                      <Icon name="mosque" size={28} color="#FFFFFF" decorative />
                     </View>
-                    <Text
-                      style={[styles.defaultCardTitle, { color: colors.textPrimary }]}
-                      numberOfLines={1}
-                    >
-                      Classic Default
-                    </Text>
-                    <Text
-                      style={[styles.defaultCardSubtitle, { color: colors.textSecondary }]}
-                      numberOfLines={1}
-                    >
-                      النمط الافتراضي
-                    </Text>
+                    <View style={styles.defaultTitlesBox}>
+                      <Text style={styles.defaultCardTitle} numberOfLines={1}>
+                        Classic Default
+                      </Text>
+                      <Text style={styles.defaultCardArabic} numberOfLines={1}>
+                        النمط الافتراضي
+                      </Text>
+                    </View>
+
+                    {/* 3-Dot Palette Swatch */}
+                    <View style={styles.cardPaletteRow}>
+                      <View style={[styles.paletteDot, { backgroundColor: '#0F8A52' }]} />
+                      <View style={[styles.paletteDot, { backgroundColor: '#F9F7F2' }]} />
+                      <View style={[styles.paletteDot, { backgroundColor: '#D4A017' }]} />
+                    </View>
                   </View>
 
                   {/* Active Checkmark Badge */}
@@ -365,7 +364,7 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
                   style={[
                     styles.gridCard,
                     {
-                      borderColor: isSelected ? colors.primary : colors.border,
+                      borderColor: isSelected ? colors.primary : 'rgba(0, 0, 0, 0.08)',
                       borderWidth: isSelected ? 2.5 : 1,
                     },
                   ]}
@@ -380,23 +379,50 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
                     />
                   )}
 
-                  {/* Frosted Bottom Gradient Strip for English & Arabic Names */}
-                  <View style={styles.cardGradientOverlay}>
+                  {/* Top Vignette Overlay */}
+                  <View style={styles.cardTopOverlay} />
+
+                  {/* Top-Right Mood Badge (Day / Night) */}
+                  <View style={styles.cardMoodBadge}>
+                    <Icon
+                      name={theme.isDark ? 'moon' : 'sun'}
+                      size={11}
+                      color="#FFFFFF"
+                      decorative
+                    />
+                  </View>
+
+                  {/* Frosted Glass Bottom Strip with English & Arabic Names + Swatch */}
+                  <View style={styles.cardGlassPanel}>
                     <Text style={styles.gridCardTitle} numberOfLines={1}>
                       {theme.name}
                     </Text>
                     <Text style={styles.gridCardArabic} numberOfLines={1}>
                       {theme.arabicName}
                     </Text>
-                  </View>
 
-                  {/* Top-Right Accent Dot */}
-                  <View
-                    style={[
-                      styles.gridAccentDot,
-                      { backgroundColor: theme.previewColors.primary },
-                    ]}
-                  />
+                    {/* 3-Dot Color Swatch */}
+                    <View style={styles.cardPaletteRow}>
+                      <View
+                        style={[
+                          styles.paletteDot,
+                          { backgroundColor: theme.previewColors.primary },
+                        ]}
+                      />
+                      <View
+                        style={[
+                          styles.paletteDot,
+                          { backgroundColor: theme.previewColors.surface },
+                        ]}
+                      />
+                      <View
+                        style={[
+                          styles.paletteDot,
+                          { backgroundColor: theme.previewColors.accent },
+                        ]}
+                      />
+                    </View>
+                  </View>
 
                   {/* Active Selection Checkmark Badge */}
                   {isSelected && (
@@ -413,6 +439,7 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
               );
             })}
           </View>
+
 
           {/* Active Islamic Theme Quote Banner */}
           {activeIslamicTheme && (
@@ -566,75 +593,120 @@ const styles = StyleSheet.create({
   },
   gridCard: {
     width: CARD_WIDTH,
-    height: 118,
-    borderRadius: 16,
+    height: CARD_HEIGHT,
+    borderRadius: 18,
     overflow: 'hidden',
     position: 'relative',
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  defaultGridCard: {
+    backgroundColor: '#0E442B',
   },
   defaultCardInner: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 10,
+    justifyContent: 'space-between',
+    paddingVertical: 20,
+    paddingHorizontal: 12,
   },
   defaultIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
+  },
+  defaultTitlesBox: {
+    alignItems: 'center',
+    marginTop: 8,
   },
   defaultCardTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
     textAlign: 'center',
   },
-  defaultCardSubtitle: {
-    fontSize: 10,
+  defaultCardArabic: {
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 11,
     marginTop: 2,
     textAlign: 'center',
   },
-  cardGradientOverlay: {
+  cardTopOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+  },
+  cardMoodBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  cardGlassPanel: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(10, 14, 26, 0.65)',
+    backgroundColor: 'rgba(10, 14, 28, 0.72)',
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
+    paddingTop: 8,
+    paddingBottom: 10,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(255, 255, 255, 0.12)',
   },
   gridCardTitle: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 12.5,
+    fontWeight: '800',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   gridCardArabic: {
     color: 'rgba(255, 255, 255, 0.85)',
-    fontSize: 10,
+    fontSize: 10.5,
     marginTop: 1,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
-  gridAccentDot: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    borderWidth: 1.2,
-    borderColor: '#FFFFFF',
+  cardPaletteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 6,
+  },
+  paletteDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
   },
   gridCheckmarkBadge: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
+    top: 10,
+    left: 10,
     width: 24,
     height: 24,
     borderRadius: 12,
@@ -645,7 +717,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.3,
     shadowRadius: 3,
     elevation: 4,
   },

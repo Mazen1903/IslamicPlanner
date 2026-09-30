@@ -668,7 +668,7 @@ export function TaskFormScreen({
                   More options
                 </Text>
                 <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                  Priority, Notes, Subtasks, Attachment
+                  Priority, Notes, and Subtasks
                 </Text>
               </View>
               <Icon name="chevron-right" size={18} color={colors.primary} directional decorative />

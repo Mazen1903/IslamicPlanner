@@ -501,57 +501,7 @@ export function TaskDetailScreen({
           )}
         </View>
 
-        {/* 5. Attachments Card */}
-        <View
-          style={[
-            styles.card,
-            shadows.card,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderRadius: radii.card,
-              padding: spacing.md,
-              marginBottom: spacing.xl,
-            },
-          ]}
-        >
-          <View style={styles.sectionHeaderRow}>
-            <View style={styles.sectionHeaderLeft}>
-              <Icon name="attach" size={20} color={colors.primary} decorative style={{ marginRight: 8 }} />
-              <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
-                Attachments
-              </Text>
-            </View>
-          </View>
-
-          <View style={[styles.attachmentPlaceholder, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md, marginTop: spacing.xs, padding: spacing.md }]}>
-            <Icon name="attach" size={24} color={colors.textTertiary} decorative style={{ marginBottom: 6 }} />
-            <Text style={[typography.bodySmall, { color: colors.textSecondary, textAlign: 'center' }]}>
-              No attachments attached yet
-            </Text>
-            <Pressable
-              onPress={() => Alert.alert('Attachments', 'File and photo attachments will be available in an upcoming update.')}
-              accessibilityRole="button"
-              accessibilityLabel="Add attachment"
-              style={({ pressed }) => [
-                styles.addAttachmentBtn,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  borderRadius: radii.pill,
-                  marginTop: spacing.sm,
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              <Text style={[typography.labelSmall, { color: colors.primary, fontWeight: '700' }]}>
-                + Add Attachment
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* 6. Quick Full Edit Button */}
+        {/* Quick Full Edit Button */}
         <Pressable
           onPress={onEditFull}
           accessibilityRole="button"
@@ -776,15 +726,6 @@ const styles = StyleSheet.create({
   },
   notesContent: {
     lineHeight: 22,
-  },
-  attachmentPlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addAttachmentBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderWidth: 1,
   },
   editFullButton: {
     flexDirection: 'row',
