@@ -60,13 +60,16 @@ describe('Group M: Targeted Static Accessibility Audits', () => {
     const expectedModalFiles = [
       'src/components/journal/JournalDeleteDialog.tsx',
       'src/components/journal/JournalPrivacySheet.tsx',
+      'src/components/journal/JournalWriteModal.tsx',
       'src/components/task-form/CustomRecurrenceModal.tsx',
       'src/components/task-form/EditScopeSheet.tsx',
+      'src/components/task-detail/TaskDetailScreen.tsx',
+      'src/components/theme-changer/ThemePreviewModal.tsx',
       'src/components/premium/PremiumLockedInfo.tsx',
       'app/(tabs)/settings/hijri-calendar.tsx',
     ];
 
-    expect(modalFiles.length).toBe(6);
+    expect(modalFiles.length).toBe(9);
     for (const expected of expectedModalFiles) {
       expect(modalFiles).toContain(expected);
     }

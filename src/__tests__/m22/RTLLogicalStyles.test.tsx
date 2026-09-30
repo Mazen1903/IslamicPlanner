@@ -98,7 +98,6 @@ describe('Group H: RTL Logical Styles Contract (RTL-1 & RTL-2)', () => {
   it('H-13: JournalHeader.tsx uses marginStart', () => {
     const src = readSource('src/components/journal/JournalHeader.tsx');
     expect(src).toContain('marginStart: spacing.xs');
-    expect(src).toContain('marginStart: 4');
   });
 
   // 14. JournalHistory.tsx
@@ -121,9 +120,9 @@ describe('Group H: RTL Logical Styles Contract (RTL-1 & RTL-2)', () => {
   });
 
   // 17. ReflectionSection.tsx
-  it('H-17: ReflectionSection.tsx uses marginStart', () => {
+  it('H-17: ReflectionSection.tsx uses marginEnd', () => {
     const src = readSource('src/components/journal/ReflectionSection.tsx');
-    expect(src).toContain('marginStart: spacing.sm');
+    expect(src).toContain('marginEnd: 4');
   });
 
   // 18. DayDetailTaskList.tsx

@@ -79,7 +79,7 @@ describe('JournalScreen (M16 Screen)', () => {
     expect(screen.getByText('Wednesday, 16 Sep 2026')).toBeTruthy();
     expect(screen.getByText('5 Rabi al-Thani 1448 AH')).toBeTruthy();
     expect(screen.getByDisplayValue('Today thoughts')).toBeTruthy();
-    expect(screen.getByText('Reflections')).toBeTruthy();
+    expect(screen.getByText('Daily Muhasaba')).toBeTruthy();
   });
 
   it('renders SETUP_REQUIRED when planning day cannot be resolved', async () => {
