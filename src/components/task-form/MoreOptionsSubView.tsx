@@ -175,11 +175,8 @@ export function MoreOptionsSubView({
 
         {/* Row 3: Subtasks */}
         <View style={styles.rowCardWrapper}>
-          <Pressable
-            onPress={() => toggleSection('subtasks')}
-            accessibilityRole="button"
-            accessibilityLabel="Subtasks"
-            style={({ pressed }) => [
+          <View
+            style={[
               styles.optionRow,
               shadows.card,
               {
@@ -187,7 +184,6 @@ export function MoreOptionsSubView({
                 borderColor: colors.border,
                 borderRadius: radii.card,
                 padding: spacing.md,
-                opacity: pressed ? 0.8 : 1,
               },
             ]}
           >
@@ -202,23 +198,14 @@ export function MoreOptionsSubView({
                 {state.subtasks.length > 0 ? `${state.subtasks.length} item${state.subtasks.length === 1 ? '' : 's'}` : 'Break into smaller steps'}
               </Text>
             </View>
-            <Icon
-              name={expandedSection === 'subtasks' ? 'chevron-down' : 'chevron-right'}
-              size={18}
-              color={colors.textTertiary}
-              directional
-              decorative
-            />
-          </Pressable>
+          </View>
 
-          {expandedSection === 'subtasks' && (
-            <View style={[styles.expandedDrawer, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md, padding: spacing.md }]}>
-              <SubtasksSection
-                subtasks={state.subtasks}
-                dispatch={dispatch}
-              />
-            </View>
-          )}
+          <View style={[styles.expandedDrawer, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md, padding: spacing.md }]}>
+            <SubtasksSection
+              subtasks={state.subtasks}
+              dispatch={dispatch}
+            />
+          </View>
         </View>
 
         {/* Row 4: Attachment */}

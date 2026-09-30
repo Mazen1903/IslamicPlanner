@@ -219,6 +219,15 @@ export const SettingsHubAppearanceIcon = createSettingsHubImageIcon({
   label: 'Appearance',
 });
 
+export const SettingsAppearanceModeIcon = createSettingsBadgeIcon({
+  defaultSize: 36,
+  label: 'Appearance Mode',
+  getBgColor: colors => colors.prayerFajr ?? 'rgba(43, 43, 92, 0.12)',
+  renderIcon: (size, colors) => (
+    <Ionicons name="color-palette" size={size} color={colors.primary} />
+  ),
+});
+
 export const SettingsHubCalendarIcon = createSettingsHubImageIcon({
   source: SETTINGS_ICONS.hubCalendar,
   label: 'Calendar',
@@ -707,15 +716,26 @@ export function SettingsOptThemeSun({
   testID,
   accessibilityLabel = 'Light Theme',
 }: SettingsIconProps) {
-  const { colors } = useTheme();
   return (
     <View
-      style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}
+      style={[
+        {
+          width: size,
+          height: size,
+          borderRadius: Math.round(size / 2),
+          backgroundColor: '#FFF7ED',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 1,
+          borderColor: 'rgba(245, 158, 11, 0.25)',
+        },
+        style,
+      ]}
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="image"
       testID={testID}
     >
-      <Ionicons name="sunny" size={Math.round(size * 0.7)} color={colors.warning} />
+      <Ionicons name="sunny" size={Math.round(size * 0.58)} color="#F59E0B" />
     </View>
   );
 }
@@ -726,15 +746,26 @@ export function SettingsOptThemeMoon({
   testID,
   accessibilityLabel = 'Dark Theme',
 }: SettingsIconProps) {
-  const { colors } = useTheme();
   return (
     <View
-      style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}
+      style={[
+        {
+          width: size,
+          height: size,
+          borderRadius: Math.round(size / 2),
+          backgroundColor: '#1E1B4B',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 1,
+          borderColor: 'rgba(129, 140, 248, 0.3)',
+        },
+        style,
+      ]}
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="image"
       testID={testID}
     >
-      <Ionicons name="moon" size={Math.round(size * 0.7)} color={colors.info} />
+      <Ionicons name="moon" size={Math.round(size * 0.55)} color="#818CF8" />
     </View>
   );
 }
@@ -748,12 +779,28 @@ export function SettingsOptThemeMonitor({
   const { colors } = useTheme();
   return (
     <View
-      style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}
+      style={[
+        {
+          width: size,
+          height: size,
+          borderRadius: Math.round(size / 2),
+          backgroundColor: colors.surfaceSecondary,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 1,
+          borderColor: colors.border,
+        },
+        style,
+      ]}
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="image"
       testID={testID}
     >
-      <Ionicons name="desktop-outline" size={Math.round(size * 0.7)} color={colors.textSecondary} />
+      <MaterialCommunityIcons
+        name="theme-light-dark"
+        size={Math.round(size * 0.6)}
+        color={colors.primary}
+      />
     </View>
   );
 }

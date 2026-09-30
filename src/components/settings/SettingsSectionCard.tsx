@@ -7,6 +7,7 @@ export interface SettingsSectionCardProps {
   icon?: IconName;
   iconColor?: string;
   badgeColor?: string;
+  bgColor?: string;
   customIcon?: React.ReactNode;
   customBadge?: React.ReactNode;
   title: string;
@@ -21,6 +22,7 @@ export function SettingsSectionCard({
   icon,
   iconColor,
   badgeColor,
+  bgColor,
   customIcon,
   customBadge,
   title,
@@ -37,13 +39,13 @@ export function SettingsSectionCard({
       style={[
         styles.card,
         {
-          backgroundColor: colors.surface,
+          backgroundColor: bgColor ?? colors.surface,
           borderColor: colors.border,
-          borderRadius: radii.card,
-          padding: spacing.md,
+          borderRadius: radii.xl,
+          padding: spacing.lg,
           marginBottom: spacing.md,
         },
-        shadows.card,
+        shadows.elevated,
         style,
       ]}
       testID={testID}

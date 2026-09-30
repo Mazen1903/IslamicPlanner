@@ -37,7 +37,7 @@ import { SubtasksSection } from './SubtasksSection';
 import { EditScopeSheet } from './EditScopeSheet';
 import { SuccessScreen } from './SuccessScreen';
 import { PartialSuccessView } from './PartialSuccessView';
-import { IconPickerModal } from './IconPickerModal';
+import { IconPickerModal, type IconPickerOrigin } from './IconPickerModal';
 import { TaskCategoryIcon } from '@/components/task/TaskCategoryIcon';
 import { detectTaskIcon } from '@/constants/taskIcons';
 
@@ -91,7 +91,7 @@ export function TaskFormScreen({
   onSuccess,
   onCancel,
 }: TaskFormScreenProps) {
-  const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
+  const { colors, spacing, radii, typography, touchTargets, shadows, isDark } = useTheme();
 
   const isEdit = Boolean(initialDefinition);
   const isRecurringSeries = Boolean(
@@ -106,6 +106,23 @@ export function TaskFormScreen({
     isEdit && isRecurringSeries && !initialScope
   );
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [iconPickerOrigin, setIconPickerOrigin] = useState<IconPickerOrigin | undefined>();
+  const iconPickerButtonRef = useRef<View>(null);
+
+  const handleOpenIconPicker = () => {
+    if (iconPickerButtonRef.current && (iconPickerButtonRef.current as any).measureInWindow) {
+      (iconPickerButtonRef.current as any).measureInWindow(
+        (x: number, y: number, width: number, height: number) => {
+          if (width > 0 && height > 0) {
+            setIconPickerOrigin({ x, y, width, height });
+          }
+          setShowIconPicker(true);
+        }
+      );
+    } else {
+      setShowIconPicker(true);
+    }
+  };
 
   const defaultDate = DateTime.now().toFormat('yyyy-MM-dd');
 
@@ -342,11 +359,14 @@ export function TaskFormScreen({
 
   // Sub-view 1: Main screen (add task1.png)
   return (
-    <SafeAreaView
+    <View
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top', 'left', 'right']}
       testID="task-form-screen"
     >
+      <SafeAreaView
+        style={styles.container}
+        edges={['top', 'left', 'right']}
+      >
       {/* Mosque Skyline Header Banner */}
       <TaskHeaderBanner
         title={isEdit ? 'Edit Task' : 'Add Task'}
@@ -378,23 +398,23 @@ export function TaskFormScreen({
             ]}
           >
             <Pressable
-              onPress={() => setShowIconPicker(true)}
+              ref={iconPickerButtonRef as any}
+              onPress={handleOpenIconPicker}
               accessibilityRole="button"
               accessibilityLabel="Choose task icon"
               testID="task-icon-picker-button"
               style={[
                 styles.iconPickerButton,
                 {
-                  backgroundColor: colors.surfaceSecondary,
-                  borderColor: colors.border,
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surfaceSecondary,
                   borderRadius: radii.md,
                   marginEnd: spacing.sm,
                 },
               ]}
             >
-              <TaskCategoryIcon iconId={state.icon || detectTaskIcon(state.title)} size={24} />
+              <TaskCategoryIcon iconId={state.icon || detectTaskIcon(state.title)} size={34} />
               <View style={[styles.iconEditPencilBadge, { backgroundColor: colors.primary }]}>
-                <Icon name="edit" size={9} color={colors.textOnPrimary} decorative />
+                <Icon name="edit" size={10} color={colors.textOnPrimary} decorative />
               </View>
             </Pressable>
             <TextInput
@@ -421,6 +441,13 @@ export function TaskFormScreen({
               {state.validationErrors.title}
             </Text>
           )}
+
+          {/* Subtasks Section directly underneath Task Name */}
+          <SubtasksSection
+            subtasks={state.subtasks}
+            dispatch={dispatch}
+            style={{ marginTop: spacing.md }}
+          />
         </View>
 
         {/* If THIS_OCCURRENCE: hide definition-level fields */}
@@ -431,7 +458,6 @@ export function TaskFormScreen({
               state={state}
               dispatch={dispatch}
               previewResult={previewResult}
-              onRequestRelativeView={() => setCurrentView('RELATIVE_PRAYER')}
             />
 
             {/* Redesigned Reminder Card */}
@@ -480,41 +506,6 @@ export function TaskFormScreen({
                       : 'No notification set'}
                   </Text>
                 </View>
-                {state.scheduleMode !== 'ANYTIME_TODAY' && (
-                  <Pressable
-                    onPress={() =>
-                      dispatch({
-                        type: 'SET_REMINDER_MINUTES',
-                        payload: state.reminderMinutes !== null ? null : 10,
-                      })
-                    }
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      state.reminderMinutes !== null ? 'Turn reminder off' : 'Turn reminder on'
-                    }
-                    style={[
-                      styles.reminderToggleBtn,
-                      {
-                        backgroundColor:
-                          state.reminderMinutes !== null ? colors.primary : colors.surfaceSecondary,
-                        borderRadius: radii.pill,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        typography.labelSmall,
-                        {
-                          color:
-                            state.reminderMinutes !== null ? colors.textOnPrimary : colors.textSecondary,
-                          fontWeight: '700',
-                        },
-                      ]}
-                    >
-                      {state.reminderMinutes !== null ? 'ON' : 'OFF'}
-                    </Text>
-                  </Pressable>
-                )}
               </View>
 
               {state.scheduleMode === 'ANYTIME_TODAY' ? (
@@ -777,11 +768,13 @@ export function TaskFormScreen({
           </View>
         )}
       </ScrollView>
+      </SafeAreaView>
 
-      {/* Icon Picker Modal */}
+      {/* Icon Picker Modal with expand/shrink morph */}
       <IconPickerModal
         visible={showIconPicker}
         selectedIconId={state.icon}
+        origin={iconPickerOrigin}
         onSelectIcon={iconId => {
           dispatch({ type: 'SET_ICON', payload: iconId });
           setShowIconPicker(false);
@@ -795,7 +788,7 @@ export function TaskFormScreen({
         onSelectScope={handleSelectScope}
         onCancel={onCancel}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -819,20 +812,20 @@ const styles = StyleSheet.create({
     minHeight: 56,
   },
   iconPickerButton: {
-    width: 44,
-    height: 44,
+    width: 50,
+    height: 50,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    borderWidth: 1,
+    borderWidth: 0,
   },
   iconEditPencilBadge: {
     position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    bottom: -1,
+    right: -1,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -859,10 +852,6 @@ const styles = StyleSheet.create({
   },
   reminderHeaderTextContainer: {
     flex: 1,
-  },
-  reminderToggleBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
   },
   reminderHelperBanner: {
     borderWidth: 0,

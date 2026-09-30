@@ -188,6 +188,7 @@ export default function PlanningDayScreen() {
       >
         {/* CARD 1: DAY START */}
         <SettingsSectionCard
+          bgColor={colors.primaryLight}
           customBadge={<SettingsSecDayStartClockIcon size={40} />}
           title="Day Start"
           subtitle="Choose when your day starts."
@@ -286,6 +287,7 @@ export default function PlanningDayScreen() {
 
         {/* CARD 2: COMPLETED TASKS */}
         <SettingsSectionCard
+          bgColor={colors.primaryLight}
           customBadge={<SettingsSecCompletedCheckIcon size={40} />}
           title="Completed Tasks"
           subtitle="Choose what happens after you complete a task."
@@ -310,28 +312,6 @@ export default function PlanningDayScreen() {
             )}
             <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
               Keep in today (move to bottom)
-            </Text>
-          </Pressable>
-
-          {/* Move to completed list */}
-          <Pressable
-            testID="completed-tasks-mode-move"
-            onPress={() => handleCompletedTasksModeChange('MOVE')}
-            style={({ pressed }) => [
-              styles.radioRow,
-              {
-                paddingVertical: spacing.sm,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            {completedTasksMode === 'MOVE' ? (
-              <SettingsCheckCircleIcon size={20} style={{ marginRight: spacing.sm }} />
-            ) : (
-              <View style={[styles.radioCircle, { borderColor: colors.border, marginRight: spacing.sm }]} />
-            )}
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
-              Move to completed list
             </Text>
           </Pressable>
 
@@ -360,6 +340,7 @@ export default function PlanningDayScreen() {
 
         {/* CARD 3: OVERDUE TASKS */}
         <SettingsSectionCard
+          bgColor={colors.primaryLight}
           customBadge={<SettingsSecOverdueBoltIcon size={40} />}
           title="Overdue Tasks"
           subtitle="Choose how to handle overdue tasks."
@@ -384,28 +365,6 @@ export default function PlanningDayScreen() {
             )}
             <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
               Keep in today (Recommended)
-            </Text>
-          </Pressable>
-
-          {/* Move to next day */}
-          <Pressable
-            testID="overdue-tasks-mode-move"
-            onPress={() => handleOverdueTasksModeChange('MOVE')}
-            style={({ pressed }) => [
-              styles.radioRow,
-              {
-                paddingVertical: spacing.sm,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            {overdueTasksMode === 'MOVE' ? (
-              <SettingsCheckCircleIcon size={20} style={{ marginRight: spacing.sm }} />
-            ) : (
-              <View style={[styles.radioCircle, { borderColor: colors.border, marginRight: spacing.sm }]} />
-            )}
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
-              Move to next day
             </Text>
           </Pressable>
 

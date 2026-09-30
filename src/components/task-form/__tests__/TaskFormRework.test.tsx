@@ -80,9 +80,9 @@ describe('Task Form Rework (All 5 Approved Phases)', () => {
     });
   });
 
-  describe('Phase 4: Steps removed from MAIN view and managed in More Options', () => {
-    it('does not display Steps section directly on MAIN view', async () => {
-      const { queryByText, queryByTestId } = await render(
+  describe('Subtasks displayed on MAIN view underneath task name', () => {
+    it('displays Steps section directly on MAIN view', async () => {
+      const { getByText, getByTestId } = await render(
         <ThemeProvider>
           <TaskFormScreen
             initialCivilSeedDate={civilToday}
@@ -94,8 +94,8 @@ describe('Task Form Rework (All 5 Approved Phases)', () => {
         </ThemeProvider>
       );
 
-      expect(queryByText('Steps')).toBeNull();
-      expect(queryByTestId('new-subtask-input')).toBeNull();
+      expect(getByText('Steps')).toBeTruthy();
+      expect(getByTestId('new-subtask-input')).toBeTruthy();
     });
   });
 

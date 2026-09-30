@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, type StyleProp, type ViewStyle } from 'react-native';
+import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import type { ThemeGalleryItem } from './types';
 
@@ -10,46 +11,57 @@ interface PhonePreviewCardProps {
 }
 
 export function PhonePreviewCard({ item, style, testID }: PhonePreviewCardProps) {
+  const { colors: appColors } = useTheme();
   const isDark = item.isDark ?? false;
-  const textColor = isDark ? '#F8FAFC' : '#1E293B';
-  const textMuted = isDark ? '#94A3B8' : '#64748B';
-  const pillInactiveBg = isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.05)';
+  const primaryColor = item.previewColors?.primary ?? appColors.primary;
+  const isDefaultTheme = item.id === 'default' || !item.wallpaperAsset;
 
-  // If this theme has an explicit high-res full screen preview image (like Scenery Theme1..10)
-  if (item.previewAsset) {
-    return (
-      <View style={[styles.cardShadow, style]} testID={testID}>
-        <View style={[styles.phoneChassis, { backgroundColor: isDark ? '#141419' : '#FFFFFF' }]}>
-          <Image
-            source={item.previewAsset}
-            style={StyleSheet.absoluteFill}
-            resizeMode="cover"
-          />
-        </View>
-      </View>
-    );
-  }
+  const textColor = isDefaultTheme
+    ? isDark
+      ? '#F8FAFC'
+      : '#1E293B'
+    : '#FFFFFF';
+  const textMuted = isDefaultTheme
+    ? isDark
+      ? '#94A3B8'
+      : '#64748B'
+    : 'rgba(255, 255, 255, 0.8)';
+  const pillInactiveBg = isDefaultTheme
+    ? isDark
+      ? 'rgba(255, 255, 255, 0.1)'
+      : 'rgba(0, 0, 0, 0.05)'
+    : 'rgba(255, 255, 255, 0.22)';
 
-  // Otherwise render the dynamic live UI preview (Pure Color, Texture, etc.)
+  const frostedTaskBg = isDefaultTheme
+    ? isDark
+      ? 'rgba(255, 255, 255, 0.08)'
+      : 'rgba(0, 0, 0, 0.04)'
+    : isDark
+    ? 'rgba(15, 23, 42, 0.45)'
+    : 'rgba(255, 255, 255, 0.65)';
+
+  const taskBorderColor = isDefaultTheme
+    ? isDark
+      ? 'rgba(255, 255, 255, 0.15)'
+      : 'rgba(0, 0, 0, 0.08)'
+    : 'rgba(255, 255, 255, 0.35)';
+
+  const taskLineColor = isDefaultTheme
+    ? isDark
+      ? 'rgba(255, 255, 255, 0.2)'
+      : 'rgba(0, 0, 0, 0.1)'
+    : 'rgba(255, 255, 255, 0.45)';
+
   return (
     <View style={[styles.cardShadow, style]} testID={testID}>
       <View
         style={[
           styles.phoneChassis,
-          { backgroundColor: item.background || (isDark ? '#121217' : '#FFFFFF') },
+          { backgroundColor: isDark ? '#121626' : '#F8FAFC' },
         ]}
       >
-        {/* If Texture theme, overlay the subtle rice paper pattern */}
-        {item.category === 'texture' && (
-          <Image
-            source={require('../../../assets/themes/gallery/texture_paper_bg.png')}
-            style={[StyleSheet.absoluteFill, { opacity: 0.85 }]}
-            resizeMode="repeat"
-          />
-        )}
-
-        {/* If Scenery wallpaper without full preview */}
-        {item.category === 'scenery' && item.wallpaperAsset && (
+        {/* Full Wallpaper Background for Islamic Themes */}
+        {item.wallpaperAsset && (
           <Image
             source={item.wallpaperAsset}
             style={StyleSheet.absoluteFill}
@@ -57,15 +69,29 @@ export function PhonePreviewCard({ item, style, testID }: PhonePreviewCardProps)
           />
         )}
 
+        {/* Subtle Dark/Light Vignette for Readability if Wallpaper is Present */}
+        {item.wallpaperAsset && (
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(10, 14, 28, 0.28)'
+                  : 'rgba(0, 0, 0, 0.12)',
+              },
+            ]}
+          />
+        )}
+
         {/* Top Header & Filter Chips */}
         <View style={styles.topHeader}>
           <View style={styles.pillRow}>
             {/* Active Chip 'All' */}
-            <View style={[styles.pillChipActive, { backgroundColor: item.color }]}>
+            <View style={[styles.pillChipActive, { backgroundColor: primaryColor }]}>
               <Text style={styles.pillTextActive}>All</Text>
             </View>
 
-            {/* Inactive Chips */}
+            {/* Inactive Filter Chips */}
             <View style={[styles.pillChipInactive, { backgroundColor: pillInactiveBg }]}>
               <Text style={[styles.pillTextInactive, { color: textColor }]}>Personal</Text>
             </View>
@@ -73,10 +99,7 @@ export function PhonePreviewCard({ item, style, testID }: PhonePreviewCardProps)
               <Text style={[styles.pillTextInactive, { color: textColor }]}>Deen</Text>
             </View>
             <View style={[styles.pillChipInactive, { backgroundColor: pillInactiveBg }]}>
-              <Text style={[styles.pillTextInactive, { color: textColor }]}>Hygiene</Text>
-            </View>
-            <View style={[styles.pillChipInactive, { backgroundColor: pillInactiveBg }]}>
-              <Text style={[styles.pillTextInactive, { color: textColor }]}>Suc...</Text>
+              <Text style={[styles.pillTextInactive, { color: textColor }]}>Worship</Text>
             </View>
 
             {/* Overflow icon */}
@@ -86,66 +109,65 @@ export function PhonePreviewCard({ item, style, testID }: PhonePreviewCardProps)
           </View>
         </View>
 
-        {/* Body Content */}
-        {item.category === 'scenery' ? (
-          /* Scenery list placeholder */
-          <View style={styles.sceneryContent}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={[styles.sectionHeaderText, { color: textColor }]}>Today</Text>
-              <Text style={[styles.sectionHeaderTriangle, { color: textMuted }]}>▲</Text>
-            </View>
+        {/* Body Content: Frosted Task Rows Over Wallpaper */}
+        <View style={styles.taskContentArea}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={[styles.sectionHeaderText, { color: textColor }]}>Today</Text>
+            <Text style={[styles.sectionHeaderTriangle, { color: textMuted }]}>▲</Text>
+          </View>
 
-            {/* 3 Frosted Task Bars */}
-            {[1, 2, 3].map((_, i) => (
+          {/* 4 Frosted Interactive-style Task Bars */}
+          {[1, 2, 3, 4].map((_, i) => (
+            <View
+              key={i}
+              style={[
+                styles.frostedTaskRow,
+                {
+                  backgroundColor: frostedTaskBg,
+                  borderColor: taskBorderColor,
+                },
+              ]}
+            >
               <View
-                key={i}
                 style={[
-                  styles.frostedTaskRow,
-                  {
-                    backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.7)',
-                  },
+                  styles.taskCircleCheckbox,
+                  { borderColor: primaryColor },
                 ]}
               >
-                <View
-                  style={[
-                    styles.taskCircleCheckbox,
-                    { borderColor: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.15)' },
-                  ]}
-                />
-                <View
-                  style={[
-                    styles.taskLinePlaceholder,
-                    {
-                      backgroundColor: isDark
-                        ? 'rgba(255,255,255,0.15)'
-                        : 'rgba(0,0,0,0.06)',
-                    },
-                  ]}
-                />
-                <View style={styles.bookmarkIcon}>
-                  <Icon
-                    name="flag"
-                    size={13}
-                    color={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.15)'}
-                    decorative
+                {i === 0 && (
+                  <View
+                    style={[
+                      styles.taskInnerCheckDot,
+                      { backgroundColor: primaryColor },
+                    ]}
                   />
-                </View>
+                )}
               </View>
-            ))}
-          </View>
-        ) : (
-          /* Empty State Illustration for Pure Color & Texture */
-          <View style={styles.illustrationContainer}>
-            <Image
-              source={require('../../../assets/themes/gallery/preview_illustration_trans.png')}
-              style={styles.illustrationImage}
-              resizeMode="contain"
-            />
-          </View>
-        )}
+
+              <View
+                style={[
+                  styles.taskLinePlaceholder,
+                  {
+                    backgroundColor: taskLineColor,
+                    width: i === 0 ? '60%' : i === 1 ? '75%' : i === 2 ? '50%' : '68%',
+                  },
+                ]}
+              />
+
+              <View style={styles.bookmarkIcon}>
+                <Icon
+                  name="flag"
+                  size={12}
+                  color={textMuted}
+                  decorative
+                />
+              </View>
+            </View>
+          ))}
+        </View>
 
         {/* Bottom Floating Action Button '+' */}
-        <View style={[styles.fabButton, { backgroundColor: item.color }]}>
+        <View style={[styles.fabButton, { backgroundColor: primaryColor }]}>
           <Text style={styles.fabPlusText}>+</Text>
         </View>
 
@@ -154,32 +176,54 @@ export function PhonePreviewCard({ item, style, testID }: PhonePreviewCardProps)
           style={[
             styles.bottomNavBar,
             {
-              backgroundColor: isDark ? 'rgba(20, 20, 26, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-              borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+              backgroundColor: isDark
+                ? 'rgba(18, 22, 38, 0.92)'
+                : 'rgba(255, 255, 255, 0.92)',
+              borderTopColor: isDark
+                ? 'rgba(255, 255, 255, 0.1)'
+                : 'rgba(0, 0, 0, 0.06)',
             },
           ]}
         >
           {/* Menu / Hamburger Icon */}
           <View style={styles.navItemSmall}>
-            <Text style={[styles.hamburgerIcon, { color: textMuted }]}>☰</Text>
+            <Text style={[styles.hamburgerIcon, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+              ☰
+            </Text>
           </View>
 
           {/* Tasks Tab (Active) */}
           <View style={styles.navItem}>
-            <Icon name="checkbox" size={17} color={item.color} decorative />
-            <Text style={[styles.navLabel, { color: item.color, fontWeight: '700' }]}>Tasks</Text>
+            <Icon name="checkbox" size={17} color={primaryColor} decorative />
+            <Text style={[styles.navLabel, { color: primaryColor, fontWeight: '700' }]}>
+              Tasks
+            </Text>
           </View>
 
           {/* Calendar Tab */}
           <View style={styles.navItem}>
-            <Icon name="calendar" size={17} color={textMuted} decorative />
-            <Text style={[styles.navLabel, { color: textMuted }]}>Calendar</Text>
+            <Icon
+              name="calendar"
+              size={17}
+              color={isDark ? '#94A3B8' : '#64748B'}
+              decorative
+            />
+            <Text style={[styles.navLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+              Calendar
+            </Text>
           </View>
 
           {/* Mine Tab */}
           <View style={styles.navItem}>
-            <Icon name="user" size={17} color={textMuted} decorative />
-            <Text style={[styles.navLabel, { color: textMuted }]}>Mine</Text>
+            <Icon
+              name="user"
+              size={17}
+              color={isDark ? '#94A3B8' : '#64748B'}
+              decorative
+            />
+            <Text style={[styles.navLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+              Mine
+            </Text>
           </View>
         </View>
       </View>
@@ -192,7 +236,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.16,
+    shadowOpacity: 0.18,
     shadowRadius: 18,
     elevation: 8,
   },
@@ -203,11 +247,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
+    borderColor: 'rgba(0, 0, 0, 0.08)',
   },
   topHeader: {
     paddingTop: 16,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     zIndex: 10,
   },
   pillRow: {
@@ -217,7 +261,7 @@ const styles = StyleSheet.create({
   },
   pillChipActive: {
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 4.5,
     borderRadius: 12,
   },
   pillTextActive: {
@@ -226,13 +270,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   pillChipInactive: {
-    paddingHorizontal: 7,
-    paddingVertical: 4,
+    paddingHorizontal: 7.5,
+    paddingVertical: 4.5,
     borderRadius: 12,
   },
   pillTextInactive: {
     fontSize: 10,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   moreIconContainer: {
     marginLeft: 'auto',
@@ -242,8 +286,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  sceneryContent: {
-    paddingTop: 12,
+  taskContentArea: {
+    paddingTop: 16,
     paddingHorizontal: 12,
     zIndex: 10,
   },
@@ -251,48 +295,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   sectionHeaderText: {
     fontSize: 13,
     fontWeight: '700',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   sectionHeaderTriangle: {
     fontSize: 8,
   },
   frostedTaskRow: {
-    height: 38,
-    borderRadius: 10,
+    height: 42,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    marginBottom: 8,
+    marginBottom: 9,
+    borderWidth: 1,
   },
   taskCircleCheckbox: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 1.5,
-  },
-  taskLinePlaceholder: {
-    flex: 1,
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 8,
-  },
-  bookmarkIcon: {
-    opacity: 0.6,
-  },
-  illustrationContainer: {
-    flex: 1,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1.8,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingBottom: 40,
-    zIndex: 5,
   },
-  illustrationImage: {
-    width: 150,
-    height: 165,
+  taskInnerCheckDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  taskLinePlaceholder: {
+    height: 8,
+    borderRadius: 4,
+    marginHorizontal: 10,
+  },
+  bookmarkIcon: {
+    marginLeft: 'auto',
   },
   fabButton: {
     position: 'absolute',
@@ -305,7 +348,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.28,
     shadowRadius: 6,
     elevation: 6,
     zIndex: 20,

@@ -1,10 +1,27 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
+import { Animated } from 'react-native';
 import { ThemeProvider } from '@/theme';
 import { IconPickerModal } from '../IconPickerModal';
 import { searchTaskIcons, detectTaskIcon, getIconIdFromTags, setIconInTags } from '@/constants/taskIcons';
 
 describe('IconPickerModal & taskIcons catalog', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.spyOn(Animated, 'timing').mockImplementation((value: any, config: any) => ({
+      start: (callback?: (result: { finished: boolean }) => void) => {
+        value.setValue(config.toValue);
+        callback?.({ finished: true });
+      },
+      stop: jest.fn(),
+      reset: jest.fn(),
+    }));
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('searches icons by keyword matching', () => {
     const results = searchTaskIcons('quran');
     expect(results.length).toBeGreaterThan(0);
@@ -35,11 +52,41 @@ describe('IconPickerModal & taskIcons catalog', () => {
     expect(cleared).toEqual(['urgent', 'deen']);
   });
 
-  it('renders IconPickerModal and selects an icon', async () => {
+  it('renders expanding IconPickerModal with placeholder Search icons and selects an icon', async () => {
     const onSelect = jest.fn();
     const onClose = jest.fn();
 
-    const { getByTestId, getByText } = await render(
+    const { getByTestId, getByText, getByPlaceholderText } = await render(
+      <ThemeProvider>
+        <IconPickerModal
+          visible={true}
+          selectedIconId="quran"
+          origin={{ x: 24, y: 120, width: 50, height: 50 }}
+          onSelectIcon={onSelect}
+          onClose={onClose}
+        />
+      </ThemeProvider>
+    );
+
+    expect(getByTestId('icon-picker-container')).toBeTruthy();
+    expect(getByTestId('icon-picker-safe-area')).toBeTruthy();
+    expect(getByPlaceholderText('Search icons')).toBeTruthy();
+    expect(getByText('Choose Task Icon')).toBeTruthy();
+
+    // Type in search query
+    await fireEvent.changeText(getByTestId('icon-search-input'), 'water');
+    expect(getByTestId('icon-item-water-hydration')).toBeTruthy();
+
+    // Press icon item
+    await fireEvent.press(getByTestId('icon-item-water-hydration'));
+    expect(onSelect).toHaveBeenCalledWith('water-hydration');
+  });
+
+  it('invokes onClose when close button is pressed', async () => {
+    const onSelect = jest.fn();
+    const onClose = jest.fn();
+
+    const { getByTestId } = await render(
       <ThemeProvider>
         <IconPickerModal
           visible={true}
@@ -50,16 +97,8 @@ describe('IconPickerModal & taskIcons catalog', () => {
       </ThemeProvider>
     );
 
-    expect(getByTestId('icon-picker-safe-area')).toBeTruthy();
-    expect(getByTestId('icon-search-input')).toBeTruthy();
-    expect(getByText('Choose Task Icon')).toBeTruthy();
-
-    // Type in search query
-    await fireEvent.changeText(getByTestId('icon-search-input'), 'water');
-    expect(getByTestId('icon-item-water-hydration')).toBeTruthy();
-
-    // Press icon item
-    await fireEvent.press(getByTestId('icon-item-water-hydration'));
-    expect(onSelect).toHaveBeenCalledWith('water-hydration');
+    const closeBtn = getByTestId('close-icon-picker');
+    await fireEvent.press(closeBtn);
+    expect(onClose).toHaveBeenCalled();
   });
 });

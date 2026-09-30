@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import {
-  PastelOptionCard,
+  SettingsGridTile,
   SettingsPastelHeader,
   SettingsQuoteCard,
   SettingsHubMosqueIcon,
@@ -24,6 +24,73 @@ export default function SettingsHubScreen() {
   const router = useRouter();
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
+  const hubItems = [
+    {
+      id: 'prayer-location',
+      label: 'Prayer & Location',
+      badge: <SettingsHubMosqueIcon size={44} />,
+      bgColor: colors.primaryLight,
+      onPress: () => router.push('/(tabs)/settings/prayer-location' as any),
+      testID: 'settings-row-prayer-location',
+    },
+    {
+      id: 'planning-day',
+      label: 'Planner',
+      badge: <SettingsHubPlannerIcon size={44} />,
+      bgColor: colors.primaryLight,
+      onPress: () => router.push('/(tabs)/settings/planning-day' as any),
+      testID: 'settings-row-planning-day',
+    },
+    {
+      id: 'notifications',
+      label: 'Notifications',
+      badge: <SettingsHubNotificationsIcon size={44} />,
+      bgColor: colors.dangerSurface,
+      onPress: () => router.push('/(tabs)/settings/notifications' as any),
+      testID: 'settings-row-notifications',
+    },
+    {
+      id: 'appearance',
+      label: 'Appearance',
+      badge: <SettingsHubAppearanceIcon size={44} />,
+      bgColor: colors.prayerFajr,
+      onPress: () => router.push('/(tabs)/settings/appearance' as any),
+      testID: 'settings-row-appearance',
+    },
+    {
+      id: 'calendar',
+      label: 'Calendar',
+      badge: <SettingsHubCalendarIcon size={44} />,
+      bgColor: colors.prayerIsha,
+      onPress: () => router.push('/(tabs)/settings/hijri-calendar' as any),
+      testID: 'settings-row-hijri-calendar',
+    },
+    {
+      id: 'account',
+      label: 'Account & Sync',
+      badge: <SettingsHubAccountIcon size={44} />,
+      bgColor: colors.primaryLight,
+      onPress: () => router.push('/(tabs)/settings/journal-privacy' as any),
+      testID: 'settings-row-account',
+    },
+    {
+      id: 'premium',
+      label: 'Premium',
+      badge: <SettingsHubPremiumIcon size={44} />,
+      bgColor: colors.prayerAsr,
+      onPress: () => setPremiumModalVisible(true),
+      testID: 'settings-row-premium',
+    },
+    {
+      id: 'about',
+      label: 'About',
+      badge: <SettingsHubAboutIcon size={44} />,
+      bgColor: colors.prayerIsha,
+      onPress: () => router.push('/(tabs)/settings/about' as any),
+      testID: 'settings-row-about',
+    },
+  ];
+
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.background }]}
@@ -40,101 +107,19 @@ export default function SettingsHubScreen() {
         testID="settings-hub"
         showsVerticalScrollIndicator={false}
       >
-        {/* 1. Prayer & Location */}
-        <PastelOptionCard
-          label="Prayer & Location"
-          subtitle="Set your location, calculation method and prayer time preferences"
-          icon="mosque"
-          iconColor={colors.primary}
-          badgeColor={colors.primaryLight}
-          customBadge={<SettingsHubMosqueIcon size={44} />}
-          onPress={() => router.push('/(tabs)/settings/prayer-location' as any)}
-          testID="settings-row-prayer-location"
-        />
-
-        {/* 2. Planner */}
-        <PastelOptionCard
-          label="Planner"
-          subtitle="Customize how your day and tasks work"
-          icon="calendar-check"
-          iconColor={colors.primary}
-          badgeColor={colors.primaryLight}
-          customBadge={<SettingsHubPlannerIcon size={44} />}
-          onPress={() => router.push('/(tabs)/settings/planning-day' as any)}
-          testID="settings-row-planning-day"
-        />
-
-        {/* 3. Notifications */}
-        <PastelOptionCard
-          label="Notifications"
-          subtitle="Set reminders and alerts"
-          icon="bell"
-          iconColor={colors.danger}
-          badgeColor={colors.dangerSurface}
-          customBadge={<SettingsHubNotificationsIcon size={44} />}
-          onPress={() => router.push('/(tabs)/settings/notifications' as any)}
-          testID="settings-row-notifications"
-        />
-
-        {/* 4. Appearance */}
-        <PastelOptionCard
-          label="Appearance"
-          subtitle="Theme, colors and display options"
-          icon="palette"
-          iconColor={colors.info}
-          badgeColor={colors.prayerFajr}
-          customBadge={<SettingsHubAppearanceIcon size={44} />}
-          onPress={() => router.push('/(tabs)/settings/appearance' as any)}
-          testID="settings-row-appearance"
-        />
-
-        {/* 5. Calendar */}
-        <PastelOptionCard
-          label="Calendar"
-          subtitle="Gregorian & Hijri settings, Islamic events"
-          icon="calendar"
-          iconColor={colors.info}
-          badgeColor={colors.prayerIsha}
-          customBadge={<SettingsHubCalendarIcon size={44} />}
-          onPress={() => router.push('/(tabs)/settings/hijri-calendar' as any)}
-          testID="settings-row-hijri-calendar"
-        />
-
-        {/* 6. Account & Sync */}
-        <PastelOptionCard
-          label="Account & Sync"
-          subtitle="Backup, devices and account settings"
-          icon="user"
-          iconColor={colors.primary}
-          badgeColor={colors.primaryLight}
-          customBadge={<SettingsHubAccountIcon size={44} />}
-          onPress={() => router.push('/(tabs)/settings/journal-privacy' as any)}
-          testID="settings-row-account"
-        />
-
-        {/* 8. Premium */}
-        <PastelOptionCard
-          label="Premium"
-          subtitle="Unlock additional features"
-          icon="crown"
-          iconColor={colors.warning}
-          badgeColor={colors.prayerAsr}
-          customBadge={<SettingsHubPremiumIcon size={44} />}
-          onPress={() => setPremiumModalVisible(true)}
-          testID="settings-row-premium"
-        />
-
-        {/* 9. About */}
-        <PastelOptionCard
-          label="About"
-          subtitle="Help, privacy and app information"
-          icon="info"
-          iconColor={colors.info}
-          badgeColor={colors.prayerIsha}
-          customBadge={<SettingsHubAboutIcon size={44} />}
-          onPress={() => router.push('/(tabs)/settings/about' as any)}
-          testID="settings-row-about"
-        />
+        <View style={styles.gridContainer}>
+          {hubItems.map((item) => (
+            <SettingsGridTile
+              key={item.id}
+              label={item.label}
+              badge={item.badge}
+              bgColor={item.bgColor}
+              onPress={item.onPress}
+              testID={item.testID}
+              style={styles.gridTile}
+            />
+          ))}
+        </View>
 
         {/* Bottom Quran Inspiration Quote */}
         <SettingsQuoteCard
@@ -204,6 +189,17 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 8,
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  gridTile: {
+    width: '48.2%',
+    marginBottom: 12,
   },
   modalOverlay: {
     position: 'absolute',

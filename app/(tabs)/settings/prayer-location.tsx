@@ -190,6 +190,7 @@ export default function PrayerLocationScreen() {
       >
         {/* CARD 1: LOCATION */}
         <SettingsSectionCard
+          bgColor={colors.primaryLight}
           customBadge={<SettingsSecLocationIcon size={40} />}
           title="Location"
           subtitle="Used to calculate accurate prayer times"
@@ -290,6 +291,7 @@ export default function PrayerLocationScreen() {
 
         {/* CARD 2: CALCULATION METHOD */}
         <SettingsSectionCard
+          bgColor={colors.primaryLight}
           customBadge={<SettingsSecCalculatorIcon size={40} />}
           title="Calculation Method"
           subtitle="Choose the method used to calculate prayer times"
@@ -363,6 +365,7 @@ export default function PrayerLocationScreen() {
 
         {/* CARD 3: ASR CALCULATION METHOD */}
         <SettingsSectionCard
+          bgColor={colors.primaryLight}
           customBadge={<SettingsSecAsrSunIcon size={40} />}
           title="Asr Calculation Method"
           subtitle="Choose the juristic method for Asr prayer"
@@ -431,6 +434,7 @@ export default function PrayerLocationScreen() {
 
         {/* CARD 4: ADJUST PRAYER TIMES */}
         <SettingsSectionCard
+          bgColor={colors.primaryLight}
           customBadge={<SettingsSecAdjustSlidersIcon size={40} />}
           title="Adjust Prayer Times"
           subtitle="Fine-tune prayer times if needed"

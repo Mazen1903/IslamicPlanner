@@ -1,10 +1,11 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
-import { ThemeProvider } from '@/theme';
+import { ThemeProvider, ISLAMIC_THEMES } from '@/theme';
 import {
   ThemeGalleryScreen,
   ThemePreviewModal,
-  PURE_COLOR_THEMES,
+  DEFAULT_THEME_ITEM,
+  type ThemeGalleryItem,
 } from '../index';
 
 jest.mock('expo-router', () => ({
@@ -15,51 +16,91 @@ jest.mock('expo-router', () => ({
 }));
 
 describe('ThemeGalleryScreen', () => {
-  it('renders Theme header and Pure Color section', async () => {
+  it('renders Appearance header, Mode card with options, and Islamic Themes 2-column grid without pure color', async () => {
     await render(
       <ThemeProvider>
         <ThemeGalleryScreen />
       </ThemeProvider>
     );
 
-    expect(screen.getByText('Theme')).toBeTruthy();
+    // Header & Navigation
+    expect(screen.getByText('Appearance')).toBeTruthy();
     expect(screen.getByTestId('theme-back-button')).toBeTruthy();
-    expect(screen.getByText('Pure Color')).toBeTruthy();
-  });
 
-  it('renders all pure color swatches', async () => {
-    await render(
-      <ThemeProvider>
-        <ThemeGalleryScreen />
-      </ThemeProvider>
-    );
+    // Appearance Mode Section
+    expect(screen.getByTestId('appearance-mode-section')).toBeTruthy();
+    expect(screen.getByText('Appearance Mode')).toBeTruthy();
+    expect(screen.getByTestId('theme-option-light')).toBeTruthy();
+    expect(screen.getByTestId('theme-option-dark')).toBeTruthy();
+    expect(screen.getByTestId('theme-option-system')).toBeTruthy();
 
-    // Verify pure colors
-    PURE_COLOR_THEMES.forEach((theme) => {
-      expect(screen.getByTestId(`theme-pure-color-${theme.id}`)).toBeTruthy();
+    // Islamic Themes Section & 2-column Grid
+    expect(screen.getByText('Islamic Themes')).toBeTruthy();
+    expect(screen.getByTestId('islamic-themes-grid')).toBeTruthy();
+    expect(screen.getByTestId('islamic-theme-default')).toBeTruthy();
+
+    // Verify all 10 Islamic themes are rendered in the grid
+    ISLAMIC_THEMES.forEach((theme) => {
+      expect(screen.getByTestId(`islamic-theme-${theme.id}`)).toBeTruthy();
+      expect(screen.getByText(theme.name)).toBeTruthy();
     });
+
+    // Verify pure color and fake categories are completely removed
+    expect(screen.queryByText('Pure Color')).toBeNull();
+    expect(screen.queryByTestId('texture-themes-section')).toBeNull();
+    expect(screen.queryByTestId('scenery-themes-section')).toBeNull();
+    expect(screen.queryByText('Textures & Materials')).toBeNull();
+    expect(screen.queryByText('Scenery & Art')).toBeNull();
   });
 
-  it('opens ThemePreviewModal when a theme is pressed', async () => {
+  it('allows switching appearance modes directly', async () => {
     await render(
       <ThemeProvider>
         <ThemeGalleryScreen />
       </ThemeProvider>
     );
 
-    // Press a pure color theme
     await act(async () => {
-      fireEvent.press(screen.getByTestId('theme-pure-color-color_sky_blue'));
+      fireEvent.press(screen.getByTestId('theme-option-dark'));
     });
 
-    // Modal should be open with title "Tap to Choose a Theme"
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('theme-option-light'));
+    });
+  });
+
+  it('opens ThemePreviewModal when an Islamic theme card is tapped', async () => {
+    await render(
+      <ThemeProvider>
+        <ThemeGalleryScreen />
+      </ThemeProvider>
+    );
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId(`islamic-theme-${ISLAMIC_THEMES[0].id}`));
+    });
+
     expect(screen.getByText('Tap to Choose a Theme')).toBeTruthy();
     expect(screen.getByTestId('theme-preview-close')).toBeTruthy();
     expect(screen.getByTestId('theme-preview-apply')).toBeTruthy();
+    expect(screen.getByTestId(`preview-card-${ISLAMIC_THEMES[0].id}`)).toBeTruthy();
   });
 });
 
 describe('ThemePreviewModal', () => {
+  const sampleItems: ThemeGalleryItem[] = [
+    DEFAULT_THEME_ITEM,
+    ...ISLAMIC_THEMES.map((t) => ({
+      id: t.id,
+      name: t.name,
+      arabicName: t.arabicName,
+      tagline: t.tagline,
+      isDark: t.isDark,
+      wallpaperAsset: t.wallpaperAsset,
+      previewColors: t.previewColors,
+    })),
+  ];
+
   it('renders header controls and allows closing', async () => {
     const mockClose = jest.fn();
     const mockApply = jest.fn();
@@ -67,7 +108,8 @@ describe('ThemePreviewModal', () => {
     await render(
       <ThemePreviewModal
         visible={true}
-        initialItem={PURE_COLOR_THEMES[0]}
+        initialItem={sampleItems[1]}
+        items={sampleItems}
         onClose={mockClose}
         onApplyTheme={mockApply}
       />
@@ -82,22 +124,23 @@ describe('ThemePreviewModal', () => {
     expect(mockClose).toHaveBeenCalled();
   });
 
-  it('allows selecting swatches and applying theme with checkmark button', async () => {
+  it('allows selecting thumbnails and applying theme with checkmark button', async () => {
     const mockClose = jest.fn();
     const mockApply = jest.fn();
 
     await render(
       <ThemePreviewModal
         visible={true}
-        initialItem={PURE_COLOR_THEMES[0]}
+        initialItem={sampleItems[0]}
+        items={sampleItems}
         onClose={mockClose}
         onApplyTheme={mockApply}
       />
     );
 
-    // Select second pure color swatch
+    // Select second theme thumbnail
     await act(async () => {
-      fireEvent.press(screen.getByTestId(`swatch-thumb-${PURE_COLOR_THEMES[1].id}`));
+      fireEvent.press(screen.getByTestId(`swatch-thumb-${sampleItems[1].id}`));
     });
 
     // Press Apply checkmark
@@ -105,23 +148,23 @@ describe('ThemePreviewModal', () => {
       fireEvent.press(screen.getByTestId('theme-preview-apply'));
     });
 
-    expect(mockApply).toHaveBeenCalledWith(PURE_COLOR_THEMES[1]);
+    expect(mockApply).toHaveBeenCalledWith(sampleItems[1]);
     expect(mockClose).toHaveBeenCalled();
   });
 
-  it('shows all pure color swatches', async () => {
+  it('shows all Islamic theme thumbnails in the bottom strip', async () => {
     await render(
       <ThemePreviewModal
         visible={true}
-        initialItem={PURE_COLOR_THEMES[0]}
+        initialItem={sampleItems[0]}
+        items={sampleItems}
         onClose={jest.fn()}
         onApplyTheme={jest.fn()}
       />
     );
 
-    // All pure color swatches should be rendered
-    PURE_COLOR_THEMES.forEach((theme) => {
-      expect(screen.getByTestId(`swatch-thumb-${theme.id}`)).toBeTruthy();
+    sampleItems.forEach((item) => {
+      expect(screen.getByTestId(`swatch-thumb-${item.id}`)).toBeTruthy();
     });
   });
 });

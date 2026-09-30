@@ -176,10 +176,17 @@ describe('PlanningDayScreen', () => {
     const upsertSpy = jest.spyOn(userSettingsRepository, 'upsert').mockResolvedValue({} as any);
     await renderScreen('FAJR');
 
-    fireEvent.press(screen.getByTestId('overdue-tasks-mode-move'));
+    fireEvent.press(screen.getByTestId('overdue-tasks-mode-hide'));
     await waitFor(() => {
-      expect(upsertSpy).toHaveBeenCalledWith({ overdueTasksMode: 'MOVE' });
+      expect(upsertSpy).toHaveBeenCalledWith({ overdueTasksMode: 'HIDE' });
       expect(mockReload).toHaveBeenCalled();
     });
+  });
+
+  it('does not render unimplemented MOVE options for completed and overdue tasks', async () => {
+    await renderScreen('FAJR');
+
+    expect(screen.queryByTestId('completed-tasks-mode-move')).toBeNull();
+    expect(screen.queryByTestId('overdue-tasks-mode-move')).toBeNull();
   });
 });

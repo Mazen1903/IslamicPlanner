@@ -231,6 +231,7 @@ export default function NotificationSettingsScreen({
       >
         {/* CARD 1: PRAYER ALERTS */}
         <SettingsSectionCard
+          bgColor={colors.dangerSurface}
           customBadge={<SettingsSecPrayerAlertsIcon size={40} />}
           title="Prayer Alerts"
           subtitle="Get notified for prayer times."
@@ -245,20 +246,8 @@ export default function NotificationSettingsScreen({
           }
           testID="prayer-alerts-section-card"
         >
-          {/* Sub-row: Adhan Sound */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.subRow,
-              { borderBottomColor: colors.border, paddingVertical: spacing.sm, opacity: pressed ? 0.8 : 1 },
-            ]}
-          >
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Adhan Sound</Text>
-            <Text style={[typography.bodySmall, { color: colors.textSecondary, marginRight: 6 }]}>Default</Text>
-            <Icon name="chevron-right" size="sm" color={colors.textTertiary} decorative />
-          </Pressable>
-
           {/* Sub-row: Vibration */}
-          <View style={[styles.subRow, { borderBottomColor: colors.border, paddingVertical: spacing.sm }]}>
+          <View style={[styles.subRow, { borderBottomWidth: 0, paddingVertical: spacing.sm }]}>
             <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Vibration</Text>
             <Switch
               testID="prayer-vibration-switch"
@@ -268,22 +257,11 @@ export default function NotificationSettingsScreen({
               thumbColor={colors.surface}
             />
           </View>
-
-          {/* Sub-row: Notify Before Prayer */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.subRow,
-              { paddingVertical: spacing.sm, opacity: pressed ? 0.8 : 1 },
-            ]}
-          >
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Notify Before Prayer</Text>
-            <Text style={[typography.bodySmall, { color: colors.textSecondary, marginRight: 6 }]}>10 minutes</Text>
-            <Icon name="chevron-right" size="sm" color={colors.textTertiary} decorative />
-          </Pressable>
         </SettingsSectionCard>
 
         {/* CARD 2: TASK REMINDERS */}
         <SettingsSectionCard
+          bgColor={colors.dangerSurface}
           customBadge={<SettingsSecTaskRemindersIcon size={40} />}
           title="Task Reminders"
           subtitle="Get reminders for your tasks."
@@ -353,32 +331,8 @@ export default function NotificationSettingsScreen({
             </View>
           )}
 
-          {/* Sub-row: Reminder Time */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.subRow,
-              { borderBottomColor: colors.border, paddingVertical: spacing.sm, opacity: pressed ? 0.8 : 1 },
-            ]}
-          >
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Reminder Time</Text>
-            <Text style={[typography.bodySmall, { color: colors.textSecondary, marginRight: 6 }]}>At time of task</Text>
-            <Icon name="chevron-right" size="sm" color={colors.textTertiary} decorative />
-          </Pressable>
-
-          {/* Sub-row: Sound */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.subRow,
-              { borderBottomColor: colors.border, paddingVertical: spacing.sm, opacity: pressed ? 0.8 : 1 },
-            ]}
-          >
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Sound</Text>
-            <Text style={[typography.bodySmall, { color: colors.textSecondary, marginRight: 6 }]}>Default</Text>
-            <Icon name="chevron-right" size="sm" color={colors.textTertiary} decorative />
-          </Pressable>
-
           {/* Sub-row: Vibration */}
-          <View style={[styles.subRow, { paddingVertical: spacing.sm }]}>
+          <View style={[styles.subRow, { borderBottomWidth: 0, paddingVertical: spacing.sm }]}>
             <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Vibration</Text>
             <Switch
               testID="task-vibration-switch"
@@ -392,6 +346,7 @@ export default function NotificationSettingsScreen({
 
         {/* CARD 3: DAILY JOURNAL REMINDER */}
         <SettingsSectionCard
+          bgColor={colors.dangerSurface}
           customBadge={<SettingsSecJournalReminderIcon size={40} />}
           title="Daily Journal"
           subtitle="Get a gentle evening reminder for your reflection."
@@ -425,12 +380,13 @@ export default function NotificationSettingsScreen({
 
         {/* CARD 4: GENERAL */}
         <SettingsSectionCard
+          bgColor={colors.dangerSurface}
           customBadge={<SettingsSecGeneralBellIcon size={40} />}
           title="General"
           testID="general-section-card"
         >
           {/* Sub-row: Quiet Hours */}
-          <View style={[styles.subRow, { borderBottomColor: colors.border, paddingVertical: spacing.sm }]}>
+          <View style={[styles.subRow, { borderBottomWidth: 0, paddingVertical: spacing.sm }]}>
             <View style={{ flex: 1, paddingRight: spacing.sm }}>
               <Text style={[typography.bodyMedium, { color: colors.textPrimary }]}>Quiet Hours</Text>
               <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
@@ -445,19 +401,6 @@ export default function NotificationSettingsScreen({
               thumbColor={colors.surface}
             />
           </View>
-
-          {/* Sub-row: Sound & Vibration Style */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.subRow,
-              { paddingVertical: spacing.sm, opacity: pressed ? 0.8 : 1 },
-            ]}
-          >
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
-              Sound & Vibration Style
-            </Text>
-            <Icon name="chevron-right" size="sm" color={colors.textTertiary} decorative />
-          </Pressable>
         </SettingsSectionCard>
 
         {/* Required Android Delivery Policy Disclaimer */}

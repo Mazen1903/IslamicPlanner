@@ -3,6 +3,7 @@ import {
   View,
   Text,
   Pressable,
+  ScrollView,
   StyleSheet,
   type StyleProp,
   type ViewStyle,
@@ -10,7 +11,8 @@ import {
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import type { FormState, FormAction, ScheduleMode, SchedulePreviewResult } from '@/features/task-form/types';
-import type { Prayer } from '@/constants/prayers';
+import { type Prayer, PRAYER_NAMES } from '@/constants/prayers';
+import { PrayerTabIcon } from '@/components/prayer/PrayerTabBar';
 import { DatePickerInput, TimePickerInput } from './DateTimePickerInput';
 
 const PRAYERS: Prayer[] = ['FAJR', 'DHUHR', 'ASR', 'MAGHRIB', 'ISHA'];
@@ -27,7 +29,7 @@ export function ScheduleModeCards({
   state,
   dispatch,
   previewResult,
-  onRequestRelativeView,
+  onRequestRelativeView: _onRequestRelativeView,
   style,
 }: ScheduleModeCardsProps) {
   const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
@@ -74,9 +76,6 @@ export function ScheduleModeCards({
               key={item.mode}
               onPress={() => {
                 dispatch({ type: 'SET_SCHEDULE_MODE', payload: item.mode });
-                if (item.mode === 'PRAYER_RELATIVE' && onRequestRelativeView) {
-                  onRequestRelativeView();
-                }
               }}
               accessibilityRole="radio"
               accessibilityState={{ checked: isSelected }}
@@ -200,6 +199,7 @@ export function ScheduleModeCards({
             <View style={styles.prayerRow}>
               {PRAYERS.map(p => {
                 const isAnchorSelected = state.relativeDraft.prayer === p;
+                const displayName = PRAYER_NAMES[p] ?? (p.charAt(0) + p.slice(1).toLowerCase());
                 return (
                   <Pressable
                     key={p}
@@ -211,21 +211,33 @@ export function ScheduleModeCards({
                     style={({ pressed }) => [
                       styles.prayerChip,
                       {
-                        backgroundColor: isAnchorSelected ? colors.primary : colors.surfaceSecondary,
+                        backgroundColor: isAnchorSelected ? colors.primaryLight : colors.surfaceSecondary,
                         borderColor: isAnchorSelected ? colors.primary : colors.border,
+                        borderWidth: isAnchorSelected ? 1.5 : 1,
                         borderRadius: radii.md,
-                        minHeight: touchTargets.min,
+                        paddingVertical: spacing.xs,
+                        minHeight: 56,
                         opacity: pressed ? 0.8 : 1,
                       },
                     ]}
                   >
+                    <PrayerTabIcon
+                      prayer={p}
+                      isSelected={isAnchorSelected}
+                      size={24}
+                      style={{ marginBottom: 2 }}
+                    />
                     <Text
                       style={[
-                        typography.labelMedium,
-                        { color: isAnchorSelected ? colors.textOnPrimary : colors.textPrimary },
+                        typography.caption,
+                        {
+                          color: isAnchorSelected ? colors.primaryDark : colors.textPrimary,
+                          fontWeight: isAnchorSelected ? '700' : '600',
+                          fontSize: 12,
+                        },
                       ]}
                     >
-                      {p.charAt(0) + p.slice(1).toLowerCase()}
+                      {displayName}
                     </Text>
                   </Pressable>
                 );
@@ -275,30 +287,43 @@ export function ScheduleModeCards({
             <Text style={[typography.labelMedium, { color: colors.textSecondary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
               Minutes Offset
             </Text>
-            <View style={styles.offsetPresetRow}>
-              {[0, 15, 30, 45, 60].map(min => {
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ flexDirection: 'row', paddingTop: 2 }}
+              testID="relative-offset-scroll"
+            >
+              {[0, 5, 10, 15, 20, 30, 45, 60, 90, 120].map(min => {
                 const isMinSelected = state.relativeDraft.offsetMinutes === min;
                 return (
                   <Pressable
                     key={min}
                     onPress={() => dispatch({ type: 'UPDATE_RELATIVE_DRAFT', payload: { offsetMinutes: min } })}
                     accessibilityRole="button"
+                    accessibilityState={{ selected: isMinSelected }}
                     accessibilityLabel={`${min} minutes`}
                     testID={`relative-offset-${min}`}
-                    style={[
+                    style={({ pressed }) => [
                       styles.offsetChip,
                       {
                         backgroundColor: isMinSelected ? colors.primary : colors.surfaceSecondary,
                         borderColor: isMinSelected ? colors.primary : colors.border,
-                        borderRadius: radii.sm,
-                        minHeight: touchTargets.min,
+                        borderRadius: radii.pill,
+                        marginEnd: spacing.xs,
+                        paddingVertical: spacing.xs,
+                        paddingHorizontal: spacing.md,
+                        minHeight: 36,
+                        opacity: pressed ? 0.8 : 1,
                       },
                     ]}
                   >
                     <Text
                       style={[
                         typography.labelMedium,
-                        { color: isMinSelected ? colors.textOnPrimary : colors.textPrimary },
+                        {
+                          color: isMinSelected ? colors.textOnPrimary : colors.textPrimary,
+                          fontWeight: isMinSelected ? '700' : '600',
+                        },
                       ]}
                     >
                       {min === 0 ? 'Exact' : `${min}m`}
@@ -306,7 +331,7 @@ export function ScheduleModeCards({
                   </Pressable>
                 );
               })}
-            </View>
+            </ScrollView>
 
             {state.validationErrors.offsetMinutes && (
               <Text style={[typography.caption, { color: colors.danger, marginTop: spacing.xs }]}>
@@ -538,7 +563,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
   },
   directionRow: {
     flexDirection: 'row',
@@ -556,8 +581,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   offsetChip: {
-    flex: 1,
-    minWidth: 50,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,

@@ -7,24 +7,25 @@ import {
   Modal,
   ScrollView,
   Dimensions,
+  Image,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import { PhonePreviewCard } from './PhonePreviewCard';
-import {
-  type ThemeGalleryItem,
-  PURE_COLOR_THEMES,
-} from './types';
+import { DEFAULT_THEME_ITEM, type ThemeGalleryItem } from './types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = 268;
 const CARD_MARGIN = 14;
 const SNAP_INTERVAL = CARD_WIDTH + CARD_MARGIN * 2;
 
-interface ThemePreviewModalProps {
+export interface ThemePreviewModalProps {
   visible: boolean;
   initialItem?: ThemeGalleryItem | null;
+  items: ThemeGalleryItem[];
   onClose: () => void;
   onApplyTheme: (item: ThemeGalleryItem) => void;
 }
@@ -32,37 +33,59 @@ interface ThemePreviewModalProps {
 export function ThemePreviewModal({
   visible,
   initialItem,
+  items,
   onClose,
   onApplyTheme,
 }: ThemePreviewModalProps) {
   const { colors } = useTheme();
 
   const [selectedItem, setSelectedItem] = useState<ThemeGalleryItem>(
-    initialItem ?? PURE_COLOR_THEMES[0],
+    initialItem ?? items[0] ?? DEFAULT_THEME_ITEM,
   );
 
   const scrollRef = useRef<ScrollView>(null);
+  const bottomThumbScrollRef = useRef<ScrollView>(null);
 
-  // Sync when initialItem changes
+  // Sync when initialItem or items change
   useEffect(() => {
     if (initialItem) {
       setSelectedItem(initialItem);
+      const index = items.findIndex((i) => i.id === initialItem.id);
+      if (index >= 0 && scrollRef.current) {
+        setTimeout(() => {
+          scrollRef.current?.scrollTo({
+            x: index * SNAP_INTERVAL,
+            animated: false,
+          });
+        }, 60);
+      }
     }
-  }, [initialItem]);
+  }, [initialItem, items]);
 
-  // Auto-scroll phone carousel to selected item index
-  useEffect(() => {
-    const index = PURE_COLOR_THEMES.findIndex((i) => i.id === selectedItem.id);
-    if (index >= 0 && scrollRef.current) {
+  const handleSelectSwatch = (item: ThemeGalleryItem, index: number) => {
+    setSelectedItem(item);
+    if (scrollRef.current) {
       scrollRef.current.scrollTo({
         x: index * SNAP_INTERVAL,
         animated: true,
       });
     }
-  }, [selectedItem.id]);
+  };
 
-  const handleSelectSwatch = (item: ThemeGalleryItem) => {
-    setSelectedItem(item);
+  const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const contentOffsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(contentOffsetX / SNAP_INTERVAL);
+    if (index >= 0 && index < items.length) {
+      const item = items[index];
+      if (item && item.id !== selectedItem.id) {
+        setSelectedItem(item);
+        // Scroll bottom thumb to visible range if needed
+        bottomThumbScrollRef.current?.scrollTo({
+          x: Math.max(0, index * 78 - 60),
+          animated: true,
+        });
+      }
+    }
   };
 
   const handleApply = () => {
@@ -93,19 +116,24 @@ export function ThemePreviewModal({
             <Icon name="close" size={24} color={colors.textPrimary} decorative />
           </Pressable>
 
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-            Tap to Choose a Theme
-          </Text>
+          <View style={styles.headerCenterCol}>
+            <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+              Tap to Choose a Theme
+            </Text>
+            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+              {selectedItem.name} {selectedItem.arabicName ? `• ${selectedItem.arabicName}` : ''}
+            </Text>
+          </View>
 
           <Pressable
             onPress={handleApply}
             accessibilityRole="button"
             accessibilityLabel="Apply theme"
             hitSlop={12}
-            style={styles.headerButton}
+            style={[styles.headerButton, styles.applyButton, { backgroundColor: colors.primary }]}
             testID="theme-preview-apply"
           >
-            <Icon name="check" size={26} color={colors.primary} decorative />
+            <Icon name="check" size={20} color="#FFFFFF" decorative />
           </Pressable>
         </View>
 
@@ -117,12 +145,13 @@ export function ThemePreviewModal({
             showsHorizontalScrollIndicator={false}
             snapToInterval={SNAP_INTERVAL}
             decelerationRate="fast"
+            onMomentumScrollEnd={handleScrollEnd}
             contentContainerStyle={[
               styles.carouselScroll,
               { paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2 - CARD_MARGIN },
             ]}
           >
-            {PURE_COLOR_THEMES.map((item) => {
+            {items.map((item) => {
               const isCurrent = item.id === selectedItem.id;
               return (
                 <View
@@ -130,8 +159,8 @@ export function ThemePreviewModal({
                   style={[
                     styles.cardWrapper,
                     {
-                      opacity: isCurrent ? 1 : 0.72,
-                      transform: [{ scale: isCurrent ? 1 : 0.95 }],
+                      opacity: isCurrent ? 1 : 0.65,
+                      transform: [{ scale: isCurrent ? 1 : 0.94 }],
                     },
                   ]}
                 >
@@ -148,54 +177,85 @@ export function ThemePreviewModal({
         {/* Section label */}
         <View style={styles.sectionLabelRow}>
           <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-            Pure Color
+            Islamic Themes
           </Text>
         </View>
 
-        {/* Bottom Horizontal Swatch Strip */}
+        {/* Bottom Swatch Strip: Thumbnail cards matching reference image */}
         <View style={styles.bottomSwatchSection}>
           <ScrollView
+            ref={bottomThumbScrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.swatchScrollContent}
           >
-            {PURE_COLOR_THEMES.map((item) => {
+            {items.map((item, index) => {
               const isSelected = item.id === selectedItem.id;
               return (
                 <Pressable
                   key={item.id}
-                  onPress={() => handleSelectSwatch(item)}
+                  onPress={() => handleSelectSwatch(item, index)}
                   accessibilityRole="button"
                   accessibilityLabel={`${item.name} theme`}
                   style={[
-                    styles.swatchItem,
-                    isSelected && styles.swatchItemSelected,
+                    styles.thumbCardContainer,
+                    isSelected && styles.thumbCardSelected,
                   ]}
                   testID={`swatch-thumb-${item.id}`}
                 >
                   <View
                     style={[
-                      styles.colorSwatchBox,
+                      styles.thumbBox,
                       {
-                        backgroundColor: item.color,
-                        borderColor: isSelected ? colors.primary : 'rgba(0,0,0,0.06)',
+                        borderColor: isSelected ? colors.primary : colors.border,
                         borderWidth: isSelected ? 2.5 : 1,
+                        backgroundColor: colors.surfaceElevated,
                       },
                     ]}
                   >
+                    {item.wallpaperAsset ? (
+                      <Image
+                        source={item.wallpaperAsset}
+                        style={StyleSheet.absoluteFill}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View
+                        style={[
+                          StyleSheet.absoluteFill,
+                          styles.defaultThumbCenter,
+                          { backgroundColor: colors.surfaceSecondary },
+                        ]}
+                      >
+                        <Icon name="refresh" size={18} color={colors.textSecondary} decorative />
+                      </View>
+                    )}
+
+                    {/* Active Checkmark Badge */}
                     {isSelected && (
-                      <View style={styles.checkmarkBadgeInner}>
-                        <Icon name="check" size={16} color="#FFFFFF" decorative />
+                      <View
+                        style={[
+                          styles.thumbCheckmarkBadge,
+                          { backgroundColor: colors.primary },
+                        ]}
+                      >
+                        <Icon name="check" size={11} color="#FFFFFF" decorative />
                       </View>
                     )}
                   </View>
 
-                  {/* PRO Badge on top-left */}
-                  {item.isPro && (
-                    <View style={styles.proBadge}>
-                      <Text style={styles.proBadgeText}>PRO</Text>
-                    </View>
-                  )}
+                  <Text
+                    style={[
+                      styles.thumbCardTitle,
+                      {
+                        color: isSelected ? colors.primary : colors.textPrimary,
+                        fontWeight: isSelected ? '700' : '500',
+                      },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {item.name}
+                  </Text>
                 </Pressable>
               );
             })}
@@ -211,21 +271,36 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    height: 52,
+    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
   },
   headerButton: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  applyButton: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.16,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerCenterCol: {
+    alignItems: 'center',
+  },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    marginTop: 1,
   },
   carouselContainer: {
     flex: 1,
@@ -234,7 +309,7 @@ const styles = StyleSheet.create({
   },
   carouselScroll: {
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   cardWrapper: {
     marginHorizontal: CARD_MARGIN,
@@ -246,57 +321,59 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   bottomSwatchSection: {
-    paddingVertical: 14,
-    paddingHorizontal: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
   },
   swatchScrollContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
   },
-  swatchItem: {
-    position: 'relative',
-    borderRadius: 16,
+  thumbCardContainer: {
+    width: 74,
+    alignItems: 'center',
   },
-  swatchItemSelected: {
+  thumbCardSelected: {
     transform: [{ scale: 1.05 }],
   },
-  colorSwatchBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
+  thumbBox: {
+    width: 70,
+    height: 52,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  defaultThumbCenter: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkmarkBadgeInner: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  proBadge: {
+  thumbCheckmarkBadge: {
     position: 'absolute',
-    top: 3,
-    left: 3,
-    backgroundColor: 'rgba(30, 30, 30, 0.72)',
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 4,
-    zIndex: 10,
+    bottom: 3,
+    right: 3,
+    width: 17,
+    height: 17,
+    borderRadius: 8.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.2,
+    borderColor: '#FFFFFF',
   },
-  proBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 8,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+  thumbCardTitle: {
+    fontSize: 9.5,
+    marginTop: 4,
+    textAlign: 'center',
   },
 });

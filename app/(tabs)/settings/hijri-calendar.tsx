@@ -25,16 +25,7 @@ import {
   SettingsRow,
   SettingsStepper,
   SettingsInfoCard,
-  SettingsSectionCard,
-  SettingsCalDateSystemIcon,
-  SettingsCalIslamicDatesIcon,
-  SettingsCalIslamicEventsIcon,
-  SettingsCalEventNotifIcon,
-  SettingsCalPreferredViewIcon,
-  SettingsCalInfoCircleIcon,
-  SettingsCheckCircleIcon,
 } from '@/components/settings';
-import { Switch } from 'react-native';
 import { Button } from '@/components/common/Button';
 import { Icon } from '@/components/common/Icon';
 import { HijriService } from '@/domain/calendar/HijriService';
@@ -198,12 +189,6 @@ export default function HijriCalendarScreen() {
     );
   };
 
-  const [dateSystem, setDateSystem] = useState<'gregorian' | 'hijri'>('gregorian');
-  const [showIslamicDates, setShowIslamicDates] = useState(true);
-  const [showIslamicEvents, setShowIslamicEvents] = useState(true);
-  const [eventNotifications, setEventNotifications] = useState(true);
-  const [preferredView, setPreferredView] = useState<'month' | 'last_viewed'>('month');
-
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.background }]}
@@ -223,206 +208,6 @@ export default function HijriCalendarScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: spacing.xxl }]}
         testID="hijri-calendar-screen"
       >
-        {/* 1. DATE SYSTEM SECTION CARD */}
-        <View style={{ paddingHorizontal: spacing.md }}>
-          <SettingsSectionCard
-            customBadge={<SettingsCalDateSystemIcon size={40} />}
-            title="Date System"
-            subtitle="Choose your primary calendar."
-            testID="calendar-date-system-card"
-          >
-            {/* Gregorian */}
-            <Pressable
-              onPress={() => setDateSystem('gregorian')}
-              style={[
-                styles.radioRow,
-                { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth },
-              ]}
-              testID="calendar-option-gregorian"
-            >
-              <View
-                style={[
-                  styles.radioCircle,
-                  {
-                    borderColor: dateSystem === 'gregorian' ? colors.primary : colors.border,
-                    backgroundColor: colors.surface,
-                  },
-                ]}
-              >
-                {dateSystem === 'gregorian' && (
-                  <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
-                )}
-              </View>
-              <View style={styles.radioTextContainer}>
-                <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
-                  Gregorian (e.g. September 2026)
-                </Text>
-              </View>
-            </Pressable>
-
-            {/* Hijri */}
-            <Pressable
-              onPress={() => setDateSystem('hijri')}
-              style={styles.radioRow}
-              testID="calendar-option-hijri"
-            >
-              <View
-                style={[
-                  styles.radioCircle,
-                  {
-                    borderColor: dateSystem === 'hijri' ? colors.primary : colors.border,
-                    backgroundColor: colors.surface,
-                  },
-                ]}
-              >
-                {dateSystem === 'hijri' && (
-                  <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
-                )}
-              </View>
-              <View style={styles.radioTextContainer}>
-                <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
-                  Hijri (e.g. Rabi' al-Thani 1448 AH)
-                </Text>
-              </View>
-            </Pressable>
-          </SettingsSectionCard>
-
-          {/* 2. SHOW ISLAMIC DATES */}
-          <SettingsSectionCard
-            customBadge={<SettingsCalIslamicDatesIcon size={40} />}
-            title="Show Islamic Dates"
-            subtitle="Display Hijri dates alongside Gregorian dates."
-            rightElement={
-              <Switch
-                value={showIslamicDates}
-                onValueChange={setShowIslamicDates}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor={colors.surface}
-              />
-            }
-            testID="calendar-show-islamic-dates-card"
-          />
-
-          {/* 3. ISLAMIC EVENTS */}
-          <SettingsSectionCard
-            customBadge={<SettingsCalIslamicEventsIcon size={40} />}
-            title="Islamic Events"
-            subtitle="Show important Islamic dates on your calendar."
-            rightElement={
-              <Switch
-                value={showIslamicEvents}
-                onValueChange={setShowIslamicEvents}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor={colors.surface}
-              />
-            }
-            testID="calendar-islamic-events-card"
-          />
-
-          {/* 4. EVENT NOTIFICATIONS */}
-          <SettingsSectionCard
-            customBadge={<SettingsCalEventNotifIcon size={40} />}
-            title="Event Notifications"
-            subtitle="Get notified for upcoming Islamic events."
-            rightElement={
-              <Switch
-                value={eventNotifications}
-                onValueChange={setEventNotifications}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor={colors.surface}
-              />
-            }
-            testID="calendar-event-notif-card"
-          />
-
-          {/* 5. PREFERRED CALENDAR VIEW */}
-          <SettingsSectionCard
-            customBadge={<SettingsCalPreferredViewIcon size={40} />}
-            title="Preferred Calendar View"
-            subtitle="Choose how the calendar opens."
-            testID="calendar-preferred-view-card"
-          >
-            {/* Month */}
-            <Pressable
-              onPress={() => setPreferredView('month')}
-              style={[
-                styles.radioRow,
-                { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth },
-              ]}
-              testID="calendar-view-month"
-            >
-              <View
-                style={[
-                  styles.radioCircle,
-                  {
-                    borderColor: preferredView === 'month' ? colors.primary : colors.border,
-                    backgroundColor: colors.surface,
-                  },
-                ]}
-              >
-                {preferredView === 'month' && (
-                  <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
-                )}
-              </View>
-              <View style={styles.radioTextContainer}>
-                <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
-                  Month
-                </Text>
-              </View>
-            </Pressable>
-
-            {/* Last viewed */}
-            <Pressable
-              onPress={() => setPreferredView('last_viewed')}
-              style={styles.radioRow}
-              testID="calendar-view-last-viewed"
-            >
-              <View
-                style={[
-                  styles.radioCircle,
-                  {
-                    borderColor: preferredView === 'last_viewed' ? colors.primary : colors.border,
-                    backgroundColor: colors.surface,
-                  },
-                ]}
-              >
-                {preferredView === 'last_viewed' && (
-                  <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
-                )}
-              </View>
-              <View style={styles.radioTextContainer}>
-                <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
-                  Last viewed
-                </Text>
-              </View>
-            </Pressable>
-          </SettingsSectionCard>
-
-          {/* Bottom Info Note */}
-          <View
-            style={[
-              styles.infoNoteCard,
-              {
-                backgroundColor: colors.primaryLight,
-                borderColor: colors.border,
-                borderRadius: radii.card,
-                padding: spacing.md,
-                marginTop: spacing.xs,
-                marginBottom: spacing.md,
-                flexDirection: 'row',
-                alignItems: 'center',
-              },
-              shadows.card,
-            ]}
-          >
-            <View style={{ marginRight: spacing.md }}>
-              <SettingsCalInfoCircleIcon size={34} />
-            </View>
-            <Text style={[typography.caption, { color: colors.textSecondary, flex: 1 }]}>
-              Islamic dates are based on the selected calculation method and may vary by region.
-            </Text>
-          </View>
-        </View>
 
         {/* EFFECTIVE PREVIEW CARD */}
         <View
@@ -680,29 +465,5 @@ const styles = StyleSheet.create({
   modalActions: {
     flexDirection: 'row',
   },
-  radioRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-  },
-  radioCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  radioTextContainer: {
-    flex: 1,
-  },
-  infoNoteCard: {
-    borderWidth: 1,
-  },
+
 });
