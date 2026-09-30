@@ -94,8 +94,35 @@ describe('Task Form Rework (All 5 Approved Phases)', () => {
         </ThemeProvider>
       );
 
-      expect(getByText('Steps')).toBeTruthy();
+      expect(getByTestId('subtasks-section')).toBeTruthy();
       expect(getByTestId('new-subtask-input')).toBeTruthy();
+    });
+
+    it('displays step count badge in heading row when subtasks are added', async () => {
+      const { getByTestId, queryByTestId, findByText } = await render(
+        <ThemeProvider>
+          <TaskFormScreen
+            initialCivilSeedDate={civilToday}
+            initialPlanningDayDate={planningDayKey}
+            inputProvider={mockProvider}
+            onSuccess={jest.fn()}
+            onCancel={jest.fn()}
+          />
+        </ThemeProvider>
+      );
+
+      expect(queryByTestId('task-subtasks-count-badge')).toBeNull();
+
+      await fireEvent.changeText(getByTestId('new-subtask-input'), 'First step');
+      await fireEvent.press(getByTestId('add-subtask-button'));
+
+      expect(await findByText('1 step')).toBeTruthy();
+      expect(getByTestId('task-subtasks-count-badge')).toBeTruthy();
+
+      await fireEvent.changeText(getByTestId('new-subtask-input'), 'Second step');
+      await fireEvent.press(getByTestId('add-subtask-button'));
+
+      expect(await findByText('2 steps')).toBeTruthy();
     });
   });
 

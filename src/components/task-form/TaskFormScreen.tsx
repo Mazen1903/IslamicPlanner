@@ -379,58 +379,83 @@ export function TaskFormScreen({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
       >
-        {/* Task Title Input Card with Icon Picker Badge */}
+        {/* Task Title + Subtasks Unified Card */}
         <View style={[styles.titleSection, { marginBottom: spacing.md }]}>
-          <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary, marginBottom: spacing.xs }]}>
-            Task name
-          </Text>
+          <View style={styles.taskSectionHeadingRow}>
+            <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary }]}>
+              Task name
+            </Text>
+            {state.subtasks.length > 0 && (
+              <Text
+                style={[typography.labelMedium, { color: colors.textSecondary }]}
+                testID="task-subtasks-count-badge"
+              >
+                {`${state.subtasks.length} step${state.subtasks.length === 1 ? '' : 's'}`}
+              </Text>
+            )}
+          </View>
           <View
             style={[
-              styles.titleInputCard,
+              styles.unifiedTaskCard,
               shadows.card,
               {
                 backgroundColor: colors.surface,
                 borderColor: state.validationErrors.title ? colors.danger : colors.border,
                 borderRadius: radii.card,
-                paddingHorizontal: spacing.sm,
-                paddingVertical: spacing.xs,
+                overflow: 'hidden',
               },
             ]}
           >
-            <Pressable
-              ref={iconPickerButtonRef as any}
-              onPress={handleOpenIconPicker}
-              accessibilityRole="button"
-              accessibilityLabel="Choose task icon"
-              testID="task-icon-picker-button"
+            <View
               style={[
-                styles.iconPickerButton,
+                styles.titleInputRow,
                 {
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surfaceSecondary,
-                  borderRadius: radii.md,
-                  marginEnd: spacing.sm,
+                  paddingHorizontal: spacing.sm,
+                  paddingVertical: spacing.sm,
                 },
               ]}
             >
-              <TaskCategoryIcon iconId={state.icon || detectTaskIcon(state.title)} size={34} />
-              <View style={[styles.iconEditPencilBadge, { backgroundColor: colors.primary }]}>
-                <Icon name="edit" size={10} color={colors.textOnPrimary} decorative />
-              </View>
-            </Pressable>
-            <TextInput
-              value={state.title}
-              onChangeText={text => dispatch({ type: 'SET_TITLE', payload: text })}
-              placeholder="What do you need to do?"
-              placeholderTextColor={colors.textTertiary}
-              accessibilityLabel="Task title"
-              testID="task-title-input"
-              style={[
-                styles.titleTextInput,
-                typography.bodyLarge,
-                {
-                  color: colors.textPrimary,
-                },
-              ]}
+              <Pressable
+                ref={iconPickerButtonRef as any}
+                onPress={handleOpenIconPicker}
+                accessibilityRole="button"
+                accessibilityLabel="Choose task icon"
+                testID="task-icon-picker-button"
+                style={[
+                  styles.iconPickerButton,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surfaceSecondary,
+                    borderRadius: radii.md,
+                    marginEnd: spacing.sm,
+                  },
+                ]}
+              >
+                <TaskCategoryIcon iconId={state.icon || detectTaskIcon(state.title)} size={34} />
+                <View style={[styles.iconEditPencilBadge, { backgroundColor: colors.primary }]}>
+                  <Icon name="edit" size={10} color={colors.textOnPrimary} decorative />
+                </View>
+              </Pressable>
+              <TextInput
+                value={state.title}
+                onChangeText={text => dispatch({ type: 'SET_TITLE', payload: text })}
+                placeholder="What do you need to do?"
+                placeholderTextColor={colors.textTertiary}
+                accessibilityLabel="Task title"
+                testID="task-title-input"
+                style={[
+                  styles.titleTextInput,
+                  typography.bodyLarge,
+                  {
+                    color: colors.textPrimary,
+                  },
+                ]}
+              />
+            </View>
+
+            {/* Subtasks Section embedded inside the unified card */}
+            <SubtasksSection
+              subtasks={state.subtasks}
+              dispatch={dispatch}
             />
           </View>
           {state.validationErrors.title && (
@@ -441,13 +466,6 @@ export function TaskFormScreen({
               {state.validationErrors.title}
             </Text>
           )}
-
-          {/* Subtasks Section directly underneath Task Name */}
-          <SubtasksSection
-            subtasks={state.subtasks}
-            dispatch={dispatch}
-            style={{ marginTop: spacing.md }}
-          />
         </View>
 
         {/* If THIS_OCCURRENCE: hide definition-level fields */}
@@ -805,11 +823,19 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontWeight: '700',
   },
-  titleInputCard: {
+  taskSectionHeadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  unifiedTaskCard: {
     borderWidth: 1,
-    minHeight: 56,
+  },
+  titleInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 60,
   },
   iconPickerButton: {
     width: 50,

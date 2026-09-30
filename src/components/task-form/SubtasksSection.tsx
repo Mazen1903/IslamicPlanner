@@ -16,10 +16,11 @@ export interface SubtasksSectionProps {
   subtasks: SubtaskDraft[];
   dispatch: React.Dispatch<FormAction>;
   style?: StyleProp<ViewStyle>;
+  hideDivider?: boolean;
 }
 
-export function SubtasksSection({ subtasks, dispatch, style }: SubtasksSectionProps) {
-  const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
+export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: SubtasksSectionProps) {
+  const { colors, spacing, radii, typography, touchTargets } = useTheme();
 
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const newSubtaskRef = useRef('');
@@ -43,30 +44,11 @@ export function SubtasksSection({ subtasks, dispatch, style }: SubtasksSectionPr
 
   return (
     <View style={[styles.container, style]} testID="subtasks-section">
-      <View style={styles.headerRow}>
-        <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary }]}>
-          Steps
-        </Text>
-        {subtasks.length > 0 && (
-          <Text style={[typography.labelMedium, { color: colors.textSecondary }]}>
-            {`${subtasks.length} step${subtasks.length === 1 ? '' : 's'}`}
-          </Text>
-        )}
-      </View>
+      {!hideDivider && (
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+      )}
 
-      <View
-        style={[
-          styles.card,
-          shadows.card,
-          {
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-            borderRadius: radii.card,
-            padding: spacing.md,
-            marginTop: spacing.xs,
-          },
-        ]}
-      >
+      <View style={[styles.content, { padding: spacing.sm }]}>
         {/* Existing subtasks list */}
         {subtasks.map(subtask => (
           <View
@@ -74,10 +56,8 @@ export function SubtasksSection({ subtasks, dispatch, style }: SubtasksSectionPr
             style={[
               styles.subtaskRow,
               {
-                backgroundColor: colors.surfaceSecondary,
-                borderRadius: radii.sm,
-                paddingHorizontal: spacing.sm,
-                paddingVertical: spacing.xs,
+                paddingHorizontal: spacing.xs,
+                paddingVertical: 4,
                 marginBottom: spacing.xs,
               },
             ]}
@@ -126,7 +106,7 @@ export function SubtasksSection({ subtasks, dispatch, style }: SubtasksSectionPr
         ))}
 
         {/* Input Row for adding new step */}
-        <View style={styles.inputRow}>
+        <View style={[styles.inputRow, subtasks.length > 0 && { marginTop: 2 }]}>
           <TextInput
             value={newSubtaskTitle}
             onChangeText={text => {
@@ -179,24 +159,19 @@ export function SubtasksSection({ subtasks, dispatch, style }: SubtasksSectionPr
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 4,
+    width: '100%',
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  divider: {
+    height: 1,
+    width: '100%',
   },
-  sectionTitle: {
-    fontWeight: '700',
-    fontSize: 18,
-  },
-  card: {
-    borderWidth: 1,
+  content: {
+    width: '100%',
   },
   subtaskRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 40,
+    minHeight: 36,
   },
   subtaskCheck: {
     padding: 6,
@@ -212,7 +187,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 4,
   },
   subtaskInput: {
     flex: 1,

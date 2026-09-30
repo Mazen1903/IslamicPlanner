@@ -200,10 +200,11 @@ export function MoreOptionsSubView({
             </View>
           </View>
 
-          <View style={[styles.expandedDrawer, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md, padding: spacing.md }]}>
+          <View style={[styles.expandedDrawer, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md, padding: spacing.xs }]}>
             <SubtasksSection
               subtasks={state.subtasks}
               dispatch={dispatch}
+              hideDivider
             />
           </View>
         </View>

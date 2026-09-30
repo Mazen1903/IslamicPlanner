@@ -18,8 +18,6 @@ describe('SubtasksSection', () => {
       </ThemeProvider>
     );
 
-    expect(getByText('Steps')).toBeTruthy();
-    expect(getByText('2 steps')).toBeTruthy();
     expect(getByText('Buy groceries')).toBeTruthy();
     expect(getByText('Cook dinner')).toBeTruthy();
 
