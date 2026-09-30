@@ -114,7 +114,7 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
               setNewSubtaskTitle(text);
             }}
             onSubmitEditing={handleAddSubtask}
-            placeholder="Add a step..."
+            placeholder="Add a subtask..."
             placeholderTextColor={colors.textTertiary}
             accessibilityLabel="New subtask title"
             testID="new-subtask-input"
@@ -134,7 +134,7 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
           <Pressable
             onPress={handleAddSubtask}
             accessibilityRole="button"
-            accessibilityLabel="Add step"
+            accessibilityLabel="Add subtask"
             testID="add-subtask-button"
             style={({ pressed }) => [
               styles.addBtn,

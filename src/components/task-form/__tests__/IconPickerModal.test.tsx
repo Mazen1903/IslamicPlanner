@@ -36,6 +36,9 @@ describe('IconPickerModal & taskIcons catalog', () => {
     expect(detectTaskIcon('Drink 8 glasses of water')).toBe('water-hydration');
     expect(detectTaskIcon('Go for a walk')).toBe('walk');
     expect(detectTaskIcon('Grocery shopping for family')).toBe('groceries');
+    expect(detectTaskIcon('')).toBe('pencil');
+    expect(detectTaskIcon(null)).toBe('pencil');
+    expect(detectTaskIcon('BlahBlahBlah123')).toBe('pencil');
   });
 
   it('extracts and sets icon in tags', () => {

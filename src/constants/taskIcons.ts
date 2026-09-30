@@ -1204,6 +1204,8 @@ export function setIconInTags(tags: string[] | undefined | null, iconId: string 
   return [...filtered, `icon:${iconId}`];
 }
 
+export const DEFAULT_TASK_ICON_ID = 'pencil';
+
 /**
  * Smart automatic fallback icon detection based on task title
  */
@@ -1214,7 +1216,7 @@ export function detectTaskIcon(title?: string | null, tags?: string[] | null): s
     return explicit;
   }
 
-  if (!title) return 'checkmark';
+  if (!title) return DEFAULT_TASK_ICON_ID;
 
   const lower = title.toLowerCase();
 
@@ -1231,5 +1233,5 @@ export function detectTaskIcon(title?: string | null, tags?: string[] | null): s
     }
   }
 
-  return bestMatch ? bestMatch.id : 'checkmark';
+  return bestMatch ? bestMatch.id : DEFAULT_TASK_ICON_ID;
 }

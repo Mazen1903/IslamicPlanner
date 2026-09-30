@@ -390,7 +390,7 @@ export function TaskFormScreen({
                 style={[typography.labelMedium, { color: colors.textSecondary }]}
                 testID="task-subtasks-count-badge"
               >
-                {`${state.subtasks.length} step${state.subtasks.length === 1 ? '' : 's'}`}
+                {`${state.subtasks.length} subtask${state.subtasks.length === 1 ? '' : 's'}`}
               </Text>
             )}
           </View>

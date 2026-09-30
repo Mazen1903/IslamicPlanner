@@ -195,7 +195,7 @@ export function MoreOptionsSubView({
                 Subtasks
               </Text>
               <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                {state.subtasks.length > 0 ? `${state.subtasks.length} item${state.subtasks.length === 1 ? '' : 's'}` : 'Break into smaller steps'}
+                {state.subtasks.length > 0 ? `${state.subtasks.length} item${state.subtasks.length === 1 ? '' : 's'}` : 'Break into smaller subtasks'}
               </Text>
             </View>
           </View>
