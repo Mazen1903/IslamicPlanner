@@ -65,6 +65,8 @@ export function IconPickerModal({
 
   const [isClosing, setIsClosing] = useState(false);
   const isClosingRef = useRef(false);
+  // Tracks icon selected mid-animation so we call onSelectIcon only after close finishes
+  const pendingSelectRef = useRef<string | null>(null);
 
   const defaultOrigin = useMemo(
     () => ({
@@ -119,7 +121,7 @@ export function IconPickerModal({
   );
 
   // ─── Dismiss handler ─────────────────────────────────────────────────────────
-  const handleClose = useCallback(() => {
+  const handleClose = useCallback((afterClose?: () => void) => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
     setIsClosing(true);
@@ -147,6 +149,7 @@ export function IconPickerModal({
       morphAnim.setValue(0);
       isClosingRef.current = false;
       onClose();
+      afterClose?.();
       return;
     }
 
@@ -164,6 +167,7 @@ export function IconPickerModal({
         setIsClosing(false);
         isClosingRef.current = false;
         onClose();
+        afterClose?.();
       }
     });
   }, [morphAnim, dragAnim, onClose]);
@@ -310,9 +314,19 @@ export function IconPickerModal({
 
   const handleSelect = useCallback(
     (iconId: string) => {
-      onSelectIcon(iconId);
+      // Close the modal with its animation first, then notify the parent.
+      // This prevents the parent's SET_ICON dispatch (which triggers async preview
+      // re-computation) from competing with the shrink animation and causing a freeze.
+      pendingSelectRef.current = iconId;
+      handleClose(() => {
+        const pending = pendingSelectRef.current;
+        pendingSelectRef.current = null;
+        if (pending !== null) {
+          onSelectIcon(pending);
+        }
+      });
     },
-    [onSelectIcon]
+    [handleClose, onSelectIcon]
   );
 
   const renderIconItem = useCallback(
@@ -370,7 +384,7 @@ export function IconPickerModal({
       {/* 1. Backdrop */}
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropOpacity }]}>
         <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.overlay }]} />
-        <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => handleClose()} />
       </Animated.View>
 
       {/* 2. Morphing Card */}
@@ -420,7 +434,7 @@ export function IconPickerModal({
                   Choose Task Icon
                 </Text>
                 <Pressable
-                  onPress={handleClose}
+                  onPress={() => handleClose()}
                   accessibilityRole="button"
                   accessibilityLabel="Close icon picker"
                   style={({ pressed }) => [

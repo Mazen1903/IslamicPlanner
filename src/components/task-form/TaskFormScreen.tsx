@@ -788,14 +788,12 @@ export function TaskFormScreen({
       </ScrollView>
       </SafeAreaView>
 
-      {/* Icon Picker Modal with expand/shrink morph */}
       <IconPickerModal
         visible={showIconPicker}
         selectedIconId={state.icon}
         origin={iconPickerOrigin}
         onSelectIcon={iconId => {
           dispatch({ type: 'SET_ICON', payload: iconId });
-          setShowIconPicker(false);
         }}
         onClose={() => setShowIconPicker(false)}
       />
