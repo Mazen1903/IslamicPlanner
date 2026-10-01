@@ -80,6 +80,8 @@ export function useToday(options: UseTodayOptions = {}) {
     engineRef.current = engine;
   }, [inputProvider, orchestrator, coordinator, locationRefresh, lifecycleService, notificationService, engine]);
 
+  const performFullRefreshRef = useRef<(syncSelected?: boolean) => Promise<void>>(async () => {});
+
   /**
    * Full refresh executor.
    * syncSelected: true on initial load and app foreground; false on mid-session rollover.
@@ -105,7 +107,7 @@ export function useToday(options: UseTodayOptions = {}) {
           .then(locResult => {
             if (locResult.status === 'READY' && locResult.changed) {
               // Location changed materially — re-run to update prayer times
-              performFullRefresh(false);
+              performFullRefreshRef.current(false);
             }
           })
           .catch(() => {});
@@ -135,6 +137,10 @@ export function useToday(options: UseTodayOptions = {}) {
       useTodayStore.getState().setError(token, err?.message ?? 'Failed to refresh Today screen');
     }
   }, []);
+
+  useEffect(() => {
+    performFullRefreshRef.current = performFullRefresh;
+  }, [performFullRefresh]);
 
   /**
    * Fast-path initial load: delegates to performFullRefresh with syncSelected=true.
@@ -368,12 +374,15 @@ export function useToday(options: UseTodayOptions = {}) {
   const deleteTask = useCallback(async (taskOrId: TaskCardViewModel | string) => {
     const occurrenceId = typeof taskOrId === 'string' ? taskOrId : taskOrId.occurrenceId;
     const defId = typeof taskOrId === 'string' ? undefined : taskOrId.taskDefinitionId;
+    const isRecurring = typeof taskOrId === 'string' ? false : Boolean(taskOrId.isRecurring);
 
     try {
       if (occurrenceId) {
         await taskOccurrenceRepository.deleteIfPending(occurrenceId).catch(() => {});
       }
-      if (defId) {
+      // Only delete definition if it is NOT a recurring series!
+      // Recurring series occurrences must be deleted individually without destroying the series.
+      if (defId && !isRecurring) {
         await taskDefinitionRepository.delete(defId).catch(() => {});
       }
     } finally {

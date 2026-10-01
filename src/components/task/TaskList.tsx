@@ -137,7 +137,9 @@ export function TaskList({
 
   // Keep a ref to selectedPrayer to always have the latest value in async callbacks without recreation churn
   const selectedPrayerRef = useRef<Prayer>(selectedPrayer);
-  selectedPrayerRef.current = selectedPrayer;
+  useEffect(() => {
+    selectedPrayerRef.current = selectedPrayer;
+  }, [selectedPrayer]);
 
   // Fix #2: Clean up edge dwell timer on unmount to prevent ghost reschedules
   useEffect(() => {

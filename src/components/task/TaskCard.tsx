@@ -235,8 +235,11 @@ export function TaskCard({
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
+      onPanResponderTerminationRequest: () => !isUnlockedRef.current,
       onMoveShouldSetPanResponder: (_evt, gestureState) => {
         if (isUnlockedRef.current) return true;
+        // Terminal historical records (completed or missed) are immutable and cannot be deleted via swipe
+        if (isCompleted || isMissed) return false;
         // Check for horizontal swipe to the left
         const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.2;
         if (isHorizontal && gestureState.dx < -8) {

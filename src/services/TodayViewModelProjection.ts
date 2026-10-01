@@ -225,7 +225,7 @@ export function buildTaskCardViewModel(
 
   const streak = streakMap?.get(occ.seriesId);
   const streakEnabled = Boolean(streak?.streakEnabled);
-  const streakCount = streakEnabled ? Math.max(1, streak?.currentStreak ?? 1) : null;
+  const streakCount = streakEnabled ? (streak?.currentStreak ?? 0) : null;
 
   return {
     occurrenceId: occ.id,

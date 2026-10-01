@@ -956,15 +956,30 @@ export class TaskOccurrenceRepository {
    *         status == 'PENDING' AND window_start IS NOT NULL AND window_end IS NOT NULL
    *         AND planning_day_key != activePlanningDayKey
    *         AND window_start <= nowUtc AND nowUtc < window_end
+   * Rule C: PENDING occurrences whose localDate equals the activeCivilDate (today's wall-clock date)
+   *         but whose planningDayKey != activePlanningDayKey.
+   *         This catches EXACT_TIME / PRAYER_RELATIVE / PRAYER_WINDOW tasks the user created for
+   *         today's civil date when the Fajr-based planning day hasn't started yet — the scheduling
+   *         engine places them on today's planningDayKey (= civil date) but the active planning day is
+   *         still yesterday. Without this rule they are invisible in the Planner but visible in the
+   *         Calendar (which queries by planningDayKey range).
+   *         ANYTIME_TODAY is safe because its startDate is always set to the active planningDayKey
+   *         (not the civil date), so it always satisfies Rule A and never hits Rule C.
+   *         Rule C is a no-op when activeCivilDate === activePlanningDayKey (normal midnight-based day).
    */
   async findTodayCandidates(
     activePlanningDayKey: string,
     nowUtc: string,
+    activeCivilDate?: string,
     tx?: any
   ): Promise<TaskOccurrence[]> {
     assertValidCivilDate(activePlanningDayKey, 'activePlanningDayKey');
     assertValidIsoInstant(nowUtc, 'nowUtc');
     const canonicalNowUtc = canonicalizeIsoInstant(nowUtc);
+
+    // Rule C civil date: defaults to activePlanningDayKey (no-op when dates match)
+    const civilDate = activeCivilDate ?? activePlanningDayKey;
+    const ruleCApplies = civilDate !== activePlanningDayKey;
 
     const client = getDb(tx);
     const rows = client
@@ -972,7 +987,9 @@ export class TaskOccurrenceRepository {
       .from(taskOccurrences)
       .where(
         or(
+          // Rule A: exact planning day match (all statuses)
           eq(taskOccurrences.planningDayKey, activePlanningDayKey),
+          // Rule B: cross-day active PENDING prayer windows
           and(
             eq(taskOccurrences.status, 'PENDING'),
             isNotNull(taskOccurrences.windowStart),
@@ -980,7 +997,18 @@ export class TaskOccurrenceRepository {
             ne(taskOccurrences.planningDayKey, activePlanningDayKey),
             lte(taskOccurrences.windowStart, canonicalNowUtc),
             gt(taskOccurrences.windowEnd, canonicalNowUtc)
-          )
+          ),
+          // Rule C: tasks created for today's civil date before Fajr
+          // Only active when civil date differs from planningDayKey (Fajr-mode, pre-Fajr)
+          ...(ruleCApplies
+            ? [
+                and(
+                  eq(taskOccurrences.status, 'PENDING'),
+                  eq(taskOccurrences.localDate, civilDate),
+                  ne(taskOccurrences.planningDayKey, activePlanningDayKey)
+                ),
+              ]
+            : [])
         )
       )
       .all();

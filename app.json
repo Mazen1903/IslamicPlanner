@@ -14,7 +14,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mm1903.islamicplannerapp"
+      "bundleIdentifier": "com.mm1903.islamicplannerapp",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Islamic Daily Planner needs your location to calculate accurate prayer times."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -25,7 +28,14 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.mm1903.islamicplannerapp",
-      "permissions": ["android.permission.POST_NOTIFICATIONS"]
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

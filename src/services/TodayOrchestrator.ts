@@ -110,7 +110,8 @@ export class TodayOrchestrator {
     const nowUtc = now.toUTC().toISO()!;
     const queryResult = await this.queryService.queryTodayCandidates(
       planningDay.key,
-      nowUtc
+      nowUtc,
+      centerDate  // Rule C: civil date may differ from planningDay.key before Fajr
     );
 
     // Batch-load streaks for all series IDs in today's candidate occurrences
@@ -152,10 +153,12 @@ export class TodayOrchestrator {
   ): Promise<TodayViewModel> {
     const timezone = runtime.planningDay.periods[0]?.start.zoneName ?? 'UTC';
     const nowUtc = now.toUTC().toISO()!;
+    const civilDate = now.setZone(timezone).toISODate()!;
 
     const queryResult = await this.queryService.queryTodayCandidates(
       runtime.planningDay.key,
-      nowUtc
+      nowUtc,
+      civilDate  // Rule C: civil date may differ from planningDay.key before Fajr
     );
 
     // Batch-load streaks for all series IDs

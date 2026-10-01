@@ -1,4 +1,5 @@
 import { eq, inArray } from 'drizzle-orm';
+import { DateTime } from 'luxon';
 import { streakData } from '@/data/schema';
 import { getDatabase, type AppDatabase } from '@/data/db';
 import type { StreakData } from '@/domain/task/types';
@@ -34,22 +35,17 @@ export class StreakRepository {
 
     if (existing) {
       if (!existing.streakEnabled) {
-        const nextStreak = Math.max(1, existing.currentStreak);
-        const nextLongest = Math.max(nextStreak, existing.longestStreak);
+        // Re-enabling: preserve historical counts but do NOT inflate — keep as-is
         await db
           .update(streakData)
           .set({
             streakEnabled: true,
-            currentStreak: nextStreak,
-            longestStreak: nextLongest,
             updatedAt: now,
           })
           .where(eq(streakData.seriesId, seriesId));
         return {
           ...existing,
           streakEnabled: true,
-          currentStreak: nextStreak,
-          longestStreak: nextLongest,
           updatedAt: now,
         };
       }
@@ -57,12 +53,13 @@ export class StreakRepository {
     }
 
     const newId = generateUuid();
+    // BUG-FIX: seed at 0 so the first real completion correctly increments to 1
     await db.insert(streakData).values({
       id: newId,
       seriesId,
       streakEnabled: true,
-      currentStreak: 1,
-      longestStreak: 1,
+      currentStreak: 0,
+      longestStreak: 0,
       lastCompletedDate: null,
       lastResetDate: null,
       createdAt: now,
@@ -73,8 +70,8 @@ export class StreakRepository {
       id: newId,
       seriesId,
       streakEnabled: true,
-      currentStreak: 1,
-      longestStreak: 1,
+      currentStreak: 0,
+      longestStreak: 0,
       lastCompletedDate: null,
       lastResetDate: null,
       createdAt: now,
@@ -154,12 +151,30 @@ export class StreakRepository {
 
     const db = getDb(tx);
     const now = new Date().toISOString();
-    // If brand new (never completed before) and starting at 1, completing today solidifies Day 1.
-    // Subsequent days increment: 1 -> 2 -> 3...
-    const newStreak =
-      existing.lastCompletedDate === null && existing.currentStreak >= 1
-        ? existing.currentStreak
-        : existing.currentStreak + 1;
+
+    // BUG-FIX: Consecutive-day continuity check.
+    // If the gap between lastCompletedDate and today is > 1 day the streak is
+    // broken regardless of whether the lifecycle sweep fired. Reset to 1.
+    let newStreak: number;
+    if (existing.lastCompletedDate === null) {
+      // No prior completion — first real completion, start at 1
+      newStreak = 1;
+    } else {
+      const lastDt = DateTime.fromISO(existing.lastCompletedDate, { zone: 'utc' });
+      const completedDt = DateTime.fromISO(completedDate, { zone: 'utc' });
+      const daysDiff = Math.round(completedDt.diff(lastDt, 'days').days);
+      if (daysDiff < 1) {
+        // Backfilled completion of an older historical date — does not advance or break the current forward streak
+        return existing;
+      } else if (daysDiff > 1) {
+        // Gap detected (> 1 day) — streak broken, restart
+        newStreak = 1;
+      } else {
+        // Exactly consecutive day (1 day diff)
+        newStreak = existing.currentStreak + 1;
+      }
+    }
+
     const newLongest = Math.max(newStreak, existing.longestStreak);
 
     await db
@@ -200,13 +215,28 @@ export class StreakRepository {
 
     const db = getDb(tx);
     const now = new Date().toISOString();
-    const newStreak = Math.max(1, existing.currentStreak - 1);
+    // BUG-FIX: decrement to 0 floor (not 1), so the badge correctly shows 0
+    const newStreak = Math.max(0, existing.currentStreak - 1);
+
+    // BUG-FIX: Restore lastCompletedDate to the day before instead of nulling it.
+    // Nulling caused the next re-completion to hit the "first completion" branch
+    // and freeze the streak at 1. Setting it to completedDate-1 restores continuity.
+    let restoredLastCompletedDate: string | null;
+    if (newStreak === 0) {
+      // No prior days in the streak — truly back to ground zero
+      restoredLastCompletedDate = null;
+    } else {
+      // Point lastCompletedDate back to the day before the reverted date
+      restoredLastCompletedDate = DateTime.fromISO(completedDate, { zone: 'utc' })
+        .minus({ days: 1 })
+        .toISODate();
+    }
 
     await db
       .update(streakData)
       .set({
         currentStreak: newStreak,
-        lastCompletedDate: null,
+        lastCompletedDate: restoredLastCompletedDate,
         updatedAt: now,
       })
       .where(eq(streakData.seriesId, seriesId));
@@ -214,7 +244,7 @@ export class StreakRepository {
     return {
       ...existing,
       currentStreak: newStreak,
-      lastCompletedDate: null,
+      lastCompletedDate: restoredLastCompletedDate,
       updatedAt: now,
     };
   }

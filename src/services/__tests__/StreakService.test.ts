@@ -19,11 +19,13 @@ describe('StreakService', () => {
   it('onOccurrenceCompleted increments streak when enabled for series', async () => {
     await service.enableStreak('series-1');
 
+    // First real completion: 0 → 1
     await service.onOccurrenceCompleted('series-1', '2026-10-01');
     let streak = await streakRepo.findBySeriesId('series-1');
     expect(streak?.currentStreak).toBe(1);
     expect(streak?.longestStreak).toBe(1);
 
+    // Consecutive day: 1 → 2
     await service.onOccurrenceCompleted('series-1', '2026-10-02');
     streak = await streakRepo.findBySeriesId('series-1');
     expect(streak?.currentStreak).toBe(2);
@@ -93,6 +95,7 @@ describe('StreakService', () => {
     await service.onOccurrenceUncompleted('series-undo', '2026-10-02');
     streak = await streakRepo.findBySeriesId('series-undo');
     expect(streak?.currentStreak).toBe(1);
-    expect(streak?.lastCompletedDate).toBeNull();
+    // BUG-FIX: lastCompletedDate restored to previous day, not null
+    expect(streak?.lastCompletedDate).toBe('2026-10-01');
   });
 });
