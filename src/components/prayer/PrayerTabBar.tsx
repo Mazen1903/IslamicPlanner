@@ -100,60 +100,6 @@ export function PrayerTabBar({
 }: PrayerTabBarProps) {
   const { colors, isDark, typography } = useTheme();
 
-  // Layout tracking for the smooth sliding pill indicator inside modeSegment
-  const [tabLayouts, setTabLayouts] = React.useState<Record<string, { x: number; y: number; width: number; height: number }>>({});
-  const translateX = React.useRef(new Animated.Value(0)).current;
-  const indicatorWidth = React.useRef(new Animated.Value(0)).current;
-  const indicatorOpacity = React.useRef(new Animated.Value(0)).current;
-  const isInitializedRef = React.useRef(false);
-
-  const handleTabLayout = React.useCallback((prayer: Prayer, layout: { x: number; y: number; width: number; height: number }) => {
-    setTabLayouts(prev => {
-      if (prev[prayer]?.x === layout.x && prev[prayer]?.width === layout.width) {
-        return prev;
-      }
-      return { ...prev, [prayer]: layout };
-    });
-  }, []);
-
-  React.useEffect(() => {
-    if (!selectedPrayer || !tabLayouts[selectedPrayer]) {
-      return;
-    }
-
-    const target = tabLayouts[selectedPrayer];
-
-    if (!isInitializedRef.current) {
-      translateX.setValue(target.x);
-      indicatorWidth.setValue(target.width);
-      indicatorOpacity.setValue(1);
-      isInitializedRef.current = true;
-      return;
-    }
-
-    Animated.parallel([
-      Animated.spring(translateX, {
-        toValue: target.x,
-        damping: 22,
-        stiffness: 220,
-        mass: 0.8,
-        useNativeDriver: false,
-      }),
-      Animated.spring(indicatorWidth, {
-        toValue: target.width,
-        damping: 22,
-        stiffness: 220,
-        mass: 0.8,
-        useNativeDriver: false,
-      }),
-      Animated.timing(indicatorOpacity, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  }, [selectedPrayer, tabLayouts, translateX, indicatorWidth, indicatorOpacity]);
-
   return (
     <View style={styles.outerWrapper}>
       {/* ── Outer Bordered Segment Container from TasbeehModeSelector ── */}
@@ -168,22 +114,6 @@ export function PrayerTabBar({
         accessibilityRole="tablist"
         testID="prayer-tab-bar"
       >
-        {/* Smooth Sliding Pill Indicator */}
-        {selectedPrayer && tabLayouts[selectedPrayer] ? (
-          <Animated.View
-            pointerEvents="none"
-            testID="prayer-tab-sliding-pill"
-            style={[
-              styles.slidingPill,
-              {
-                transform: [{ translateX }],
-                width: indicatorWidth,
-                opacity: indicatorOpacity,
-                backgroundColor: isDark ? 'rgba(34, 197, 94, 0.22)' : '#DCFCE7',
-              },
-            ]}
-          />
-        ) : null}
 
         {tabs.map(tab => {
           const active = tab.prayer === selectedPrayer;
@@ -212,7 +142,6 @@ export function PrayerTabBar({
               accessibilityLabel={`${tab.name}, ${tab.startTime}${
                 isCurrent ? ', current prayer' : ''
               }`}
-              onLayout={e => handleTabLayout(tab.prayer, e.nativeEvent.layout)}
               style={[
                 styles.modeTab,
                 active && {
@@ -370,13 +299,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  slidingPill: {
-    position: 'absolute',
-    top: 4,
-    bottom: 4,
-    borderRadius: 16,
-    zIndex: 0,
-  },
 
   timeRow: {
     flexDirection: 'row',

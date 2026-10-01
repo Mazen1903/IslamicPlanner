@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback } from 'react';
+import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -145,6 +145,17 @@ export function TaskCard({
   const isSwipedOpenRef = useRef(false);
   const onDeleteRef = useRef(onDelete);
   onDeleteRef.current = onDelete;
+
+  const prevOccurrenceIdRef = useRef(task.occurrenceId);
+  useEffect(() => {
+    if (prevOccurrenceIdRef.current !== task.occurrenceId) {
+      prevOccurrenceIdRef.current = task.occurrenceId;
+      isSwipedOpenRef.current = false;
+      swipeX.setValue(0);
+      trashScale.setValue(0);
+      trashOpacity.setValue(0);
+    }
+  }, [task.occurrenceId, swipeX, trashScale, trashOpacity]);
 
   const handleConfirmDelete = useCallback(() => {
     try {
@@ -496,7 +507,7 @@ export function TaskCard({
             borderRadius: radii.card,
             paddingVertical: 12,
             paddingHorizontal: 14,
-            marginBottom: 8,
+            marginBottom: 0,
             borderColor: isUnlocked ? '#10B981' : colors.border,
             borderWidth: isUnlocked ? 2 : 1,
             shadowColor: isUnlocked ? '#10B981' : '#000',
