@@ -384,10 +384,33 @@ export function TaskList({
       }
     }
 
+    // Deduplicate repetitive tasks in upcoming:
+    // Only show the next upcoming occurrence for repeating tasks (deduplicate so they don't repeat multiple times)
+    // Also avoid repeating a task in upcoming if it is already present in today or previous
+    const activeKeys = new Set<string>();
+    for (const t of today) {
+      const key = t.taskDefinitionId || t.title.toLowerCase().trim();
+      activeKeys.add(key);
+    }
+    for (const t of previous) {
+      const key = t.taskDefinitionId || t.title.toLowerCase().trim();
+      activeKeys.add(key);
+    }
+
+    const seenUpcomingKeys = new Set<string>();
+    const deduplicatedUpcoming: TaskCardViewModel[] = [];
+    for (const t of upcoming) {
+      const key = t.taskDefinitionId || t.title.toLowerCase().trim();
+      if (!activeKeys.has(key) && !seenUpcomingKeys.has(key)) {
+        seenUpcomingKeys.add(key);
+        deduplicatedUpcoming.push(t);
+      }
+    }
+
     return {
       previousTasks: previous,
       todayTasks: today,
-      upcomingTasks: upcoming,
+      upcomingTasks: deduplicatedUpcoming,
       completedTasks: completed,
     };
   }, [tab, allTabs, selectedPrayer, currentPrayer, completedTasksMode, overdueTasksMode, now, nowIso]);

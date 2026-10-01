@@ -274,6 +274,136 @@ describe('TaskList Sections and Undo Functionality', () => {
       expect(screen.queryByText('Anytime Today')).toBeNull();
       expect(screen.queryByText('Anytime')).toBeNull();
     });
+
+    it('deduplicates repetitive tasks in Upcoming and excludes tasks already active in Today', async () => {
+      const activeTab: PrayerTabViewModel = {
+        prayer: 'DHUHR',
+        name: 'Dhuhr',
+        arabicName: 'الظهر',
+        startTime: '1:05 PM',
+        startDateTime: '2026-09-15T13:05:00Z',
+        temporalState: 'CURRENT',
+        scheduledTasks: [
+          {
+            occurrenceId: 'occ-active-dhuhr',
+            taskDefinitionId: 'def-tasbeeh',
+            title: 'Recite Tasbeeh',
+            scheduleType: 'PRAYER_RELATIVE',
+            scheduleLabel: 'Dhuhr',
+            priority: 'NORMAL',
+            status: 'PENDING',
+            estimatedMinutes: 10,
+            sortInstant: '2026-09-15T13:10:00.000Z',
+            createdAt: '2026-09-15T08:00:00.000Z',
+            completedAt: null,
+            missedAt: null,
+            dueAt: null,
+            expiresAt: null,
+          },
+        ],
+        missedTasks: [],
+        completedTasks: [],
+        anytimeTasks: [],
+      };
+
+      const asrTab: PrayerTabViewModel = {
+        prayer: 'ASR',
+        name: 'Asr',
+        arabicName: 'العصر',
+        startTime: '4:35 PM',
+        startDateTime: '2026-09-15T16:35:00Z',
+        temporalState: 'FUTURE',
+        scheduledTasks: [
+          {
+            occurrenceId: 'occ-tasbeeh-asr',
+            taskDefinitionId: 'def-tasbeeh',
+            title: 'Recite Tasbeeh',
+            scheduleType: 'PRAYER_RELATIVE',
+            scheduleLabel: 'Asr',
+            priority: 'NORMAL',
+            status: 'PENDING',
+            estimatedMinutes: 10,
+            sortInstant: '2026-09-15T16:40:00.000Z',
+            createdAt: '2026-09-15T08:00:00.000Z',
+            completedAt: null,
+            missedAt: null,
+            dueAt: null,
+            expiresAt: null,
+          },
+          {
+            occurrenceId: 'occ-quran-asr',
+            taskDefinitionId: 'def-quran',
+            title: 'Review Quran',
+            scheduleType: 'PRAYER_RELATIVE',
+            scheduleLabel: 'Asr',
+            priority: 'NORMAL',
+            status: 'PENDING',
+            estimatedMinutes: 20,
+            sortInstant: '2026-09-15T16:45:00.000Z',
+            createdAt: '2026-09-15T08:00:00.000Z',
+            completedAt: null,
+            missedAt: null,
+            dueAt: null,
+            expiresAt: null,
+          },
+        ],
+        missedTasks: [],
+        completedTasks: [],
+        anytimeTasks: [],
+      };
+
+      const maghribTab: PrayerTabViewModel = {
+        prayer: 'MAGHRIB',
+        name: 'Maghrib',
+        arabicName: 'المغرب',
+        startTime: '7:15 PM',
+        startDateTime: '2026-09-15T19:15:00Z',
+        temporalState: 'FUTURE',
+        scheduledTasks: [
+          {
+            occurrenceId: 'occ-quran-maghrib',
+            taskDefinitionId: 'def-quran',
+            title: 'Review Quran',
+            scheduleType: 'PRAYER_RELATIVE',
+            scheduleLabel: 'Maghrib',
+            priority: 'NORMAL',
+            status: 'PENDING',
+            estimatedMinutes: 20,
+            sortInstant: '2026-09-15T19:20:00.000Z',
+            createdAt: '2026-09-15T08:00:00.000Z',
+            completedAt: null,
+            missedAt: null,
+            dueAt: null,
+            expiresAt: null,
+          },
+        ],
+        missedTasks: [],
+        completedTasks: [],
+        anytimeTasks: [],
+      };
+
+      await render(
+        <ThemeProvider>
+          <TaskList
+            tab={activeTab}
+            allTabs={[activeTab, asrTab, maghribTab]}
+            selectedPrayer="DHUHR"
+            currentPrayer="DHUHR"
+            nextPrayer="ASR"
+            onCompleteTask={jest.fn()}
+            onUndoTask={jest.fn()}
+          />
+        </ThemeProvider>
+      );
+
+      // Today should have 1 task (Recite Tasbeeh)
+      expect(screen.getByText('Today (1)')).toBeTruthy();
+
+      // Upcoming should have only 1 task (Review Quran from Asr), NOT 3 tasks:
+      // - "Recite Tasbeeh" is excluded because it's already active in Today
+      // - "Review Quran" is deduplicated across Asr & Maghrib to only show the next upcoming one
+      expect(screen.getByText('Upcoming (1)')).toBeTruthy();
+    });
   });
 });
 

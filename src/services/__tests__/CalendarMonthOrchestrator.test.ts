@@ -333,5 +333,64 @@ describe('CalendarMonthOrchestrator (M14)', () => {
         'Anytime Normal',       // Sep 20: Group 3 (Anytime NORMAL)
       ]);
     });
+
+    it('deduplicates repetitive recurring tasks to only show the next upcoming occurrence in upcomingTasks', async () => {
+      const def = await taskDefinitionRepository.create({
+        id: 'def-recurring-adhkar',
+        title: 'Daily Morning Adhkar',
+        startDate: '2026-09-18',
+        source: 'USER',
+        scheduleType: 'PRAYER_RELATIVE',
+        scheduleData: {
+          anchorPrayer: 'FAJR',
+          direction: 'AFTER',
+          offsetMinutes: 10,
+        },
+        recurrenceRule: 'FREQ=DAILY',
+        seriesId: 'series-adhkar',
+        seriesVersion: 1,
+        priority: 'NORMAL',
+        estimatedMinutes: 15,
+        notes: null,
+        tags: [],
+        subtasks: [],
+        isActive: true,
+      });
+
+      await taskOccurrenceRepository.create({
+        id: 'occ-adhkar-18',
+        taskDefinitionId: def.id,
+        seriesId: def.seriesId,
+        localDate: '2026-09-18',
+        planningDayKey: '2026-09-18',
+        timezone: 'America/New_York',
+        status: 'PENDING',
+      });
+      await taskOccurrenceRepository.create({
+        id: 'occ-adhkar-19',
+        taskDefinitionId: def.id,
+        seriesId: def.seriesId,
+        localDate: '2026-09-19',
+        planningDayKey: '2026-09-19',
+        timezone: 'America/New_York',
+        status: 'PENDING',
+      });
+      await taskOccurrenceRepository.create({
+        id: 'occ-adhkar-20',
+        taskDefinitionId: def.id,
+        seriesId: def.seriesId,
+        localDate: '2026-09-20',
+        planningDayKey: '2026-09-20',
+        timezone: 'America/New_York',
+        status: 'PENDING',
+      });
+
+      const state = await orchestrator.loadMonth(2026, 9, '2026-09-15');
+      const adhkarUpcoming = state.upcomingTasks.filter(t => t.title === 'Daily Morning Adhkar');
+
+      // Should only show the NEXT upcoming occurrence (Sep 18), not repetitive copies for Sep 19 and 20
+      expect(adhkarUpcoming).toHaveLength(1);
+      expect(adhkarUpcoming[0].planningDayKey).toBe('2026-09-18');
+    });
   });
 });

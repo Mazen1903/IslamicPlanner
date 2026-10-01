@@ -340,8 +340,20 @@ export class CalendarMonthOrchestrator {
 
     upcomingItems.sort(compareUpcomingTasks);
 
-    const hasMoreUpcoming = upcomingItems.length > 50;
-    const upcomingTasks = upcomingItems.slice(0, 50);
+    // Deduplicate repetitive recurring tasks: only retain the next upcoming occurrence for each series/task definition
+    const seenSeries = new Set<string>();
+    const deduplicatedUpcomingItems: UpcomingTaskItem[] = [];
+    for (const item of upcomingItems) {
+      const def = defMap.get(item.taskDefinitionId);
+      const identityKey = def?.seriesId ?? item.taskDefinitionId;
+      if (!seenSeries.has(identityKey)) {
+        seenSeries.add(identityKey);
+        deduplicatedUpcomingItems.push(item);
+      }
+    }
+
+    const hasMoreUpcoming = deduplicatedUpcomingItems.length > 50;
+    const upcomingTasks = deduplicatedUpcomingItems.slice(0, 50);
 
     // 7. Project Selected-Day Detail (M14 §1, §2, §3, §18)
     const selectedDayDetail = await this.projectSelectedDay(
