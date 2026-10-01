@@ -43,6 +43,13 @@
       "when": 1790294033031,
       "tag": "0005_flippant_sumo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790805000000,
+      "tag": "0006_streak_data",
+      "breakpoints": true
     }
   ]
 }

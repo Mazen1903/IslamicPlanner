@@ -79,6 +79,7 @@ const CATEGORY_B_APPROVED_FILES = new Set([
 const CATEGORY_B_APPROVED_PREFIXES = [
   'src/components/journal/',
   'app/(tabs)/journal',
+  'src/components/streak/',
 ];
 
 export function auditSourceCode(content: string, relativePath: string): Violation[] {

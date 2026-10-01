@@ -88,6 +88,7 @@ export interface FormState {
   // More options
   priority: TaskPriority;
   estimatedMinutes: number | null;
+  streakEnabled: boolean;
   notes: string;
   subtasks: SubtaskDraft[];
   tags: string[];
@@ -117,6 +118,7 @@ export type FormAction =
   | { type: 'UPDATE_CUSTOM_HIJRI_DRAFT'; payload: Partial<CustomHijriDraft> }
   | { type: 'SET_PRIORITY'; payload: TaskPriority }
   | { type: 'SET_ESTIMATED_MINUTES'; payload: number | null }
+  | { type: 'SET_STREAK_ENABLED'; payload: boolean }
   | { type: 'SET_NOTES'; payload: string }
   | { type: 'ADD_SUBTASK'; payload: { title: string } }
   | { type: 'UPDATE_SUBTASK'; payload: { id: string; title: string } }

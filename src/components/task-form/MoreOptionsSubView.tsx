@@ -4,9 +4,11 @@ import {
   Text,
   TextInput,
   Pressable,
+  Switch,
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
@@ -105,13 +107,88 @@ export function MoreOptionsSubView({
             accessibilityRole="button"
             accessibilityLabel={`Priority: ${state.priority === 'IMPORTANT' ? 'Important' : 'Normal'}`}
             testID={state.priority === 'IMPORTANT' ? 'priority-important' : 'priority-normal'}
-            style={[styles.dropdownPill, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.pill }]}
+            style={[
+              styles.dropdownPill,
+              {
+                backgroundColor: state.priority === 'IMPORTANT' ? colors.primary : colors.surfaceSecondary,
+                borderRadius: radii.pill,
+              },
+            ]}
           >
-            <Text style={[typography.labelMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
+            <Text style={[typography.labelMedium, {
+              color: state.priority === 'IMPORTANT' ? colors.textOnPrimary : colors.textPrimary,
+              fontWeight: '600',
+            }]}>
               {state.priority === 'IMPORTANT' ? 'Important' : 'Normal'}
             </Text>
-            <Icon name="chevron-down" size={14} color={colors.textSecondary} style={{ marginStart: 4 }} decorative />
           </Pressable>
+        </View>
+
+        {/* Row: Track Streak */}
+        <View
+          style={[
+            styles.optionRow,
+            shadows.card,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderRadius: radii.card,
+              padding: spacing.md,
+            },
+          ]}
+          testID="streak-option-row"
+        >
+          <View style={styles.badgeBox}>
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: radii.md,
+                backgroundColor: colors.warning + '1A',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Icon name="flame" size={24} color={colors.warning} decorative />
+            </View>
+          </View>
+          <View style={styles.textContent}>
+            <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
+              Track Streak
+            </Text>
+            <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+              {state.recurrencePreset !== 'NONE'
+                ? 'Build consecutive daily completion streaks'
+                : 'Requires repeat (turns on Daily repeat)'}
+            </Text>
+          </View>
+          <Switch
+            value={state.streakEnabled}
+            onValueChange={val => {
+              if (val && state.recurrencePreset === 'NONE') {
+                Alert.alert(
+                  'Enable Daily Repeat?',
+                  'Streak tracking requires a repeating schedule. This will set the task to repeat daily.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Enable Daily',
+                      onPress: () => {
+                        dispatch({ type: 'SET_RECURRENCE_PRESET', payload: 'DAILY' });
+                        dispatch({ type: 'SET_STREAK_ENABLED', payload: true });
+                      },
+                    },
+                  ]
+                );
+                return;
+              }
+              dispatch({ type: 'SET_STREAK_ENABLED', payload: val });
+            }}
+            trackColor={{ true: colors.primary, false: colors.border }}
+            thumbColor={colors.surface}
+            accessibilityLabel="Track streak toggle"
+            testID="track-streak-switch"
+          />
         </View>
 
         {/* Row 2: Notes */}
@@ -175,8 +252,11 @@ export function MoreOptionsSubView({
 
         {/* Row 3: Subtasks */}
         <View style={styles.rowCardWrapper}>
-          <View
-            style={[
+          <Pressable
+            onPress={() => toggleSection('subtasks')}
+            accessibilityRole="button"
+            accessibilityLabel="Subtasks"
+            style={({ pressed }) => [
               styles.optionRow,
               shadows.card,
               {
@@ -184,6 +264,7 @@ export function MoreOptionsSubView({
                 borderColor: colors.border,
                 borderRadius: radii.card,
                 padding: spacing.md,
+                opacity: pressed ? 0.8 : 1,
               },
             ]}
           >
@@ -198,19 +279,23 @@ export function MoreOptionsSubView({
                 {state.subtasks.length > 0 ? `${state.subtasks.length} item${state.subtasks.length === 1 ? '' : 's'}` : 'Break into smaller subtasks'}
               </Text>
             </View>
-          </View>
+            <Icon name={expandedSection === 'subtasks' ? 'chevron-down' : 'chevron-right'} size={18} color={colors.textTertiary} directional decorative />
+          </Pressable>
 
-          <View style={[styles.expandedDrawer, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md, padding: spacing.xs }]}>
-            <SubtasksSection
-              subtasks={state.subtasks}
-              dispatch={dispatch}
-              hideDivider
-            />
-          </View>
+          {expandedSection === 'subtasks' && (
+            <View style={[styles.expandedDrawer, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md, padding: spacing.xs }]}>
+              <SubtasksSection
+                subtasks={state.subtasks}
+                dispatch={dispatch}
+                hideDivider
+              />
+            </View>
+          )}
         </View>
 
         {/* Row 4: Attachment */}
         <Pressable
+          onPress={() => Alert.alert('Coming Soon', 'File and photo attachments will be available in a future update.')}
           accessibilityRole="button"
           accessibilityLabel="Attachment"
           style={({ pressed }) => [
@@ -233,7 +318,7 @@ export function MoreOptionsSubView({
               Attachment
             </Text>
             <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-              Add a file or photo
+              Coming soon
             </Text>
           </View>
           <Icon name="chevron-right" size={18} color={colors.textTertiary} directional decorative />

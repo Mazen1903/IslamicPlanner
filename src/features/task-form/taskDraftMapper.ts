@@ -162,6 +162,7 @@ export function mapStateToCreateParams(state: FormState): CreateTaskParams {
     tags: state.tags,
     subtasks: state.subtasks.map(s => ({ id: s.id, title: s.title.trim() })),
     reminderRule,
+    streakEnabled: state.streakEnabled,
   };
 }
 

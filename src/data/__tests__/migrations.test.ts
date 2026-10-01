@@ -116,12 +116,13 @@ describe('Drizzle Migrations & Discovery (MG Suite)', () => {
       nodeDb.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[]
     ).map(t => t.name);
 
-    // 8 Application Tables
+    // 9 Application Tables
     const expectedApplicationTables = [
       'hijri_month_overrides',
       'journal_entries',
       'notification_schedule',
       'prayer_cache',
+      'streak_data',
       'task_definitions',
       'task_occurrences',
       'user_settings',
@@ -134,10 +135,10 @@ describe('Drizzle Migrations & Discovery (MG Suite)', () => {
       expect(postMigrationTables).toContain(appTable);
     }
     expect(postMigrationTables).toContain(expectedDrizzleTable);
-    // 9 expected tables: 8 app tables + 1 drizzle migrations ledger.
+    // 10 expected tables: 9 app tables + 1 drizzle migrations ledger.
     // sqlite_sequence may also appear when AUTOINCREMENT is used — filter it out for the count.
     const countedTables = postMigrationTables.filter(t => t !== 'sqlite_sequence');
-    expect(countedTables).toHaveLength(9);
+    expect(countedTables).toHaveLength(10);
 
     // Verify task_occurrences columns include window_start and window_end
     const columns = (
@@ -341,11 +342,13 @@ describe('Drizzle Migrations & Discovery (MG Suite)', () => {
       nodeDb.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[]
     ).map(t => t.name);
 
+    // 9 Application Tables
     const expectedApplicationTables = [
       'hijri_month_overrides',
       'journal_entries',
       'notification_schedule',
       'prayer_cache',
+      'streak_data',
       'task_definitions',
       'task_occurrences',
       'user_settings',
@@ -359,6 +362,6 @@ describe('Drizzle Migrations & Discovery (MG Suite)', () => {
     expect(postMigrationTables).toContain(expectedDrizzleTable);
     // sqlite_sequence is created automatically when AUTOINCREMENT is used. Filter it out.
     const countedTables = postMigrationTables.filter(t => t !== 'sqlite_sequence');
-    expect(countedTables).toHaveLength(9);
+    expect(countedTables).toHaveLength(10);
   });
 });

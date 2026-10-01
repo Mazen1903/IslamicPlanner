@@ -1,19 +1,18 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomNavBar } from '@/components/layout/BottomNavBar';
 import { ExpandingAddTaskModal } from '@/components/task-form/ExpandingAddTaskModal';
 import { useAddTaskModalStore, type FabOrigin } from '@/stores/useAddTaskModalStore';
 import { useTodayStore } from '@/stores/useTodayStore';
-import { PlannerRefreshCoordinator } from '@/services/PlannerRefreshCoordinator';
-import { LocationAwareTodayTemporalInputProvider } from '@/services/TodayTemporalInputProvider';
 import { todayOrchestrator } from '@/services/TodayOrchestrator';
 import { DateTime } from 'luxon';
 import { useTheme } from '@/theme';
 
 export default function TabLayout() {
   const { colors } = useTheme();
+  const screenDimensions = useWindowDimensions();
   const isOpen = useAddTaskModalStore(s => s.isOpen);
   const origin = useAddTaskModalStore(s => s.origin);
   const initialPrayer = useAddTaskModalStore(s => s.initialPrayer);
@@ -32,7 +31,6 @@ export default function TabLayout() {
     });
   }, []);
 
-  const screenDimensions = Dimensions.get('window');
   const defaultOrigin: FabOrigin = {
     x: (screenDimensions.width - 48) / 2,
     y: screenDimensions.height - (insets.bottom > 0 ? insets.bottom + 54 : 58),
@@ -46,21 +44,20 @@ export default function TabLayout() {
     : null;
 
   const handleSuccess = useCallback(async () => {
+    // Phase 2 of TaskFormOrchestrator already materialized the occurrence before
+    // the success screen appeared. A lightweight re-query + re-projection is
+    // sufficient and avoids the requestGeneration token race that a full
+    // fullRefresh() creates (horizon sync + materialization takes ~300–800ms,
+    // during which any prayer-timer startReproject() silently drops the commit).
     try {
-      const token = useTodayStore.getState().startRefresh();
-      const coordinator = new PlannerRefreshCoordinator(
-        new LocationAwareTodayTemporalInputProvider(),
-        todayOrchestrator
-      );
-      const res = await coordinator.fullRefresh(DateTime.now());
-      if (res.status === 'READY') {
-        useTodayStore.getState().commitRefresh(token, {
-          viewModel: res.viewModel,
-          runtime: res.runtime,
-        });
-      }
+      const runtime = useTodayStore.getState().runtime;
+      if (!runtime) return;
+      const token = useTodayStore.getState().startReproject();
+      const now = DateTime.now();
+      const vm = await todayOrchestrator.queryAndProject(runtime, now);
+      useTodayStore.getState().commitReproject(token, vm);
     } catch {
-      // Non-blocking refresh
+      // Non-blocking — Today will catch up on next focus or timer tick
     }
   }, []);
 
@@ -75,7 +72,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="today"
           options={{
-            title: 'Today',
+            title: 'Planner',
           }}
         />
         <Tabs.Screen

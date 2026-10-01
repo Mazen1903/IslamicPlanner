@@ -172,4 +172,32 @@ describe('formReducer & Dual-Date Model (M10)', () => {
     });
     expect(state.subtasks).toHaveLength(0);
   });
+
+  it('manages streakEnabled toggle and resets when recurrence preset becomes NONE', () => {
+    let state = createInitialFormState({
+      civilSeedDate: civilToday,
+      planningDayDate: planningDayKey,
+    });
+    expect(state.streakEnabled).toBe(false);
+
+    // Set recurring
+    state = formReducer(state, {
+      type: 'SET_RECURRENCE_PRESET',
+      payload: 'DAILY',
+    });
+
+    // Toggle streak on
+    state = formReducer(state, {
+      type: 'SET_STREAK_ENABLED',
+      payload: true,
+    });
+    expect(state.streakEnabled).toBe(true);
+
+    // Switching recurrence to NONE resets streakEnabled to false
+    state = formReducer(state, {
+      type: 'SET_RECURRENCE_PRESET',
+      payload: 'NONE',
+    });
+    expect(state.streakEnabled).toBe(false);
+  });
 });

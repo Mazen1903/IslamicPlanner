@@ -45,22 +45,47 @@ async function readAssetUri(uri: string): Promise<string> {
   }
 
   // On native (Android / iOS), file:// URIs point to the app's private cache directory.
-  // XHR and fetch both fail on Android for cross-directory file:// access.
-  // expo-file-system's readAsStringAsync uses the native FS API and works reliably.
   if (uri.startsWith('file://')) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const FileSystem = require('expo-file-system');
-    return FileSystem.readAsStringAsync(uri, { encoding: 'utf8' });
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const FileSystem = require('expo-file-system');
+      if (FileSystem?.readAsStringAsync) {
+        return await FileSystem.readAsStringAsync(uri, { encoding: 'utf8' });
+      }
+    } catch {
+      // expo-file-system is not installed or unavailable; fall through to fetch/XHR
+    }
   }
 
-  // For http(s):// URIs (web / remote assets), use standard fetch.
-  const response = await fetch(uri);
-  if (response.ok || response.status === 0) {
-    return response.text();
+  // For http(s):// or file:// URIs, try standard fetch first.
+  try {
+    const response = await fetch(uri);
+    if (response.ok || response.status === 0) {
+      return await response.text();
+    }
+  } catch {
+    // fetch failed on local file scheme; fall through to XMLHttpRequest
   }
-  throw new Error(
-    `Failed to read city dataset asset from ${uri}: HTTP ${response.status}`
-  );
+
+  // Final native fallback using React Native's XMLHttpRequest file loader
+  return new Promise<string>((resolve, reject) => {
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = () => {
+        if (xhr.status === 200 || xhr.status === 0) {
+          resolve(xhr.responseText);
+        } else {
+          reject(new Error(`Failed to read city dataset asset from ${uri}: HTTP ${xhr.status}`));
+        }
+      };
+      xhr.onerror = () =>
+        reject(new Error(`Failed to read city dataset asset from ${uri}: network error`));
+      xhr.open('GET', uri);
+      xhr.send();
+    } catch (xhrErr) {
+      reject(xhrErr);
+    }
+  });
 }
 
 /**

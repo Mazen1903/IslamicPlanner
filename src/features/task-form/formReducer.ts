@@ -24,6 +24,7 @@ export interface CreateFormInitialParams {
   initialDefinition?: TaskDefinition;
   initialOccurrence?: TaskOccurrence;
   editScope?: EditScope;
+  initialStreakEnabled?: boolean;
 }
 
 export const DEFAULT_EXACT_DRAFT: ExactTimeDraft = {
@@ -254,6 +255,7 @@ export function createInitialFormState(params: CreateFormInitialParams): FormSta
       customHijriDraft: customHij,
       priority: initialDefinition.priority ?? 'NORMAL',
       estimatedMinutes: initialDefinition.estimatedMinutes ?? null,
+      streakEnabled: params.initialStreakEnabled ?? false,
       notes,
       subtasks,
       tags: initialDefinition.tags ? [...initialDefinition.tags] : [],
@@ -286,6 +288,7 @@ export function createInitialFormState(params: CreateFormInitialParams): FormSta
     customHijriDraft: { ...DEFAULT_CUSTOM_HIJRI },
     priority: 'NORMAL',
     estimatedMinutes: null,
+    streakEnabled: params.initialStreakEnabled ?? false,
     notes: '',
     subtasks: [],
     tags: [],
@@ -363,12 +366,15 @@ export function formReducer(state: FormState, action: FormAction): FormState {
         isDirty: true,
       };
 
-    case 'SET_RECURRENCE_PRESET':
+    case 'SET_RECURRENCE_PRESET': {
+      const isNone = action.payload === 'NONE';
       return {
         ...state,
         recurrencePreset: action.payload,
+        streakEnabled: isNone ? false : state.streakEnabled,
         isDirty: true,
       };
+    }
 
     case 'SET_RECURRENCE_CALENDAR':
       return {
@@ -409,6 +415,13 @@ export function formReducer(state: FormState, action: FormAction): FormState {
       return {
         ...state,
         estimatedMinutes: action.payload,
+        isDirty: true,
+      };
+
+    case 'SET_STREAK_ENABLED':
+      return {
+        ...state,
+        streakEnabled: action.payload,
         isDirty: true,
       };
 

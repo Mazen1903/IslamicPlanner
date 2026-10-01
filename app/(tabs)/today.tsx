@@ -1,16 +1,18 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, StyleSheet, Text, Pressable, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/theme';
 import type { Prayer } from '@/constants/prayers';
+import type { TaskCardViewModel } from '@/services/types';
+import type { ScheduleConfig } from '@/domain/task/types';
 import { useToday } from '@/hooks/useToday';
 import { useLocation } from '@/hooks/useLocation';
 import { SetupRequiredState } from '@/components/today/SetupRequiredState';
 import { PrayerHeader } from '@/components/prayer/PrayerHeader';
 import { PrayerTabBar } from '@/components/prayer/PrayerTabBar';
-import { PrayerTransitionBanner } from '@/components/prayer/PrayerTransitionBanner';
 import { TaskList } from '@/components/task/TaskList';
+import { ReschedulePrayerModal } from '@/components/task/ReschedulePrayerModal';
 import { getTodayDateSubtitle } from '@/utils/todayDateSubtitle';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useAddTaskModalStore } from '@/stores/useAddTaskModalStore';
@@ -34,9 +36,18 @@ export default function TodayScreen() {
     toggleAnytimeCollapsed,
     countdownDisplay,
     completeTask,
+    uncompleteTask,
+    deleteTask,
     toggleSubtask,
+    rescheduleTask,
     refresh,
   } = useToday();
+
+  // Drag & Reschedule Modal states
+  const [rescheduleModalVisible, setRescheduleModalVisible] = useState(false);
+  const [taskToReschedule, setTaskToReschedule] = useState<TaskCardViewModel | null>(null);
+  const [targetReschedulePrayer, setTargetReschedulePrayer] = useState<Prayer | null>(null);
+  const [dragTargetPrayer, setDragTargetPrayer] = useState<Prayer | null>(null);
 
   const { locationName } = useLocation();
 
@@ -47,6 +58,33 @@ export default function TodayScreen() {
   useEffect(() => {
     refreshRef.current = refresh;
   });
+
+  // ── Drag-and-drop / reschedule handlers ──────────────────────────────────
+  // IMPORTANT: all useCallback hooks must live here (before any early returns)
+  // to satisfy the Rules of Hooks.
+  const handleTaskReschedule = useCallback((task: TaskCardViewModel, targetPrayer: Prayer) => {
+    setTaskToReschedule(task);
+    setTargetReschedulePrayer(targetPrayer);
+    setRescheduleModalVisible(true);
+  }, []);
+
+  const handleConfirmReschedule = useCallback(
+    async (config: ScheduleConfig) => {
+      if (taskToReschedule && targetReschedulePrayer) {
+        await rescheduleTask(taskToReschedule, targetReschedulePrayer, config);
+      }
+      setRescheduleModalVisible(false);
+      setTaskToReschedule(null);
+      setTargetReschedulePrayer(null);
+    },
+    [taskToReschedule, targetReschedulePrayer, rescheduleTask]
+  );
+
+  const handleCancelReschedule = useCallback(() => {
+    setRescheduleModalVisible(false);
+    setTaskToReschedule(null);
+    setTargetReschedulePrayer(null);
+  }, []);
 
   const isFirstFocusRef = useRef(true);
 
@@ -142,6 +180,9 @@ export default function TodayScreen() {
     useAddTaskModalStore.getState().openModal(undefined, prayer ?? activePrayer);
   };
 
+  const targetPrayerTab = viewModel?.tabs.find(t => t.prayer === targetReschedulePrayer);
+  const targetPrayerTime = targetPrayerTab?.startTime ?? '';
+
   return (
     <View style={styles.container} testID="today-screen">
       {activeIslamicTheme?.wallpaperAsset && (
@@ -168,21 +209,13 @@ export default function TodayScreen() {
           onPressLocation={handlePressLocation}
         />
 
-        {/* 2. Prayer transition banner (if mid-session prayer changed) */}
-        {prayerTransition && (
-          <PrayerTransitionBanner
-            transition={prayerTransition}
-            onViewPress={viewTransitionPrayer}
-            onDismissPress={dismissPrayerTransition}
-          />
-        )}
-
-        {/* 3. Exactly 5 Prayer Capsules with vector icons and integrated time */}
+        {/* 3. Exactly 5 Prayer Capsules with vector icons, integrated time, and glowing gradient border */}
         <View style={styles.tabBarWrapper}>
           <PrayerTabBar
             tabs={viewModel.tabs}
             selectedPrayer={activePrayer}
             onSelectPrayer={handleSelectPrayer}
+            dragTargetPrayer={dragTargetPrayer}
           />
         </View>
 
@@ -191,6 +224,7 @@ export default function TodayScreen() {
           <View style={styles.taskListWrapper}>
             <TaskList
               tab={currentTab}
+              allTabs={viewModel.tabs}
               selectedPrayer={activePrayer}
               currentPrayer={viewModel.currentPrayer}
               nextPrayer={viewModel.nextPrayer?.prayer ?? null}
@@ -199,13 +233,28 @@ export default function TodayScreen() {
               onToggleCompletedCollapsed={() => toggleCompletedCollapsed(activePrayer)}
               onToggleAnytimeCollapsed={toggleAnytimeCollapsed}
               onCompleteTask={completeTask}
+              onUndoTask={uncompleteTask}
               onToggleSubtask={toggleSubtask}
               onAddTask={handleAddTask}
+              onSelectPrayer={handleSelectPrayer}
+              onRescheduleTask={handleTaskReschedule}
+              onDragTargetChange={setDragTargetPrayer}
               completedTasksMode={(settings?.completedTasksMode as any) ?? 'KEEP'}
               overdueTasksMode={(settings?.overdueTasksMode as any) ?? 'KEEP'}
+              onDeleteTask={deleteTask}
             />
           </View>
         )}
+
+        {/* 5. Reschedule Confirmation Modal when card is dropped onto another prayer */}
+        <ReschedulePrayerModal
+          visible={rescheduleModalVisible}
+          task={taskToReschedule}
+          targetPrayer={targetReschedulePrayer}
+          targetPrayerTime={targetPrayerTime}
+          onConfirm={handleConfirmReschedule}
+          onCancel={handleCancelReschedule}
+        />
       </SafeAreaView>
     </View>
   );

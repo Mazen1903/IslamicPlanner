@@ -63,9 +63,9 @@ describe('Group M: Targeted Static Accessibility Audits', () => {
       'src/components/journal/JournalWriteModal.tsx',
       'src/components/task-form/CustomRecurrenceModal.tsx',
       'src/components/task-form/EditScopeSheet.tsx',
-      'src/components/task-detail/TaskDetailScreen.tsx',
       'src/components/theme-changer/ThemePreviewModal.tsx',
       'src/components/premium/PremiumLockedInfo.tsx',
+      'src/components/task/ReschedulePrayerModal.tsx',
       'app/(tabs)/settings/hijri-calendar.tsx',
     ];
 
@@ -76,13 +76,14 @@ describe('Group M: Targeted Static Accessibility Audits', () => {
   });
 
   // M-4
-  it('M-4: all six native <Modal> consumers specify accessibilityViewIsModal={true} on content', () => {
+  it('M-4: all native <Modal> consumers specify accessibilityViewIsModal={true} on content', () => {
     const modalFiles = [
       'src/components/journal/JournalDeleteDialog.tsx',
       'src/components/journal/JournalPrivacySheet.tsx',
       'src/components/task-form/CustomRecurrenceModal.tsx',
       'src/components/task-form/EditScopeSheet.tsx',
       'src/components/premium/PremiumLockedInfo.tsx',
+      'src/components/task/ReschedulePrayerModal.tsx',
       'app/(tabs)/settings/hijri-calendar.tsx',
     ];
 

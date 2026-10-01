@@ -171,6 +171,19 @@ export interface CreateTaskParams {
   tags?: string[];
   subtasks?: { id?: string; title: string }[];
   isActive?: boolean;
+  streakEnabled?: boolean;
+}
+
+export interface StreakData {
+  id: string;
+  seriesId: string;
+  streakEnabled: boolean;
+  currentStreak: number;
+  longestStreak: number;
+  lastCompletedDate: string | null;
+  lastResetDate: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface NewTaskOccurrenceInput {
@@ -191,3 +204,4 @@ export interface NewTaskOccurrenceInput {
   missedAt?: string | null;
   overrideData?: OccurrenceOverrideData | null;
 }
+

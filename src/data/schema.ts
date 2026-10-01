@@ -152,6 +152,7 @@ export const userSettings = sqliteTable('user_settings', {
   onboardingCompleted: integer('onboarding_completed', { mode: 'boolean' })
     .notNull()
     .default(false),
+  flameEngine: text('flame_engine').notNull().default('lottie'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -229,3 +230,25 @@ export const journalEntries = sqliteTable(
     updatedAt: text('updated_at').notNull(),
   }
 );
+
+// ==========================================
+// 2.9 streak_data
+// ==========================================
+export const streakData = sqliteTable(
+  'streak_data',
+  {
+    id: text('id').primaryKey(),
+    seriesId: text('series_id').notNull().unique(),
+    streakEnabled: integer('streak_enabled', { mode: 'boolean' }).notNull().default(false),
+    currentStreak: integer('current_streak').notNull().default(1),
+    longestStreak: integer('longest_streak').notNull().default(1),
+    lastCompletedDate: text('last_completed_date'), // 'YYYY-MM-DD'
+    lastResetDate: text('last_reset_date'),         // 'YYYY-MM-DD'
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  table => [
+    index('idx_streak_data_series_id').on(table.seriesId),
+  ]
+);
+

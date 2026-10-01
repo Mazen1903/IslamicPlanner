@@ -28,6 +28,19 @@ export function withTiming(toValue: number, _config?: any, callback?: (finished:
   return toValue;
 }
 
+export function withRepeat(animation: any, _numberOfReps?: number, _reverse?: boolean, callback?: (finished: boolean) => void) {
+  callback?.(true);
+  return animation;
+}
+
+export function withSequence(...animations: any[]) {
+  return animations[animations.length - 1];
+}
+
+export function withDelay(_delayMs: number, animation: any) {
+  return animation;
+}
+
 export function interpolate(
   value: number,
   inputRange: number[],

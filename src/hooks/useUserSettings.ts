@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   userSettingsRepository,
   UserSettingsRepository,
   type UserSettingsRow,
+  type UserSettingsPatch,
 } from '@/data/repositories/UserSettingsRepository';
 
 export interface UseUserSettingsResult {
@@ -10,6 +11,7 @@ export interface UseUserSettingsResult {
   isLoading: boolean;
   error: string | null;
   reload: () => Promise<void>;
+  updateSettings?: (patch: UserSettingsPatch) => Promise<UserSettingsRow>;
 }
 
 export function useUserSettings(
@@ -31,6 +33,15 @@ export function useUserSettings(
       setIsLoading(false);
     }
   }, [repo]);
+
+  const updateSettings = useCallback(
+    async (patch: UserSettingsPatch): Promise<UserSettingsRow> => {
+      const updated = await repo.upsert(patch);
+      setSettings(updated);
+      return updated;
+    },
+    [repo]
+  );
 
   useEffect(() => {
     let active = true;
@@ -58,5 +69,6 @@ export function useUserSettings(
     isLoading,
     error,
     reload: loadSettings,
+    updateSettings,
   };
 }

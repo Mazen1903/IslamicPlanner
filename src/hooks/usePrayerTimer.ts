@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { DateTime } from 'luxon';
 import { useTodayStore } from '@/stores/useTodayStore';
 import { formatCountdown } from './useCountdown';
-import { PRAYER_NAMES } from '@/constants/prayers';
 import type { TodayRuntimeContext } from '@/services/types';
 
 export interface UsePrayerTimerOptions {
@@ -71,15 +70,6 @@ export function usePrayerTimer(options: UsePrayerTimerOptions): void {
           return;
         }
 
-        // If prayer also changed at rollover, set banner as well
-        const currentPeriod = runtime.timeline.findPeriod(now);
-        if (currentPeriod.prayer !== viewModel.currentPrayer) {
-          store.setPrayerTransition({
-            newPrayer: currentPeriod.prayer,
-            message: `${PRAYER_NAMES[currentPeriod.prayer]} has begun — View ${PRAYER_NAMES[currentPeriod.prayer]}`,
-          });
-        }
-
         optionsRef.current.onFullRefresh();
         return;
       }
@@ -87,11 +77,6 @@ export function usePrayerTimer(options: UsePrayerTimerOptions): void {
       // C. Prayer-only boundary comparison within same planning day
       const currentPeriod = runtime.timeline.findPeriod(now);
       if (currentPeriod.prayer !== viewModel.currentPrayer) {
-        store.setPrayerTransition({
-          newPrayer: currentPeriod.prayer,
-          message: `${PRAYER_NAMES[currentPeriod.prayer]} has begun — View ${PRAYER_NAMES[currentPeriod.prayer]}`,
-        });
-
         // Prayer-only transition re-projects viewModel (no materialization)
         optionsRef.current.onPrayerTransition(runtime, now);
       }

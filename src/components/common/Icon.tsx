@@ -57,6 +57,7 @@ export type IconName =
   | 'journal'
   | 'lock'
   | 'home'
+  | 'clipboard'
   | 'restaurant'
   | 'laptop'
   | 'book'
@@ -94,7 +95,8 @@ export type IconName =
   | 'star-outline'
   | 'calendar-check'
   | 'format-font'
-  | 'duration';
+  | 'duration'
+  | 'flame';
 
 export interface IconProps {
   name: IconName;
@@ -168,6 +170,7 @@ const ICON_DEF_MAP: Record<IconName, ResolvedIconDef> = {
   journal: { lib: 'ionicons', name: 'book-outline' },
   lock: { lib: 'ionicons', name: 'lock-closed-outline' },
   home: { lib: 'ionicons', name: 'home' },
+  clipboard: { lib: 'mci', name: 'clipboard-text-outline' },
   restaurant: { lib: 'ionicons', name: 'restaurant-outline' },
   laptop: { lib: 'ionicons', name: 'laptop-outline' },
   book: { lib: 'ionicons', name: 'book-outline' },
@@ -192,6 +195,7 @@ const ICON_DEF_MAP: Record<IconName, ResolvedIconDef> = {
   'star-outline': { lib: 'ionicons', name: 'star-outline' },
   'calendar-check': { lib: 'mci', name: 'calendar-check-outline' },
   'format-font': { lib: 'mci', name: 'format-font' },
+  flame: { lib: 'ionicons', name: 'flame' },
 };
 
 export function Icon({

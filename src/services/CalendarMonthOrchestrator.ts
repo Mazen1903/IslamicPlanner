@@ -37,6 +37,7 @@ import {
 import {
   LocationAwareTodayTemporalInputProvider,
 } from './TodayTemporalInputProvider';
+import { StreakRepository } from '@/data/repositories/StreakRepository';
 import type {
   TodayTemporalInputProvider,
   TodayTemporalInputs,
@@ -144,7 +145,8 @@ export class CalendarMonthOrchestrator {
     private occRepo: TaskOccurrenceRepository = defaultOccRepo,
     private horizonSync: RecurringHorizonSync = defaultHorizonSync,
     private temporalProvider: TodayTemporalInputProvider = new LocationAwareTodayTemporalInputProvider(),
-    private hijriService: HijriService = new HijriService()
+    private hijriService: HijriService = new HijriService(),
+    private streakRepo: StreakRepository = new StreakRepository()
   ) {}
 
   /**
@@ -427,13 +429,17 @@ export class CalendarMonthOrchestrator {
 
     const anytimeTasks: TaskCardViewModel[] = [];
 
+    // Batch load streak data for occurrences in selected day
+    const seriesIds = occurrences.map(o => o.seriesId);
+    const streakMap = await this.streakRepo.findBySeriesIds(seriesIds);
+
     // Project each occurrence into sections
     for (const occ of occurrences) {
       const def = defMap.get(occ.taskDefinitionId);
       if (!def) continue;
 
       if (def.scheduleType === 'ANYTIME_TODAY') {
-        const card = buildTaskCardViewModel(occ, def, 'FAJR', planningDay, timezone, timeline);
+        const card = buildTaskCardViewModel(occ, def, 'FAJR', planningDay, timezone, timeline, streakMap);
         anytimeTasks.push(card);
         continue;
       }
@@ -449,7 +455,7 @@ export class CalendarMonthOrchestrator {
         for (const prayer of targetPrayers) {
           const list = sectionTasks.get(prayer);
           if (!list) continue;
-          const card = buildTaskCardViewModel(occ, def, prayer, planningDay, timezone, timeline);
+          const card = buildTaskCardViewModel(occ, def, prayer, planningDay, timezone, timeline, streakMap);
           list.push(card);
         }
         continue;
@@ -458,7 +464,7 @@ export class CalendarMonthOrchestrator {
       // EXACT_TIME or PRAYER_RELATIVE
       const targetPrayer = occ.calculatedPrayerSection;
       if (targetPrayer && sectionTasks.has(targetPrayer)) {
-        const card = buildTaskCardViewModel(occ, def, targetPrayer, planningDay, timezone, timeline);
+        const card = buildTaskCardViewModel(occ, def, targetPrayer, planningDay, timezone, timeline, streakMap);
         sectionTasks.get(targetPrayer)!.push(card);
       }
     }

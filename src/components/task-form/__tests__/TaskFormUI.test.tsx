@@ -96,7 +96,7 @@ describe('Task Form UI Components & Accessibility (M10 §6, §11, §14, §16, §
       expect(queryByTestId('relative-prayer-sunrise')).toBeNull();
     });
 
-    it('renders live schedule preview when available', async () => {
+    it('does not render schedule preview and renders 4 mode cards without descriptions', async () => {
       const state = createInitialFormState({ civilSeedDate: civilToday, planningDayDate: planningDayKey });
       const preview = {
         status: 'READY' as const,
@@ -104,14 +104,25 @@ describe('Task Form UI Components & Accessibility (M10 §6, §11, §14, §16, §
         secondaryLabel: 'Exact wall-clock time',
       };
 
-      const { getByTestId, getByText } = await render(
+      const { queryByTestId, queryByText, getByText } = await render(
         <ThemeProvider>
           <ScheduleModeCards state={state} dispatch={jest.fn()} previewResult={preview} />
         </ThemeProvider>
       );
 
-      expect(getByTestId('schedule-preview-banner')).toBeTruthy();
-      expect(getByText('6:00 PM · Asr')).toBeTruthy();
+      // Verify schedule preview banner is completely removed
+      expect(queryByTestId('schedule-preview-banner')).toBeNull();
+      expect(queryByText('6:00 PM · Asr')).toBeNull();
+
+      // Verify 4 mode cards are rendered with titles
+      expect(getByText('Exact Time')).toBeTruthy();
+      expect(getByText('Relative to Prayer')).toBeTruthy();
+      expect(getByText('Prayer Window')).toBeTruthy();
+      expect(getByText('Anytime Today')).toBeTruthy();
+
+      // Verify descriptions are removed
+      expect(queryByText('Set a specific time')).toBeNull();
+      expect(queryByText('Do it whenever')).toBeNull();
     });
   });
 
@@ -364,8 +375,9 @@ describe('Task Form UI Components & Accessibility (M10 §6, §11, §14, §16, §
       });
     });
 
-    it('shows alert when discarding unsaved changes on back press', async () => {
+    it('calls onCancel directly without discard changes alert on back press', async () => {
       const alertSpy = jest.spyOn(Alert, 'alert');
+      const onCancelMock = jest.fn();
 
       const { getByTestId } = await render(
         <ThemeProvider>
@@ -374,7 +386,7 @@ describe('Task Form UI Components & Accessibility (M10 §6, §11, §14, §16, §
             initialPlanningDayDate={planningDayKey}
             inputProvider={mockProvider}
             onSuccess={jest.fn()}
-            onCancel={jest.fn()}
+            onCancel={onCancelMock}
           />
         </ThemeProvider>
       );
@@ -385,11 +397,8 @@ describe('Task Form UI Components & Accessibility (M10 §6, §11, §14, §16, §
       // Press back button
       await fireEvent.press(getByTestId('task-form-back-button'));
 
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Discard Changes?',
-        'You have unsaved changes. Are you sure you want to discard them?',
-        expect.any(Array)
-      );
+      expect(alertSpy).not.toHaveBeenCalled();
+      expect(onCancelMock).toHaveBeenCalledTimes(1);
 
       alertSpy.mockRestore();
     });

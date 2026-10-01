@@ -1,4 +1,4 @@
-import React, { useReducer, useState, useRef, useEffect } from 'react';
+import React, { useReducer, useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -98,13 +98,21 @@ export function TaskFormScreen({
     initialDefinition?.recurrenceRule || initialDefinition?.hijriRecurrence
   );
 
+  // Fix #1: Reset orchestrator stale state on mount so each form session starts fresh
+  useEffect(() => {
+    orchestrator.resetFlight();
+    return () => {
+      orchestrator.resetFlight();
+    };
+  }, [orchestrator]);
+
   // Sub-view navigation state
   const [currentView, setCurrentView] = useState<FormView>('MAIN');
 
-  // Scope selection sheet state for recurring task edits
-  const [showScopeSheet, setShowScopeSheet] = useState(
-    isEdit && isRecurringSeries && !initialScope
-  );
+  // Scope selection sheet state for recurring task edits - do not block on mount
+  const [showScopeSheet, setShowScopeSheet] = useState(false);
+  // Track whether scope was selected (defaults to true so form is immediately accessible)
+  const [scopeSelected, setScopeSelected] = useState(true);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [iconPickerOrigin, setIconPickerOrigin] = useState<IconPickerOrigin | undefined>();
   const iconPickerButtonRef = useRef<View>(null);
@@ -135,7 +143,7 @@ export function TaskFormScreen({
       launchPrayer: initialPrayerTab,
       initialDefinition,
       initialOccurrence,
-      editScope: initialScope,
+      editScope: initialScope ?? (isRecurringSeries ? 'ALL_OCCURRENCES' : undefined),
     },
     createInitialFormState
   );
@@ -185,27 +193,23 @@ export function TaskFormScreen({
   // Handle scope selection for recurring edit
   const handleSelectScope = (scope: EditScope) => {
     dispatch({ type: 'SET_EDIT_SCOPE', payload: scope });
+    setScopeSelected(true);
     setShowScopeSheet(false);
   };
 
-  // Handle Cancel / Back with unsaved changes prompt
-  const handleBackPress = () => {
-    if (saveResult) {
-      onCancel();
-      return;
-    }
-    if (state.isDirty) {
-      Alert.alert(
-        'Discard Changes?',
-        'You have unsaved changes. Are you sure you want to discard them?',
-        [
-          { text: 'Keep Editing', style: 'cancel' },
-          { text: 'Discard', style: 'destructive', onPress: onCancel },
-        ]
-      );
+  // Fix #12/#14: Dismissing scope sheet without selecting should not exit form
+  const handleDismissScopeSheet = () => {
+    if (scopeSelected) {
+      setShowScopeSheet(false);
     } else {
+      // User hasn't chosen a scope yet — navigate back since we can't proceed
       onCancel();
     }
+  };
+
+  // Handle Cancel / Back directly without discard changes alert
+  const handleBackPress = () => {
+    onCancel();
   };
 
   // Single-flight Save Submission
@@ -379,21 +383,11 @@ export function TaskFormScreen({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
       >
-        {/* Task Title + Subtasks Unified Card */}
+        {/* Revamped Task Title Section */}
         <View style={[styles.titleSection, { marginBottom: spacing.md }]}>
-          <View style={styles.taskSectionHeadingRow}>
-            <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary }]}>
-              Task name
-            </Text>
-            {state.subtasks.length > 0 && (
-              <Text
-                style={[typography.labelMedium, { color: colors.textSecondary }]}
-                testID="task-subtasks-count-badge"
-              >
-                {`${state.subtasks.length} subtask${state.subtasks.length === 1 ? '' : 's'}`}
-              </Text>
-            )}
-          </View>
+          <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary, marginBottom: 8 }]}>
+            Task name
+          </Text>
           <View
             style={[
               styles.unifiedTaskCard,
@@ -402,19 +396,11 @@ export function TaskFormScreen({
                 backgroundColor: colors.surface,
                 borderColor: state.validationErrors.title ? colors.danger : colors.border,
                 borderRadius: radii.card,
-                overflow: 'hidden',
+                padding: spacing.sm,
               },
             ]}
           >
-            <View
-              style={[
-                styles.titleInputRow,
-                {
-                  paddingHorizontal: spacing.sm,
-                  paddingVertical: spacing.sm,
-                },
-              ]}
-            >
+            <View style={styles.titleInputRow}>
               <Pressable
                 ref={iconPickerButtonRef as any}
                 onPress={handleOpenIconPicker}
@@ -425,12 +411,12 @@ export function TaskFormScreen({
                   styles.iconPickerButton,
                   {
                     backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surfaceSecondary,
-                    borderRadius: radii.md,
+                    borderRadius: 16,
                     marginEnd: spacing.sm,
                   },
                 ]}
               >
-                <TaskCategoryIcon iconId={state.icon || detectTaskIcon(state.title)} size={34} />
+                <TaskCategoryIcon iconId={state.icon || detectTaskIcon(state.title)} size={36} />
                 <View style={[styles.iconEditPencilBadge, { backgroundColor: colors.primary }]}>
                   <Icon name="edit" size={10} color={colors.textOnPrimary} decorative />
                 </View>
@@ -447,16 +433,12 @@ export function TaskFormScreen({
                   typography.bodyLarge,
                   {
                     color: colors.textPrimary,
+                    fontSize: 17,
+                    fontWeight: '600',
                   },
                 ]}
               />
             </View>
-
-            {/* Subtasks Section embedded inside the unified card */}
-            <SubtasksSection
-              subtasks={state.subtasks}
-              dispatch={dispatch}
-            />
           </View>
           {state.validationErrors.title && (
             <Text
@@ -466,6 +448,52 @@ export function TaskFormScreen({
               {state.validationErrors.title}
             </Text>
           )}
+        </View>
+
+        {/* Revamped Standalone Subtasks Card */}
+        <View style={[styles.titleSection, { marginBottom: spacing.md }]}>
+          <View style={styles.taskSectionHeadingRow}>
+            <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary }]}>
+              Subtasks
+            </Text>
+            {state.subtasks.length > 0 && (
+              <View
+                style={[
+                  {
+                    backgroundColor: colors.primaryLight,
+                    borderRadius: radii.pill,
+                    paddingHorizontal: 8,
+                    paddingVertical: 2,
+                  },
+                ]}
+              >
+                <Text
+                  style={[typography.labelMedium, { color: colors.primaryDark, fontWeight: '700' }]}
+                  testID="task-subtasks-count-badge"
+                >
+                  {`${state.subtasks.length} subtask${state.subtasks.length === 1 ? '' : 's'}`}
+                </Text>
+              </View>
+            )}
+          </View>
+          <View
+            style={[
+              styles.unifiedTaskCard,
+              shadows.card,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderRadius: radii.card,
+                overflow: 'hidden',
+              },
+            ]}
+          >
+            <SubtasksSection
+              subtasks={state.subtasks}
+              dispatch={dispatch}
+              hideDivider={true}
+            />
+          </View>
         </View>
 
         {/* If THIS_OCCURRENCE: hide definition-level fields */}
@@ -505,7 +533,7 @@ export function TaskFormScreen({
                 >
                   <Icon
                     name="bell"
-                    size={20}
+                    size={24}
                     color={state.reminderMinutes !== null ? colors.primary : colors.textSecondary}
                     decorative
                   />
@@ -635,7 +663,7 @@ export function TaskFormScreen({
                   {getRecurrenceLabel(state.recurrencePreset, state.specificDays.length, state.recurrenceCalendar)}
                 </Text>
               </View>
-              <Icon name="chevron-down" size={18} color={colors.primary} decorative />
+              <Icon name="chevron-right" size={18} color={colors.primary} directional decorative />
             </Pressable>
 
             {/* More Options Row Entry Card (Tapping opens add task4.png) */}
@@ -802,7 +830,7 @@ export function TaskFormScreen({
       <EditScopeSheet
         visible={showScopeSheet}
         onSelectScope={handleSelectScope}
-        onCancel={onCancel}
+        onCancel={handleDismissScopeSheet}
       />
     </View>
   );
@@ -868,8 +896,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reminderIconBadge: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,

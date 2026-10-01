@@ -1,27 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
-  TextInput,
   ScrollView,
   Pressable,
-  Modal,
   Alert,
   StyleSheet,
-  ActivityIndicator,
+  Image,
+  type ImageSourcePropType,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { DateTime } from 'luxon';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import { TaskCategoryIcon } from '@/components/task/TaskCategoryIcon';
 import { getIconIdFromTags, detectTaskIcon } from '@/constants/taskIcons';
 import type { TaskDefinition, TaskOccurrence } from '@/domain/task/types';
 
+// Specialized icon image assets for Task Details screen
+const TASK_DETAIL_ICONS = {
+  subtasks: require('../../../assets/icons/task_details/Subtasks.png') as ImageSourcePropType,
+  notes: require('../../../assets/icons/task_details/Notes.png') as ImageSourcePropType,
+  dateDetail: require('../../../assets/icons/task_details/Date.png') as ImageSourcePropType,
+  pencil: require('../../../assets/icons/task_details/pencil.png') as ImageSourcePropType,
+
+  anytimeToday: require('../../../assets/icons/task/anytime_today.png') as ImageSourcePropType,
+  date: require('../../../assets/icons/task/date.png') as ImageSourcePropType,
+  daily: require('../../../assets/icons/task/doesnt_repeat.png') as ImageSourcePropType,
+  exactTime: require('../../../assets/icons/task/exact_time.png') as ImageSourcePropType,
+  relativePrayer: require('../../../assets/icons/task/relative_prayer.png') as ImageSourcePropType,
+  prayerWindow: require('../../../assets/icons/task/prayer_window.png') as ImageSourcePropType,
+  time: require('../../../assets/icons/task/time.png') as ImageSourcePropType,
+  optPriority: require('../../../assets/icons/task/opt_priority.png') as ImageSourcePropType,
+  optDuration: require('../../../assets/icons/task/opt_duration.png') as ImageSourcePropType,
+};
+
 export interface TaskDetailScreenProps {
   definition: TaskDefinition;
   occurrence: TaskOccurrence | null;
   onEditFull: () => void;
-  onDelete: () => void;
+  onDelete: (scope?: 'THIS_OCCURRENCE' | 'ALL_OCCURRENCES') => void;
   onBack: () => void;
   onToggleSubtask?: (occurrenceId: string, subtaskId: string) => Promise<void>;
   onAddSubtask?: (title: string) => Promise<void>;
@@ -35,39 +53,30 @@ export function TaskDetailScreen({
   onDelete,
   onBack,
   onToggleSubtask,
-  onAddSubtask,
-  onUpdateNotes,
 }: TaskDetailScreenProps) {
-  const { colors, spacing, radii, typography, shadows, touchTargets } = useTheme();
+  const { colors, spacing, radii, typography, shadows, isDark } = useTheme();
 
-  // Three dots action sheet state
-  const [showMenu, setShowMenu] = useState(false);
-
-  // Subtasks local state for immediate feedback
+  // Subtasks state
   const [completedSubtaskIds, setCompletedSubtaskIds] = useState<string[]>(
     occurrence?.overrideData?.completedSubtaskIds ?? []
   );
-  const [subtasksList, setSubtasksList] = useState(definition.subtasks ?? []);
-  const [newSubtaskText, setNewSubtaskText] = useState('');
-  const [isAddingSubtask, setIsAddingSubtask] = useState(false);
+  const subtasksList = definition.subtasks ?? [];
 
   // Notes state
-  const initialNotes =
+  const notes =
     occurrence?.overrideData?.notes !== undefined
       ? occurrence.overrideData.notes ?? ''
       : definition.notes ?? '';
-  const [notes, setNotes] = useState(initialNotes);
-  const [isEditingNotes, setIsEditingNotes] = useState(false);
-  const [isSavingNotes, setIsSavingNotes] = useState(false);
 
-  // Resolve icon
+  // Resolve icon and effective title
   const iconId = getIconIdFromTags(definition.tags) || detectTaskIcon(definition.title);
-
-  // Resolve effective title
   const effectiveTitle = occurrence?.overrideData?.title || definition.title;
 
+  const isCompleted = occurrence?.status === 'COMPLETED';
+  const isMissed = occurrence?.status === 'MISSED';
+
   // Schedule summary
-  const getScheduleSummary = () => {
+  const scheduleSummary = useMemo(() => {
     switch (definition.scheduleType) {
       case 'EXACT_TIME': {
         const time = (definition.scheduleData as any)?.localTime;
@@ -87,11 +96,51 @@ export function TaskDetailScreen({
       default:
         return 'Anytime Today';
     }
-  };
+  }, [definition.scheduleType, definition.scheduleData]);
+
+  // Schedule mode icon source
+  const scheduleModeIconSource = useMemo(() => {
+    switch (definition.scheduleType) {
+      case 'EXACT_TIME':
+        return TASK_DETAIL_ICONS.exactTime;
+      case 'PRAYER_RELATIVE':
+        return TASK_DETAIL_ICONS.relativePrayer;
+      case 'PRAYER_WINDOW':
+        return TASK_DETAIL_ICONS.prayerWindow;
+      case 'ANYTIME_TODAY':
+      default:
+        return TASK_DETAIL_ICONS.anytimeToday;
+    }
+  }, [definition.scheduleType]);
+
+  // Formatted date string
+  const dateDisplay = useMemo(() => {
+    const rawDate = occurrence?.localDate ?? definition.startDate;
+    if (!rawDate) return null;
+    const dt = DateTime.fromISO(rawDate);
+    if (!dt.isValid) return rawDate;
+    return dt.toFormat('EEE, MMM d, yyyy');
+  }, [occurrence?.localDate, definition.startDate]);
+
+  // Recurrence summary
+  const recurrenceDisplay = useMemo(() => {
+    if (definition.hijriRecurrence) {
+      return 'Hijri Recurring';
+    }
+    if (definition.recurrenceRule) {
+      const rule = definition.recurrenceRule.toUpperCase();
+      if (rule.includes('DAILY')) return 'Daily';
+      if (rule.includes('WEEKLY')) return 'Weekly';
+      if (rule.includes('MONTHLY')) return 'Monthly';
+      if (rule.includes('YEARLY')) return 'Yearly';
+      return 'Recurring';
+    }
+    return 'One-time';
+  }, [definition.recurrenceRule, definition.hijriRecurrence]);
 
   const handleToggleSubtask = async (subtaskId: string) => {
-    const isCompleted = completedSubtaskIds.includes(subtaskId);
-    const nextCompleted = isCompleted
+    const isChecked = completedSubtaskIds.includes(subtaskId);
+    const nextCompleted = isChecked
       ? completedSubtaskIds.filter(id => id !== subtaskId)
       : [...completedSubtaskIds, subtaskId];
 
@@ -106,53 +155,36 @@ export function TaskDetailScreen({
       }
     }
   };
-
-  const handleAddSubtask = async () => {
-    const trimmed = newSubtaskText.trim();
-    if (!trimmed) return;
-
-    setIsAddingSubtask(true);
-    const tempId = `temp-${Date.now()}`;
-    const newSubtask = { id: tempId, title: trimmed };
-    setSubtasksList(prev => [...prev, newSubtask]);
-    setNewSubtaskText('');
-
-    try {
-      if (onAddSubtask) {
-        await onAddSubtask(trimmed);
-      }
-    } catch {
-      // Revert if failed
-      setSubtasksList(prev => prev.filter(s => s.id !== tempId));
-    } finally {
-      setIsAddingSubtask(false);
-    }
-  };
-
-  const handleSaveNotes = async () => {
-    setIsSavingNotes(true);
-    try {
-      if (onUpdateNotes) {
-        await onUpdateNotes(notes);
-      }
-      setIsEditingNotes(false);
-    } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to save notes');
-    } finally {
-      setIsSavingNotes(false);
-    }
-  };
-
   const handleDeletePress = () => {
-    setShowMenu(false);
-    Alert.alert(
-      'Delete Task',
-      'Are you sure you want to delete this task? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: onDelete },
-      ]
-    );
+    const isRecurring = Boolean(definition.recurrenceRule || definition.hijriRecurrence);
+    if (isRecurring) {
+      Alert.alert(
+        'Delete Recurring Task',
+        'Would you like to delete only this occurrence, or delete all future occurrences of this recurring task?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'This Occurrence Only',
+            style: 'destructive',
+            onPress: () => onDelete('THIS_OCCURRENCE'),
+          },
+          {
+            text: 'All Occurrences',
+            style: 'destructive',
+            onPress: () => onDelete('ALL_OCCURRENCES'),
+          },
+        ]
+      );
+    } else {
+      Alert.alert(
+        'Delete Task',
+        'Are you sure you want to delete this task? This action cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: () => onDelete('ALL_OCCURRENCES') },
+        ]
+      );
+    }
   };
 
   const completedCount = subtasksList.filter(s => completedSubtaskIds.includes(s.id)).length;
@@ -160,10 +192,10 @@ export function TaskDetailScreen({
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top', 'left', 'right']}
+      edges={['top', 'left', 'right', 'bottom']}
       testID="task-detail-screen"
     >
-      {/* 1. Header Bar */}
+      {/* ── 1. Top Navigation Bar ── */}
       <View style={[styles.headerBar, { borderBottomColor: colors.border }]}>
         <Pressable
           onPress={onBack}
@@ -172,7 +204,10 @@ export function TaskDetailScreen({
           testID="task-detail-back-button"
           style={({ pressed }) => [
             styles.headerButton,
-            { backgroundColor: pressed ? colors.surfaceSecondary : 'transparent', borderRadius: radii.pill },
+            {
+              backgroundColor: pressed ? colors.surfaceSecondary : 'transparent',
+              borderRadius: radii.pill,
+            },
           ]}
         >
           <Icon name="arrow-left" size={24} color={colors.textPrimary} decorative />
@@ -182,25 +217,14 @@ export function TaskDetailScreen({
           Task Details
         </Text>
 
-        <Pressable
-          onPress={() => setShowMenu(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Task options"
-          testID="task-detail-more-button"
-          style={({ pressed }) => [
-            styles.headerButton,
-            { backgroundColor: pressed ? colors.surfaceSecondary : 'transparent', borderRadius: radii.pill },
-          ]}
-        >
-          <Icon name="dots-horizontal" size={24} color={colors.textPrimary} decorative />
-        </Pressable>
+        <View style={styles.headerRightPlaceholder} />
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
       >
-        {/* 2. Main Title & Icon Card */}
+        {/* ── 2. Hero Title & Status Card ── */}
         <View
           style={[
             styles.card,
@@ -214,111 +238,205 @@ export function TaskDetailScreen({
             },
           ]}
         >
-          <View style={styles.titleRow}>
+          <View style={styles.heroHeaderRow}>
             <View
               style={[
-                styles.iconBadge,
+                styles.heroIconBadge,
                 {
                   backgroundColor: colors.primaryLight,
-                  borderRadius: radii.pill,
-                  marginRight: spacing.md,
+                  borderRadius: 20,
                 },
               ]}
             >
-              <TaskCategoryIcon iconId={iconId} size={30} />
+              <TaskCategoryIcon iconId={iconId} size={42} />
             </View>
 
-            <View style={styles.titleTextContainer}>
-              <Text style={[typography.headlineMedium, { color: colors.textPrimary, fontWeight: '700' }]}>
+            <View style={styles.heroTitleContainer}>
+              <Text
+                style={[
+                  typography.headlineLarge,
+                  styles.heroTitleText,
+                  {
+                    color: isCompleted ? colors.textMuted : colors.textPrimary,
+                    textDecorationLine: isCompleted ? 'line-through' : 'none',
+                  },
+                ]}
+              >
                 {effectiveTitle}
               </Text>
 
-              {/* Badges row: Schedule + Priority */}
-              <View style={styles.badgesRow}>
+              {isCompleted ? (
                 <View
                   style={[
-                    styles.pillBadge,
-                    { backgroundColor: colors.surfaceSecondary, borderRadius: radii.pill },
+                    styles.statusPill,
+                    {
+                      backgroundColor: colors.completed + '1A',
+                      borderColor: colors.completed,
+                      borderRadius: radii.pill,
+                    },
                   ]}
                 >
-                  <Icon name="clock" size={13} color={colors.primary} decorative style={{ marginRight: 4 }} />
-                  <Text style={[typography.caption, { color: colors.textSecondary, fontWeight: '600' }]}>
-                    {getScheduleSummary()}
+                  <Icon name="check" size={14} color={colors.completed} decorative style={{ marginRight: 4 }} />
+                  <Text style={[typography.caption, { color: colors.completed, fontWeight: '700' }]}>
+                    Completed
                   </Text>
                 </View>
-
-                {definition.priority === 'IMPORTANT' && (
-                  <View
-                    style={[
-                      styles.pillBadge,
-                      {
-                        backgroundColor: '#fee2e2',
-                        borderRadius: radii.pill,
-                        marginLeft: spacing.xs,
-                      },
-                    ]}
-                  >
-                    <Icon name="flag" size={12} color={colors.danger} decorative style={{ marginRight: 4 }} />
-                    <Text style={[typography.caption, { color: colors.danger, fontWeight: '700' }]}>
-                      Important
-                    </Text>
-                  </View>
-                )}
-
-                {Boolean(definition.recurrenceRule || definition.hijriRecurrence) && (
-                  <View
-                    style={[
-                      styles.pillBadge,
-                      {
-                        backgroundColor: colors.surfaceSecondary,
-                        borderRadius: radii.pill,
-                        marginLeft: spacing.xs,
-                      },
-                    ]}
-                  >
-                    <Icon name="refresh" size={12} color={colors.textSecondary} decorative style={{ marginRight: 4 }} />
-                    <Text style={[typography.caption, { color: colors.textSecondary, fontWeight: '600' }]}>
-                      Recurring
-                    </Text>
-                  </View>
-                )}
-              </View>
+              ) : isMissed ? (
+                <View
+                  style={[
+                    styles.statusPill,
+                    {
+                      backgroundColor: colors.warning + '1A',
+                      borderColor: colors.warning,
+                      borderRadius: radii.pill,
+                    },
+                  ]}
+                >
+                  <Text style={[typography.caption, { color: colors.warning, fontWeight: '700' }]}>
+                    Missed
+                  </Text>
+                </View>
+              ) : null}
             </View>
           </View>
-        </View>
 
-        {/* 3. Subtasks Checklist Card */}
-        <View
-          style={[
-            styles.card,
-            shadows.card,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderRadius: radii.card,
-              padding: spacing.md,
-              marginBottom: spacing.md,
-            },
-          ]}
-        >
-          <View style={styles.sectionHeaderRow}>
-            <View style={styles.sectionHeaderLeft}>
-              <Icon name="checkbox" size={20} color={colors.primary} decorative style={{ marginRight: 8 }} />
-              <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
-                Subtasks
+          {/* Metadata Badges Carousel / Row */}
+          <View style={styles.badgesRow}>
+            {/* Schedule Mode badge with Anytime Today / schedule icon */}
+            <View
+              style={[
+                styles.pillBadge,
+                { backgroundColor: colors.surfaceSecondary, borderRadius: radii.pill },
+              ]}
+            >
+              <Image
+                source={scheduleModeIconSource}
+                style={{ width: 24, height: 24, marginRight: 6 }}
+                resizeMode="contain"
+              />
+              <Text style={[typography.caption, styles.badgeText, { color: colors.textSecondary }]}>
+                {scheduleSummary}
               </Text>
             </View>
-            {subtasksList.length > 0 && (
-              <View style={[styles.countBadge, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.pill }]}>
-                <Text style={[typography.caption, { color: colors.textSecondary, fontWeight: '700' }]}>
-                  {completedCount}/{subtasksList.length}
+
+            {/* Date badge with Date icon */}
+            {dateDisplay ? (
+              <View
+                style={[
+                  styles.pillBadge,
+                  { backgroundColor: colors.surfaceSecondary, borderRadius: radii.pill },
+                ]}
+              >
+                <Image
+                  source={TASK_DETAIL_ICONS.dateDetail}
+                  style={{ width: 24, height: 24, marginRight: 6 }}
+                  resizeMode="contain"
+                />
+                <Text style={[typography.caption, styles.badgeText, { color: colors.textSecondary }]}>
+                  {dateDisplay}
+                </Text>
+              </View>
+            ) : null}
+
+            {/* Recurrence badge with Daily / Repeat icon */}
+            {Boolean(definition.recurrenceRule || definition.hijriRecurrence) && (
+              <View
+                style={[
+                  styles.pillBadge,
+                  {
+                    backgroundColor: colors.surfaceSecondary,
+                    borderRadius: radii.pill,
+                  },
+                ]}
+              >
+                <Image
+                  source={TASK_DETAIL_ICONS.daily}
+                  style={{ width: 24, height: 24, marginRight: 6 }}
+                  resizeMode="contain"
+                />
+                <Text style={[typography.caption, styles.badgeText, { color: colors.textSecondary }]}>
+                  {recurrenceDisplay}
                 </Text>
               </View>
             )}
-          </View>
 
-          {/* Subtasks items */}
-          {subtasksList.length > 0 ? (
+            {/* Priority flag badge */}
+            {definition.priority === 'IMPORTANT' && (
+              <View
+                style={[
+                  styles.pillBadge,
+                  {
+                    backgroundColor: '#fee2e2',
+                    borderRadius: radii.pill,
+                  },
+                ]}
+              >
+                <Image
+                  source={TASK_DETAIL_ICONS.optPriority}
+                  style={{ width: 24, height: 24, marginRight: 6 }}
+                  resizeMode="contain"
+                />
+                <Text style={[typography.caption, styles.badgeText, { color: colors.danger, fontWeight: '700' }]}>
+                  Important
+                </Text>
+              </View>
+            )}
+
+            {/* Estimated Duration badge */}
+            {definition.estimatedMinutes ? (
+              <View
+                style={[
+                  styles.pillBadge,
+                  { backgroundColor: colors.surfaceSecondary, borderRadius: radii.pill },
+                ]}
+              >
+                <Image
+                  source={TASK_DETAIL_ICONS.optDuration}
+                  style={{ width: 24, height: 24, marginRight: 6 }}
+                  resizeMode="contain"
+                />
+                <Text style={[typography.caption, styles.badgeText, { color: colors.textSecondary }]}>
+                  {definition.estimatedMinutes}m
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+
+        {/* ── 3. Subtasks Checklist Card (Only shown if subtasks exist) ── */}
+        {subtasksList.length > 0 && (
+          <View
+            style={[
+              styles.card,
+              shadows.card,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderRadius: radii.card,
+                padding: spacing.md,
+                marginBottom: spacing.md,
+              },
+            ]}
+          >
+            <View style={styles.sectionHeaderRow}>
+              <View style={styles.sectionHeaderLeft}>
+                <Image
+                  source={TASK_DETAIL_ICONS.subtasks}
+                  style={{ width: 36, height: 36, marginRight: 10 }}
+                  resizeMode="contain"
+                />
+                <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary }]}>
+                  Subtasks
+                </Text>
+              </View>
+              <View style={[styles.countBadge, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.pill }]}>
+                <Text style={[typography.caption, { color: colors.primary, fontWeight: '700', fontSize: 13 }]}>
+                  {completedCount} of {subtasksList.length} done
+                </Text>
+              </View>
+            </View>
+
+            {/* Subtasks items */}
             <View style={styles.subtasksListContainer}>
               {subtasksList.map(item => {
                 const isChecked = completedSubtaskIds.includes(item.id);
@@ -343,18 +461,20 @@ export function TaskDetailScreen({
                         {
                           borderColor: isChecked ? colors.primary : colors.border,
                           backgroundColor: isChecked ? colors.primary : 'transparent',
-                          borderRadius: 4,
+                          borderRadius: 7,
+                          width: 26,
+                          height: 26,
                         },
                       ]}
                     >
-                      {isChecked && <Icon name="check" size={14} color={colors.textOnPrimary} decorative />}
+                      {isChecked && <Icon name="check" size={16} color={colors.textOnPrimary} decorative />}
                     </View>
                     <Text
                       style={[
-                        typography.bodyMedium,
+                        typography.bodyLarge,
                         styles.subtaskText,
                         {
-                          color: isChecked ? colors.textTertiary : colors.textPrimary,
+                          color: isChecked ? colors.textMuted : colors.textPrimary,
                           textDecorationLine: isChecked ? 'line-through' : 'none',
                         },
                       ]}
@@ -365,248 +485,105 @@ export function TaskDetailScreen({
                 );
               })}
             </View>
-          ) : (
-            <Text style={[typography.bodySmall, { color: colors.textTertiary, fontStyle: 'italic', marginVertical: spacing.xs }]}>
-              No subtasks added yet
-            </Text>
-          )}
-
-          {/* Quick Add Subtask row */}
-          <View style={[styles.addSubtaskRow, { borderTopColor: colors.border, marginTop: spacing.sm, paddingTop: spacing.sm }]}>
-            <TextInput
-              value={newSubtaskText}
-              onChangeText={setNewSubtaskText}
-              placeholder="Add a step..."
-              placeholderTextColor={colors.textTertiary}
-              returnKeyType="done"
-              onSubmitEditing={handleAddSubtask}
-              style={[
-                styles.addSubtaskInput,
-                typography.bodyMedium,
-                { color: colors.textPrimary, backgroundColor: colors.surfaceSecondary, borderRadius: radii.pill },
-              ]}
-            />
-            <Pressable
-              onPress={handleAddSubtask}
-              disabled={!newSubtaskText.trim() || isAddingSubtask}
-              accessibilityRole="button"
-              accessibilityLabel="Add step"
-              style={({ pressed }) => [
-                styles.addSubtaskButton,
-                {
-                  backgroundColor: newSubtaskText.trim() ? colors.primary : colors.disabledBackground,
-                  borderRadius: radii.pill,
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              <Icon name="plus" size={18} color={colors.textOnPrimary} decorative />
-            </Pressable>
           </View>
-        </View>
+        )}
 
-        {/* 4. Notes Card */}
-        <View
-          style={[
-            styles.card,
-            shadows.card,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderRadius: radii.card,
-              padding: spacing.md,
-              marginBottom: spacing.md,
-            },
-          ]}
-        >
-          <View style={styles.sectionHeaderRow}>
-            <View style={styles.sectionHeaderLeft}>
-              <Icon name="document" size={20} color={colors.primary} decorative style={{ marginRight: 8 }} />
-              <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
-                Notes
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => {
-                if (isEditingNotes) {
-                  handleSaveNotes();
-                } else {
-                  setIsEditingNotes(true);
-                }
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={isEditingNotes ? 'Save notes' : 'Edit notes'}
-              style={({ pressed }) => [
-                styles.notesActionBtn,
-                {
-                  backgroundColor: isEditingNotes ? colors.primary : colors.surfaceSecondary,
-                  borderRadius: radii.pill,
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              {isSavingNotes ? (
-                <ActivityIndicator size="small" color={colors.textOnPrimary} />
-              ) : (
-                <Text
-                  style={[
-                    typography.labelSmall,
-                    {
-                      color: isEditingNotes ? colors.textOnPrimary : colors.textPrimary,
-                      fontWeight: '700',
-                    },
-                  ]}
-                >
-                  {isEditingNotes ? 'Save' : 'Edit'}
+        {/* ── 4. Notes Card (Only shown if notes exist) ── */}
+        {Boolean(notes && notes.trim()) && (
+          <View
+            style={[
+              styles.card,
+              shadows.card,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderRadius: radii.card,
+                padding: spacing.md,
+                marginBottom: spacing.md,
+              },
+            ]}
+          >
+            <View style={styles.sectionHeaderRow}>
+              <View style={styles.sectionHeaderLeft}>
+                <Image
+                  source={TASK_DETAIL_ICONS.notes}
+                  style={{ width: 36, height: 36, marginRight: 10 }}
+                  resizeMode="contain"
+                />
+                <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary }]}>
+                  Notes
                 </Text>
-              )}
-            </Pressable>
-          </View>
+              </View>
+            </View>
 
-          {isEditingNotes ? (
-            <TextInput
-              value={notes}
-              onChangeText={setNotes}
-              placeholder="Add extra details, reminders, or references..."
-              placeholderTextColor={colors.textTertiary}
-              multiline
-              numberOfLines={4}
-              style={[
-                styles.notesInput,
-                typography.bodyMedium,
-                {
-                  backgroundColor: colors.surfaceSecondary,
-                  borderColor: colors.border,
-                  borderRadius: radii.md,
-                  color: colors.textPrimary,
-                  marginTop: spacing.sm,
-                  padding: spacing.md,
-                },
-              ]}
-            />
-          ) : (
             <Text
               style={[
-                typography.bodyMedium,
+                typography.bodyLarge,
                 styles.notesContent,
                 {
-                  color: notes.trim() ? colors.textPrimary : colors.textTertiary,
-                  fontStyle: notes.trim() ? 'normal' : 'italic',
+                  color: colors.textPrimary,
                   marginTop: spacing.xs,
                 },
               ]}
             >
-              {notes.trim() || 'No notes added for this task'}
+              {notes.trim()}
             </Text>
-          )}
-        </View>
+          </View>
+        )}
+      </ScrollView>
 
-        {/* Quick Full Edit Button */}
+      {/* ── 5. Fixed Bottom Actions Bar: Delete (Left, Red) & Edit (Right, Green) ── */}
+      <View
+        style={[
+          styles.bottomActionBar,
+          {
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
+          },
+        ]}
+      >
         <Pressable
-          onPress={onEditFull}
+          onPress={handleDeletePress}
           accessibilityRole="button"
-          accessibilityLabel="Edit full task options"
-          testID="task-detail-edit-full-button"
+          accessibilityLabel="Delete task"
+          testID="task-detail-delete-button"
           style={({ pressed }) => [
-            styles.editFullButton,
+            styles.actionButton,
+            styles.deleteButton,
             {
-              backgroundColor: colors.surface,
-              borderColor: colors.primary,
-              borderRadius: radii.pill,
-              minHeight: touchTargets.min,
-              opacity: pressed ? 0.8 : 1,
+              backgroundColor: isDark ? '#DC2626' : '#EF4444',
+              borderRadius: radii.md,
+              opacity: pressed ? 0.85 : 1,
             },
           ]}
         >
-          <Icon name="edit" size={18} color={colors.primary} decorative style={{ marginRight: 8 }} />
-          <Text style={[typography.labelLarge, { color: colors.primary, fontWeight: '700' }]}>
-            Edit Full Task & Options
+          <Icon name="trash" size={18} color="#FFFFFF" decorative style={{ marginRight: 6 }} />
+          <Text style={[typography.labelLarge, styles.actionButtonText, { color: '#FFFFFF' }]}>
+            Delete Task
           </Text>
         </Pressable>
-      </ScrollView>
 
-      {/* 7. Action Sheet Menu Modal */}
-      <Modal
-        visible={showMenu}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowMenu(false)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowMenu(false)}>
-          <View
-            style={[
-              styles.menuContainer,
-              shadows.card,
-              { backgroundColor: colors.surface, borderRadius: radii.card, padding: spacing.md },
-            ]}
-          >
-            <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700', marginBottom: spacing.md }]}>
-              Task Options
-            </Text>
-
-            <Pressable
-              onPress={() => {
-                setShowMenu(false);
-                onEditFull();
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Edit full task"
-              style={({ pressed }) => [
-                styles.menuItem,
-                { backgroundColor: pressed ? colors.surfaceSecondary : 'transparent', borderRadius: radii.md },
-              ]}
-            >
-              <Icon name="edit" size={20} color={colors.primary} decorative style={{ marginRight: spacing.md }} />
-              <View style={styles.menuItemTextContainer}>
-                <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '600' }]}>
-                  Edit Full Task
-                </Text>
-                <Text style={[typography.caption, { color: colors.textSecondary }]}>
-                  Schedule, recurrence, priority, and reminders
-                </Text>
-              </View>
-            </Pressable>
-
-            <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
-
-            <Pressable
-              onPress={handleDeletePress}
-              accessibilityRole="button"
-              accessibilityLabel="Delete task"
-              style={({ pressed }) => [
-                styles.menuItem,
-                { backgroundColor: pressed ? '#fee2e2' : 'transparent', borderRadius: radii.md },
-              ]}
-            >
-              <Icon name="trash" size={20} color={colors.danger} decorative style={{ marginRight: spacing.md }} />
-              <View style={styles.menuItemTextContainer}>
-                <Text style={[typography.labelLarge, { color: colors.danger, fontWeight: '700' }]}>
-                  Delete Task
-                </Text>
-                <Text style={[typography.caption, { color: colors.textSecondary }]}>
-                  Remove this task from your planner
-                </Text>
-              </View>
-            </Pressable>
-
-            <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
-
-            <Pressable
-              onPress={() => setShowMenu(false)}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel"
-              style={({ pressed }) => [
-                styles.cancelMenuItem,
-                { backgroundColor: pressed ? colors.surfaceSecondary : 'transparent', borderRadius: radii.pill },
-              ]}
-            >
-              <Text style={[typography.labelMedium, { color: colors.textSecondary, fontWeight: '700' }]}>
-                Cancel
-              </Text>
-            </Pressable>
-          </View>
+        <Pressable
+          onPress={onEditFull}
+          accessibilityRole="button"
+          accessibilityLabel="Edit full task"
+          testID="task-detail-edit-button"
+          style={({ pressed }) => [
+            styles.actionButton,
+            styles.editButton,
+            {
+              backgroundColor: isDark ? '#16A34A' : '#15803D',
+              borderRadius: radii.md,
+              opacity: pressed ? 0.85 : 1,
+            },
+          ]}
+        >
+          <Icon name="edit" size={18} color="#FFFFFF" decorative style={{ marginRight: 6 }} />
+          <Text style={[typography.labelLarge, styles.actionButtonText, { color: '#FFFFFF' }]}>
+            Edit Full Task
+          </Text>
         </Pressable>
-      </Modal>
+      </View>
     </SafeAreaView>
   );
 }
@@ -621,7 +598,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerButton: {
     width: 44,
@@ -631,52 +608,81 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontWeight: '700',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerRightPlaceholder: {
+    width: 44,
+    height: 44,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 24,
   },
   card: {
     borderWidth: 1,
   },
-  titleRow: {
+  heroHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 14,
   },
-  iconBadge: {
-    width: 52,
-    height: 52,
+  heroIconBadge: {
+    width: 60,
+    height: 60,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  titleTextContainer: {
+  heroTitleContainer: {
     flex: 1,
+  },
+  heroTitleText: {
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginTop: 4,
   },
   badgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    marginTop: 6,
-    gap: 4,
+    marginTop: 12,
+    gap: 6,
   },
   pillBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  badgeText: {
+    fontWeight: '600',
+    fontSize: 13,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   sectionHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  sectionTitle: {
+    fontWeight: '700',
+    fontSize: 18,
+  },
   countBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
   },
   subtasksListContainer: {
     marginTop: 4,
@@ -688,9 +694,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   checkboxBox: {
-    width: 22,
-    height: 22,
-    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -698,68 +701,31 @@ const styles = StyleSheet.create({
   subtaskText: {
     flex: 1,
   },
-  addSubtaskRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  addSubtaskInput: {
-    flex: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginRight: 8,
-  },
-  addSubtaskButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notesActionBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  notesInput: {
-    borderWidth: 1,
-    minHeight: 90,
-    textAlignVertical: 'top',
-  },
   notesContent: {
-    lineHeight: 22,
+    lineHeight: 24,
   },
-  editFullButton: {
+  bottomActionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    paddingVertical: 12,
+    paddingVertical: 13,
+    paddingHorizontal: 12,
+    minHeight: 48,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  menuContainer: {
-    width: '100%',
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-  },
-  menuItemTextContainer: {
-    flex: 1,
-  },
-  menuDivider: {
-    height: StyleSheet.hairlineWidth,
-    marginVertical: 4,
-  },
-  cancelMenuItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    marginTop: 4,
+  deleteButton: {},
+  editButton: {},
+  actionButtonText: {
+    fontWeight: '700',
+    fontSize: 15,
   },
 });

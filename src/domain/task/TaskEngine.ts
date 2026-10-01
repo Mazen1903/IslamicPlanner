@@ -18,11 +18,13 @@ import type {
 } from '@/domain/task/types';
 import { TaskValidationError } from '@/domain/task/errors';
 import { assertValidCivilDate, subtractCivilDay } from '@/utils/dateValidation';
+import { StreakService, streakService as defaultStreakService } from '@/services/StreakService';
 
 export class TaskEngine {
   constructor(
     private defRepo: TaskDefinitionRepository = taskDefinitionRepository,
-    private occRepo: TaskOccurrenceRepository = taskOccurrenceRepository
+    private occRepo: TaskOccurrenceRepository = taskOccurrenceRepository,
+    private streakService: StreakService = defaultStreakService
   ) {}
 
   /**
@@ -60,7 +62,7 @@ export class TaskEngine {
       });
     }
 
-    return await this.defRepo.create(
+    const created = await this.defRepo.create(
       {
         id,
         title: params.title.trim(),
@@ -87,6 +89,16 @@ export class TaskEngine {
       },
       tx
     );
+
+    if (params.streakEnabled) {
+      try {
+        await this.streakService.enableStreak(seriesId);
+      } catch (err) {
+        console.warn('[TaskEngine] Failed to enable streak for series:', seriesId, err);
+      }
+    }
+
+    return created;
   }
 
   /**
@@ -206,14 +218,39 @@ export class TaskEngine {
    * Completes an occurrence (PENDING -> COMPLETED).
    */
   async completeTask(occurrenceId: string, completedAt?: string, tx?: any): Promise<TaskOccurrence> {
-    return await this.occRepo.updateStatus(occurrenceId, 'COMPLETED', completedAt, tx);
+    const updated = await this.occRepo.updateStatus(occurrenceId, 'COMPLETED', completedAt, tx);
+    try {
+      await this.streakService.onOccurrenceCompleted(updated.seriesId, updated.localDate);
+    } catch (e) {
+      console.warn('[TaskEngine] Failed to update streak on completion:', e);
+    }
+    return updated;
+  }
+
+  /**
+   * Uncompletes an occurrence (COMPLETED -> PENDING).
+   */
+  async uncompleteTask(occurrenceId: string, tx?: any): Promise<TaskOccurrence> {
+    const updated = await this.occRepo.uncomplete(occurrenceId, tx);
+    try {
+      await this.streakService.onOccurrenceUncompleted(updated.seriesId, updated.localDate);
+    } catch (e) {
+      console.warn('[TaskEngine] Failed to update streak on uncomplete:', e);
+    }
+    return updated;
   }
 
   /**
    * Marks an occurrence as missed (PENDING -> MISSED).
    */
   async missTask(occurrenceId: string, missedAt?: string, tx?: any): Promise<TaskOccurrence> {
-    return await this.occRepo.updateStatus(occurrenceId, 'MISSED', missedAt, tx);
+    const updated = await this.occRepo.updateStatus(occurrenceId, 'MISSED', missedAt, tx);
+    try {
+      await this.streakService.onOccurrenceMissed(updated.seriesId, updated.localDate);
+    } catch (e) {
+      console.warn('[TaskEngine] Failed to update streak on miss:', e);
+    }
+    return updated;
   }
 
   /**

@@ -80,6 +80,12 @@ export function validateForm(state: FormState): ValidationResult {
   }
 
   // 4. Recurrence validation
+  if (state.recurrencePreset === 'SPECIFIC_DAYS') {
+    if (!state.specificDays || state.specificDays.length === 0) {
+      errors.specificDays = 'Select at least one day of the week';
+    }
+  }
+
   if (state.recurrencePreset === 'CUSTOM') {
     if (state.recurrenceCalendar === 'GREGORIAN') {
       const greg = state.customGregorianDraft;

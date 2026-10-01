@@ -825,6 +825,25 @@ export function NavHomeIcon({
   );
 }
 
+export function NavPlannerIcon({
+  size = 22,
+  color,
+  style,
+  testID,
+}: {
+  size?: number;
+  color?: string;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]} testID={testID}>
+      <MaterialCommunityIcons name="clipboard-text-outline" size={size} color={color ?? colors.tabInactive} />
+    </View>
+  );
+}
+
 export function NavCalendarIcon({
   size = 22,
   color,

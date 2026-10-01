@@ -135,14 +135,13 @@ export function ExpandingAddTaskModal({
       return;
     }
 
-    // Shrink back to origin.
-    // Easing.bezier(0.2, 0.85, 0.32, 1) starts closing immediately and decelerates softly into the button.
-    const closeDuration = Math.max(Math.round(750 * currentProgress), 350);
+    // Shrink back to origin with smooth closing that decelerates into circular FAB
+    const closeDuration = Math.max(Math.round(580 * currentProgress), 360);
 
     Animated.timing(morphAnim, {
       toValue: 0,
       duration: closeDuration,
-      easing: Easing.bezier(0.2, 0.85, 0.32, 1),
+      easing: Easing.bezier(0.25, 0.9, 0.35, 1),
       useNativeDriver: false,
     }).start(({ finished }) => {
       if (finished) {
@@ -166,11 +165,11 @@ export function ExpandingAddTaskModal({
       dragAnim.setValue(0);
       morphAnim.setValue(0);
 
-      // Fluid deceleration curve: launches swiftly and glides effortlessly into full screen
+      // Fluid deceleration curve: opens gracefully without aggressive initial jerk
       Animated.timing(morphAnim, {
         toValue: 1,
-        duration: 480,
-        easing: Easing.bezier(0.16, 1, 0.3, 1),
+        duration: 520,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: false,
       }).start();
     }
@@ -224,15 +223,20 @@ export function ExpandingAddTaskModal({
     extrapolate: 'clamp',
   });
 
-  // Card transforms
+  // Circle geometry for the final closing frames (t in [0, 0.15])
+  // In the last few frames, width === height so the container physically morphs into a circle
+  const circleMaxDiameter = Math.min(screenW * 0.32, 128);
+  const circleScaleX15 = circleMaxDiameter / screenW;
+  const circleScaleY15 = circleMaxDiameter / screenH;
+
   const cardScaleX = morphFraction.interpolate({
-    inputRange: [0, 1],
-    outputRange: [initialScaleX, 1],
+    inputRange: [0, 0.15, 0.45, 1],
+    outputRange: [initialScaleX, circleScaleX15, initialScaleX + 0.45 * (1 - initialScaleX), 1],
     extrapolate: 'clamp',
   });
   const cardScaleY = morphFraction.interpolate({
-    inputRange: [0, 1],
-    outputRange: [initialScaleY, 1],
+    inputRange: [0, 0.15, 0.45, 1],
+    outputRange: [initialScaleY, circleScaleY15, initialScaleY + 0.45 * (1 - initialScaleY), 1],
     extrapolate: 'clamp',
   });
   const cardTranslateX = morphFraction.interpolate({
@@ -255,30 +259,30 @@ export function ExpandingAddTaskModal({
 
   // Dissolve into origin button at the very end
   const cardOpacity = morphFraction.interpolate({
-    inputRange: [0, 0.06, 1],
+    inputRange: [0, 0.04, 1],
     outputRange: [0, 1, 1],
     extrapolate: 'clamp',
   });
 
-  // Corner radius: capsule pill (180) until 0.35, then smoothly shapes into full screen
+  // Corner radius: full circle (999) for final closing frames [0, 0.15], then smoothly transitions into card/screen
   const cardBorderTL = morphFraction.interpolate({
-    inputRange: [0, 0.35, 0.70, 1],
-    outputRange: [180, 60, 24, 0],
+    inputRange: [0, 0.15, 0.45, 0.75, 1],
+    outputRange: [999, 999, 32, 16, 0],
     extrapolate: 'clamp',
   });
   const cardBorderTR = morphFraction.interpolate({
-    inputRange: [0, 0.35, 0.70, 1],
-    outputRange: [180, 60, 24, 0],
+    inputRange: [0, 0.15, 0.45, 0.75, 1],
+    outputRange: [999, 999, 32, 16, 0],
     extrapolate: 'clamp',
   });
   const cardBorderBL = morphFraction.interpolate({
-    inputRange: [0, 0.30, 0.70, 1],
-    outputRange: [180, 40, 12, 0],
+    inputRange: [0, 0.15, 0.45, 0.75, 1],
+    outputRange: [999, 999, 32, 16, 0],
     extrapolate: 'clamp',
   });
   const cardBorderBR = morphFraction.interpolate({
-    inputRange: [0, 0.30, 0.70, 1],
-    outputRange: [180, 40, 12, 0],
+    inputRange: [0, 0.15, 0.45, 0.75, 1],
+    outputRange: [999, 999, 32, 16, 0],
     extrapolate: 'clamp',
   });
 

@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { useTheme } from '@/theme';
+import { useUserSettings } from '@/hooks/useUserSettings';
+import { StreakFlameBadge } from '@/components/streak';
 import {
   SettingsPastelHeader,
   SettingsSectionHeader,
@@ -58,8 +60,14 @@ const CREDITS: { name: string; license: string; purpose: string }[] = [
 export default function AboutScreen() {
   const { colors, spacing, radii, typography } = useTheme();
   const router = useRouter();
+  const { settings, updateSettings } = useUserSettings();
 
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+
+  const handleToggleFlameEngine = async () => {
+    const nextEngine = settings?.flameEngine === 'skia' ? 'svg' : 'skia';
+    await updateSettings?.({ flameEngine: nextEngine });
+  };
 
   const openUrl = async (url: string) => {
     try {
@@ -160,6 +168,48 @@ export default function AboutScreen() {
           testID="about-hadith-card"
         />
 
+        {/* Streak Flame Animation Engine (Dev / Customization) */}
+        <SettingsSectionHeader title="Streak Flame Animation" testID="flame-section" />
+        <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <SettingsRow
+            label="Flame Engine"
+            subtitle={settings?.flameEngine === 'skia' ? 'Skia Canvas' : 'SVG + Reanimated'}
+            value={settings?.flameEngine === 'skia' ? 'Skia' : 'SVG'}
+            icon="flame"
+            onPress={handleToggleFlameEngine}
+            testID="flame-engine-row"
+          />
+        </View>
+
+        {/* Live Flame Tiers Preview */}
+        <View style={[styles.tierPreviewCard, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.lg, padding: spacing.md, marginHorizontal: 16, marginTop: 12 }]}>
+          <Text style={[typography.labelMedium, { color: colors.textSecondary, marginBottom: spacing.sm }]}>
+            Flame Tiers Preview (Custom Palettes)
+          </Text>
+          <View style={styles.tierRow}>
+            <View style={styles.tierItem}>
+              <StreakFlameBadge count={3} size={36} testID="flame-preview-warm" />
+              <Text style={[typography.caption, { color: colors.textPrimary, marginTop: 4, fontWeight: '600' }]}>Warm</Text>
+              <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 10 }]}>1-7</Text>
+            </View>
+            <View style={styles.tierItem}>
+              <StreakFlameBadge count={14} size={36} testID="flame-preview-bright" />
+              <Text style={[typography.caption, { color: colors.textPrimary, marginTop: 4, fontWeight: '600' }]}>Bright</Text>
+              <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 10 }]}>8-30</Text>
+            </View>
+            <View style={styles.tierItem}>
+              <StreakFlameBadge count={45} size={36} testID="flame-preview-hot" />
+              <Text style={[typography.caption, { color: colors.textPrimary, marginTop: 4, fontWeight: '600' }]}>Hot</Text>
+              <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 10 }]}>31-99</Text>
+            </View>
+            <View style={styles.tierItem}>
+              <StreakFlameBadge count={120} size={36} testID="flame-preview-electric" />
+              <Text style={[typography.caption, { color: colors.textPrimary, marginTop: 4, fontWeight: '600' }]}>Electric</Text>
+              <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 10 }]}>100+</Text>
+            </View>
+          </View>
+        </View>
+
         {/* Footer with App Version & Care Notice */}
         <View style={[styles.footerContainer, { marginVertical: spacing.md, alignItems: 'center' }]}>
           <Text
@@ -227,5 +277,18 @@ const styles = StyleSheet.create({
   group: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  tierPreviewCard: {
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+  },
+  tierRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    paddingVertical: 4,
+  },
+  tierItem: {
+    alignItems: 'center',
   },
 });

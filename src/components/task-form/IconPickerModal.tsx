@@ -357,7 +357,7 @@ export function IconPickerModal({
         >
           <TaskCategoryIcon
             iconId={item.id}
-            size={item.imageAsset ? 58 : 36}
+            size={48}
             color={isSelected ? colors.primary : colors.textPrimary}
           />
         </Pressable>
@@ -491,8 +491,8 @@ export function IconPickerModal({
                 data={filteredIcons}
                 keyExtractor={item => item.id}
                 renderItem={renderIconItem}
-                numColumns={4}
-                contentContainerStyle={[styles.gridContainer, { paddingHorizontal: spacing.md }]}
+                numColumns={5}
+                contentContainerStyle={[styles.gridContainer, { paddingHorizontal: spacing.sm }]}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 ListEmptyComponent={
@@ -591,12 +591,12 @@ const styles = StyleSheet.create({
   },
   iconTile: {
     flex: 1,
-    margin: 5,
+    margin: 3,
     aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 4,
-    maxWidth: '25%',
+    padding: 2,
+    maxWidth: '20%',
   },
   emptyContainer: {
     alignItems: 'center',

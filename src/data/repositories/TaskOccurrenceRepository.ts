@@ -586,6 +586,45 @@ export class TaskOccurrenceRepository {
   }
 
   /**
+   * Reverts a COMPLETED occurrence back to PENDING.
+   * Atomically clears completedAt and resets status to PENDING.
+   */
+  async uncomplete(id: string, tx?: any): Promise<TaskOccurrence> {
+    const client = getDb(tx);
+    const updateResult = client
+      .update(taskOccurrences)
+      .set({
+        status: 'PENDING',
+        completedAt: null,
+      })
+      .where(
+        and(
+          eq(taskOccurrences.id, id),
+          eq(taskOccurrences.status, 'COMPLETED')
+        )
+      )
+      .run() as { changes?: number };
+
+    if ((updateResult?.changes ?? 0) > 0) {
+      const updated = await this.findById(id, tx);
+      return updated!;
+    }
+
+    const existing = await this.findById(id, tx);
+    if (!existing) {
+      throw new TaskValidationError(`Cannot uncomplete non-existent TaskOccurrence ${id}`);
+    }
+
+    if (existing.status === 'PENDING') {
+      return existing; // idempotent
+    }
+
+    throw new TaskValidationError(
+      `Cannot uncomplete occurrence ${id} with status ${existing.status}. Only COMPLETED occurrences can be uncompleted.`
+    );
+  }
+
+  /**
    * Updates per-occurrence override data (e.g. completedSubtaskIds).
    */
   async updateOverrideData(

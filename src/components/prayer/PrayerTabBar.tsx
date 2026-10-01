@@ -1,29 +1,32 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Pressable,
+  TouchableOpacity,
+  LayoutAnimation,
+  Platform,
+  UIManager,
   Image,
   Animated,
-  Dimensions,
-  I18nManager,
-} from 'react-native';
-import type {
-  StyleProp,
-  ViewStyle,
-  ImageSourcePropType,
-  LayoutChangeEvent,
+  type StyleProp,
+  type ViewStyle,
+  type ImageSourcePropType,
 } from 'react-native';
 import { useTheme } from '@/theme';
 import type { Prayer } from '@/constants/prayers';
 import type { PrayerTabViewModel } from '@/services/types';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export interface PrayerTabBarProps {
   tabs: PrayerTabViewModel[];
   selectedPrayer: Prayer | null;
   onSelectPrayer: (prayer: Prayer) => void;
   expandedPrayer?: Prayer | null;
+  dragTargetPrayer?: Prayer | null;
 }
 
 export const PRAYER_IMAGES: Record<Prayer, ImageSourcePropType> = {
@@ -33,18 +36,6 @@ export const PRAYER_IMAGES: Record<Prayer, ImageSourcePropType> = {
   MAGHRIB: require('../../../assets/prayers/maghrib.png'),
   ISHA: require('../../../assets/prayers/isha.png'),
 };
-
-interface PrayerTabItemProps {
-  tab: PrayerTabViewModel;
-  isSelected: boolean;
-  isCurrent: boolean;
-  isPast: boolean;
-  onPress: () => void;
-}
-
-// ─── Layout ──────────────────────────────────────────────────────────────────
-/** Height of the tab row */
-const TAB_BAR_HEIGHT = 40;
 
 export interface PrayerTabIconProps {
   prayer: Prayer;
@@ -61,7 +52,7 @@ export function PrayerTabIcon({
   isSelected,
   isCurrent,
   isPast,
-  size = 20,
+  size = 24,
   style,
   testID,
 }: PrayerTabIconProps) {
@@ -101,153 +92,222 @@ export function PrayerTabIcon({
   );
 }
 
-// ─── PrayerTabItem ────────────────────────────────────────────────────────────
-function PrayerTabItem({
-  tab,
-  isSelected,
-  isCurrent,
-  isPast,
-  onPress,
-}: PrayerTabItemProps) {
-  const { colors, typography, isDark } = useTheme();
+export function PrayerTabBar({
+  tabs,
+  selectedPrayer,
+  onSelectPrayer,
+  dragTargetPrayer,
+}: PrayerTabBarProps) {
+  const { colors, isDark, typography } = useTheme();
 
-  const nameColor = isSelected
-    ? colors.textOnPrimary
-    : isCurrent
-    ? colors.primary
-    : isPast
-    ? colors.textTertiary
-    : colors.textPrimary;
+  // Layout tracking for the smooth sliding pill indicator inside modeSegment
+  const [tabLayouts, setTabLayouts] = React.useState<Record<string, { x: number; y: number; width: number; height: number }>>({});
+  const translateX = React.useRef(new Animated.Value(0)).current;
+  const indicatorWidth = React.useRef(new Animated.Value(0)).current;
+  const indicatorOpacity = React.useRef(new Animated.Value(0)).current;
+  const isInitializedRef = React.useRef(false);
 
-  const timeColor = isSelected
-    ? colors.primary
-    : isCurrent
-    ? colors.primary
-    : isPast
-    ? colors.textTertiary
-    : colors.textSecondary;
+  const handleTabLayout = React.useCallback((prayer: Prayer, layout: { x: number; y: number; width: number; height: number }) => {
+    setTabLayouts(prev => {
+      if (prev[prayer]?.x === layout.x && prev[prayer]?.width === layout.width) {
+        return prev;
+      }
+      return { ...prev, [prayer]: layout };
+    });
+  }, []);
 
-  const hasTasks = (tab.scheduledTasks?.length ?? 0) > 0 || (tab.anytimeTasks?.length ?? 0) > 0;
+  React.useEffect(() => {
+    if (!selectedPrayer || !tabLayouts[selectedPrayer]) {
+      return;
+    }
 
-  return (
-    <View style={styles.tabColumn}>
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="tab"
-        accessibilityState={{ selected: isSelected }}
-        accessibilityLabel={`${tab.name}, ${tab.startTime}${isCurrent ? ', current prayer' : ''}`}
-        testID={`prayer-tab-${tab.prayer.toLowerCase()}`}
-        style={({ pressed }) => [
-          styles.tabCapsule,
-          {
-            backgroundColor: isSelected
-              ? colors.primary
-              : pressed
-              ? colors.surfaceSecondary
-              : isDark
-              ? 'rgba(28, 35, 43, 0.95)'
-              : 'rgba(255, 255, 255, 0.96)',
-            borderColor: isSelected
-              ? colors.primary
-              : isCurrent
-              ? colors.primary
-              : colors.border,
-            borderWidth: 1.5,
-            shadowColor: isSelected ? colors.primary : '#000',
-            shadowOpacity: isSelected ? 0.2 : 0.04,
-          },
-        ]}
-      >
-        <View style={styles.tabContent}>
-          <PrayerTabIcon
-            prayer={tab.prayer}
-            isSelected={isSelected}
-            isCurrent={isCurrent}
-            isPast={isPast}
-            size={18}
-          />
-          <Text
-            style={[
-              typography.labelMedium,
-              styles.tabName,
-              { color: nameColor },
-            ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.75}
-          >
-            {tab.name}
-          </Text>
+    const target = tabLayouts[selectedPrayer];
 
-          {hasTasks && (
-            <View
-              style={[
-                styles.taskDot,
-                { backgroundColor: isSelected ? colors.textOnPrimary : colors.primary },
-              ]}
-              importantForAccessibility="no"
-              accessible={false}
-            />
-          )}
-        </View>
-      </Pressable>
+    if (!isInitializedRef.current) {
+      translateX.setValue(target.x);
+      indicatorWidth.setValue(target.width);
+      indicatorOpacity.setValue(1);
+      isInitializedRef.current = true;
+      return;
+    }
 
-      {/* Visible start time directly beneath the capsule per today1.png */}
-      <Text
-        style={[
-          typography.caption,
-          styles.visibleTimeText,
-          { color: timeColor, fontWeight: isSelected || isCurrent ? '700' : '500' },
-        ]}
-        importantForAccessibility="no"
-        accessible={false}
-      >
-        {tab.startTime}
-      </Text>
-    </View>
-  );
-}
-
-// ─── PrayerTabBar ─────────────────────────────────────────────────────────────
-export function PrayerTabBar({ tabs, selectedPrayer, onSelectPrayer }: PrayerTabBarProps) {
-  const { colors, spacing } = useTheme();
+    Animated.parallel([
+      Animated.spring(translateX, {
+        toValue: target.x,
+        damping: 22,
+        stiffness: 220,
+        mass: 0.8,
+        useNativeDriver: false,
+      }),
+      Animated.spring(indicatorWidth, {
+        toValue: target.width,
+        damping: 22,
+        stiffness: 220,
+        mass: 0.8,
+        useNativeDriver: false,
+      }),
+      Animated.timing(indicatorOpacity, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [selectedPrayer, tabLayouts, translateX, indicatorWidth, indicatorOpacity]);
 
   return (
-    <View
-      style={[
-        styles.outerWrapper,
-        {
-          paddingBottom: spacing.xs,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.border,
-        },
-      ]}
-    >
+    <View style={styles.outerWrapper}>
+      {/* ── Outer Bordered Segment Container from TasbeehModeSelector ── */}
       <View
         style={[
-          styles.track,
+          styles.modeSegment,
           {
-            paddingHorizontal: spacing.md,
-            marginTop: spacing.xs,
-            marginBottom: spacing.xs,
+            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.7)' : '#FFFFFF',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
           },
         ]}
         accessibilityRole="tablist"
         testID="prayer-tab-bar"
       >
+        {/* Smooth Sliding Pill Indicator */}
+        {selectedPrayer && tabLayouts[selectedPrayer] ? (
+          <Animated.View
+            pointerEvents="none"
+            testID="prayer-tab-sliding-pill"
+            style={[
+              styles.slidingPill,
+              {
+                transform: [{ translateX }],
+                width: indicatorWidth,
+                opacity: indicatorOpacity,
+                backgroundColor: isDark ? 'rgba(34, 197, 94, 0.22)' : '#DCFCE7',
+              },
+            ]}
+          />
+        ) : null}
+
         {tabs.map(tab => {
-          const isSelected = tab.prayer === selectedPrayer;
+          const active = tab.prayer === selectedPrayer;
           const isCurrent = tab.temporalState === 'CURRENT';
           const isPast = tab.temporalState === 'PAST';
+          const isDragTarget = tab.prayer === dragTargetPrayer;
+
+          const textColor = active
+            ? isDark
+              ? '#4ADE80'
+              : '#15803D'
+            : isDragTarget
+            ? '#F59E0B'
+            : isPast
+            ? colors.textTertiary
+            : isDark
+            ? '#94A3B8'
+            : '#64748B';
+
           return (
-            <PrayerTabItem
+            <TouchableOpacity
               key={tab.prayer}
-              tab={tab}
-              isSelected={isSelected}
-              isCurrent={isCurrent}
-              isPast={isPast}
-              onPress={() => onSelectPrayer(tab.prayer)}
-            />
+              testID={`prayer-tab-${tab.prayer.toLowerCase()}`}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={`${tab.name}, ${tab.startTime}${
+                isCurrent ? ', current prayer' : ''
+              }`}
+              onLayout={e => handleTabLayout(tab.prayer, e.nativeEvent.layout)}
+              style={[
+                styles.modeTab,
+                active && {
+                  backgroundColor: isDark ? 'rgba(34, 197, 94, 0.22)' : '#DCFCE7',
+                  borderColor: isDark ? '#4ADE80' : '#16A34A',
+                },
+                !active && isCurrent && {
+                  borderColor: isDark ? '#22C55E' : '#16A34A',
+                  backgroundColor: isDark ? 'rgba(34, 197, 94, 0.08)' : '#F0FDF4',
+                },
+                isDragTarget && {
+                  backgroundColor: isDark ? 'rgba(245, 158, 11, 0.25)' : '#FEF3C7',
+                  borderColor: '#F59E0B',
+                },
+              ]}
+              onPress={() => {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                onSelectPrayer(tab.prayer);
+              }}
+              activeOpacity={0.75}
+            >
+              {isCurrent && (
+                <View
+                  style={[
+                    styles.currentIndicatorDot,
+                    { backgroundColor: isDark ? '#4ADE80' : '#16A34A' },
+                  ]}
+                  testID="prayer-current-indicator"
+                  importantForAccessibility="no"
+                  accessible={false}
+                />
+              )}
+              <PrayerTabIcon
+                prayer={tab.prayer}
+                isSelected={active}
+                isCurrent={isCurrent}
+                isPast={isPast}
+                size={20}
+              />
+              <Text
+                style={[
+                  styles.modeTabText,
+                  {
+                    color: textColor,
+                    fontWeight: active || isCurrent ? '700' : '600',
+                  },
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+              >
+                {tab.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* ── Start times row directly aligned under each tab ── */}
+      <View style={styles.timeRow}>
+        {tabs.map(tab => {
+          const active = tab.prayer === selectedPrayer;
+          const isCurrent = tab.temporalState === 'CURRENT';
+          const isPast = tab.temporalState === 'PAST';
+          const timeColor = active
+            ? isDark
+              ? '#4ADE80'
+              : '#15803D'
+            : isCurrent
+            ? isDark
+              ? '#4ADE80'
+              : '#15803D'
+            : isPast
+            ? colors.textTertiary
+            : isDark
+            ? '#94A3B8'
+            : '#64748B';
+
+          return (
+            <View key={tab.prayer} style={styles.timeColumn}>
+              <Text
+                style={[
+                  typography.caption,
+                  styles.visibleTimeText,
+                  {
+                    color: timeColor,
+                    fontWeight: active || isCurrent ? '700' : '500',
+                  },
+                ]}
+                importantForAccessibility="no"
+                accessible={false}
+              >
+                {tab.startTime}
+              </Text>
+            </View>
           );
         })}
       </View>
@@ -259,36 +319,49 @@ export function PrayerTabBar({ tabs, selectedPrayer, onSelectPrayer }: PrayerTab
 const styles = StyleSheet.create({
   outerWrapper: {
     width: '100%',
+    paddingBottom: 6,
   },
 
-  track: {
+  modeSegment: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-
-  tabColumn: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 3,
-  },
-
-  tabCapsule: {
-    width: '100%',
-    paddingVertical: 7,
-    paddingHorizontal: 4,
+    marginHorizontal: 16,
+    marginVertical: 4,
     borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 3,
+    borderWidth: 1,
+    padding: 4,
+    gap: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
     elevation: 2,
   },
 
-  tabContent: {
+  modeTab: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    position: 'relative',
+  },
+
+  modeTabText: {
+    fontSize: 12.5,
+    letterSpacing: -0.2,
+  },
+
+  currentIndicatorDot: {
+    position: 'absolute',
+    top: 3,
+    right: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
 
   prayerIconContainer: {
@@ -297,22 +370,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  tabName: {
-    fontSize: 12,
-    flexShrink: 1,
-    marginStart: 4,
+  slidingPill: {
+    position: 'absolute',
+    top: 4,
+    bottom: 4,
+    borderRadius: 16,
+    zIndex: 0,
   },
 
-  taskDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    marginStart: 4,
+  timeRow: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    paddingHorizontal: 4,
+    gap: 4,
+    marginTop: 2,
+  },
+
+  timeColumn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   visibleTimeText: {
-    fontSize: 11,
-    marginTop: 4,
+    fontSize: 12,
     textAlign: 'center',
   },
 

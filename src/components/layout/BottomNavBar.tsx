@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { Icon, type IconName } from '@/components/common/Icon';
-import { NavHomeIcon, NavCalendarIcon, NavLibraryIcon, NavMoreIcon } from '@/components/settings/SettingsIcons';
+import { NavHomeIcon, NavPlannerIcon, NavCalendarIcon, NavLibraryIcon, NavMoreIcon } from '@/components/settings/SettingsIcons';
 import { useAddTaskModalStore, type FabOrigin } from '@/stores/useAddTaskModalStore';
 
 export interface BottomNavBarRoute {
@@ -20,7 +20,7 @@ export interface BottomNavBarProps {
 }
 
 const TAB_CONFIG: Record<string, { label: string; icon: IconName }> = {
-  today: { label: 'Today', icon: 'home' },
+  today: { label: 'Planner', icon: 'clipboard' },
   calendar: { label: 'Calendar', icon: 'calendar' },
   add: { label: 'Add', icon: 'plus' },
   journal: { label: 'Journal', icon: 'journal' },
@@ -176,7 +176,7 @@ export function BottomNavBar(props: BottomNavBarProps) {
               ]}
             >
               {route.name === 'today' ? (
-                <NavHomeIcon size={22} color={isFocused ? colors.tabActive : colors.tabInactive} />
+                <NavPlannerIcon size={22} color={isFocused ? colors.tabActive : colors.tabInactive} />
               ) : route.name === 'calendar' ? (
                 <NavCalendarIcon size={22} color={isFocused ? colors.tabActive : colors.tabInactive} />
               ) : route.name === 'journal' ? (

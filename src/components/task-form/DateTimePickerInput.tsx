@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -38,6 +38,14 @@ export function DatePickerInput({
     : DateTime.now();
 
   const [viewMonth, setViewMonth] = useState<DateTime>(selectedDt.startOf('month'));
+
+  // Fix #5: Sync viewMonth when value prop changes externally
+  useEffect(() => {
+    const newDt = DateTime.fromISO(value);
+    if (newDt.isValid) {
+      setViewMonth(newDt.startOf('month'));
+    }
+  }, [value]);
 
   const isToday = selectedDt.hasSame(DateTime.now(), 'day');
   const formattedDate = isToday
@@ -94,7 +102,7 @@ export function DatePickerInput({
         ]}
       >
         <View style={[styles.iconBox, { marginEnd: spacing.sm }]}>
-          <Icon name="task-date" size={28} decorative />
+          <Icon name="task-date" size={38} decorative />
         </View>
         <View style={styles.textColumn}>
           <Text style={[typography.caption, { color: colors.textSecondary }]}>
@@ -237,7 +245,7 @@ export interface TimePickerInputProps {
 }
 
 const HOURS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+const MINUTES = Array.from({ length: 60 }, (_, i) => i);
 
 function to24Hour(hour12: number, minute: number, ampm: 'AM' | 'PM'): string {
   let h = hour12 % 12;
@@ -252,8 +260,8 @@ function from24Hour(timeStr: string): { hour12: number; minute: number; ampm: 'A
   const minute = validDt.minute;
   const ampm: 'AM' | 'PM' = h24 >= 12 ? 'PM' : 'AM';
   const hour12 = h24 % 12 === 0 ? 12 : h24 % 12;
-  const roundedMin = Math.round(minute / 5) * 5 % 60;
-  return { hour12, minute: roundedMin, ampm };
+  // Fix #10: Don't round minutes — preserve exact values from saved tasks
+  return { hour12, minute, ampm };
 }
 
 export function TimePickerInput({
@@ -309,7 +317,7 @@ export function TimePickerInput({
         ]}
       >
         <View style={[styles.iconBox, { marginEnd: spacing.sm }]}>
-          <Icon name="task-time" size={28} decorative />
+          <Icon name="task-time" size={38} decorative />
         </View>
         <View style={styles.textColumn}>
           <Text style={[typography.caption, { color: colors.textSecondary }]}>
@@ -521,8 +529,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   iconBox: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },

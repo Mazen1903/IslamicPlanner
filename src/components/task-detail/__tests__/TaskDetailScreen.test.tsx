@@ -56,8 +56,8 @@ describe('TaskDetailScreen', () => {
     },
   };
 
-  it('renders task details with name, subtasks, and notes', async () => {
-    const { getByText, getByTestId } = await render(
+  it('renders task details with name, subtasks, notes, and no standalone edit buttons', async () => {
+    const { getByText, queryByText, getByTestId } = await render(
       <ThemeProvider>
         <TaskDetailScreen
           definition={mockDefinition}
@@ -77,7 +77,45 @@ describe('TaskDetailScreen', () => {
     expect(getByText('Last 10 ayat')).toBeTruthy();
     expect(getByText('Notes')).toBeTruthy();
     expect(getByText('Read with tafsir')).toBeTruthy();
-    expect(getByTestId('task-detail-more-button')).toBeTruthy();
+    expect(getByTestId('task-detail-delete-button')).toBeTruthy();
+    expect(getByTestId('task-detail-edit-button')).toBeTruthy();
+
+    // Verify three-dots button is removed
+    expect(queryByText('Task Options')).toBeNull();
+    // Verify Schedule & Information is completely removed
+    expect(queryByText('Schedule & Information')).toBeNull();
+  });
+
+  it('hides notes, subtasks, and priority when they were not added to the task', async () => {
+    const minimalDefinition: TaskDefinition = {
+      ...mockDefinition,
+      priority: 'NORMAL',
+      notes: null,
+      subtasks: [],
+      estimatedMinutes: null,
+    };
+
+    const { queryByText, getByText } = await render(
+      <ThemeProvider>
+        <TaskDetailScreen
+          definition={minimalDefinition}
+          occurrence={{ ...mockOccurrence, overrideData: {} }}
+          onEditFull={jest.fn()}
+          onDelete={jest.fn()}
+          onBack={jest.fn()}
+        />
+      </ThemeProvider>
+    );
+
+    // Essential header is present
+    expect(getByText('Recite Surah Al-Kahf')).toBeTruthy();
+
+    // Unadded metadata must NOT be rendered
+    expect(queryByText('Notes')).toBeNull();
+    expect(queryByText('Subtasks')).toBeNull();
+    expect(queryByText('Important')).toBeNull();
+    expect(queryByText('20m')).toBeNull();
+    expect(queryByText('Schedule & Information')).toBeNull();
   });
 
   it('toggles subtask completion on press', async () => {
@@ -99,9 +137,9 @@ describe('TaskDetailScreen', () => {
     expect(onToggle).toHaveBeenCalledWith('occ-1', 'st-2');
   });
 
-  it('opens three dots options menu and triggers edit full task', async () => {
+  it('triggers edit full task from bottom green action button', async () => {
     const onEditFull = jest.fn();
-    const { getByTestId, getByText } = await render(
+    const { getByTestId } = await render(
       <ThemeProvider>
         <TaskDetailScreen
           definition={mockDefinition}
@@ -113,12 +151,32 @@ describe('TaskDetailScreen', () => {
       </ThemeProvider>
     );
 
-    await fireEvent.press(getByTestId('task-detail-more-button'));
-    expect(getByText('Task Options')).toBeTruthy();
-    expect(getByText('Edit Full Task')).toBeTruthy();
-    expect(getByText('Delete Task')).toBeTruthy();
-
-    await fireEvent.press(getByText('Edit Full Task'));
+    await fireEvent.press(getByTestId('task-detail-edit-button'));
     expect(onEditFull).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders Anytime Today schedule mode and Daily recurrence badge in the Hero card', async () => {
+    const anytimeDailyDefinition: TaskDefinition = {
+      ...mockDefinition,
+      scheduleType: 'ANYTIME_TODAY',
+      scheduleData: {},
+      recurrenceRule: 'RRULE:FREQ=DAILY',
+    };
+
+    const { getByText, queryByText } = await render(
+      <ThemeProvider>
+        <TaskDetailScreen
+          definition={anytimeDailyDefinition}
+          occurrence={mockOccurrence}
+          onEditFull={jest.fn()}
+          onDelete={jest.fn()}
+          onBack={jest.fn()}
+        />
+      </ThemeProvider>
+    );
+
+    expect(getByText('Anytime Today')).toBeTruthy();
+    expect(getByText('Daily')).toBeTruthy();
+    expect(queryByText('Schedule & Information')).toBeNull();
   });
 });

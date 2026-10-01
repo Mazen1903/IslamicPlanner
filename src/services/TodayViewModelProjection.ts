@@ -2,7 +2,7 @@ import { DateTime } from 'luxon';
 import { PRAYER_ORDER, PRAYER_NAMES, type Prayer } from '@/constants/prayers';
 import type { PrayerTimeline, PrayerPeriodInstance } from '@/domain/prayer/types';
 import type { PlanningDay } from '@/domain/planning-day/types';
-import type { TaskOccurrence, TaskDefinition } from '@/domain/task/types';
+import type { TaskOccurrence, TaskDefinition, StreakData } from '@/domain/task/types';
 import type {
   TodayViewModel,
   PrayerTabViewModel,
@@ -159,8 +159,16 @@ export function formatScheduleLabel(
       const endName = PRAYER_NAMES[data.endPrayer] ?? data.endPrayer;
       return `${startName} – ${endName}`;
     }
-    case 'ANYTIME_TODAY':
+    case 'ANYTIME_TODAY': {
+      const dateStr = occ?.localDate ?? occ?.planningDayKey ?? def?.startDate;
+      if (dateStr) {
+        const dt = DateTime.fromISO(dateStr, { zone: timezone });
+        if (dt.isValid) {
+          return dt.toFormat('MMM d');
+        }
+      }
       return 'Anytime Today';
+    }
     default:
       return '';
   }
@@ -175,7 +183,8 @@ export function buildTaskCardViewModel(
   tabPrayer: Prayer,
   planningDay: PlanningDay,
   timezone: string,
-  timeline?: PrayerTimeline
+  timeline?: PrayerTimeline,
+  streakMap?: Map<string, StreakData>
 ): TaskCardViewModel {
   let sortInstant: string | null = null;
   let dueAt: string | null = null;
@@ -214,6 +223,10 @@ export function buildTaskCardViewModel(
   }));
   const icon = detectTaskIcon(def.title, def.tags);
 
+  const streak = streakMap?.get(occ.seriesId);
+  const streakEnabled = Boolean(streak?.streakEnabled);
+  const streakCount = streakEnabled ? Math.max(1, streak?.currentStreak ?? 1) : null;
+
   return {
     occurrenceId: occ.id,
     taskDefinitionId: def.id,
@@ -232,6 +245,12 @@ export function buildTaskCardViewModel(
     expiresAt,
     subtasks,
     notes: occ.overrideData?.notes ?? def.notes ?? null,
+    streakCount,
+    streakEnabled,
+    localDate: occ.localDate ?? occ.planningDayKey ?? def.startDate ?? null,
+    date: (occ.localDate ?? occ.planningDayKey ?? def.startDate)
+      ? DateTime.fromISO(occ.localDate ?? occ.planningDayKey ?? def.startDate, { zone: timezone }).toFormat('MMM d')
+      : null,
   };
 }
 
@@ -460,7 +479,8 @@ export function projectTodayViewModel(
   planningDay: PlanningDay,
   timeline: PrayerTimeline,
   now: DateTime,
-  timezone: string
+  timezone: string,
+  streakMap?: Map<string, StreakData>
 ): TodayViewModel {
   // 1. Initialize empty tab builders for exactly 5 prayer tabs
   const tabBuilders = new Map<
@@ -496,7 +516,7 @@ export function projectTodayViewModel(
 
     // A. ANYTIME_TODAY: project to anytime section of all 5 tabs
     if (def.scheduleType === 'ANYTIME_TODAY') {
-      const card = buildTaskCardViewModel(occ, def, 'FAJR', planningDay, timezone, timeline);
+      const card = buildTaskCardViewModel(occ, def, 'FAJR', planningDay, timezone, timeline, streakMap);
       for (const prayer of PRAYER_ORDER) {
         tabBuilders.get(prayer)!.anytime.push(card);
       }
@@ -517,7 +537,7 @@ export function projectTodayViewModel(
         const builder = tabBuilders.get(prayer);
         if (!builder) continue;
 
-        const card = buildTaskCardViewModel(occ, def, prayer, planningDay, timezone, timeline);
+        const card = buildTaskCardViewModel(occ, def, prayer, planningDay, timezone, timeline, streakMap);
         if (occ.status === 'PENDING') {
           builder.scheduled.push(card);
         } else if (occ.status === 'MISSED') {
@@ -533,7 +553,7 @@ export function projectTodayViewModel(
     const targetPrayer = occ.calculatedPrayerSection;
     if (targetPrayer && tabBuilders.has(targetPrayer)) {
       const builder = tabBuilders.get(targetPrayer)!;
-      const card = buildTaskCardViewModel(occ, def, targetPrayer, planningDay, timezone, timeline);
+      const card = buildTaskCardViewModel(occ, def, targetPrayer, planningDay, timezone, timeline, streakMap);
       if (occ.status === 'PENDING') {
         builder.scheduled.push(card);
       } else if (occ.status === 'MISSED') {

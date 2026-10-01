@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
+import { AppHeroHeader } from '@/components/common/AppHeroHeader';
 
 export interface CalendarHeaderProps {
   gregorianTitle: string; // e.g. "September 2026"
@@ -23,17 +24,22 @@ export function CalendarHeader({
   const { colors, spacing, typography, radii, touchTargets } = useTheme();
 
   return (
-    <View style={[styles.container, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md }]} testID={testID}>
-      <View style={styles.topRow}>
-        <View style={styles.titleContainer}>
-          <Text style={[typography.headlineMedium, { color: colors.textPrimary }]} accessibilityRole="header">
-            {gregorianTitle}
-          </Text>
-          <Text style={[typography.bodySmall, { color: colors.primary, marginTop: spacing.xxs }]}>
-            {hijriHeaderSpan}
-          </Text>
-        </View>
-
+    <AppHeroHeader
+      testID={testID}
+      title={
+        <Text
+          style={[typography.headlineMedium, styles.titleText, { color: colors.textPrimary }]}
+          accessibilityRole="header"
+        >
+          {gregorianTitle}
+        </Text>
+      }
+      hijriSubtitle={
+        <Text style={[typography.bodySmall, styles.hijriText, { color: colors.primary, marginTop: spacing.xxs }]}>
+          {hijriHeaderSpan}
+        </Text>
+      }
+      rightElement={
         <View style={styles.actionsContainer}>
           <Pressable
             onPress={onTodayPress}
@@ -92,27 +98,23 @@ export function CalendarHeader({
             </Pressable>
           </View>
         </View>
-      </View>
-    </View>
+      }
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    width: '100%',
+  titleText: {
+    fontWeight: '800',
+    letterSpacing: -0.4,
   },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  titleContainer: {
-    flex: 1,
+  hijriText: {
+    fontWeight: '600',
   },
   actionsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   todayButton: {
     alignItems: 'center',

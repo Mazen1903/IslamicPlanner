@@ -1,3 +1,4 @@
+import { Settings } from 'luxon';
 import {
   CalendarMonthOrchestrator,
   compareUpcomingTasks,
@@ -43,6 +44,7 @@ describe('CalendarMonthOrchestrator (M14)', () => {
   }
 
   beforeEach(() => {
+    Settings.now = () => new Date('2026-09-15T12:00:00Z').getTime();
     createTestDatabase();
     taskEngine = new TaskEngine(taskDefinitionRepository, taskOccurrenceRepository);
     horizonSync = new RecurringHorizonSync();
@@ -56,6 +58,7 @@ describe('CalendarMonthOrchestrator (M14)', () => {
   });
 
   afterEach(() => {
+    Settings.now = () => Date.now();
     cleanupTestDatabase();
   });
 

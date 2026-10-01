@@ -3,7 +3,7 @@ import type { Config } from 'jest';
 const config: Config = {
   preset: 'jest-expo',
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|expo-widgets|react-native-android-widget|react-native-reanimated|standard-navigation)',
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|expo-widgets|react-native-android-widget|react-native-reanimated|lottie-react-native|standard-navigation)',
   ],
   setupFilesAfterEnv: [],
   testTimeout: 10000,
@@ -18,6 +18,7 @@ const config: Config = {
     '^@expo/ui/swift-ui/modifiers$': '<rootDir>/src/__mocks__/expo-ui-swift-ui-modifiers.ts',
     '^react-native-reanimated$': '<rootDir>/src/__mocks__/react-native-reanimated.ts',
     '\\.dat$': '<rootDir>/src/__mocks__/assetMock.js',
+    '^lottie-react-native$': '<rootDir>/src/__mocks__/lottie-react-native.tsx',
   },
   testMatch: [
     '**/__tests__/**/*.test.[jt]s?(x)',

@@ -132,13 +132,26 @@ export default function TaskEditScreen() {
     await refresh();
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (scope: 'THIS_OCCURRENCE' | 'ALL_OCCURRENCES' = 'ALL_OCCURRENCES') => {
     try {
-      if (occurrence) {
-        await taskOccurrenceRepository.deleteIfPending(occurrence.id).catch(() => {});
-      }
       const isRecurring = Boolean(definition.recurrenceRule || definition.hijriRecurrence);
-      if (!isRecurring) {
+      if (isRecurring && scope === 'THIS_OCCURRENCE') {
+        if (occurrence) {
+          await taskOccurrenceRepository.deleteIfPending(occurrence.id).catch(() => {});
+        }
+      } else if (isRecurring && scope === 'ALL_OCCURRENCES') {
+        if (definition.seriesId) {
+          await taskEngine.deleteEntireSeries(definition.seriesId).catch(() => {});
+        } else {
+          if (occurrence) {
+            await taskOccurrenceRepository.deleteIfPending(occurrence.id).catch(() => {});
+          }
+          await taskDefinitionRepository.delete(definition.id).catch(() => {});
+        }
+      } else {
+        if (occurrence) {
+          await taskOccurrenceRepository.deleteIfPending(occurrence.id).catch(() => {});
+        }
         await taskDefinitionRepository.delete(definition.id).catch(() => {});
       }
       await refresh();

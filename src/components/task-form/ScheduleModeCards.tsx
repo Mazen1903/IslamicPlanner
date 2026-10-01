@@ -5,6 +5,8 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Image,
+  type ImageSourcePropType,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -17,10 +19,17 @@ import { DatePickerInput, TimePickerInput } from './DateTimePickerInput';
 
 const PRAYERS: Prayer[] = ['FAJR', 'DHUHR', 'ASR', 'MAGHRIB', 'ISHA'];
 
+const MODE_ICONS: Record<ScheduleMode, ImageSourcePropType> = {
+  EXACT_TIME: require('../../../assets/icons/task/exact_time.png'),
+  PRAYER_RELATIVE: require('../../../assets/icons/task/relative_prayer.png'),
+  PRAYER_WINDOW: require('../../../assets/icons/task/prayer_window.png'),
+  ANYTIME_TODAY: require('../../../assets/icons/task/anytime_today.png'),
+};
+
 interface ScheduleModeCardsProps {
   state: FormState;
   dispatch: React.Dispatch<FormAction>;
-  previewResult: SchedulePreviewResult | null;
+  previewResult?: SchedulePreviewResult | null;
   onRequestRelativeView?: () => void;
   style?: StyleProp<ViewStyle>;
 }
@@ -28,36 +37,28 @@ interface ScheduleModeCardsProps {
 export function ScheduleModeCards({
   state,
   dispatch,
-  previewResult,
+  previewResult: _previewResult,
   onRequestRelativeView: _onRequestRelativeView,
   style,
 }: ScheduleModeCardsProps) {
   const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
 
-  const modes: { mode: ScheduleMode; label: string; icon: 'clock' | 'prayer' | 'calendar' | 'sun'; desc: string }[] = [
+  const modes: { mode: ScheduleMode; label: string }[] = [
     {
       mode: 'EXACT_TIME',
       label: 'Exact Time',
-      icon: 'clock',
-      desc: 'Set a specific time',
     },
     {
       mode: 'PRAYER_RELATIVE',
       label: 'Relative to Prayer',
-      icon: 'prayer',
-      desc: 'e.g. Maghrib + 30m',
     },
     {
       mode: 'PRAYER_WINDOW',
       label: 'Prayer Window',
-      icon: 'calendar',
-      desc: 'e.g. Fajr → Asr',
     },
     {
       mode: 'ANYTIME_TODAY',
       label: 'Anytime Today',
-      icon: 'sun',
-      desc: 'Do it whenever',
     },
   ];
 
@@ -79,7 +80,7 @@ export function ScheduleModeCards({
               }}
               accessibilityRole="radio"
               accessibilityState={{ checked: isSelected }}
-              accessibilityLabel={`${item.label}: ${item.desc}`}
+              accessibilityLabel={item.label}
               testID={`schedule-mode-${item.mode.toLowerCase()}`}
               style={({ pressed }) => [
                 styles.modeCard,
@@ -88,8 +89,11 @@ export function ScheduleModeCards({
                   backgroundColor: isSelected ? colors.primaryLight : colors.surface,
                   borderColor: isSelected ? colors.primary : colors.border,
                   borderRadius: radii.card,
-                  padding: spacing.md,
+                  paddingVertical: spacing.md,
+                  paddingHorizontal: spacing.sm,
                   alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: 96,
                   opacity: pressed ? 0.8 : 1,
                 },
               ]}
@@ -102,20 +106,10 @@ export function ScheduleModeCards({
                   },
                 ]}
               >
-                <Icon
-                  name={item.icon}
-                  size={32}
-                  color={
-                    item.mode === 'ANYTIME_TODAY'
-                      ? colors.warning
-                      : item.mode === 'PRAYER_RELATIVE'
-                      ? colors.primary
-                      : isSelected
-                      ? colors.primary
-                      : colors.textSecondary
-                  }
-                  dotColor={colors.primary}
-                  decorative
+                <Image
+                  source={MODE_ICONS[item.mode]}
+                  style={{ width: 44, height: 44 }}
+                  resizeMode="contain"
                 />
               </View>
               <Text
@@ -125,22 +119,11 @@ export function ScheduleModeCards({
                   {
                     color: isSelected ? colors.primaryDark : colors.textPrimary,
                     textAlign: 'center',
+                    fontWeight: isSelected ? '700' : '600',
                   },
                 ]}
               >
                 {item.label}
-              </Text>
-              <Text
-                style={[
-                  typography.caption,
-                  {
-                    color: isSelected ? colors.primary : colors.textSecondary,
-                    marginTop: 2,
-                    textAlign: 'center',
-                  },
-                ]}
-              >
-                {item.desc}
               </Text>
             </Pressable>
           );
@@ -426,9 +409,9 @@ export function ScheduleModeCards({
               })}
             </View>
 
-            {state.validationErrors.windowOrder && (
+            {(state.validationErrors.windowOrder || state.validationErrors.prayerWindow) && (
               <Text style={[typography.caption, { color: colors.danger, marginTop: spacing.xs }]}>
-                {state.validationErrors.windowOrder}
+                {state.validationErrors.windowOrder || state.validationErrors.prayerWindow}
               </Text>
             )}
           </View>
@@ -436,7 +419,13 @@ export function ScheduleModeCards({
 
         {state.scheduleMode === 'ANYTIME_TODAY' && (
           <View testID="anytime-today-fields">
-            <Text style={[typography.bodyMedium, { color: colors.textSecondary }]}>
+            <DatePickerInput
+              value={state.planningDayDate}
+              onChange={d => dispatch({ type: 'SET_PLANNING_DAY_DATE', payload: d })}
+              label="Planning Day"
+              testID="anytime-date-picker"
+            />
+            <Text style={[typography.bodyMedium, { color: colors.textSecondary, marginTop: spacing.sm }]}>
               This task has no fixed time. It will appear in the Anytime Today section for your active planning day.
             </Text>
             <View style={[styles.infoBanner, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md, marginTop: spacing.md, padding: spacing.md }]}>
@@ -447,57 +436,6 @@ export function ScheduleModeCards({
             </View>
           </View>
         )}
-      </View>
-    )}
-
-    {/* Live Derived Preview */}
-    {previewResult && previewResult.status === 'READY' && (
-      <View
-        style={[
-          styles.previewBanner,
-          {
-            backgroundColor: colors.primaryLight,
-            borderColor: colors.primary,
-            borderRadius: radii.md,
-            padding: spacing.md,
-            marginTop: spacing.md,
-          },
-        ]}
-        testID="schedule-preview-banner"
-      >
-        <View style={styles.previewHeader}>
-          <Icon name="clock" size={16} color={colors.primary} style={{ marginEnd: spacing.xs }} decorative />
-          <Text style={[typography.labelMedium, { color: colors.primaryDark }]}>
-            Schedule Preview
-          </Text>
-        </View>
-        <Text style={[typography.bodyMedium, { color: colors.textPrimary, marginTop: 2 }]}>
-          {previewResult.primaryLabel}
-        </Text>
-        {previewResult.secondaryLabel ? (
-          <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-            {previewResult.secondaryLabel}
-          </Text>
-        ) : null}
-      </View>
-    )}
-
-    {previewResult && (previewResult.status === 'CONTEXT_UNAVAILABLE' || previewResult.status === 'INVALID') && (
-      <View
-        style={[
-          styles.previewBanner,
-          {
-            backgroundColor: colors.surfaceSecondary,
-            borderColor: colors.border,
-            borderRadius: radii.md,
-            padding: spacing.md,
-            marginTop: spacing.md,
-          },
-        ]}
-      >
-        <Text style={[typography.caption, { color: colors.textTertiary }]}>
-          {previewResult.reason || 'Preview unavailable'}
-        </Text>
       </View>
     )}
   </View>
@@ -586,13 +524,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   infoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  previewBanner: {
-    borderWidth: 1,
-  },
-  previewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },

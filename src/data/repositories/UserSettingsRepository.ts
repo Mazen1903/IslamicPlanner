@@ -3,7 +3,9 @@ import { userSettings } from '@/data/schema';
 import { getDatabase, type AppDatabase } from '@/data/db';
 import type { Coordinates } from '@/domain/prayer/types';
 
-export type UserSettingsRow = typeof userSettings.$inferSelect;
+export type UserSettingsRow = Omit<typeof userSettings.$inferSelect, 'flameEngine'> & {
+  flameEngine?: string;
+};
 export type UserSettingsPatch = Partial<Omit<typeof userSettings.$inferInsert, 'id' | 'createdAt'>>;
 
 function getDb(tx?: any): AppDatabase {
@@ -74,6 +76,7 @@ export class UserSettingsRepository {
         themeMode: patch.themeMode ?? 'SYSTEM',
         isPremium: patch.isPremium ?? false,
         onboardingCompleted: patch.onboardingCompleted ?? false,
+        flameEngine: patch.flameEngine ?? 'lottie',
         createdAt: now,
         updatedAt: now,
       });

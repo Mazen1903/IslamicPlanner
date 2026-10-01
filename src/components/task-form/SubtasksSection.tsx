@@ -48,7 +48,7 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
       )}
 
-      <View style={[styles.content, { padding: spacing.sm }]}>
+      <View style={[styles.content, { padding: spacing.md }]}>
         {/* Existing subtasks list */}
         {subtasks.map(subtask => (
           <View
@@ -57,8 +57,10 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
               styles.subtaskRow,
               {
                 paddingHorizontal: spacing.xs,
-                paddingVertical: 4,
+                paddingVertical: 6,
                 marginBottom: spacing.xs,
+                borderBottomColor: colors.border,
+                borderBottomWidth: StyleSheet.hairlineWidth,
               },
             ]}
             testID={`subtask-item-${subtask.id}`}
@@ -69,24 +71,31 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
               accessibilityState={{ checked: subtask.isCompleted }}
               accessibilityLabel={`Subtask: ${subtask.title}`}
               testID={`toggle-subtask-${subtask.id}`}
-              style={styles.subtaskCheck}
+              style={[
+                styles.subtaskCheck,
+                {
+                  borderColor: subtask.isCompleted ? colors.primary : colors.border,
+                  backgroundColor: subtask.isCompleted ? colors.primary : 'transparent',
+                },
+              ]}
             >
-              <Icon
-                name={subtask.isCompleted ? 'check' : 'circle'}
-                size={18}
-                color={subtask.isCompleted ? colors.primary : colors.textTertiary}
-                decorative
-              />
+              {subtask.isCompleted ? (
+                <Icon
+                  name="check"
+                  size={13}
+                  color={colors.textOnPrimary}
+                  decorative
+                />
+              ) : null}
             </Pressable>
 
             <Text
               style={[
                 typography.bodyMedium,
+                styles.subtaskText,
                 {
                   color: subtask.isCompleted ? colors.textTertiary : colors.textPrimary,
                   textDecorationLine: subtask.isCompleted ? 'line-through' : 'none',
-                  flex: 1,
-                  marginHorizontal: spacing.xs,
                 },
               ]}
             >
@@ -98,7 +107,11 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
               accessibilityRole="button"
               accessibilityLabel={`Remove subtask: ${subtask.title}`}
               testID={`remove-subtask-${subtask.id}`}
-              style={styles.subtaskDelete}
+              style={({ pressed }) => [
+                styles.subtaskDelete,
+                { opacity: pressed ? 0.6 : 1 },
+              ]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Icon name="close" size={16} color={colors.textTertiary} decorative />
             </Pressable>
@@ -106,7 +119,7 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
         ))}
 
         {/* Input Row for adding new step */}
-        <View style={[styles.inputRow, subtasks.length > 0 && { marginTop: 2 }]}>
+        <View style={[styles.inputRow, subtasks.length > 0 && { marginTop: spacing.xs }]}>
           <TextInput
             value={newSubtaskTitle}
             onChangeText={text => {
@@ -171,12 +184,21 @@ const styles = StyleSheet.create({
   subtaskRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 36,
+    minHeight: 40,
   },
   subtaskCheck: {
-    padding: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 8,
+  },
+  subtaskText: {
+    flex: 1,
+    fontSize: 15,
+    marginHorizontal: 4,
   },
   subtaskDelete: {
     padding: 6,
@@ -191,6 +213,7 @@ const styles = StyleSheet.create({
   subtaskInput: {
     flex: 1,
     borderWidth: 1,
+    fontSize: 15,
   },
   addBtn: {
     alignItems: 'center',

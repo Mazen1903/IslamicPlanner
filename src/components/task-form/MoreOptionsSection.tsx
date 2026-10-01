@@ -4,6 +4,7 @@ import {
   Text,
   TextInput,
   Pressable,
+  Switch,
   StyleSheet,
   type StyleProp,
   type ViewStyle,
@@ -426,6 +427,57 @@ export function MoreOptionsSection({
               <Icon name="plus" size={16} color={colors.textOnPrimary} />
             </Pressable>
           </View>
+
+          {/* 7. Streak Tracking */}
+          <View
+            style={[
+              styles.streakToggleRow,
+              {
+                borderTopColor: colors.border,
+                borderTopWidth: 1,
+                marginTop: spacing.lg,
+                paddingTop: spacing.md,
+              },
+            ]}
+            testID="streak-toggle-row"
+          >
+            <View style={styles.streakToggleInfo}>
+              <View
+                style={[
+                  styles.streakIconContainer,
+                  {
+                    backgroundColor: colors.warning + '1A',
+                    borderRadius: radii.sm,
+                  },
+                ]}
+              >
+                <Icon name="flame" size={20} color={colors.warning} decorative />
+              </View>
+              <View style={{ marginStart: spacing.md, flex: 1 }}>
+                <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
+                  Track Streak
+                </Text>
+                <Text style={[typography.caption, { color: colors.textSecondary }]}>
+                  {state.recurrencePreset !== 'NONE'
+                    ? 'Build consecutive daily completion streaks'
+                    : 'Requires repeat (turns on Daily repeat)'}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={state.streakEnabled}
+              onValueChange={val => {
+                if (val && state.recurrencePreset === 'NONE') {
+                  dispatch({ type: 'SET_RECURRENCE_PRESET', payload: 'DAILY' });
+                }
+                dispatch({ type: 'SET_STREAK_ENABLED', payload: val });
+              }}
+              trackColor={{ true: colors.primary, false: colors.border }}
+              thumbColor={colors.surface}
+              accessibilityLabel="Track streak toggle"
+              testID="track-streak-switch"
+            />
+          </View>
         </View>
       )}
     </View>
@@ -435,6 +487,22 @@ export function MoreOptionsSection({
 const styles = StyleSheet.create({
   container: {
     marginVertical: 8,
+  },
+  streakToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  streakToggleInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  streakIconContainer: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerButton: {
     flexDirection: 'row',

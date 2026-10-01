@@ -11,6 +11,7 @@ import {
 import type {
   TodayTemporalInputProvider,
   TodayRuntimeContext,
+  TaskCardViewModel,
 } from '@/services/types';
 import { taskEngine, TaskEngine } from '@/domain/task/TaskEngine';
 import { useAppForeground } from './useAppForeground';
@@ -29,6 +30,10 @@ import {
 } from '@/services/notification/NotificationReconciliationService';
 import { widgetSyncCoordinator } from '@/services/widget/WidgetSyncCoordinator';
 import { taskOccurrenceRepository } from '@/data/repositories/TaskOccurrenceRepository';
+import { taskDefinitionRepository } from '@/data/repositories/TaskDefinitionRepository';
+import { taskFormSyncService } from '@/features/task-form/syncService';
+import type { Prayer } from '@/constants/prayers';
+import type { ScheduleConfig } from '@/domain/task/types';
 
 export interface UseTodayOptions {
   inputProvider?: TodayTemporalInputProvider;
@@ -221,6 +226,28 @@ export function useToday(options: UseTodayOptions = {}) {
     });
   }, []);
 
+  // Task undo completion action
+  const uncompleteTask = useCallback(async (occurrenceId: string) => {
+    await engineRef.current.uncompleteTask(occurrenceId);
+    notificationServiceRef.current.reconcile().catch(() => {});
+
+    const runtime = useTodayStore.getState().runtime;
+    if (runtime) {
+      const token = useTodayStore.getState().startReproject();
+      try {
+        const now = DateTime.now();
+        const vm = await orchestratorRef.current.queryAndProject(runtime, now);
+        useTodayStore.getState().commitReproject(token, vm);
+      } catch {
+        // Leave previous state
+      }
+    }
+
+    widgetSyncCoordinator.sync().catch(err => {
+      console.warn('[useToday] uncompleteTask widget sync failed:', err);
+    });
+  }, []);
+
   const toggleSubtask = useCallback(async (occurrenceId: string, subtaskId: string) => {
     try {
       const occ = await taskOccurrenceRepository.findById(occurrenceId);
@@ -245,6 +272,115 @@ export function useToday(options: UseTodayOptions = {}) {
     }
   }, []);
 
+  const rescheduleTask = useCallback(
+    async (task: TaskCardViewModel, targetPrayer: Prayer, scheduleConfig: ScheduleConfig) => {
+      try {
+        const preDef = await taskDefinitionRepository.findById(task.taskDefinitionId);
+        if (!preDef) return;
+
+        const isRecurring = Boolean(preDef.recurrenceRule || preDef.hijriRecurrence);
+
+        if (isRecurring) {
+          // For recurring tasks, only update this occurrence's placement
+          // instead of modifying the entire series definition
+          const occ = await taskOccurrenceRepository.findById(task.occurrenceId);
+          if (!occ || occ.status !== 'PENDING') return;
+
+          // Build a new placement with the target prayer's window from active planning day
+          const inputsRes = await inputProviderRef.current.getInputs();
+          if (inputsRes.status === 'READY') {
+            const runtime = useTodayStore.getState().runtime;
+            if (runtime) {
+              const targetPeriod = runtime.planningDay.periods.find(p => p.prayer === targetPrayer);
+              if (targetPeriod) {
+                let calcStart = targetPeriod.start;
+                if (scheduleConfig.scheduleType === 'PRAYER_RELATIVE') {
+                  const offset = (scheduleConfig.scheduleData as any)?.offsetMinutes ?? 0;
+                  const dir = (scheduleConfig.scheduleData as any)?.direction ?? 'AFTER';
+                  calcStart = dir === 'BEFORE'
+                    ? targetPeriod.start.minus({ minutes: offset })
+                    : targetPeriod.start.plus({ minutes: offset });
+                } else if (scheduleConfig.scheduleType === 'EXACT_TIME') {
+                  const localTime = (scheduleConfig.scheduleData as any)?.localTime;
+                  if (localTime) {
+                    const [hh, mm] = localTime.split(':').map(Number);
+                    calcStart = targetPeriod.start.set({ hour: hh, minute: mm, second: 0, millisecond: 0 });
+                  }
+                }
+
+                await taskOccurrenceRepository.updateDerivedPlacement(task.occurrenceId, {
+                  windowStart: targetPeriod.start.toISO()!,
+                  windowEnd: targetPeriod.end.toISO()!,
+                  calculatedStartTime: calcStart.toISO()!,
+                  calculatedPrayerSection: targetPrayer,
+                  eligiblePrayerSections: [targetPrayer],
+                  wallClockResolution: 'NORMAL',
+                  planningDayKey: occ.planningDayKey,
+                  timezone: occ.timezone,
+                });
+              }
+            }
+          }
+        } else {
+          // Non-recurring: update the entire definition
+          const updatedDef = await engineRef.current.updateEntireSeries(preDef.seriesId, {
+            scheduleType: scheduleConfig.scheduleType,
+            scheduleData: scheduleConfig.scheduleData as any,
+          });
+
+          // Synchronize occurrences for today
+          const inputsRes = await inputProviderRef.current.getInputs();
+          if (inputsRes.status === 'READY') {
+            await taskFormSyncService.reconcileAfterEdit(
+              preDef,
+              updatedDef,
+              inputsRes.inputs
+            );
+          }
+        }
+
+        // Re-project Today view model
+        const runtime = useTodayStore.getState().runtime;
+        if (runtime) {
+          const token = useTodayStore.getState().startReproject();
+          try {
+            const now = DateTime.now();
+            const vm = await orchestratorRef.current.queryAndProject(runtime, now);
+            useTodayStore.getState().commitReproject(token, vm);
+          } catch {}
+        }
+
+        // Select the target prayer tab
+        useTodayStore.getState().setSelectedPrayer(targetPrayer);
+
+        // Background sync for notifications and widgets
+        notificationServiceRef.current.reconcile().catch(() => {});
+        widgetSyncCoordinator.sync().catch(err => {
+          console.warn('[useToday] rescheduleTask widget sync failed:', err);
+        });
+      } catch (err) {
+        console.warn('[useToday] rescheduleTask failed:', err);
+      }
+    },
+    []
+  );
+
+  const deleteTask = useCallback(async (taskOrId: TaskCardViewModel | string) => {
+    const occurrenceId = typeof taskOrId === 'string' ? taskOrId : taskOrId.occurrenceId;
+    const defId = typeof taskOrId === 'string' ? undefined : taskOrId.taskDefinitionId;
+
+    try {
+      if (occurrenceId) {
+        await taskOccurrenceRepository.deleteIfPending(occurrenceId).catch(() => {});
+      }
+      if (defId) {
+        await taskDefinitionRepository.delete(defId).catch(() => {});
+      }
+    } finally {
+      await performFullRefresh(false);
+    }
+  }, [performFullRefresh]);
+
   const viewTransitionPrayer = useCallback(() => {
     useTodayStore.getState().syncSelectedToCurrent();
     useTodayStore.getState().dismissPrayerTransition();
@@ -267,7 +403,10 @@ export function useToday(options: UseTodayOptions = {}) {
     toggleAnytimeCollapsed: store.toggleAnytimeCollapsed,
     countdownDisplay: store.countdownDisplay,
     completeTask,
+    uncompleteTask,
+    deleteTask,
     toggleSubtask,
+    rescheduleTask,
     refresh: () => performFullRefresh(false),
   };
 }

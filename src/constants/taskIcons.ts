@@ -50,6 +50,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'mosque',
     keywords: ['mosque', 'masjid', 'jamaah', 'prayer', 'salah', 'jummah', 'fajr', 'dhuhr', 'asr', 'maghrib', 'isha'],
+    imageAsset: TASK_ICON_ASSETS['mosque'],
   },
   {
     id: 'quran',
@@ -58,6 +59,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'book-open-page-variant',
     keywords: ['quran', 'koran', 'mushaf', 'surah', 'ayah', 'read', 'tilawah', 'hifz', 'recitation', 'tadabbur'],
+    imageAsset: TASK_ICON_ASSETS['quran'],
   },
   {
     id: 'kaaba',
@@ -66,6 +68,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'cube-outline',
     keywords: ['kaaba', 'makkah', 'hajj', 'umrah', 'pilgrimage', 'mecca', 'qibla'],
+    imageAsset: TASK_ICON_ASSETS['kaaba'],
   },
   {
     id: 'crescent',
@@ -74,6 +77,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'moon',
     keywords: ['moon', 'crescent', 'ramadan', 'hilal', 'fasting', 'sawm', 'shawwal', 'night'],
+    imageAsset: TASK_ICON_ASSETS['crescent'],
   },
   {
     id: 'beads',
@@ -82,6 +86,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'dots-horizontal-circle-outline',
     keywords: ['tasbeeh', 'dhikr', 'subhanallah', 'alhamdulillah', 'allahu akbar', 'beads', 'azkar', 'adhkar'],
+    imageAsset: TASK_ICON_ASSETS['beads'],
   },
   {
     id: 'charity',
@@ -90,6 +95,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'hand-heart',
     keywords: ['sadaqah', 'zakat', 'charity', 'donation', 'give', 'help', 'poor', 'volunteer'],
+    imageAsset: TASK_ICON_ASSETS['charity'],
   },
   {
     id: 'duaa',
@@ -98,6 +104,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'hands-pray',
     keywords: ['duaa', 'dua', 'supplication', 'prayer', 'ask', 'tahajjud', 'istighfar'],
+    imageAsset: TASK_ICON_ASSETS['duaa'],
   },
   {
     id: 'fasting',
@@ -106,6 +113,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'silverware-fork-knife',
     keywords: ['fasting', 'sawm', 'iftar', 'suhoor', 'food', 'sunnah', 'ashura', 'arafah'],
+    imageAsset: TASK_ICON_ASSETS['fasting'],
   },
   {
     id: 'lectures',
@@ -114,6 +122,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'volume-high',
     keywords: ['halaqah', 'lecture', 'talk', 'dars', 'class', 'knowledge', 'ilm', 'scholar'],
+    imageAsset: TASK_ICON_ASSETS['lectures'],
   },
   {
     id: 'water-wudu',
@@ -122,6 +131,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'water-outline',
     keywords: ['wudu', 'ablution', 'taharah', 'purification', 'wash for prayer'],
+    imageAsset: TASK_ICON_ASSETS['water-wudu'],
   },
   {
     id: 'heart-deen',
@@ -130,6 +140,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'heart',
     keywords: ['good deed', 'hasanat', 'akhlaq', 'manners', 'kindness', 'charity', 'sunnah'],
+    imageAsset: TASK_ICON_ASSETS['heart-deen'],
   },
   {
     id: 'star-islamic',
@@ -138,14 +149,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'star',
     keywords: ['star', 'blessed', 'barakah', 'sunnah', 'islamic'],
-  },
-  {
-    id: 'tahajjud',
-    label: 'Tahajjud / Night',
-    category: 'deen',
-    family: 'MaterialCommunityIcons',
-    iconName: 'weather-night',
-    keywords: ['tahajjud', 'night prayer', 'qiyam', 'layl', 'witr', 'salah', 'midnight'],
+    imageAsset: TASK_ICON_ASSETS['star-islamic'],
   },
   {
     id: 'sujood',
@@ -154,6 +158,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'human-handsdown',
     keywords: ['sujood', 'prostration', 'sajdah', 'humble', 'dua', 'prayer', 'salah'],
+    imageAsset: TASK_ICON_ASSETS['sujood'],
   },
   {
     id: 'dua-praise',
@@ -162,14 +167,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'human-handsup',
     keywords: ['hamd', 'praise', 'shukr', 'dua', 'supplication', 'gratitude', 'tahmid'],
-  },
-  {
-    id: 'quran-bookmark',
-    label: 'Quran Hifz',
-    category: 'deen',
-    family: 'MaterialCommunityIcons',
-    iconName: 'bookmark-check-outline',
-    keywords: ['hifz', 'memorize', 'bookmark', 'juz', 'surah', 'quran', 'revision'],
+    imageAsset: TASK_ICON_ASSETS['dua-praise'],
   },
   {
     id: 'compass-qibla',
@@ -178,30 +176,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'compass-outline',
     keywords: ['qibla', 'compass', 'direction', 'travel prayer', 'mecca', 'kaaba'],
-  },
-  {
-    id: 'sadaqah-box',
-    label: 'Sadaqah / Giving',
-    category: 'deen',
-    family: 'MaterialCommunityIcons',
-    iconName: 'cash-plus',
-    keywords: ['sadaqah', 'donation', 'giving', 'charity', 'money', 'zakat', 'poor'],
-  },
-  {
-    id: 'eid-sparkles',
-    label: 'Eid / Blessings',
-    category: 'deen',
-    family: 'Ionicons',
-    iconName: 'sparkles-outline',
-    keywords: ['eid', 'blessed', 'jummah', 'mubarak', 'celebrate', 'barakah', 'sunnah'],
-  },
-  {
-    id: 'seerah-study',
-    label: 'Seerah / Hadith',
-    category: 'deen',
-    family: 'MaterialCommunityIcons',
-    iconName: 'book-open-outline',
-    keywords: ['seerah', 'hadith', 'prophet', 'sunnah', 'study', 'ilm', 'islamic book'],
+    imageAsset: TASK_ICON_ASSETS['compass-qibla'],
   },
 
   // ─── ☀️ Routine & Daily Life ──────────────────────────────────────────────────
@@ -212,6 +187,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'sunny',
     keywords: ['morning', 'sunrise', 'wake', 'day', 'early', 'routine', 'sun'],
+    imageAsset: TASK_ICON_ASSETS['sun'],
   },
   {
     id: 'moon-sleep',
@@ -220,6 +196,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'bed-outline',
     keywords: ['sleep', 'bed', 'rest', 'night', 'nap', 'bedtime', 'adhkar'],
+    imageAsset: TASK_ICON_ASSETS['moon-sleep'],
   },
   {
     id: 'coffee',
@@ -228,6 +205,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'cafe-outline',
     keywords: ['coffee', 'caffeine', 'espresso', 'latte', 'cafe'],
+    imageAsset: TASK_ICON_ASSETS['coffee'],
   },
   {
     id: 'tea',
@@ -236,6 +214,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'tea',
     keywords: ['tea', 'chai', 'relax', 'evening', 'hot drink', 'infusion'],
+    imageAsset: TASK_ICON_ASSETS['tea'],
   },
   {
     id: 'breakfast',
@@ -244,6 +223,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'egg-fried',
     keywords: ['breakfast', 'morning meal', 'eat', 'food', 'suhoor'],
+    imageAsset: TASK_ICON_ASSETS['breakfast'],
   },
   {
     id: 'shower',
@@ -252,6 +232,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'shower',
     keywords: ['shower', 'bath', 'ghusl', 'hygiene', 'clean', 'wash'],
+    imageAsset: TASK_ICON_ASSETS['shower'],
   },
   {
     id: 'water-hydration',
@@ -260,6 +241,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'water-outline',
     keywords: ['water', 'drink', 'hydrate', 'bottle', 'health', 'daily'],
+    imageAsset: TASK_ICON_ASSETS['water-hydration'],
   },
   {
     id: 'walk',
@@ -268,6 +250,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'walk-outline',
     keywords: ['walk', 'steps', 'stroll', 'outside', 'fresh air', 'evening walk'],
+    imageAsset: TASK_ICON_ASSETS['walk'],
   },
   {
     id: 'journal',
@@ -276,6 +259,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'journal-outline',
     keywords: ['journal', 'diary', 'write', 'reflection', 'gratitude', 'thoughts'],
+    imageAsset: TASK_ICON_ASSETS['journal'],
   },
   {
     id: 'alarm',
@@ -284,70 +268,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'alarm-outline',
     keywords: ['alarm', 'clock', 'wake', 'fajr alarm', 'reminder', 'early'],
-  },
-  {
-    id: 'meditate',
-    label: 'Reflection / Pause',
-    category: 'routine',
-    family: 'MaterialCommunityIcons',
-    iconName: 'meditation',
-    keywords: ['meditation', 'tafakkur', 'peace', 'calm', 'reflect', 'mindfulness', 'breath'],
-  },
-  {
-    id: 'nap',
-    label: 'Qaylulah / Nap',
-    category: 'routine',
-    family: 'MaterialCommunityIcons',
-    iconName: 'sleep',
-    keywords: ['nap', 'qaylulah', 'rest', 'siesta', 'afternoon', 'recharge', 'sunnah'],
-  },
-  {
-    id: 'laundry-fold',
-    label: 'Clothing / Outfit',
-    category: 'routine',
-    family: 'MaterialCommunityIcons',
-    iconName: 'tshirt-crew-outline',
-    keywords: ['clothes', 'outfit', 'iron', 'thobe', 'wardrobe', 'laundry', 'wear'],
-  },
-  {
-    id: 'todo-routine',
-    label: 'Checklist / Daily',
-    category: 'routine',
-    family: 'MaterialCommunityIcons',
-    iconName: 'format-list-checks',
-    keywords: ['checklist', 'routine', 'daily list', 'tasks', 'chores', 'habits'],
-  },
-  {
-    id: 'haircut',
-    label: 'Grooming / Haircut',
-    category: 'routine',
-    family: 'MaterialCommunityIcons',
-    iconName: 'content-cut',
-    keywords: ['haircut', 'barber', 'salon', 'trim', 'beard', 'grooming', 'sunnah'],
-  },
-  {
-    id: 'face-grooming',
-    label: 'Self-Care / Hygiene',
-    category: 'routine',
-    family: 'MaterialCommunityIcons',
-    iconName: 'face-man-outline',
-    keywords: ['hygiene', 'clean', 'skincare', 'face', 'shave', 'miswak', 'brush'],
-  },
-  {
-    id: 'dog-walk',
-    label: 'Outdoor Stroll',
-    category: 'routine',
-    family: 'Ionicons',
-    iconName: 'paw-outline',
-    keywords: ['pet', 'dog', 'walk', 'park', 'outdoor', 'stroll'],
-  },
-  {
-    id: 'coffee-time',
-    label: 'Warm Drink',
-    category: 'routine',
-    family: 'MaterialCommunityIcons',
-    iconName: 'coffee-outline',
-    keywords: ['coffee', 'mug', 'warm drink', 'morning', 'break', 'cafe'],
+    imageAsset: TASK_ICON_ASSETS['alarm'],
   },
 
   // ─── 💼 Work & Study ──────────────────────────────────────────────────────────
@@ -358,6 +279,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'laptop-outline',
     keywords: ['work', 'laptop', 'computer', 'desk', 'office', 'job', 'coding'],
+    imageAsset: TASK_ICON_ASSETS['laptop'],
   },
   {
     id: 'book',
@@ -366,6 +288,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'book-outline',
     keywords: ['study', 'book', 'reading', 'library', 'revision', 'course', 'exam'],
+    imageAsset: TASK_ICON_ASSETS['book'],
   },
   {
     id: 'graduation',
@@ -374,6 +297,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'school-outline',
     keywords: ['college', 'university', 'school', 'degree', 'lecture', 'student'],
+    imageAsset: TASK_ICON_ASSETS['graduation'],
   },
   {
     id: 'briefcase',
@@ -382,6 +306,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'briefcase-outline',
     keywords: ['office', 'business', 'briefcase', 'client', 'meeting', 'career', 'job'],
+    imageAsset: TASK_ICON_ASSETS['briefcase'],
   },
   {
     id: 'pencil',
@@ -390,6 +315,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'pencil-outline',
     keywords: ['pencil', 'pen', 'write', 'draft', 'essay', 'notes', 'homework'],
+    imageAsset: TASK_ICON_ASSETS['pencil'],
   },
   {
     id: 'document',
@@ -398,6 +324,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'document-text-outline',
     keywords: ['document', 'report', 'contract', 'paper', 'pdf', 'file'],
+    imageAsset: TASK_ICON_ASSETS['document'],
   },
   {
     id: 'presentation',
@@ -406,6 +333,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'presentation',
     keywords: ['presentation', 'slides', 'meeting', 'pitch', 'conference', 'demo'],
+    imageAsset: TASK_ICON_ASSETS['presentation'],
   },
   {
     id: 'code',
@@ -414,6 +342,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'code-slash-outline',
     keywords: ['code', 'developer', 'programming', 'software', 'git', 'bug', 'app'],
+    imageAsset: TASK_ICON_ASSETS['code'],
   },
   {
     id: 'calculator',
@@ -422,6 +351,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'calculator-outline',
     keywords: ['calculator', 'budget', 'finance', 'taxes', 'money', 'math', 'accounting'],
+    imageAsset: TASK_ICON_ASSETS['calculator'],
   },
   {
     id: 'email',
@@ -430,70 +360,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'mail-outline',
     keywords: ['email', 'inbox', 'message', 'mail', 'correspondence', 'reply'],
-  },
-  {
-    id: 'videocall',
-    label: 'Video Meeting',
-    category: 'work_study',
-    family: 'Ionicons',
-    iconName: 'videocam-outline',
-    keywords: ['zoom', 'teams', 'meet', 'video call', 'conference', 'remote', 'online'],
-  },
-  {
-    id: 'mic-podcast',
-    label: 'Interview / Voice',
-    category: 'work_study',
-    family: 'Ionicons',
-    iconName: 'mic-outline',
-    keywords: ['podcast', 'interview', 'recording', 'mic', 'audio', 'speaking', 'presentation'],
-  },
-  {
-    id: 'certificate',
-    label: 'Certificate / Course',
-    category: 'work_study',
-    family: 'MaterialCommunityIcons',
-    iconName: 'certificate-outline',
-    keywords: ['certificate', 'diploma', 'course', 'ijazah', 'qualification', 'pass', 'exam'],
-  },
-  {
-    id: 'portfolio',
-    label: 'Portfolio / Projects',
-    category: 'work_study',
-    family: 'MaterialCommunityIcons',
-    iconName: 'briefcase-variant-outline',
-    keywords: ['portfolio', 'projects', 'case study', 'work', 'freelance', 'client'],
-  },
-  {
-    id: 'resume',
-    label: 'Resume / CV',
-    category: 'work_study',
-    family: 'MaterialCommunityIcons',
-    iconName: 'file-account-outline',
-    keywords: ['resume', 'cv', 'job application', 'apply', 'career', 'interview', 'hire'],
-  },
-  {
-    id: 'reading-lamp',
-    label: 'Study Desk',
-    category: 'work_study',
-    family: 'MaterialCommunityIcons',
-    iconName: 'desk-lamp',
-    keywords: ['desk', 'lamp', 'study', 'night study', 'focus', 'homework', 'library'],
-  },
-  {
-    id: 'analytics',
-    label: 'Analytics / Data',
-    category: 'work_study',
-    family: 'Ionicons',
-    iconName: 'analytics-outline',
-    keywords: ['analytics', 'data', 'metrics', 'chart', 'kpi', 'reports', 'finance'],
-  },
-  {
-    id: 'notebook-study',
-    label: 'Notepad',
-    category: 'work_study',
-    family: 'MaterialCommunityIcons',
-    iconName: 'notebook-outline',
-    keywords: ['notebook', 'notes', 'lecture notes', 'memo', 'binder', 'study'],
+    imageAsset: TASK_ICON_ASSETS['email'],
   },
 
   // ─── 🏃 Health & Fitness ──────────────────────────────────────────────────────
@@ -504,6 +371,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'barbell-outline',
     keywords: ['gym', 'workout', 'weights', 'lifting', 'strength', 'training', 'fitness', 'dumbbell', 'barbell'],
+    imageAsset: TASK_ICON_ASSETS['dumbbell'],
   },
   {
     id: 'running',
@@ -512,6 +380,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'run',
     keywords: ['running', 'jogging', 'cardio', 'sprint', 'treadmill', 'marathon'],
+    imageAsset: TASK_ICON_ASSETS['running'],
   },
   {
     id: 'cycling',
@@ -520,6 +389,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'bicycle-outline',
     keywords: ['cycling', 'bike', 'bicycle', 'ride', 'spin', 'cardio'],
+    imageAsset: TASK_ICON_ASSETS['cycling'],
   },
   {
     id: 'yoga',
@@ -528,6 +398,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'yoga',
     keywords: ['stretching', 'yoga', 'mobility', 'posture', 'flexibility'],
+    imageAsset: TASK_ICON_ASSETS['yoga'],
   },
   {
     id: 'pill',
@@ -536,6 +407,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'pill',
     keywords: ['pill', 'medication', 'vitamins', 'medicine', 'prescription', 'supplements', 'pharmacy'],
+    imageAsset: TASK_ICON_ASSETS['pill'],
   },
   {
     id: 'doctor',
@@ -544,6 +416,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'stethoscope',
     keywords: ['doctor', 'clinic', 'hospital', 'checkup', 'appointment', 'health'],
+    imageAsset: TASK_ICON_ASSETS['doctor'],
   },
   {
     id: 'dentist',
@@ -552,6 +425,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'tooth-outline',
     keywords: ['dentist', 'teeth', 'tooth', 'cleaning', 'dental', 'brush'],
+    imageAsset: TASK_ICON_ASSETS['dentist'],
   },
   {
     id: 'nutrition',
@@ -560,6 +434,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'nutrition-outline',
     keywords: ['nutrition', 'apple', 'diet', 'healthy', 'salad', 'vitamins', 'food'],
+    imageAsset: TASK_ICON_ASSETS['nutrition'],
   },
   {
     id: 'pulse',
@@ -568,70 +443,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'pulse-outline',
     keywords: ['heart', 'pulse', 'cardio', 'blood pressure', 'health', 'fitness'],
-  },
-  {
-    id: 'swimming',
-    label: 'Swimming',
-    category: 'health',
-    family: 'MaterialCommunityIcons',
-    iconName: 'swim',
-    keywords: ['swim', 'swimming', 'pool', 'water sport', 'sunnah sport', 'cardio'],
-  },
-  {
-    id: 'mental-health',
-    label: 'Mental Health',
-    category: 'health',
-    family: 'MaterialCommunityIcons',
-    iconName: 'head-heart-outline',
-    keywords: ['mental health', 'therapy', 'mind', 'wellness', 'wellbeing', 'counseling'],
-  },
-  {
-    id: 'eye-exam',
-    label: 'Eye Clinic / Glasses',
-    category: 'health',
-    family: 'Ionicons',
-    iconName: 'eye-outline',
-    keywords: ['eye', 'optometrist', 'eyeglasses', 'spectacles', 'vision', 'checkup', 'exam'],
-  },
-  {
-    id: 'scale-weight',
-    label: 'Weight / Scale',
-    category: 'health',
-    family: 'MaterialCommunityIcons',
-    iconName: 'scale-bathroom',
-    keywords: ['weight', 'scale', 'weigh in', 'body', 'fitness', 'tracking'],
-  },
-  {
-    id: 'lungs-breath',
-    label: 'Breathing / Lungs',
-    category: 'health',
-    family: 'MaterialCommunityIcons',
-    iconName: 'lungs',
-    keywords: ['breath', 'lungs', 'pranayama', 'asthma', 'respiratory', 'oxygen'],
-  },
-  {
-    id: 'spa-relax',
-    label: 'Massage / Spa',
-    category: 'health',
-    family: 'MaterialCommunityIcons',
-    iconName: 'spa-outline',
-    keywords: ['spa', 'massage', 'recovery', 'sauna', 'relax', 'cupping', 'hijama'],
-  },
-  {
-    id: 'first-aid',
-    label: 'First Aid / Medical',
-    category: 'health',
-    family: 'Ionicons',
-    iconName: 'medkit-outline',
-    keywords: ['first aid', 'medkit', 'emergency', 'bandage', 'injury', 'clinic'],
-  },
-  {
-    id: 'blood-test',
-    label: 'Lab / Blood Test',
-    category: 'health',
-    family: 'MaterialCommunityIcons',
-    iconName: 'needle',
-    keywords: ['blood test', 'lab', 'needle', 'vaccine', 'injection', 'hijama', 'draw'],
+    imageAsset: TASK_ICON_ASSETS['pulse'],
   },
 
   // ─── 🏠 Home & Chores ─────────────────────────────────────────────────────────
@@ -642,6 +454,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'home-outline',
     keywords: ['home', 'house', 'apartment', 'indoor', 'household'],
+    imageAsset: TASK_ICON_ASSETS['home'],
   },
   {
     id: 'groceries',
@@ -650,6 +463,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'cart-outline',
     keywords: ['groceries', 'supermarket', 'shopping', 'cart', 'buy food', 'market'],
+    imageAsset: TASK_ICON_ASSETS['groceries'],
   },
   {
     id: 'cooking',
@@ -658,6 +472,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'restaurant-outline',
     keywords: ['cooking', 'cook', 'bake', 'dinner', 'lunch', 'meal', 'chef', 'kitchen'],
+    imageAsset: TASK_ICON_ASSETS['cooking'],
   },
   {
     id: 'cleaning',
@@ -666,6 +481,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'broom',
     keywords: ['cleaning', 'clean', 'sweep', 'vacuum', 'tidy', 'mop', 'dishes', 'chores'],
+    imageAsset: TASK_ICON_ASSETS['cleaning'],
   },
   {
     id: 'laundry',
@@ -674,6 +490,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'washing-machine',
     keywords: ['laundry', 'clothes', 'wash', 'dry', 'iron', 'fold'],
+    imageAsset: TASK_ICON_ASSETS['laundry'],
   },
   {
     id: 'car',
@@ -682,6 +499,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'car-outline',
     keywords: ['car', 'drive', 'auto', 'gas', 'mechanic', 'oil change', 'commute'],
+    imageAsset: TASK_ICON_ASSETS['car'],
   },
   {
     id: 'trash',
@@ -690,6 +508,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'trash-outline',
     keywords: ['trash', 'garbage', 'bin', 'recycle', 'waste', 'disposal'],
+    imageAsset: TASK_ICON_ASSETS['trash'],
   },
   {
     id: 'repair',
@@ -698,6 +517,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'hammer-outline',
     keywords: ['hammer', 'repair', 'tools', 'fix', 'diy', 'maintenance'],
+    imageAsset: TASK_ICON_ASSETS['repair'],
   },
   {
     id: 'plant',
@@ -706,6 +526,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'leaf-outline',
     keywords: ['plants', 'water plants', 'garden', 'nature', 'flowers', 'green'],
+    imageAsset: TASK_ICON_ASSETS['plant'],
   },
   {
     id: 'package',
@@ -714,70 +535,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'cube-outline',
     keywords: ['package', 'delivery', 'mail', 'post', 'amazon', 'parcel', 'box'],
-  },
-  {
-    id: 'dishwasher',
-    label: 'Dishes',
-    category: 'home',
-    family: 'MaterialCommunityIcons',
-    iconName: 'dishwasher',
-    keywords: ['dishwasher', 'dishes', 'wash dishes', 'kitchen', 'plates', 'sink'],
-  },
-  {
-    id: 'vacuum',
-    label: 'Vacuum',
-    category: 'home',
-    family: 'MaterialCommunityIcons',
-    iconName: 'robot-vacuum',
-    keywords: ['vacuum', 'rug', 'carpet', 'dust', 'clean', 'roomba', 'chores'],
-  },
-  {
-    id: 'receipt-bill',
-    label: 'Bills & Utilities',
-    category: 'home',
-    family: 'Ionicons',
-    iconName: 'receipt-outline',
-    keywords: ['bill', 'receipt', 'utilities', 'electric', 'water bill', 'rent', 'expenses'],
-  },
-  {
-    id: 'mailbox-home',
-    label: 'Mailbox',
-    category: 'home',
-    family: 'MaterialCommunityIcons',
-    iconName: 'mailbox-outline',
-    keywords: ['mail', 'letters', 'mailbox', 'post', 'envelopes'],
-  },
-  {
-    id: 'ac-heating',
-    label: 'AC / Climate',
-    category: 'home',
-    family: 'MaterialCommunityIcons',
-    iconName: 'air-conditioner',
-    keywords: ['ac', 'air conditioner', 'heating', 'thermostat', 'temperature', 'climate'],
-  },
-  {
-    id: 'painting-decor',
-    label: 'Painting / Decor',
-    category: 'home',
-    family: 'Ionicons',
-    iconName: 'brush-outline',
-    keywords: ['painting', 'decor', 'brush', 'renovation', 'interior', 'walls'],
-  },
-  {
-    id: 'furniture-sofa',
-    label: 'Furniture / Living',
-    category: 'home',
-    family: 'MaterialCommunityIcons',
-    iconName: 'sofa-outline',
-    keywords: ['couch', 'sofa', 'furniture', 'living room', 'ikea', 'lounge'],
-  },
-  {
-    id: 'garage-home',
-    label: 'Garage / Storage',
-    category: 'home',
-    family: 'MaterialCommunityIcons',
-    iconName: 'garage',
-    keywords: ['garage', 'storage', 'shed', 'parking', 'basement', 'organize'],
+    imageAsset: TASK_ICON_ASSETS['package'],
   },
 
   // ─── 👥 Family & Social ───────────────────────────────────────────────────────
@@ -788,6 +546,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'people-outline',
     keywords: ['family', 'parents', 'siblings', 'relatives', 'together', 'home'],
+    imageAsset: TASK_ICON_ASSETS['family'],
   },
   {
     id: 'baby',
@@ -796,6 +555,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'baby-carriage',
     keywords: ['kids', 'baby', 'child', 'children', 'toddler', 'school pickup', 'parenting'],
+    imageAsset: TASK_ICON_ASSETS['baby'],
   },
   {
     id: 'call',
@@ -804,6 +564,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'call-outline',
     keywords: ['call', 'phone', 'ring', 'parents', 'contact', 'telecom', 'silat ar-rahim'],
+    imageAsset: TASK_ICON_ASSETS['call'],
   },
   {
     id: 'chat',
@@ -812,6 +573,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'chatbubble-ellipses-outline',
     keywords: ['message', 'chat', 'whatsapp', 'text', 'talk', 'reply'],
+    imageAsset: TASK_ICON_ASSETS['chat'],
   },
   {
     id: 'gift',
@@ -820,6 +582,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'gift-outline',
     keywords: ['gift', 'present', 'eid', 'birthday', 'surprise', 'celebrate'],
+    imageAsset: TASK_ICON_ASSETS['gift'],
   },
   {
     id: 'party',
@@ -828,6 +591,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'party-popper',
     keywords: ['party', 'eid', 'gathering', 'guests', 'visit', 'celebration', 'walimah'],
+    imageAsset: TASK_ICON_ASSETS['party'],
   },
   {
     id: 'pet',
@@ -836,70 +600,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'paw-outline',
     keywords: ['pet', 'cat', 'dog', 'feed', 'vet', 'animal'],
-  },
-  {
-    id: 'ring-nikah',
-    label: 'Nikah / Wedding',
-    category: 'family',
-    family: 'MaterialCommunityIcons',
-    iconName: 'ring',
-    keywords: ['nikah', 'marriage', 'wedding', 'spouse', 'husband', 'wife', 'katb kitab'],
-  },
-  {
-    id: 'date-night',
-    label: 'Spouse Time',
-    category: 'family',
-    family: 'MaterialCommunityIcons',
-    iconName: 'heart-multiple-outline',
-    keywords: ['date night', 'spouse', 'couple', 'love', 'dinner date', 'marriage'],
-  },
-  {
-    id: 'siblings-family',
-    label: 'Siblings',
-    category: 'family',
-    family: 'Ionicons',
-    iconName: 'people-circle-outline',
-    keywords: ['brother', 'sister', 'siblings', 'family', 'relatives', 'cousins'],
-  },
-  {
-    id: 'grandparents',
-    label: 'Elders / Grandparents',
-    category: 'family',
-    family: 'MaterialCommunityIcons',
-    iconName: 'account-group-outline',
-    keywords: ['grandparents', 'elders', 'parents', 'grandfather', 'grandmother', 'silat'],
-  },
-  {
-    id: 'family-dine',
-    label: 'Family Dinner',
-    category: 'family',
-    family: 'MaterialCommunityIcons',
-    iconName: 'table-chair',
-    keywords: ['family dinner', 'table', 'gathering', 'meal together', 'walimah', 'guests'],
-  },
-  {
-    id: 'visit-relatives',
-    label: 'Silat Ar-Rahim',
-    category: 'family',
-    family: 'Ionicons',
-    iconName: 'heart-circle-outline',
-    keywords: ['silat ar-rahim', 'kinship', 'visit relatives', 'family ties', 'aunt', 'uncle'],
-  },
-  {
-    id: 'baby-bottle',
-    label: 'Infant Feeding',
-    category: 'family',
-    family: 'MaterialCommunityIcons',
-    iconName: 'baby-bottle-outline',
-    keywords: ['baby bottle', 'nursing', 'feeding', 'infant', 'milk', 'newborn'],
-  },
-  {
-    id: 'baby-care',
-    label: 'Toddler Care',
-    category: 'family',
-    family: 'MaterialCommunityIcons',
-    iconName: 'baby-face-outline',
-    keywords: ['toddler', 'daycare', 'childcare', 'kids', 'bedtime story', 'play'],
+    imageAsset: TASK_ICON_ASSETS['pet'],
   },
 
   // ─── 🎨 Leisure & Hobbies ─────────────────────────────────────────────────────
@@ -910,6 +611,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'color-palette-outline',
     keywords: ['art', 'draw', 'paint', 'design', 'craft', 'hobby', 'creative'],
+    imageAsset: TASK_ICON_ASSETS['palette'],
   },
   {
     id: 'camera',
@@ -918,6 +620,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'camera-outline',
     keywords: ['photo', 'camera', 'pictures', 'shoot', 'video'],
+    imageAsset: TASK_ICON_ASSETS['camera'],
   },
   {
     id: 'headphones',
@@ -926,6 +629,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'headset-outline',
     keywords: ['audio', 'podcast', 'listen', 'headphones', 'sound', 'lecture'],
+    imageAsset: TASK_ICON_ASSETS['headphones'],
   },
   {
     id: 'airplane',
@@ -934,6 +638,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'airplane-outline',
     keywords: ['travel', 'flight', 'trip', 'airport', 'holiday', 'vacation', 'journey'],
+    imageAsset: TASK_ICON_ASSETS['airplane'],
   },
   {
     id: 'gaming',
@@ -942,6 +647,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'game-controller-outline',
     keywords: ['game', 'gaming', 'play', 'video game', 'console'],
+    imageAsset: TASK_ICON_ASSETS['gaming'],
   },
   {
     id: 'shopping-bag',
@@ -950,70 +656,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'bag-handle-outline',
     keywords: ['shopping', 'mall', 'buy', 'clothes', 'store', 'retail'],
-  },
-  {
-    id: 'cinema-movie',
-    label: 'Movie / Documentary',
-    category: 'leisure',
-    family: 'Ionicons',
-    iconName: 'film-outline',
-    keywords: ['movie', 'documentary', 'cinema', 'watch', 'video', 'series'],
-  },
-  {
-    id: 'board-game',
-    label: 'Board Game / Chess',
-    category: 'leisure',
-    family: 'MaterialCommunityIcons',
-    iconName: 'chess-knight',
-    keywords: ['chess', 'board game', 'puzzle', 'strategy', 'games night', 'cards'],
-  },
-  {
-    id: 'hiking',
-    label: 'Hiking / Nature',
-    category: 'leisure',
-    family: 'MaterialCommunityIcons',
-    iconName: 'hiking',
-    keywords: ['hiking', 'mountains', 'nature', 'trail', 'outdoor', 'adventure', 'scenic'],
-  },
-  {
-    id: 'music-hobby',
-    label: 'Audio / Nasheed',
-    category: 'leisure',
-    family: 'Ionicons',
-    iconName: 'musical-notes-outline',
-    keywords: ['audio', 'nasheed', 'sound', 'melody', 'listen', 'relax'],
-  },
-  {
-    id: 'flower-garden',
-    label: 'Flowers / Flora',
-    category: 'leisure',
-    family: 'MaterialCommunityIcons',
-    iconName: 'flower-outline',
-    keywords: ['flower', 'garden', 'nature', 'botany', 'bloom', 'roses'],
-  },
-  {
-    id: 'reading-novel',
-    label: 'Reading Fiction',
-    category: 'leisure',
-    family: 'MaterialCommunityIcons',
-    iconName: 'book-open-page-variant-outline',
-    keywords: ['reading', 'novel', 'fiction', 'literature', 'story', 'kindle'],
-  },
-  {
-    id: 'football',
-    label: 'Football / Soccer',
-    category: 'leisure',
-    family: 'Ionicons',
-    iconName: 'football-outline',
-    keywords: ['football', 'soccer', 'sports', 'match', 'play', 'game'],
-  },
-  {
-    id: 'gamepad-retro',
-    label: 'Video Games',
-    category: 'leisure',
-    family: 'MaterialCommunityIcons',
-    iconName: 'controller-classic-outline',
-    keywords: ['games', 'playstation', 'xbox', 'nintendo', 'gaming', 'retro'],
+    imageAsset: TASK_ICON_ASSETS['shopping-bag'],
   },
 
   // ─── ⭐ Productivity & Goals ──────────────────────────────────────────────────
@@ -1024,6 +667,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'MaterialCommunityIcons',
     iconName: 'target',
     keywords: ['goal', 'target', 'objective', 'aim', 'focus', 'mission', 'milestone'],
+    imageAsset: TASK_ICON_ASSETS['target'],
   },
   {
     id: 'bulb',
@@ -1032,6 +676,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'bulb-outline',
     keywords: ['idea', 'brainstorm', 'think', 'innovation', 'inspiration', 'solution'],
+    imageAsset: TASK_ICON_ASSETS['bulb'],
   },
   {
     id: 'fire',
@@ -1040,6 +685,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'flame-outline',
     keywords: ['fire', 'urgent', 'priority', 'focus', 'streak', 'hot'],
+    imageAsset: TASK_ICON_ASSETS['fire'],
   },
   {
     id: 'trophy',
@@ -1048,6 +694,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'trophy-outline',
     keywords: ['trophy', 'win', 'achievement', 'success', 'reward', 'victory'],
+    imageAsset: TASK_ICON_ASSETS['trophy'],
   },
   {
     id: 'flag',
@@ -1056,6 +703,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'flag-outline',
     keywords: ['flag', 'priority', 'important', 'action', 'mark'],
+    imageAsset: TASK_ICON_ASSETS['flag'],
   },
   {
     id: 'pin',
@@ -1064,6 +712,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'pin-outline',
     keywords: ['pin', 'note', 'reminder', 'remember', 'sticky'],
+    imageAsset: TASK_ICON_ASSETS['pin'],
   },
   {
     id: 'clock',
@@ -1072,6 +721,7 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'time-outline',
     keywords: ['time', 'clock', 'duration', 'timer', 'deadline', 'schedule'],
+    imageAsset: TASK_ICON_ASSETS['clock'],
   },
   {
     id: 'checkmark',
@@ -1080,72 +730,11 @@ export const ALL_TASK_ICONS: TaskIconDef[] = [
     family: 'Ionicons',
     iconName: 'checkmark-circle-outline',
     keywords: ['task', 'check', 'done', 'todo', 'complete', 'action'],
-  },
-  {
-    id: 'habit-track',
-    label: 'Habit Tracker',
-    category: 'productivity',
-    family: 'MaterialCommunityIcons',
-    iconName: 'chart-line',
-    keywords: ['habit', 'streak', 'progress', 'tracking', 'consistency', 'discipline'],
-  },
-  {
-    id: 'pomodoro',
-    label: 'Pomodoro Timer',
-    category: 'productivity',
-    family: 'Ionicons',
-    iconName: 'timer-outline',
-    keywords: ['pomodoro', 'timer', 'focus sprint', 'intervals', 'deep work', 'session'],
-  },
-  {
-    id: 'brainstorm',
-    label: 'Brain Dump / Mind',
-    category: 'productivity',
-    family: 'MaterialCommunityIcons',
-    iconName: 'brain',
-    keywords: ['brain', 'mind dump', 'thinking', 'cognition', 'strategy', 'iq'],
-  },
-  {
-    id: 'weekly-review',
-    label: 'Weekly Review',
-    category: 'productivity',
-    family: 'MaterialCommunityIcons',
-    iconName: 'calendar-check-outline',
-    keywords: ['weekly review', 'audit', 'plan ahead', 'sunday planning', 'retrospective'],
-  },
-  {
-    id: 'vision-board',
-    label: 'Vision Board',
-    category: 'productivity',
-    family: 'MaterialCommunityIcons',
-    iconName: 'view-dashboard-outline',
-    keywords: ['vision board', 'goals', 'dashboard', 'overview', 'aspirations', 'future'],
-  },
-  {
-    id: 'journaling-prod',
-    label: 'Daily Log / Notes',
-    category: 'productivity',
-    family: 'MaterialCommunityIcons',
-    iconName: 'notebook-edit-outline',
-    keywords: ['log', 'daily note', 'bullet journal', 'standup', 'summary'],
-  },
-  {
-    id: 'roadmap',
-    label: 'Roadmap / Plan',
-    category: 'productivity',
-    family: 'Ionicons',
-    iconName: 'map-outline',
-    keywords: ['roadmap', 'milestones', 'direction', 'quarterly', 'strategy', 'navigation'],
-  },
-  {
-    id: 'focus-shield',
-    label: 'Deep Focus',
-    category: 'productivity',
-    family: 'Ionicons',
-    iconName: 'shield-checkmark-outline',
-    keywords: ['focus', 'do not disturb', 'shield', 'uninterrupted', 'deep work', 'block'],
+    imageAsset: TASK_ICON_ASSETS['checkmark'],
   },
 ];
+
+
 
 export const TASK_ICON_MAP: Record<string, TaskIconDef> = ALL_TASK_ICONS.reduce(
   (acc, item) => {

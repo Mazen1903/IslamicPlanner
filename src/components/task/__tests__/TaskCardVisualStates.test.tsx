@@ -166,4 +166,89 @@ describe('TaskCard Visual States — M11 Presentation (Overdue, Missed, Complete
 
     expect(queryByTestId('overdue-badge-occ-card-1')).toBeNull();
   });
+
+  it('renders streak flame badge when task has streakCount >= 1', async () => {
+    const taskWithStreak: TaskCardViewModel = {
+      ...baseTask,
+      streakCount: 5,
+      streakEnabled: true,
+    };
+
+    const { getByTestId, getByText } = await render(
+      <ThemeProvider>
+        <TaskCard task={taskWithStreak} />
+      </ThemeProvider>
+    );
+
+    expect(getByTestId('streak-badge-occ-card-1')).toBeTruthy();
+    expect(getByText('5')).toBeTruthy();
+  });
+
+  it('renders streak flame badge when task has streakCount >= 0', async () => {
+    const taskZeroStreak: TaskCardViewModel = {
+      ...baseTask,
+      streakCount: 0,
+      streakEnabled: true,
+    };
+
+    const { getByTestId, getByText } = await render(
+      <ThemeProvider>
+        <TaskCard task={taskZeroStreak} />
+      </ThemeProvider>
+    );
+
+    expect(getByTestId('streak-badge-occ-card-1')).toBeTruthy();
+    expect(getByText('0')).toBeTruthy();
+  });
+
+  it('omits streak flame badge when streakCount is null', async () => {
+    const taskNoStreak: TaskCardViewModel = {
+      ...baseTask,
+      streakCount: null,
+      streakEnabled: false,
+    };
+
+    const { queryByTestId } = await render(
+      <ThemeProvider>
+        <TaskCard task={taskNoStreak} />
+      </ThemeProvider>
+    );
+
+    expect(queryByTestId('streak-badge-occ-card-1')).toBeNull();
+  });
+
+  it('displays date and time combined with middle dot when both are available', async () => {
+    const taskWithDateTime: TaskCardViewModel = {
+      ...baseTask,
+      date: 'Oct 1',
+      scheduleLabel: '2:30 PM',
+      scheduleType: 'EXACT_TIME',
+    };
+
+    const { getByText } = await render(
+      <ThemeProvider>
+        <TaskCard task={taskWithDateTime} />
+      </ThemeProvider>
+    );
+
+    expect(getByText('Oct 1 · 2:30 PM')).toBeTruthy();
+  });
+
+  it('displays date only when schedule is Anytime Today', async () => {
+    const anytimeTask: TaskCardViewModel = {
+      ...baseTask,
+      date: 'Oct 1',
+      scheduleLabel: 'Anytime Today',
+      scheduleType: 'ANYTIME_TODAY',
+    };
+
+    const { getByText, queryByText } = await render(
+      <ThemeProvider>
+        <TaskCard task={anytimeTask} />
+      </ThemeProvider>
+    );
+
+    expect(getByText('Oct 1')).toBeTruthy();
+    expect(queryByText('Oct 1 · Anytime Today')).toBeNull();
+  });
 });

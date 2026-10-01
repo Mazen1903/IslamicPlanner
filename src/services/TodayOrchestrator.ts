@@ -15,6 +15,7 @@ import {
   deriveTimelineSeedRange,
   projectTodayViewModel,
 } from './TodayViewModelProjection';
+import { StreakRepository } from '@/data/repositories/StreakRepository';
 import type {
   TodayTemporalInputs,
   TodayRefreshResult,
@@ -58,7 +59,8 @@ export function detectTransitions(
 export class TodayOrchestrator {
   constructor(
     private readonly materializationEngine: MaterializationEngine = defaultMaterializationEngine,
-    private readonly queryService: TodayQueryService = defaultTodayQueryService
+    private readonly queryService: TodayQueryService = defaultTodayQueryService,
+    private readonly streakRepo: StreakRepository = new StreakRepository()
   ) {}
 
   /**
@@ -111,6 +113,10 @@ export class TodayOrchestrator {
       nowUtc
     );
 
+    // Batch-load streaks for all series IDs in today's candidate occurrences
+    const seriesIds = queryResult.occurrences.map(o => o.seriesId);
+    const streakMap = await this.streakRepo.findBySeriesIds(seriesIds);
+
     // 7. Project TodayViewModel
     const viewModel = projectTodayViewModel(
       queryResult.occurrences,
@@ -118,7 +124,8 @@ export class TodayOrchestrator {
       planningDay,
       timeline,
       now,
-      inputs.params.timezone
+      inputs.params.timezone,
+      streakMap
     );
 
     // 8. Construct explicit TodayRuntimeContext
@@ -151,13 +158,18 @@ export class TodayOrchestrator {
       nowUtc
     );
 
+    // Batch-load streaks for all series IDs
+    const seriesIds = queryResult.occurrences.map(o => o.seriesId);
+    const streakMap = await this.streakRepo.findBySeriesIds(seriesIds);
+
     return projectTodayViewModel(
       queryResult.occurrences,
       queryResult.definitions,
       runtime.planningDay,
       runtime.timeline,
       now,
-      timezone
+      timezone,
+      streakMap
     );
   }
 }

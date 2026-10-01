@@ -17,6 +17,7 @@ import {
 } from './taskDraftMapper';
 import { TaskFormSyncService, taskFormSyncService, computeSyncHorizon } from './syncService';
 import { RecurringHorizonSync, recurringHorizonSync as defaultRecurringHorizonSync } from './recurringHorizonSync';
+import { StreakService, streakService as defaultStreakService } from '@/services/StreakService';
 
 interface CommittedSaveIdentity {
   kind: 'CREATE' | 'THIS_OCCURRENCE' | 'THIS_AND_FUTURE' | 'SERIES_UPDATE';
@@ -35,7 +36,8 @@ export class TaskFormOrchestrator {
     private taskEngine: TaskEngine = defaultTaskEngine,
     private syncService: TaskFormSyncService = taskFormSyncService,
     private horizonSync: RecurringHorizonSync = defaultRecurringHorizonSync,
-    private inputProvider: TodayTemporalInputProvider = new LocationAwareTodayTemporalInputProvider()
+    private inputProvider: TodayTemporalInputProvider = new LocationAwareTodayTemporalInputProvider(),
+    private streakService: StreakService = defaultStreakService
   ) {}
 
   /**
@@ -148,6 +150,20 @@ export class TaskFormOrchestrator {
             preDef,
             postDef: updatedDef,
           };
+        }
+
+        // Sync streak tracking state if recurring
+        const isRecurring = state.recurrencePreset !== 'NONE';
+        if (isRecurring && state.editScope !== 'THIS_OCCURRENCE') {
+          try {
+            if (state.streakEnabled) {
+              await this.streakService.enableStreak(identity.seriesId);
+            } else {
+              await this.streakService.disableStreak(identity.seriesId);
+            }
+          } catch (streakErr) {
+            console.warn('[TaskFormOrchestrator] Failed to sync streak for series:', identity.seriesId, streakErr);
+          }
         }
       }
 

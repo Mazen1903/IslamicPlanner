@@ -57,6 +57,10 @@ export interface TaskCardViewModel {
   expiresAt: string | null;
   subtasks?: OccurrenceSubtask[];
   notes?: string | null;
+  streakCount?: number | null;
+  streakEnabled?: boolean;
+  localDate?: string | null;
+  date?: string | null;
 }
 
 /**

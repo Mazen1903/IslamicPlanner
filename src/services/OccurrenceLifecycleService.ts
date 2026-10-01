@@ -8,6 +8,7 @@ import type { TodayTemporalInputs } from './types';
 import type { PrayerTimeline } from '@/domain/prayer/types';
 import { buildPrayerTimeline } from '@/domain/prayer/PrayerTimeline';
 import { PlanningDayEngine } from '@/domain/planning-day/PlanningDayEngine';
+import { StreakService, streakService as defaultStreakService } from '@/services/StreakService';
 
 export interface LifecycleSweepError {
   occurrenceId: string;
@@ -46,7 +47,8 @@ export class OccurrenceLifecycleService implements OccurrenceLifecycleServiceAPI
   constructor(
     private readonly occRepo: TaskOccurrenceRepository = taskOccurrenceRepository,
     private readonly defRepo: TaskDefinitionRepository = taskDefinitionRepository,
-    private readonly defaultInputs?: TodayTemporalInputs
+    private readonly defaultInputs?: TodayTemporalInputs,
+    private readonly streakService: StreakService = defaultStreakService
   ) {}
 
   /**
@@ -129,6 +131,11 @@ export class OccurrenceLifecycleService implements OccurrenceLifecycleServiceAPI
         try {
           await this.occRepo.updateStatus(occ.id, 'MISSED', missedBoundary.toISO()!);
           mutatedCount++;
+          try {
+            await this.streakService.onOccurrenceMissed(occ.seriesId, occ.localDate);
+          } catch (err) {
+            console.warn('[OccurrenceLifecycleService] Failed to reset streak on missed occurrence:', err);
+          }
         } catch (err) {
           // If another terminal transition won (e.g. concurrent user completion),
           // preserve the winner and record the error
