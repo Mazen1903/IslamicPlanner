@@ -14,7 +14,7 @@ import { DateTime } from 'luxon';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import { TaskCategoryIcon } from '@/components/task/TaskCategoryIcon';
-import { DuolingoActionButton } from './DuolingoActionButton';
+import { TactileActionButton } from './TactileActionButton';
 import { getIconIdFromTags, detectTaskIcon } from '@/constants/taskIcons';
 import type { TaskDefinition, TaskOccurrence } from '@/domain/task/types';
 
@@ -588,7 +588,7 @@ export function TaskDetailScreen({
         )}
       </ScrollView>
 
-      {/* ── 5. Fixed Bottom Actions Bar: Duolingo-style 3D Delete (Left, Red) & Edit (Right, Green) ── */}
+      {/* ── 5. Fixed Bottom Actions Bar: Tactile 3D Delete (Left, Red) & Edit (Right, Green) ── */}
       <View
         style={[
           styles.bottomActionBar,
@@ -598,7 +598,7 @@ export function TaskDetailScreen({
           },
         ]}
       >
-        <DuolingoActionButton
+        <TactileActionButton
           title="Delete Task"
           iconName="trash"
           variant="danger"
@@ -607,7 +607,7 @@ export function TaskDetailScreen({
           accessibilityLabel="Delete task"
         />
 
-        <DuolingoActionButton
+        <TactileActionButton
           title="Edit Full Task"
           iconName="edit"
           variant="success"

@@ -1,14 +1,14 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { ThemeProvider } from '@/theme';
-import { DuolingoActionButton } from '../DuolingoActionButton';
+import { TactileActionButton } from '../TactileActionButton';
 
-describe('DuolingoActionButton', () => {
+describe('TactileActionButton', () => {
   it('renders correctly with title and icon for danger variant', async () => {
     const onPress = jest.fn();
     const { getByText, getByTestId, getByLabelText } = await render(
       <ThemeProvider>
-        <DuolingoActionButton
+        <TactileActionButton
           title="Delete Task"
           iconName="trash"
           variant="danger"
@@ -31,7 +31,7 @@ describe('DuolingoActionButton', () => {
     const onPress = jest.fn();
     const { getByText, getByTestId } = await render(
       <ThemeProvider>
-        <DuolingoActionButton
+        <TactileActionButton
           title="Edit Full Task"
           iconName="edit"
           variant="success"
@@ -52,7 +52,7 @@ describe('DuolingoActionButton', () => {
     const onPress = jest.fn();
     const { getByTestId } = await render(
       <ThemeProvider>
-        <DuolingoActionButton
+        <TactileActionButton
           title="Disabled Button"
           iconName="trash"
           variant="danger"

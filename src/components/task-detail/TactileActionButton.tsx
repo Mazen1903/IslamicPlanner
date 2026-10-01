@@ -11,7 +11,7 @@ import {
 import { useTheme } from '@/theme';
 import { Icon, type IconName } from '@/components/common/Icon';
 
-export interface DuolingoActionButtonProps {
+export interface TactileActionButtonProps {
   title: string;
   iconName: IconName;
   onPress: () => void;
@@ -22,7 +22,7 @@ export interface DuolingoActionButtonProps {
   disabled?: boolean;
 }
 
-export function DuolingoActionButton({
+export function TactileActionButton({
   title,
   iconName,
   onPress,
@@ -31,11 +31,11 @@ export function DuolingoActionButton({
   accessibilityLabel,
   style,
   disabled = false,
-}: DuolingoActionButtonProps) {
+}: TactileActionButtonProps) {
   const { typography, isDark } = useTheme();
   const pressAnim = useRef(new Animated.Value(0)).current;
 
-  // Duolingo-style vibrant color palette with dark 3D bevel lips
+  // Tactile 3D button palette with bottom shadow bevel lips
   const colorsConfig = variant === 'danger'
     ? {
         face: isDark ? '#EF4444' : '#EF4444',
@@ -134,7 +134,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 14,
-    // Smooth 3D shadow for depth
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
