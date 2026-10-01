@@ -251,6 +251,8 @@ export function buildTaskCardViewModel(
     date: (occ.localDate ?? occ.planningDayKey ?? def.startDate)
       ? DateTime.fromISO(occ.localDate ?? occ.planningDayKey ?? def.startDate, { zone: timezone }).toFormat('MMM d')
       : null,
+    recurrenceRule: def.recurrenceRule ?? null,
+    isRecurring: Boolean(def.recurrenceRule || def.hijriRecurrence),
   };
 }
 

@@ -251,4 +251,25 @@ describe('TaskCard Visual States — M11 Presentation (Overdue, Missed, Complete
     expect(getByText('Oct 1')).toBeTruthy();
     expect(queryByText('Oct 1 · Anytime Today')).toBeNull();
   });
+
+  it('renders green Daily recurring badge when isRecurring is true', async () => {
+    const recurringTask: TaskCardViewModel = {
+      ...baseTask,
+      isRecurring: true,
+      recurrenceRule: 'FREQ=DAILY',
+      date: 'Oct 1',
+      scheduleLabel: 'Fajr · +5m',
+      scheduleType: 'PRAYER_RELATIVE',
+    };
+
+    const { getByTestId, getByText } = await render(
+      <ThemeProvider>
+        <TaskCard task={recurringTask} />
+      </ThemeProvider>
+    );
+
+    expect(getByTestId('task-recurring-badge-occ-card-1')).toBeTruthy();
+    expect(getByText('Daily')).toBeTruthy();
+    expect(getByText('Oct 1 · Fajr · +5m')).toBeTruthy();
+  });
 });

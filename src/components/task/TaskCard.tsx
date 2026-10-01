@@ -577,18 +577,87 @@ export function TaskCard({
               </Text>
 
               {scheduleDisplay ? (
-                <Text
-                  style={[
-                    typography.caption,
-                    styles.dateSubtitleText,
-                    {
-                      color: isCompleted ? colors.textMuted : colors.textSecondary,
-                    },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {scheduleDisplay}
-                </Text>
+                <View style={styles.scheduleRow}>
+                  <Text
+                    style={[
+                      typography.caption,
+                      styles.dateSubtitleText,
+                      {
+                        color: isCompleted
+                          ? colors.textMuted
+                          : isDark
+                          ? '#34D399'
+                          : '#059669',
+                      },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {scheduleDisplay}
+                  </Text>
+                  {task.isRecurring && (
+                    <View
+                      style={[
+                        styles.recurringBadge,
+                        {
+                          backgroundColor: isDark ? 'rgba(16, 185, 129, 0.18)' : '#ECFDF5',
+                          borderColor: isDark ? 'rgba(52, 211, 153, 0.35)' : '#A7F3D0',
+                        },
+                      ]}
+                      testID={`task-recurring-badge-${task.occurrenceId}`}
+                    >
+                      <Icon
+                        name="refresh"
+                        size={10}
+                        color={isDark ? '#34D399' : '#047857'}
+                        decorative
+                        style={{ marginRight: 3 }}
+                      />
+                      <Text
+                        style={[
+                          typography.caption,
+                          {
+                            color: isDark ? '#34D399' : '#047857',
+                            fontSize: 10,
+                          },
+                        ]}
+                      >
+                        Daily
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              ) : task.isRecurring ? (
+                <View style={styles.scheduleRow}>
+                  <View
+                    style={[
+                      styles.recurringBadge,
+                      {
+                        backgroundColor: isDark ? 'rgba(16, 185, 129, 0.18)' : '#ECFDF5',
+                        borderColor: isDark ? 'rgba(52, 211, 153, 0.35)' : '#A7F3D0',
+                      },
+                    ]}
+                    testID={`task-recurring-badge-${task.occurrenceId}`}
+                  >
+                    <Icon
+                      name="refresh"
+                      size={10}
+                      color={isDark ? '#34D399' : '#047857'}
+                      decorative
+                      style={{ marginRight: 3 }}
+                    />
+                    <Text
+                      style={[
+                        typography.caption,
+                        {
+                          color: isDark ? '#34D399' : '#047857',
+                          fontSize: 10,
+                        },
+                      ]}
+                    >
+                      Daily
+                    </Text>
+                  </View>
+                </View>
               ) : null}
             </View>
           </View>
@@ -776,8 +845,22 @@ const styles = StyleSheet.create({
   titleText: {
     fontWeight: '600',
   },
-  dateSubtitleText: {
+  scheduleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
     marginTop: 2,
+  },
+  recurringBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  dateSubtitleText: {
     fontWeight: '500',
   },
   metaRow: {

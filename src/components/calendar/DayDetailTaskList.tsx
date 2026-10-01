@@ -32,7 +32,7 @@ export function DayDetailTaskList({
     <View style={[styles.container, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md }]} testID={testID}>
       {/* Selected Day Header */}
       <View style={[styles.headerContainer, { borderBottomColor: colors.border, borderBottomWidth: 1, paddingBottom: spacing.sm, marginBottom: spacing.md }]}>
-        <Text style={[typography.headlineLarge, { color: colors.textPrimary, fontWeight: '700' }]} testID="selected-day-title">
+        <Text style={[typography.headlineLarge, { color: colors.textPrimary }]} testID="selected-day-title">
           {civilDate}
         </Text>
         <Text style={[typography.bodySmall, { color: colors.primary, marginTop: spacing.xxs }]}>
@@ -67,7 +67,7 @@ export function DayDetailTaskList({
                     size={24}
                     style={{ marginEnd: spacing.xs }}
                   />
-                  <Text style={[typography.headlineMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
+                  <Text style={[typography.headlineMedium, { color: colors.textPrimary }]}>
                     {section.name}
                   </Text>
                   <Text
@@ -78,7 +78,7 @@ export function DayDetailTaskList({
                     {section.arabicName}
                   </Text>
                 </View>
-                <Text style={[typography.caption, { color: colors.textSecondary }]}>
+                <Text style={[typography.caption, { color: colors.primary }]}>
                   {section.startTime}
                 </Text>
               </View>
@@ -120,7 +120,7 @@ export function DayDetailTaskList({
         testID="anytime-secondary-section"
       >
         <View style={styles.sectionHeaderRow}>
-          <Text style={[typography.labelLarge, { color: colors.textSecondary, fontWeight: '600' }]}>
+          <Text style={[typography.labelLarge, { color: colors.primary }]}>
             Anytime
           </Text>
           <Text style={[typography.caption, { color: colors.textTertiary }]}>

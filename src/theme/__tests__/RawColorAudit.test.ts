@@ -67,6 +67,7 @@ const CATEGORY_B_APPROVED_FILES = new Set([
   'src/components/task/TaskCard.tsx',
   'src/components/task/EmptyPrayerState.tsx',
   'src/components/task-detail/TaskDetailScreen.tsx',
+  'src/components/task-detail/DuolingoActionButton.tsx',
   'src/components/task-form/IconPickerModal.tsx',
   'src/components/task-form/TaskFormScreen.tsx',
   'src/components/settings/SettingsIcons.tsx',

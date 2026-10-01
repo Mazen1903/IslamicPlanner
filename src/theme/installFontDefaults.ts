@@ -62,7 +62,7 @@ export function resolveAppFontStyle(style?: StyleProp<TextStyle>): StyleProp<Tex
   if (!style) {
     return {
       fontFamily: COMIC_BOLD,
-      fontWeight: Platform.OS === 'android' ? undefined : '700',
+      fontWeight: undefined,
     };
   }
 
@@ -106,30 +106,22 @@ export function resolveAppFontStyle(style?: StyleProp<TextStyle>): StyleProp<Tex
     targetFont = COMIC_BOLD;
   }
 
-  // CRITICAL FIX FOR ANDROID FONT FALLBACK BUG:
-  // On Android, if a custom font is used (such as ComicSansMS-Bold), specifying
-  // ANY fontWeight (e.g. '700', '600', 'bold', 'normal') causes Android's
-  // ReactFontManager to fail asset resolution and immediately fall back to the
-  // phone's system font (e.g. Roboto or Samsung One).
+  // CRITICAL FIX FOR FONT FALLBACK BUG ON ANDROID & IOS:
+  // When a dedicated bold font asset is used (such as ComicSansMS-Bold.ttf),
+  // specifying an explicit fontWeight (such as '700' or '800') causes native font managers
+  // (Android ReactFontManager & iOS CoreText) to seek a bold variant of the bold font file,
+  // fail resolution, and immediately fall back to the phone's system font (Roboto / San Francisco).
   //
-  // Therefore, whenever a custom font is applied on Android, fontWeight MUST be undefined!
-  // The bold weight is already built into ComicSansMS-Bold.ttf.
-  if (Platform.OS === 'android') {
-    return [
-      style,
-      {
-        fontFamily: targetFont,
-        fontWeight: undefined,
-        fontStyle: isItalic ? 'italic' : undefined,
-      },
-    ];
-  }
+  // Therefore, whenever ComicSansMS-Bold is applied, fontWeight MUST be undefined.
+  // The bold weight is already built directly into the font glyphs.
+  const isDedicatedBoldAsset = targetFont === COMIC_BOLD || targetFont === COMIC_BOLD_ITALIC;
+  const resolvedWeight = Platform.OS === 'android' || isDedicatedBoldAsset ? undefined : (isExplicitBold ? '700' : undefined);
 
   return [
     style,
     {
       fontFamily: targetFont,
-      fontWeight: isExplicitBold ? '700' : undefined,
+      fontWeight: resolvedWeight,
       fontStyle: isItalic ? 'italic' : undefined,
     },
   ];

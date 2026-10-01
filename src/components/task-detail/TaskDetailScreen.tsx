@@ -14,6 +14,7 @@ import { DateTime } from 'luxon';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import { TaskCategoryIcon } from '@/components/task/TaskCategoryIcon';
+import { DuolingoActionButton } from './DuolingoActionButton';
 import { getIconIdFromTags, detectTaskIcon } from '@/constants/taskIcons';
 import type { TaskDefinition, TaskOccurrence } from '@/domain/task/types';
 
@@ -270,14 +271,14 @@ export function TaskDetailScreen({
                   style={[
                     styles.statusPill,
                     {
-                      backgroundColor: colors.completed + '1A',
-                      borderColor: colors.completed,
+                      backgroundColor: isDark ? 'rgba(16, 185, 129, 0.18)' : '#ECFDF5',
+                      borderColor: isDark ? 'rgba(52, 211, 153, 0.4)' : '#A7F3D0',
                       borderRadius: radii.pill,
                     },
                   ]}
                 >
-                  <Icon name="check" size={14} color={colors.completed} decorative style={{ marginRight: 4 }} />
-                  <Text style={[typography.caption, { color: colors.completed, fontWeight: '700' }]}>
+                  <Icon name="check" size={14} color={isDark ? '#34D399' : '#059669'} decorative style={{ marginRight: 4 }} />
+                  <Text style={[typography.caption, { color: isDark ? '#34D399' : '#059669' }]}>
                     Completed
                   </Text>
                 </View>
@@ -292,7 +293,7 @@ export function TaskDetailScreen({
                     },
                   ]}
                 >
-                  <Text style={[typography.caption, { color: colors.warning, fontWeight: '700' }]}>
+                  <Text style={[typography.caption, { color: colors.warning }]}>
                     Missed
                   </Text>
                 </View>
@@ -306,15 +307,26 @@ export function TaskDetailScreen({
             <View
               style={[
                 styles.pillBadge,
-                { backgroundColor: colors.surfaceSecondary, borderRadius: radii.pill },
+                styles.greenPillBadge,
+                {
+                  backgroundColor: isDark ? 'rgba(16, 185, 129, 0.18)' : '#ECFDF5',
+                  borderColor: isDark ? 'rgba(52, 211, 153, 0.35)' : '#A7F3D0',
+                  borderRadius: radii.pill,
+                },
               ]}
             >
               <Image
                 source={scheduleModeIconSource}
-                style={{ width: 24, height: 24, marginRight: 6 }}
+                style={{ width: 22, height: 22, marginRight: 6 }}
                 resizeMode="contain"
               />
-              <Text style={[typography.caption, styles.badgeText, { color: colors.textSecondary }]}>
+              <Text
+                style={[
+                  typography.caption,
+                  styles.badgeText,
+                  { color: isDark ? '#34D399' : '#047857' },
+                ]}
+              >
                 {scheduleSummary}
               </Text>
             </View>
@@ -324,15 +336,26 @@ export function TaskDetailScreen({
               <View
                 style={[
                   styles.pillBadge,
-                  { backgroundColor: colors.surfaceSecondary, borderRadius: radii.pill },
+                  styles.greenPillBadge,
+                  {
+                    backgroundColor: isDark ? 'rgba(16, 185, 129, 0.18)' : '#ECFDF5',
+                    borderColor: isDark ? 'rgba(52, 211, 153, 0.35)' : '#A7F3D0',
+                    borderRadius: radii.pill,
+                  },
                 ]}
               >
                 <Image
                   source={TASK_DETAIL_ICONS.dateDetail}
-                  style={{ width: 24, height: 24, marginRight: 6 }}
+                  style={{ width: 22, height: 22, marginRight: 6 }}
                   resizeMode="contain"
                 />
-                <Text style={[typography.caption, styles.badgeText, { color: colors.textSecondary }]}>
+                <Text
+                  style={[
+                    typography.caption,
+                    styles.badgeText,
+                    { color: isDark ? '#34D399' : '#047857' },
+                  ]}
+                >
                   {dateDisplay}
                 </Text>
               </View>
@@ -343,18 +366,26 @@ export function TaskDetailScreen({
               <View
                 style={[
                   styles.pillBadge,
+                  styles.greenPillBadge,
                   {
-                    backgroundColor: colors.surfaceSecondary,
+                    backgroundColor: isDark ? 'rgba(16, 185, 129, 0.18)' : '#ECFDF5',
+                    borderColor: isDark ? 'rgba(52, 211, 153, 0.35)' : '#A7F3D0',
                     borderRadius: radii.pill,
                   },
                 ]}
               >
                 <Image
                   source={TASK_DETAIL_ICONS.daily}
-                  style={{ width: 24, height: 24, marginRight: 6 }}
+                  style={{ width: 22, height: 22, marginRight: 6 }}
                   resizeMode="contain"
                 />
-                <Text style={[typography.caption, styles.badgeText, { color: colors.textSecondary }]}>
+                <Text
+                  style={[
+                    typography.caption,
+                    styles.badgeText,
+                    { color: isDark ? '#34D399' : '#047857' },
+                  ]}
+                >
                   {recurrenceDisplay}
                 </Text>
               </View>
@@ -366,17 +397,19 @@ export function TaskDetailScreen({
                 style={[
                   styles.pillBadge,
                   {
-                    backgroundColor: '#fee2e2',
+                    backgroundColor: isDark ? '#7F1D1D' : '#FEE2E2',
+                    borderColor: isDark ? '#DC2626' : '#FCA5A5',
+                    borderWidth: 1,
                     borderRadius: radii.pill,
                   },
                 ]}
               >
                 <Image
                   source={TASK_DETAIL_ICONS.optPriority}
-                  style={{ width: 24, height: 24, marginRight: 6 }}
+                  style={{ width: 22, height: 22, marginRight: 6 }}
                   resizeMode="contain"
                 />
-                <Text style={[typography.caption, styles.badgeText, { color: colors.danger, fontWeight: '700' }]}>
+                <Text style={[typography.caption, styles.badgeText, { color: isDark ? '#FCA5A5' : colors.danger }]}>
                   Important
                 </Text>
               </View>
@@ -387,15 +420,26 @@ export function TaskDetailScreen({
               <View
                 style={[
                   styles.pillBadge,
-                  { backgroundColor: colors.surfaceSecondary, borderRadius: radii.pill },
+                  styles.greenPillBadge,
+                  {
+                    backgroundColor: isDark ? 'rgba(16, 185, 129, 0.18)' : '#ECFDF5',
+                    borderColor: isDark ? 'rgba(52, 211, 153, 0.35)' : '#A7F3D0',
+                    borderRadius: radii.pill,
+                  },
                 ]}
               >
                 <Image
                   source={TASK_DETAIL_ICONS.optDuration}
-                  style={{ width: 24, height: 24, marginRight: 6 }}
+                  style={{ width: 22, height: 22, marginRight: 6 }}
                   resizeMode="contain"
                 />
-                <Text style={[typography.caption, styles.badgeText, { color: colors.textSecondary }]}>
+                <Text
+                  style={[
+                    typography.caption,
+                    styles.badgeText,
+                    { color: isDark ? '#34D399' : '#047857' },
+                  ]}
+                >
                   {definition.estimatedMinutes}m
                 </Text>
               </View>
@@ -429,8 +473,18 @@ export function TaskDetailScreen({
                   Subtasks
                 </Text>
               </View>
-              <View style={[styles.countBadge, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.pill }]}>
-                <Text style={[typography.caption, { color: colors.primary, fontWeight: '700', fontSize: 13 }]}>
+              <View
+                style={[
+                  styles.countBadge,
+                  {
+                    backgroundColor: isDark ? 'rgba(16, 185, 129, 0.18)' : '#ECFDF5',
+                    borderColor: isDark ? 'rgba(52, 211, 153, 0.35)' : '#A7F3D0',
+                    borderWidth: 1,
+                    borderRadius: radii.pill,
+                  },
+                ]}
+              >
+                <Text style={[typography.caption, { color: isDark ? '#34D399' : '#047857', fontSize: 13 }]}>
                   {completedCount} of {subtasksList.length} done
                 </Text>
               </View>
@@ -495,8 +549,10 @@ export function TaskDetailScreen({
               styles.card,
               shadows.card,
               {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
+                backgroundColor: isDark ? 'rgba(16, 185, 129, 0.08)' : '#F0FDF4',
+                borderColor: isDark ? 'rgba(52, 211, 153, 0.3)' : '#BBF7D0',
+                borderLeftWidth: 5,
+                borderLeftColor: colors.primary,
                 borderRadius: radii.card,
                 padding: spacing.md,
                 marginBottom: spacing.md,
@@ -510,7 +566,7 @@ export function TaskDetailScreen({
                   style={{ width: 36, height: 36, marginRight: 10 }}
                   resizeMode="contain"
                 />
-                <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary }]}>
+                <Text style={[typography.headlineMedium, styles.sectionTitle, { color: isDark ? '#34D399' : '#065F46' }]}>
                   Notes
                 </Text>
               </View>
@@ -532,7 +588,7 @@ export function TaskDetailScreen({
         )}
       </ScrollView>
 
-      {/* ── 5. Fixed Bottom Actions Bar: Delete (Left, Red) & Edit (Right, Green) ── */}
+      {/* ── 5. Fixed Bottom Actions Bar: Duolingo-style 3D Delete (Left, Red) & Edit (Right, Green) ── */}
       <View
         style={[
           styles.bottomActionBar,
@@ -542,47 +598,23 @@ export function TaskDetailScreen({
           },
         ]}
       >
-        <Pressable
+        <DuolingoActionButton
+          title="Delete Task"
+          iconName="trash"
+          variant="danger"
           onPress={handleDeletePress}
-          accessibilityRole="button"
-          accessibilityLabel="Delete task"
           testID="task-detail-delete-button"
-          style={({ pressed }) => [
-            styles.actionButton,
-            styles.deleteButton,
-            {
-              backgroundColor: isDark ? '#DC2626' : '#EF4444',
-              borderRadius: radii.md,
-              opacity: pressed ? 0.85 : 1,
-            },
-          ]}
-        >
-          <Icon name="trash" size={18} color="#FFFFFF" decorative style={{ marginRight: 6 }} />
-          <Text style={[typography.labelLarge, styles.actionButtonText, { color: '#FFFFFF' }]}>
-            Delete Task
-          </Text>
-        </Pressable>
+          accessibilityLabel="Delete task"
+        />
 
-        <Pressable
+        <DuolingoActionButton
+          title="Edit Full Task"
+          iconName="edit"
+          variant="success"
           onPress={onEditFull}
-          accessibilityRole="button"
-          accessibilityLabel="Edit full task"
           testID="task-detail-edit-button"
-          style={({ pressed }) => [
-            styles.actionButton,
-            styles.editButton,
-            {
-              backgroundColor: isDark ? '#16A34A' : '#15803D',
-              borderRadius: radii.md,
-              opacity: pressed ? 0.85 : 1,
-            },
-          ]}
-        >
-          <Icon name="edit" size={18} color="#FFFFFF" decorative style={{ marginRight: 6 }} />
-          <Text style={[typography.labelLarge, styles.actionButtonText, { color: '#FFFFFF' }]}>
-            Edit Full Task
-          </Text>
-        </Pressable>
+          accessibilityLabel="Edit full task"
+        />
       </View>
     </SafeAreaView>
   );
@@ -607,7 +639,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontWeight: '700',
     flex: 1,
     textAlign: 'center',
   },
@@ -637,7 +668,6 @@ const styles = StyleSheet.create({
   },
   heroTitleText: {
     fontSize: 24,
-    fontWeight: '800',
     letterSpacing: -0.4,
   },
   statusPill: {
@@ -662,8 +692,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
+  greenPillBadge: {
+    borderWidth: 1,
+  },
   badgeText: {
-    fontWeight: '600',
     fontSize: 13,
   },
   sectionHeaderRow: {
@@ -677,7 +709,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionTitle: {
-    fontWeight: '700',
     fontSize: 18,
   },
   countBadge: {
@@ -709,23 +740,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 10,
+    paddingBottom: 14,
     borderTopWidth: StyleSheet.hairlineWidth,
     gap: 12,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 13,
-    paddingHorizontal: 12,
-    minHeight: 48,
-  },
-  deleteButton: {},
-  editButton: {},
-  actionButtonText: {
-    fontWeight: '700',
-    fontSize: 15,
   },
 });

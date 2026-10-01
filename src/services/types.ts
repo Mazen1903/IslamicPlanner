@@ -61,6 +61,8 @@ export interface TaskCardViewModel {
   streakEnabled?: boolean;
   localDate?: string | null;
   date?: string | null;
+  recurrenceRule?: string | null;
+  isRecurring?: boolean;
 }
 
 /**

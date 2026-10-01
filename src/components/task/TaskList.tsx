@@ -66,7 +66,7 @@ function SectionHeader({ title, count, isExpanded, onToggle, testID }: SectionHe
           style={[
             typography.bodyLarge,
             styles.sectionTitle,
-            { color: colors.textPrimary, fontWeight: '600' },
+            { color: colors.textPrimary },
           ]}
         >
           {title} ({count})

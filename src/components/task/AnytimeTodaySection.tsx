@@ -45,13 +45,13 @@ export function AnytimeTodaySection({
         testID="anytime-section-header"
       >
         <View style={styles.headerLeft}>
-          <Icon name="clock" size={18} color={colors.textSecondary} style={{ marginEnd: 6 }} decorative />
+          <Icon name="clock" size={18} color={colors.primary} style={{ marginEnd: 6 }} decorative />
           <Text style={[typography.labelLarge, styles.title, { color: colors.textPrimary }]}>
             Anytime Today
           </Text>
 
           <View style={[styles.badgePill, { backgroundColor: colors.primaryLight }]}>
-            <Text style={[styles.badgeText, { color: colors.primary }]}>{countLabel}</Text>
+            <Text style={[typography.caption, styles.badgeText, { color: colors.primary }]}>{countLabel}</Text>
           </View>
         </View>
 
@@ -92,7 +92,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 15,
-    fontWeight: '700',
     marginStart: 4,
   },
   badgePill: {
@@ -103,7 +102,6 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 12,
-    fontWeight: '600',
   },
   list: {
     marginTop: 10,

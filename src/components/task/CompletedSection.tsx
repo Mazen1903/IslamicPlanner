@@ -39,7 +39,7 @@ export function CompletedSection({
         accessibilityState={{ expanded: !collapsed }}
         testID="completed-section-header"
       >
-        <Text style={[typography.labelMedium, { color: colors.textSecondary, fontWeight: '700' }]}>
+        <Text style={[typography.labelMedium, { color: colors.primary }]}>
           Completed ({tasks.length})
         </Text>
         <Icon
