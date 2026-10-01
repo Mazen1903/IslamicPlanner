@@ -109,6 +109,7 @@ export function TaskList({
 
   // Collapsible section states
   const [previousExpanded, setPreviousExpanded] = useState(false);
+  const [previousUserToggled, setPreviousUserToggled] = useState(false);
   const [todayExpanded, setTodayExpanded] = useState(true);
   const [upcomingExpanded, setUpcomingExpanded] = useState(false);
   // Fix #3: Derive from prop so it stays in sync when switching prayer tabs
@@ -284,13 +285,65 @@ export function TaskList({
   // Partition tasks into Previous, Today, Upcoming, and Completed Today
   const { previousTasks, todayTasks, upcomingTasks, completedTasks } = useMemo(() => {
     const isShowingCurrentPrayer = selectedPrayer === currentPrayer && allTabs && allTabs.length > 0;
-    const tabsToProcess = isShowingCurrentPrayer ? allTabs : [tab];
 
     const seenIds = new Set<string>();
     const completed: TaskCardViewModel[] = [];
     const previous: TaskCardViewModel[] = [];
     const upcoming: TaskCardViewModel[] = [];
     const today: TaskCardViewModel[] = [];
+
+    if (!isShowingCurrentPrayer) {
+      // User is explicitly viewing a specific prayer tab (e.g. Fajr, Asr, Maghrib, Isha)
+      // All pending tasks scheduled for this prayer appear directly under "Today" so they are immediately visible.
+      if (completedTasksMode !== 'HIDE') {
+        for (const task of tab.completedTasks) {
+          if (!seenIds.has(task.occurrenceId)) {
+            seenIds.add(task.occurrenceId);
+            completed.push(task);
+          }
+        }
+      }
+
+      if (overdueTasksMode !== 'HIDE') {
+        for (const task of tab.missedTasks) {
+          if (!seenIds.has(task.occurrenceId)) {
+            seenIds.add(task.occurrenceId);
+            previous.push(task);
+          }
+        }
+      }
+
+      for (const task of tab.scheduledTasks) {
+        if (!seenIds.has(task.occurrenceId)) {
+          seenIds.add(task.occurrenceId);
+          today.push(task);
+        }
+      }
+
+      if (tab.anytimeTasks) {
+        for (const task of tab.anytimeTasks) {
+          if (task.status === 'COMPLETED') {
+            if (completedTasksMode !== 'HIDE' && !seenIds.has(task.occurrenceId)) {
+              seenIds.add(task.occurrenceId);
+              completed.push(task);
+            }
+          } else if (!seenIds.has(task.occurrenceId)) {
+            seenIds.add(task.occurrenceId);
+            today.push(task);
+          }
+        }
+      }
+
+      return {
+        previousTasks: previous,
+        todayTasks: today,
+        upcomingTasks: [],
+        completedTasks: completed,
+      };
+    }
+
+    // Unified current prayer view (aggregates past, current, and upcoming prayers for today)
+    const tabsToProcess = allTabs;
 
     // 1. Collect completed tasks
     if (completedTasksMode !== 'HIDE') {
@@ -430,6 +483,10 @@ export function TaskList({
     onToggleCompletedCollapsed?.();
   };
 
+  const isPreviousOpen = previousUserToggled
+    ? previousExpanded
+    : previousExpanded || (todayTasks.length === 0 && previousTasks.length > 0);
+
   return (
     <ScrollView
       style={styles.container}
@@ -443,11 +500,14 @@ export function TaskList({
           <SectionHeader
             title="Previous"
             count={previousTasks.length}
-            isExpanded={previousExpanded}
-            onToggle={() => setPreviousExpanded(p => !p)}
+            isExpanded={isPreviousOpen}
+            onToggle={() => {
+              setPreviousUserToggled(true);
+              setPreviousExpanded(!isPreviousOpen);
+            }}
             testID="section-header-previous"
           />
-          {previousExpanded && (
+          {isPreviousOpen && (
             <View style={styles.cardsContainer} testID="section-content-previous">
               {previousTasks.map(task => (
                 <TaskCard

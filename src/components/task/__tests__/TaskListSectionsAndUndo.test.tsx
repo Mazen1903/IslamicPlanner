@@ -404,6 +404,61 @@ describe('TaskList Sections and Undo Functionality', () => {
       // - "Review Quran" is deduplicated across Asr & Maghrib to only show the next upcoming one
       expect(screen.getByText('Upcoming (1)')).toBeTruthy();
     });
+
+    it('shows scheduled tasks directly in Today when viewing a past or future prayer tab', async () => {
+      const fajrPastTab: PrayerTabViewModel = {
+        prayer: 'FAJR',
+        name: 'Fajr',
+        arabicName: 'الفجر',
+        startTime: '5:25 AM',
+        startDateTime: '2026-09-15T05:25:00Z',
+        temporalState: 'PAST',
+        scheduledTasks: [
+          {
+            occurrenceId: 'occ-fajr-relative',
+            taskDefinitionId: 'def-fajr-adhkar',
+            title: 'Morning Adhkar Relative to Fajr',
+            scheduleType: 'PRAYER_RELATIVE',
+            scheduleLabel: 'Fajr +5 min',
+            priority: 'IMPORTANT',
+            status: 'PENDING',
+            estimatedMinutes: 15,
+            sortInstant: '2026-09-15T05:30:00.000Z',
+            createdAt: '2026-09-15T05:00:00.000Z',
+            completedAt: null,
+            missedAt: null,
+            dueAt: null,
+            expiresAt: null,
+          },
+        ],
+        missedTasks: [],
+        completedTasks: [],
+        anytimeTasks: [],
+      };
+
+      await render(
+        <ThemeProvider>
+          <TaskList
+            tab={fajrPastTab}
+            allTabs={[fajrPastTab]}
+            selectedPrayer="FAJR"
+            currentPrayer="DHUHR"
+            nextPrayer="ASR"
+            onCompleteTask={jest.fn()}
+            onUndoTask={jest.fn()}
+          />
+        </ThemeProvider>
+      );
+
+      // When viewing Fajr (even though it's in the past relative to Dhuhr),
+      // its scheduled tasks should appear directly under Today (1), not banished into Previous with Today (0)
+      expect(screen.getByText('Today (1)')).toBeTruthy();
+      expect(screen.getByText('Morning Adhkar Relative to Fajr')).toBeTruthy();
+
+      // Priority badge should be present for IMPORTANT task
+      expect(screen.getByTestId('important-badge-occ-fajr-relative')).toBeTruthy();
+    });
   });
 });
+
 

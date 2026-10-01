@@ -44,18 +44,15 @@ export default function TabLayout() {
     : null;
 
   const handleSuccess = useCallback(async () => {
-    // Phase 2 of TaskFormOrchestrator already materialized the occurrence before
-    // the success screen appeared. A lightweight re-query + re-projection is
-    // sufficient and avoids the requestGeneration token race that a full
-    // fullRefresh() creates (horizon sync + materialization takes ~300–800ms,
-    // during which any prayer-timer startReproject() silently drops the commit).
     try {
-      const runtime = useTodayStore.getState().runtime;
-      if (!runtime) return;
-      const token = useTodayStore.getState().startReproject();
+      const store = useTodayStore.getState();
+      const runtime = store.runtime;
       const now = DateTime.now();
-      const vm = await todayOrchestrator.queryAndProject(runtime, now);
-      useTodayStore.getState().commitReproject(token, vm);
+      if (runtime) {
+        const token = store.startReproject();
+        const vm = await todayOrchestrator.queryAndProject(runtime, now);
+        store.commitReproject(token, vm);
+      }
     } catch {
       // Non-blocking — Today will catch up on next focus or timer tick
     }

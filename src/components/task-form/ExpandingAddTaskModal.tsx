@@ -135,13 +135,13 @@ export function ExpandingAddTaskModal({
       return;
     }
 
-    // Shrink back to origin with smooth closing that decelerates into circular FAB
-    const closeDuration = Math.max(Math.round(580 * currentProgress), 360);
+    // Shrink back to origin with smooth, graceful closing that decelerates into circular FAB
+    const closeDuration = Math.max(Math.round(620 * currentProgress), 450);
 
     Animated.timing(morphAnim, {
       toValue: 0,
       duration: closeDuration,
-      easing: Easing.bezier(0.25, 0.9, 0.35, 1),
+      easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start(({ finished }) => {
       if (finished) {

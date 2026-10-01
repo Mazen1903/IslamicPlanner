@@ -20,6 +20,7 @@ import { hasCustomTaskIcon } from '@/constants/taskIconAssets';
 import { useTodayStore } from '@/stores/useTodayStore';
 import { deriveOverdueState } from '@/services/TodayViewModelProjection';
 import { StreakFlameBadge } from '@/components/streak';
+import { LottiePriorityBadge } from './LottiePriorityBadge';
 import { taskOccurrenceRepository } from '@/data/repositories/TaskOccurrenceRepository';
 import { taskDefinitionRepository } from '@/data/repositories/TaskDefinitionRepository';
 
@@ -675,21 +676,11 @@ export function TaskCard({
           )}
 
           {task.priority === 'IMPORTANT' && (
-            <View
-              style={[
-                styles.priorityCircle,
-                {
-                  backgroundColor: isDark ? '#3B1414' : '#FEE2E2',
-                  borderWidth: 1,
-                  borderColor: isDark ? '#F87171' : '#EF4444',
-                },
-              ]}
+            <LottiePriorityBadge
+              size={32}
               testID={`important-badge-${task.occurrenceId}`}
               accessibilityLabel="Important task"
-            >
-              <Text style={[styles.priorityExclamation, { color: isDark ? '#F87171' : '#DC2626' }]}>!</Text>
-              <Text style={styles.srOnly}>IMPORTANT</Text>
-            </View>
+            />
           )}
 
           <Icon
