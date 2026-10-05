@@ -16,6 +16,14 @@ export interface NotificationSchedulerAdapterAPI {
   getPermissionStatus(): Promise<PermissionStatusResult>;
   requestPermission(): Promise<PermissionStatusResult>;
   scheduleNotification(desired: DesiredNotification): Promise<string>;
+  scheduleDailyNotification(
+    identifier: string,
+    title: string,
+    body: string,
+    timeOfDay: string,
+    channelId: string,
+    data?: Record<string, unknown>
+  ): Promise<string>;
   cancelScheduledNotification(identifier: string): Promise<void>;
   getAllScheduledNotifications(): Promise<ScheduledNotificationSnapshot[]>;
 }
@@ -174,13 +182,55 @@ export class NotificationSchedulerAdapter implements NotificationSchedulerAdapte
       channelId: desired.channelId,
     };
 
+    const body = (desired.data?.body as string) || 'Tap to view your task';
+    const categoryIdentifier = desired.data?.kind === 'task-reminder' ? 'task-reminder-actions' : undefined;
+
     return await notifications.scheduleNotificationAsync({
       identifier: desired.identifier,
       content: {
         title: desired.title,
-        body: 'Tap to view your task',
+        body,
         sound: 'default',
+        categoryIdentifier,
         data: desired.data,
+      },
+      trigger,
+    });
+  }
+
+  async scheduleDailyNotification(
+    identifier: string,
+    title: string,
+    body: string,
+    timeOfDay: string,
+    channelId: string,
+    data?: Record<string, unknown>
+  ): Promise<string> {
+    if (!notificationsAvailable()) {
+      return identifier;
+    }
+
+    const notifications = await getNotificationsModule();
+    if (!notifications) {
+      return identifier;
+    }
+
+    const [hour, minute] = timeOfDay.split(':').map(Number);
+    const triggerType = (notifications.SchedulableTriggerInputTypes?.DAILY ?? 'daily') as any;
+    const trigger: Notifications.DailyTriggerInput = {
+      type: triggerType,
+      hour,
+      minute,
+      channelId,
+    };
+
+    return await notifications.scheduleNotificationAsync({
+      identifier,
+      content: {
+        title,
+        body,
+        sound: 'default',
+        data: data ?? { kind: 'journal-reminder', payloadVersion: 2 },
       },
       trigger,
     });

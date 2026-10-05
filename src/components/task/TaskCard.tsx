@@ -21,8 +21,6 @@ import { useTodayStore } from '@/stores/useTodayStore';
 import { deriveOverdueState } from '@/services/TodayViewModelProjection';
 import { StreakFlameBadge } from '@/components/streak';
 import { LottiePriorityBadge } from './LottiePriorityBadge';
-import { taskOccurrenceRepository } from '@/data/repositories/TaskOccurrenceRepository';
-import { taskDefinitionRepository } from '@/data/repositories/TaskDefinitionRepository';
 
 export interface TaskCardProps {
   task: TaskCardViewModel;
@@ -33,7 +31,7 @@ export interface TaskCardProps {
   onDragStart?: (task: TaskCardViewModel) => void;
   onDragMove?: (task: TaskCardViewModel, gestureState: PanResponderGestureState) => void;
   onDragEnd?: (task: TaskCardViewModel, gestureState: PanResponderGestureState) => void;
-  onDelete?: (task: TaskCardViewModel) => void;
+  onDelete?: (task: TaskCardViewModel) => void | boolean | Promise<void | boolean>;
 }
 
 function getCategoryTheme(
@@ -170,19 +168,25 @@ export function TaskCard({
     }).start();
 
     if (onDeleteRef.current) {
-      onDeleteRef.current(task);
-    } else {
-      (async () => {
-        try {
-          if (task.occurrenceId) {
-            await taskOccurrenceRepository.deleteIfPending(task.occurrenceId).catch(() => {});
-          } else if (task.taskDefinitionId) {
-            await taskDefinitionRepository.delete(task.taskDefinitionId).catch(() => {});
+      Promise.resolve(onDeleteRef.current(task))
+        .then(res => {
+          if (res === false) {
+            Animated.spring(swipeX, {
+              toValue: 0,
+              useNativeDriver: true,
+              friction: 6,
+            }).start();
           }
-        } catch {}
-      })();
+        })
+        .catch(() => {
+          Animated.spring(swipeX, {
+            toValue: 0,
+            useNativeDriver: true,
+            friction: 6,
+          }).start();
+        });
     }
-  }, [task]);
+  }, [task, swipeX]);
 
   // Fix #5: Keep drag callbacks in refs so the PanResponder closure is always current
   const onDragStartRef = useRef(onDragStart);
@@ -665,7 +669,7 @@ export function TaskCard({
             </View>
           </View>
 
-          {(task.estimatedMinutes || (isPending && overdueState.isOverdue) || isMissed || isCompleted) ? (
+          {(task.estimatedMinutes || (isPending && overdueState.isOverdue)) ? (
             <View style={styles.metaRow}>
               {task.estimatedMinutes ? (
                 <View style={styles.metaItem}>
@@ -694,46 +698,6 @@ export function TaskCard({
                     {overdueState.overdueMinutes >= 1
                       ? `${overdueState.overdueMinutes} min overdue`
                       : 'Overdue'}
-                  </Text>
-                </View>
-              )}
-
-              {isMissed && (
-                <View
-                  style={[
-                    styles.badge,
-                    {
-                      backgroundColor: colors.warning + '1A',
-                      borderColor: colors.warning,
-                      borderRadius: radii.pill,
-                      borderWidth: 1,
-                      paddingHorizontal: spacing.xs,
-                      marginLeft: 'auto',
-                    },
-                  ]}
-                >
-                  <Text style={[typography.caption, { color: colors.warning, fontWeight: '700' }]}>
-                    Missed
-                  </Text>
-                </View>
-              )}
-
-              {isCompleted && (
-                <View
-                  style={[
-                    styles.badge,
-                    {
-                      backgroundColor: colors.completed + '1A',
-                      borderColor: colors.completed,
-                      borderRadius: radii.pill,
-                      borderWidth: 1,
-                      paddingHorizontal: spacing.xs,
-                      marginLeft: 'auto',
-                    },
-                  ]}
-                >
-                  <Text style={[typography.caption, { color: colors.completed, fontWeight: '700' }]}>
-                    Completed
                   </Text>
                 </View>
               )}

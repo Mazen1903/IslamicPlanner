@@ -15,6 +15,7 @@ describe('NotificationReconciliationService', () => {
   let mockAdapter: jest.Mocked<NotificationSchedulerAdapterAPI>;
   let mockChannelManager: jest.Mocked<NotificationChannelManagerAPI>;
   let mockSettingsRepo: { get: jest.Mock };
+  let mockPrayerScheduler: { getDesiredPrayerAlerts: jest.Mock };
   let currentTimeMs: number;
   let service: NotificationReconciliationService;
 
@@ -86,10 +87,18 @@ describe('NotificationReconciliationService', () => {
       scheduleNotification: jest.fn().mockImplementation(async d => d.identifier),
       cancelScheduledNotification: jest.fn().mockResolvedValue(undefined),
       getAllScheduledNotifications: jest.fn().mockResolvedValue([]),
+      scheduleDailyNotification: jest.fn().mockResolvedValue(undefined),
     };
 
     mockChannelManager = {
       ensureChannel: jest.fn().mockResolvedValue(undefined),
+      getTaskChannelId: jest.fn().mockReturnValue('task-reminders-v2-vib'),
+      getJournalChannelId: jest.fn().mockReturnValue('journal-reminders-v2'),
+      getPrayerChannelId: jest.fn().mockReturnValue('prayer-alerts-v2-vib'),
+    };
+
+    mockPrayerScheduler = {
+      getDesiredPrayerAlerts: jest.fn().mockResolvedValue([]),
     };
 
     mockSettingsRepo = {
@@ -102,7 +111,8 @@ describe('NotificationReconciliationService', () => {
       mockAdapter,
       mockChannelManager,
       { nowMs: () => currentTimeMs },
-      mockSettingsRepo as any
+      mockSettingsRepo as any,
+      mockPrayerScheduler as any
     );
   });
 
@@ -500,10 +510,194 @@ describe('NotificationReconciliationService', () => {
     });
   });
 
+  describe('Multi-Slot Occurrence Reminders', () => {
+    it('schedules distinct slots for tasks with multiple reminder offsets', async () => {
+      const def = makeDef('def-multi', 'Multi Reminder Task');
+      def.reminderRule = { offsetsMinutes: [-30, 0] };
+      const occ = makeOcc('occ-multi', 'def-multi', '2026-09-17T15:00:00.000Z');
+
+      mockOccRepo.findAllMaterializedPending!.mockResolvedValueOnce([occ]);
+      mockDefRepo.findById!.mockResolvedValueOnce(def);
+      mockAdapter.getAllScheduledNotifications.mockResolvedValueOnce([]);
+
+      const result = await service.reconcile();
+
+      expect(result.scheduled).toEqual([
+        'task-reminder:occ-multi:r0',
+        'task-reminder:occ-multi:r1',
+      ]);
+      expect(mockAdapter.scheduleNotification).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('Quiet Hours Deferral & Important Exemption', () => {
+    it('defers normal priority task falling inside quiet hours to window end', async () => {
+      mockSettingsRepo.get.mockResolvedValueOnce({
+        taskRemindersEnabled: true,
+        quietHoursEnabled: true,
+        quietHoursStart: '22:00',
+        quietHoursEnd: '06:00',
+      });
+
+      // Occurrence at 04:30 UTC on 2026-09-18 (inside quiet hours 22:00-06:00)
+      const def = makeDef('def-quiet', 'Quiet Task');
+      def.priority = 'NORMAL';
+      def.reminderRule = { offsetsMinutes: [0] };
+      const occ = makeOcc('occ-quiet', 'def-quiet', '2026-09-18T04:30:00.000Z');
+
+      mockOccRepo.findAllMaterializedPending!.mockResolvedValueOnce([occ]);
+      mockDefRepo.findById!.mockResolvedValueOnce(def);
+      mockAdapter.getAllScheduledNotifications.mockResolvedValueOnce([]);
+
+      await service.reconcile();
+
+      expect(mockAdapter.scheduleNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identifier: 'task-reminder:occ-quiet:default',
+          triggerAtMs: Date.parse('2026-09-18T06:00:00.000Z'),
+        })
+      );
+    });
+
+    it('does not defer IMPORTANT priority task even if it falls inside quiet hours', async () => {
+      mockSettingsRepo.get.mockResolvedValueOnce({
+        taskRemindersEnabled: true,
+        quietHoursEnabled: true,
+        quietHoursStart: '22:00',
+        quietHoursEnd: '06:00',
+      });
+
+      const def = makeDef('def-urgent', 'Urgent Task');
+      def.priority = 'IMPORTANT';
+      def.reminderRule = { offsetsMinutes: [0] };
+      const occ = makeOcc('occ-urgent', 'def-urgent', '2026-09-18T04:30:00.000Z');
+
+      mockOccRepo.findAllMaterializedPending!.mockResolvedValueOnce([occ]);
+      mockDefRepo.findById!.mockResolvedValueOnce(def);
+      mockAdapter.getAllScheduledNotifications.mockResolvedValueOnce([]);
+
+      await service.reconcile();
+
+      expect(mockAdapter.scheduleNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identifier: 'task-reminder:occ-urgent:default',
+          triggerAtMs: Date.parse('2026-09-18T04:30:00.000Z'),
+        })
+      );
+    });
+  });
+
+  describe('Snooze Notification Invariant', () => {
+    it('preserves active snooze notifications without canceling them during reconcile', async () => {
+      const snoozeSnapshot: ScheduledNotificationSnapshot = {
+        identifier: 'task-reminder:occ-1:snooze',
+        title: 'Task 1 (Snoozed)',
+        triggerAtMs: currentTimeMs + 600_000,
+        channelId: NOTIFICATION_CHANNEL_ID,
+        data: {
+          kind: 'task-reminder',
+          occurrenceId: 'occ-1',
+          taskDefinitionId: 'def-1',
+          reminderSlot: 'snooze',
+          triggerAtMs: currentTimeMs + 600_000,
+          payloadVersion: NOTIFICATION_PAYLOAD_VERSION,
+        },
+      };
+
+      mockOccRepo.findAllMaterializedPending!.mockResolvedValueOnce([]);
+      mockAdapter.getAllScheduledNotifications.mockResolvedValueOnce([snoozeSnapshot]);
+
+      const result = await service.reconcile();
+
+      expect(mockAdapter.cancelScheduledNotification).not.toHaveBeenCalledWith('task-reminder:occ-1:snooze');
+      expect(result.cancelled).not.toContain('task-reminder:occ-1:snooze');
+    });
+  });
+
+  describe('Prayer Alerts Integration', () => {
+    it('collects and schedules desired prayer alerts when prayerAlertsEnabled is true', async () => {
+      mockSettingsRepo.get.mockResolvedValueOnce({
+        taskRemindersEnabled: false,
+        prayerAlertsEnabled: true,
+        prayerVibrationEnabled: false,
+      });
+
+      const mockPrayerAlert: any = {
+        identifier: 'prayer-alert:fajr:2026-09-18',
+        title: 'Fajr Prayer',
+        body: 'Time for Fajr prayer',
+        triggerAtMs: Date.parse('2026-09-18T05:00:00.000Z'),
+        channelId: 'prayer-alerts-v2-novib',
+        data: {
+          kind: 'prayer-alert',
+          prayerKey: 'fajr',
+          date: '2026-09-18',
+          payloadVersion: 2,
+        },
+      };
+
+      mockPrayerScheduler.getDesiredPrayerAlerts.mockResolvedValueOnce([mockPrayerAlert]);
+      mockAdapter.getAllScheduledNotifications.mockResolvedValueOnce([]);
+
+      const result = await service.reconcile();
+
+      expect(mockPrayerScheduler.getDesiredPrayerAlerts).toHaveBeenCalledWith(currentTimeMs, false);
+      expect(result.scheduled).toContain('prayer-alert:fajr:2026-09-18');
+      expect(mockAdapter.scheduleNotification).toHaveBeenCalledWith(mockPrayerAlert);
+    });
+  });
+
+  describe('Journal Reminder Integration', () => {
+    it('schedules daily journal reminder when enabled', async () => {
+      mockSettingsRepo.get.mockResolvedValueOnce({
+        taskRemindersEnabled: false,
+        prayerAlertsEnabled: false,
+        journalReminderEnabled: true,
+        journalReminderTime: '22:00',
+      });
+
+      await service.reconcile();
+
+      expect(mockAdapter.scheduleDailyNotification).toHaveBeenCalledWith(
+        'journal-reminder:daily',
+        'Daily Reflection',
+        'Take a moment for your evening reflection & journal entry.',
+        '22:00',
+        'journal-reminders-v2'
+      );
+    });
+
+    it('cancels daily journal reminder when disabled and currently scheduled in OS', async () => {
+      mockSettingsRepo.get.mockResolvedValueOnce({
+        taskRemindersEnabled: false,
+        prayerAlertsEnabled: false,
+        journalReminderEnabled: false,
+      });
+
+      const journalSnapshot: any = {
+        identifier: 'journal-reminder:daily',
+        title: 'Daily Reflection',
+        triggerAtMs: currentTimeMs + 3600_000,
+        channelId: 'journal-reminders-v2',
+      };
+
+      mockAdapter.getAllScheduledNotifications.mockResolvedValueOnce([journalSnapshot]);
+
+      const result = await service.reconcile();
+
+      expect(mockAdapter.cancelScheduledNotification).toHaveBeenCalledWith('journal-reminder:daily');
+      expect(result.cancelled).toContain('journal-reminder:daily');
+    });
+  });
+
   describe('Targeted Cancellation (cancelOccurrenceReminder)', () => {
     it('cancels specific occurrence reminder by deterministic ID', async () => {
       await service.cancelOccurrenceReminder('occ-complete-1');
       expect(mockAdapter.cancelScheduledNotification).toHaveBeenCalledWith('task-reminder:occ-complete-1:default');
+      expect(mockAdapter.cancelScheduledNotification).toHaveBeenCalledWith('task-reminder:occ-complete-1:r0');
+      expect(mockAdapter.cancelScheduledNotification).toHaveBeenCalledWith('task-reminder:occ-complete-1:r1');
+      expect(mockAdapter.cancelScheduledNotification).toHaveBeenCalledWith('task-reminder:occ-complete-1:r2');
+      expect(mockAdapter.cancelScheduledNotification).toHaveBeenCalledWith('task-reminder:occ-complete-1:snooze');
     });
 
     it('does not throw when canceling non-existent or failed reminder (idempotent)', async () => {

@@ -11,6 +11,7 @@ import { WidgetSyncCoordinator } from '../WidgetSyncCoordinator';
 import { WidgetSnapshotBuilder } from '../WidgetSnapshotBuilder';
 import type { TodayTemporalInputProvider } from '@/services/types';
 import type { WidgetSnapshot } from '../types';
+import { DEFAULT_WIDGET_THEME } from '../types';
 import { SmallWidgetComponent } from '../../../../widgets/android/SmallWidgetComponent';
 import { MediumWidgetComponent } from '../../../../widgets/android/MediumWidgetComponent';
 import { SmallWidgetLayout } from '../../../../widgets/ios/SmallWidget';
@@ -22,33 +23,32 @@ import { MediumWidgetLayout } from '../../../../widgets/ios/MediumWidget';
 
 function makeSnapshot(isSetupRequired = false): WidgetSnapshot {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedAt: '2026-09-18T15:00:00.000Z',
     planningDayKey: isSetupRequired ? '' : '2026-09-18',
     timezone: isSetupRequired ? 'UTC' : 'America/Chicago',
     currentPrayer: {
       prayer: 'DHUHR',
       name: 'Dhuhr',
-      arabicName: 'الظهر',
       startsAt: '2026-09-18T11:15:00.000Z',
       startsAtLocal: '6:15 AM',
     },
     nextPrayer: {
       prayer: 'ASR',
       name: 'Asr',
-      arabicName: 'العصر',
       startsAt: '2026-09-18T14:52:00.000Z',
       startsAtLocal: '9:52 AM',
     },
     allPrayers: [
-      { prayer: 'FAJR', name: 'Fajr', arabicName: 'الفجر', startsAt: '2026-09-18T09:47:00.000Z', startsAtLocal: '4:47 AM' },
-      { prayer: 'DHUHR', name: 'Dhuhr', arabicName: 'الظهر', startsAt: '2026-09-18T11:15:00.000Z', startsAtLocal: '6:15 AM' },
-      { prayer: 'ASR', name: 'Asr', arabicName: 'العصر', startsAt: '2026-09-18T14:52:00.000Z', startsAtLocal: '9:52 AM' },
-      { prayer: 'MAGHRIB', name: 'Maghrib', arabicName: 'المغرب', startsAt: '2026-09-18T19:20:00.000Z', startsAtLocal: '2:20 PM' },
-      { prayer: 'ISHA', name: 'Isha', arabicName: 'العشاء', startsAt: '2026-09-18T20:55:00.000Z', startsAtLocal: '3:55 PM' },
+      { prayer: 'FAJR', name: 'Fajr', startsAt: '2026-09-18T09:47:00.000Z', startsAtLocal: '4:47 AM' },
+      { prayer: 'DHUHR', name: 'Dhuhr', startsAt: '2026-09-18T11:15:00.000Z', startsAtLocal: '6:15 AM' },
+      { prayer: 'ASR', name: 'Asr', startsAt: '2026-09-18T14:52:00.000Z', startsAtLocal: '9:52 AM' },
+      { prayer: 'MAGHRIB', name: 'Maghrib', startsAt: '2026-09-18T19:20:00.000Z', startsAtLocal: '2:20 PM' },
+      { prayer: 'ISHA', name: 'Isha', startsAt: '2026-09-18T20:55:00.000Z', startsAtLocal: '3:55 PM' },
     ],
     tasks: [],
     isSetupRequired,
+    theme: DEFAULT_WIDGET_THEME,
   };
 }
 
@@ -341,11 +341,12 @@ describe('WidgetSyncCoordinator', () => {
       expect(typeof options.renderWidget).toBe('function');
 
       const mockWidgetInfo = { widgetId: 1, width: 120, height: 110 };
-      const element = options.renderWidget(mockWidgetInfo);
+      const rep = options.renderWidget(mockWidgetInfo);
 
-      expect(element).not.toBeNull();
+      expect(rep).not.toBeNull();
+      const element = 'light' in rep ? rep.light : rep;
       expect(element.type).toBe(SmallWidgetComponent);
-      expect(element.props).toEqual(snapshot);
+      expect(element.props.snapshot).toEqual(snapshot);
     });
 
     it('AND-04: requestWidgetUpdate renders real MediumWidgetComponent (never null)', async () => {
@@ -366,11 +367,12 @@ describe('WidgetSyncCoordinator', () => {
       expect(typeof options.renderWidget).toBe('function');
 
       const mockWidgetInfo = { widgetId: 2, width: 250, height: 110 };
-      const element = options.renderWidget(mockWidgetInfo);
+      const rep = options.renderWidget(mockWidgetInfo);
 
-      expect(element).not.toBeNull();
+      expect(rep).not.toBeNull();
+      const element = 'light' in rep ? rep.light : rep;
       expect(element.type).toBe(MediumWidgetComponent);
-      expect(element.props).toEqual(snapshot);
+      expect(element.props.snapshot).toEqual(snapshot);
     });
 
     it('AND-05: setup-required Android render returns valid component with calm prompt', async () => {
@@ -387,23 +389,25 @@ describe('WidgetSyncCoordinator', () => {
       const smallCall = mockRequestWidgetUpdate.mock.calls.find(
         (c: any[]) => c[0].widgetName === 'IslamicPlannerSmall'
       );
-      const smallElement = smallCall[0].renderWidget({});
-      expect(smallElement).not.toBeNull();
+      const smallRep = smallCall[0].renderWidget({});
+      expect(smallRep).not.toBeNull();
+      const smallElement = 'light' in smallRep ? smallRep.light : smallRep;
       expect(smallElement.type).toBe(SmallWidgetComponent);
-      expect(smallElement.props.isSetupRequired).toBe(true);
+      expect(smallElement.props.snapshot.isSetupRequired).toBe(true);
 
       const mediumCall = mockRequestWidgetUpdate.mock.calls.find(
         (c: any[]) => c[0].widgetName === 'IslamicPlannerMedium'
       );
-      const mediumElement = mediumCall[0].renderWidget({});
-      expect(mediumElement).not.toBeNull();
+      const mediumRep = mediumCall[0].renderWidget({});
+      expect(mediumRep).not.toBeNull();
+      const mediumElement = 'light' in mediumRep ? mediumRep.light : mediumRep;
       expect(mediumElement.type).toBe(MediumWidgetComponent);
-      expect(mediumElement.props.isSetupRequired).toBe(true);
+      expect(mediumElement.props.snapshot.isSetupRequired).toBe(true);
     });
 
-    it('AND-06: WIDGET_CLICK handler uses islamic-planner://today deep link', () => {
-      const DEEP_LINK_TODAY = 'islamic-planner://today';
-      expect(DEEP_LINK_TODAY).toBe('islamic-planner://today');
+    it('AND-06: WIDGET_CLICK handler uses islamic-planner://planner deep link', () => {
+      const DEEP_LINK_PLANNER = 'islamic-planner://planner';
+      expect(DEEP_LINK_PLANNER).toBe('islamic-planner://planner');
     });
   });
 
@@ -427,6 +431,15 @@ describe('WidgetSyncCoordinator', () => {
       for (const widget of widgets) {
         expect(widget.updatePeriodMillis).toBe(1800000);
       }
+    });
+
+    it('CFG-01b: app.json configures ComicSansMS fonts for react-native-android-widget', () => {
+      const androidPlugin = plugins.find(
+        (p: any) => Array.isArray(p) && p[0] === 'react-native-android-widget'
+      );
+      expect(androidPlugin).toBeDefined();
+      expect(androidPlugin[1].fonts).toContain('./assets/fonts/ComicSansMS.ttf');
+      expect(androidPlugin[1].fonts).toContain('./assets/fonts/ComicSansMS-Bold.ttf');
     });
 
     it('CFG-02: app.json has friendly displayName values for iOS widgets', () => {

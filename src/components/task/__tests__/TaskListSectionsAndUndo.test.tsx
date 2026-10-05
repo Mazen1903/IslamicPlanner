@@ -136,7 +136,6 @@ describe('TaskList Sections and Undo Functionality', () => {
     const sampleTab: PrayerTabViewModel = {
       prayer: 'DHUHR',
       name: 'Dhuhr',
-      arabicName: 'الظهر',
       startTime: '1:05 PM',
       startDateTime: '2026-09-15T13:05:00.000Z',
       temporalState: 'CURRENT',
@@ -279,7 +278,6 @@ describe('TaskList Sections and Undo Functionality', () => {
       const activeTab: PrayerTabViewModel = {
         prayer: 'DHUHR',
         name: 'Dhuhr',
-        arabicName: 'الظهر',
         startTime: '1:05 PM',
         startDateTime: '2026-09-15T13:05:00Z',
         temporalState: 'CURRENT',
@@ -309,7 +307,6 @@ describe('TaskList Sections and Undo Functionality', () => {
       const asrTab: PrayerTabViewModel = {
         prayer: 'ASR',
         name: 'Asr',
-        arabicName: 'العصر',
         startTime: '4:35 PM',
         startDateTime: '2026-09-15T16:35:00Z',
         temporalState: 'FUTURE',
@@ -355,7 +352,6 @@ describe('TaskList Sections and Undo Functionality', () => {
       const maghribTab: PrayerTabViewModel = {
         prayer: 'MAGHRIB',
         name: 'Maghrib',
-        arabicName: 'المغرب',
         startTime: '7:15 PM',
         startDateTime: '2026-09-15T19:15:00Z',
         temporalState: 'FUTURE',
@@ -409,7 +405,6 @@ describe('TaskList Sections and Undo Functionality', () => {
       const fajrPastTab: PrayerTabViewModel = {
         prayer: 'FAJR',
         name: 'Fajr',
-        arabicName: 'الفجر',
         startTime: '5:25 AM',
         startDateTime: '2026-09-15T05:25:00Z',
         temporalState: 'PAST',

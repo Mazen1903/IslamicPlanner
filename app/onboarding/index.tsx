@@ -275,7 +275,7 @@ export default function OnboardingScreen({
       if (result.status === 'SUCCESS' || result.status === 'PERSISTED_REFRESH_FAILED') {
         // Mandatory order: markComplete() BEFORE router.replace()
         useOnboardingStore.getState().markComplete();
-        router.replace('/(tabs)/today');
+        router.replace('/(tabs)/planner');
       } else if (result.status === 'LOCATION_REQUIRED') {
         setCompletionError('A valid location is required to finish setup. Please go back and select your location.');
       } else if (result.status === 'SETUP_INCOMPLETE') {

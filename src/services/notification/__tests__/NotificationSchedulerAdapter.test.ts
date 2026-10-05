@@ -273,6 +273,7 @@ describe('NotificationSchedulerAdapter', () => {
           body: 'Tap to view your task',
           sound: 'default',
           data: desired.data,
+          categoryIdentifier: 'task-reminder-actions',
         },
         trigger: {
           type: 'date',

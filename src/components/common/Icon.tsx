@@ -96,7 +96,8 @@ export type IconName =
   | 'calendar-check'
   | 'format-font'
   | 'duration'
-  | 'flame';
+  | 'flame'
+  | 'expand';
 
 export interface IconProps {
   name: IconName;
@@ -196,6 +197,7 @@ const ICON_DEF_MAP: Record<IconName, ResolvedIconDef> = {
   'calendar-check': { lib: 'mci', name: 'calendar-check-outline' },
   'format-font': { lib: 'mci', name: 'format-font' },
   flame: { lib: 'ionicons', name: 'flame' },
+  expand: { lib: 'ionicons', name: 'expand-outline' },
 };
 
 export function Icon({

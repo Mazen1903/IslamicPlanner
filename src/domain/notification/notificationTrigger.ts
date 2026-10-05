@@ -1,47 +1,123 @@
+import { DateTime } from 'luxon';
 import type { TaskOccurrence, TaskDefinition } from '@/domain/task/types';
 import {
   NOTIFICATION_CHANNEL_ID,
   NOTIFICATION_PAYLOAD_VERSION,
+  NOTIFICATION_DEFAULT_SLOT,
   type DesiredNotification,
 } from './types';
 import { buildNotificationId } from './notificationIdentity';
+import {
+  normalizeReminderRule,
+  DEFAULT_ANYTIME_REMINDER_TIME,
+  formatReminderOffset,
+} from './reminderRule';
 
 /**
- * Derives the epoch timestamp (ms) for a task occurrence reminder trigger.
- *
- * Invariants:
- * 1. Only PENDING occurrences are eligible.
- * 2. TaskDefinition must have a non-null reminderRule with a numeric offsetMinutes.
- * 3. ANYTIME_TODAY has no concrete anchor; returns null.
- * 4. Anchor resolution:
- *    - EXACT_TIME: occurrence.calculatedStartTime
- *    - PRAYER_RELATIVE: occurrence.calculatedStartTime
- *    - PRAYER_WINDOW: occurrence.windowStart
- * 5. Trigger calculation: anchorMs + (offsetMinutes * 60_000).
- * 6. Past triggers (triggerAtMs <= nowMs) return null.
+ * Builds a rich notification body text.
+ * e.g. "Starts in 10 min · 1:45 PM", "Starting now · 2:00 PM", or "Scheduled for today".
  */
-export function deriveNotificationTrigger(
+export function buildNotificationBody(
+  occurrence: TaskOccurrence,
+  definition: TaskDefinition,
+  offsetMinutes?: number
+): string {
+  let relativePart = 'Scheduled for today';
+
+  if (typeof offsetMinutes === 'number') {
+    if (offsetMinutes < 0) {
+      const abs = Math.abs(offsetMinutes);
+      if (abs === 1440) {
+        relativePart = 'Starts in 1 day';
+      } else if (abs >= 60 && abs % 60 === 0) {
+        const h = abs / 60;
+        relativePart = `Starts in ${h} ${h === 1 ? 'hour' : 'hours'}`;
+      } else {
+        relativePart = `Starts in ${abs} min`;
+      }
+    } else if (offsetMinutes === 0) {
+      relativePart = 'Starting now';
+    } else {
+      relativePart = `Due in ${offsetMinutes} min`;
+    }
+  }
+
+  // Format start time if available
+  const startTimeIso = occurrence.calculatedStartTime || occurrence.windowStart;
+  if (startTimeIso) {
+    try {
+      const dt = occurrence.timezone
+        ? DateTime.fromISO(startTimeIso, { zone: occurrence.timezone })
+        : DateTime.fromISO(startTimeIso);
+      if (dt.isValid) {
+        const formattedTime = dt.toFormat('h:mm a');
+        return `${relativePart} · ${formattedTime}`;
+      }
+    } catch {
+      // Fallback to relative part
+    }
+  }
+
+  return relativePart;
+}
+
+export interface DerivedTriggerSlot {
+  slot: string;
+  triggerAtMs: number;
+  offsetMinutes?: number;
+}
+
+/**
+ * Derives all upcoming trigger slots (ms) for a task occurrence reminder.
+ * Returns empty array if not eligible or if all triggers are in the past.
+ */
+export function deriveNotificationTriggers(
   occurrence: TaskOccurrence,
   definition: TaskDefinition,
   nowMs: number
-): number | null {
+): DerivedTriggerSlot[] {
   // 1. Status eligibility: PENDING only
   if (occurrence.status !== 'PENDING') {
-    return null;
+    return [];
   }
 
-  // 2. Reminder rule eligibility
-  const reminderRule = definition.reminderRule;
-  if (!reminderRule || typeof reminderRule.offsetMinutes !== 'number' || !Number.isFinite(reminderRule.offsetMinutes)) {
-    return null;
+  // 2. Reminder rule normalization
+  const normalized = normalizeReminderRule(definition.reminderRule);
+  if (!normalized) {
+    return [];
   }
 
-  // 3. Schedule type check: ANYTIME_TODAY has no reminder anchor
+  // 3. ANYTIME_TODAY handling
   if (definition.scheduleType === 'ANYTIME_TODAY') {
-    return null;
+    if (!normalized.timeOfDay) {
+      return [];
+    }
+    const timeOfDay = normalized.timeOfDay;
+    let anchorMs: number | null = null;
+
+    try {
+      const dt = DateTime.fromISO(`${occurrence.localDate}T${timeOfDay}:00`, {
+        zone: occurrence.timezone || 'UTC',
+      });
+      if (dt.isValid) {
+        anchorMs = dt.toMillis();
+      }
+    } catch {
+      // Ignore parse failure
+    }
+
+    if (!anchorMs || Number.isNaN(anchorMs)) {
+      anchorMs = Date.parse(`${occurrence.localDate}T${timeOfDay}:00Z`);
+    }
+
+    if (Number.isNaN(anchorMs) || anchorMs <= nowMs) {
+      return [];
+    }
+
+    return [{ slot: NOTIFICATION_DEFAULT_SLOT, triggerAtMs: anchorMs }];
   }
 
-  // 4. Resolve anchor instant string
+  // 4. Resolve anchor instant string for timed tasks
   let anchorIso: string | null = null;
   if (definition.scheduleType === 'EXACT_TIME' || definition.scheduleType === 'PRAYER_RELATIVE') {
     anchorIso = occurrence.calculatedStartTime;
@@ -50,27 +126,87 @@ export function deriveNotificationTrigger(
   }
 
   if (!anchorIso) {
-    return null;
+    return [];
   }
 
   const anchorMs = Date.parse(anchorIso);
   if (Number.isNaN(anchorMs)) {
-    return null;
+    return [];
   }
 
-  // 5. Calculate trigger instant: anchor + offsetMinutes
-  const triggerAtMs = anchorMs + Math.round(reminderRule.offsetMinutes * 60_000);
+  const results: DerivedTriggerSlot[] = [];
 
-  // 6. Past trigger check: must be strictly in the future (> nowMs)
-  if (triggerAtMs <= nowMs) {
-    return null;
-  }
+  normalized.offsetsMinutes.forEach((offset, idx) => {
+    // Math: anchor + offset (offset is negative for "before", 0 for "at time")
+    const triggerAtMs = anchorMs + Math.round(offset * 60_000);
+    if (triggerAtMs > nowMs) {
+      const slot = normalized.offsetsMinutes.length === 1 ? NOTIFICATION_DEFAULT_SLOT : `r${idx}`;
+      results.push({
+        slot,
+        triggerAtMs,
+        offsetMinutes: offset,
+      });
+    }
+  });
 
-  return triggerAtMs;
+  return results;
 }
 
 /**
- * Derives the canonical DesiredNotification object for an eligible occurrence.
+ * Derives the single primary/earliest upcoming trigger timestamp (ms) for backward compatibility.
+ * Returns null if not eligible or if all triggers are in the past.
+ */
+export function deriveNotificationTrigger(
+  occurrence: TaskOccurrence,
+  definition: TaskDefinition,
+  nowMs: number
+): number | null {
+  const triggers = deriveNotificationTriggers(occurrence, definition, nowMs);
+  if (triggers.length === 0) {
+    return null;
+  }
+  // Return earliest upcoming trigger
+  return triggers[0].triggerAtMs;
+}
+
+/**
+ * Derives all canonical DesiredNotification objects for an eligible occurrence.
+ */
+export function deriveDesiredNotifications(
+  occurrence: TaskOccurrence,
+  definition: TaskDefinition,
+  nowMs: number,
+  channelId = NOTIFICATION_CHANNEL_ID
+): DesiredNotification[] {
+  const triggers = deriveNotificationTriggers(occurrence, definition, nowMs);
+  if (triggers.length === 0) {
+    return [];
+  }
+
+  return triggers.map(({ slot, triggerAtMs, offsetMinutes }) => {
+    const identifier = buildNotificationId(occurrence.id, slot);
+    return {
+      identifier,
+      occurrenceId: occurrence.id,
+      taskDefinitionId: definition.id,
+      title: definition.title,
+      triggerAtMs,
+      channelId,
+      data: {
+        kind: 'task-reminder',
+        occurrenceId: occurrence.id,
+        taskDefinitionId: definition.id,
+        reminderSlot: slot,
+        triggerAtMs,
+        payloadVersion: NOTIFICATION_PAYLOAD_VERSION,
+        body: buildNotificationBody(occurrence, definition, offsetMinutes),
+      },
+    };
+  });
+}
+
+/**
+ * Derives the single canonical DesiredNotification object for an eligible occurrence (earliest slot).
  * Returns null if not eligible or if trigger is in the past.
  */
 export function deriveDesiredNotification(
@@ -78,27 +214,7 @@ export function deriveDesiredNotification(
   definition: TaskDefinition,
   nowMs: number
 ): DesiredNotification | null {
-  const triggerAtMs = deriveNotificationTrigger(occurrence, definition, nowMs);
-  if (triggerAtMs === null) {
-    return null;
-  }
-
-  const identifier = buildNotificationId(occurrence.id);
-
-  return {
-    identifier,
-    occurrenceId: occurrence.id,
-    taskDefinitionId: definition.id,
-    title: definition.title,
-    triggerAtMs,
-    channelId: NOTIFICATION_CHANNEL_ID,
-    data: {
-      kind: 'task-reminder',
-      occurrenceId: occurrence.id,
-      taskDefinitionId: definition.id,
-      reminderSlot: 'default',
-      triggerAtMs,
-      payloadVersion: NOTIFICATION_PAYLOAD_VERSION,
-    },
-  };
+  const all = deriveDesiredNotifications(occurrence, definition, nowMs);
+  return all.length > 0 ? all[0] : null;
 }
+

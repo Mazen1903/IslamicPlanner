@@ -3,9 +3,7 @@ import { userSettings } from '@/data/schema';
 import { getDatabase, type AppDatabase } from '@/data/db';
 import type { Coordinates } from '@/domain/prayer/types';
 
-export type UserSettingsRow = Omit<typeof userSettings.$inferSelect, 'flameEngine'> & {
-  flameEngine?: string;
-};
+export type UserSettingsRow = typeof userSettings.$inferSelect;
 export type UserSettingsPatch = Partial<Omit<typeof userSettings.$inferInsert, 'id' | 'createdAt'>>;
 
 function getDb(tx?: any): AppDatabase {
@@ -61,9 +59,7 @@ export class UserSettingsRepository {
           patch.prayerAdjustments ??
           '{"fajr":0,"sunrise":0,"dhuhr":0,"asr":0,"maghrib":0,"isha":0}',
         planningDayStart: patch.planningDayStart ?? 'FAJR',
-        hijriBaseMethod: patch.hijriBaseMethod ?? 'UMM_AL_QURA',
         hijriGlobalAdjustment: patch.hijriGlobalAdjustment ?? 0,
-        worshipSuggestionsEnabled: patch.worshipSuggestionsEnabled ?? true,
         prayerAlertsEnabled: patch.prayerAlertsEnabled ?? true,
         completedTasksMode: patch.completedTasksMode ?? 'KEEP',
         overdueTasksMode: patch.overdueTasksMode ?? 'KEEP',
@@ -71,12 +67,14 @@ export class UserSettingsRepository {
         taskRemindersEnabled: patch.taskRemindersEnabled ?? true,
         taskVibrationEnabled: patch.taskVibrationEnabled ?? true,
         quietHoursEnabled: patch.quietHoursEnabled ?? false,
+        quietHoursStart: patch.quietHoursStart ?? '22:00',
+        quietHoursEnd: patch.quietHoursEnd ?? '06:00',
+        defaultReminderMinutes: patch.defaultReminderMinutes ?? null,
         journalReminderEnabled: patch.journalReminderEnabled ?? false,
         journalReminderTime: patch.journalReminderTime ?? '21:30',
         themeMode: patch.themeMode ?? 'SYSTEM',
         isPremium: patch.isPremium ?? false,
         onboardingCompleted: patch.onboardingCompleted ?? false,
-        flameEngine: patch.flameEngine ?? 'lottie',
         createdAt: now,
         updatedAt: now,
       });

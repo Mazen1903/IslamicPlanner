@@ -20,7 +20,6 @@ import type {
   PrayerAdjustments,
 } from '@/domain/prayer/types';
 import type { ThemeMode } from '@/theme/tokens';
-import type { HijriBaseMethod } from '@/domain/calendar/types';
 
 export type MutationCategory =
   | 'TEMPORAL_FULL_REFRESH'
@@ -64,15 +63,9 @@ const VALID_POLAR_RESOLUTIONS: ReadonlySet<string> = new Set<PolarCircleResoluti
 
 const VALID_THEME_MODES: ReadonlySet<string> = new Set<ThemeMode>(['SYSTEM', 'LIGHT', 'DARK']);
 
-const VALID_HIJRI_BASE_METHODS: ReadonlySet<string> = new Set<HijriBaseMethod>([
-  'UMM_AL_QURA',
-  'CALCULATED',
-]);
-
 const FORBIDDEN_PATCH_KEYS: ReadonlySet<string> = new Set([
   'isPremium',
   'onboardingCompleted',
-  'worshipSuggestionsEnabled',
   'prayerAlertsEnabled',
   'locationMode',
   'manualLatitude',
@@ -94,7 +87,6 @@ const TEMPORAL_ALLOWED_KEYS: ReadonlySet<string> = new Set([
 
 const PRESENTATION_ALLOWED_KEYS: ReadonlySet<string> = new Set([
   'themeMode',
-  'hijriBaseMethod',
 ]);
 
 const HIJRI_USER_SETTINGS_KEYS: ReadonlySet<string> = new Set([
@@ -348,12 +340,6 @@ export class SettingsMutationCoordinator {
       if (patch.themeMode !== undefined) {
         if (!VALID_THEME_MODES.has(patch.themeMode as ThemeMode)) {
           throw new Error(`Invalid themeMode: "${patch.themeMode}".`);
-        }
-      }
-
-      if (patch.hijriBaseMethod !== undefined) {
-        if (!VALID_HIJRI_BASE_METHODS.has(patch.hijriBaseMethod as HijriBaseMethod)) {
-          throw new Error(`Invalid hijriBaseMethod: "${patch.hijriBaseMethod}".`);
         }
       }
 

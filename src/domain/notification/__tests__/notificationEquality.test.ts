@@ -84,7 +84,7 @@ describe('Notification Equality', () => {
   it('returns false when payload payloadVersion differs (stale payloadVersion)', () => {
     const current = {
       ...matchingSnapshot,
-      data: { ...matchingSnapshot.data!, payloadVersion: 2 },
+      data: { ...matchingSnapshot.data!, payloadVersion: 999 },
     };
     expect(isNotificationEquivalent(desired, current)).toBe(false);
   });

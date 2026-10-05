@@ -5,7 +5,7 @@ import { PrayerHeader } from '@/components/prayer/PrayerHeader';
 import { DayDetailTaskList } from '@/components/calendar/DayDetailTaskList';
 import fs from 'fs';
 
-describe('Group L: Arabic / Mixed-Bidi Content & Suppression Contract', () => {
+describe('Group L: Arabic Suppression & Pure English UI Contract', () => {
   const sampleSelectedDayDetail: any = {
     civilDate: '2026-09-15',
     hijriFormatted: '3 Rabi al-Awwal 1448 AH',
@@ -13,7 +13,6 @@ describe('Group L: Arabic / Mixed-Bidi Content & Suppression Contract', () => {
       {
         prayer: 'FAJR',
         name: 'Fajr',
-        arabicName: 'الفجر',
         startTime: '5:15 AM',
         tasks: [],
       },
@@ -22,7 +21,7 @@ describe('Group L: Arabic / Mixed-Bidi Content & Suppression Contract', () => {
     totalTasksCount: 0,
   };
 
-  it('L-1: DayDetailTaskList Arabic prayer name is suppressed from accessibility (A-11)', async () => {
+  it('L-1: DayDetailTaskList renders cleanly with zero Arabic script', async () => {
     const { toJSON } = await render(
       <ThemeProvider>
         <DayDetailTaskList selectedDayDetail={sampleSelectedDayDetail} />
@@ -30,12 +29,10 @@ describe('Group L: Arabic / Mixed-Bidi Content & Suppression Contract', () => {
     );
 
     const json = JSON.stringify(toJSON());
-    // Arabic text has importantForAccessibility="no"
-    expect(json).toContain('"importantForAccessibility":"no"');
-    expect(json).toContain('"accessibilityElementsHidden":true');
+    expect(/[\u0600-\u06FF\uFD00-\uFDFF\uFE70-\uFEFE]/.test(json)).toBe(false);
   });
 
-  it('L-2: PrayerHeader Arabic prayer name is suppressed from individual screen-reader traversal (A-7)', async () => {
+  it('L-2: PrayerHeader renders cleanly with zero Arabic script', async () => {
     const { toJSON } = await render(
       <ThemeProvider>
         <PrayerHeader
@@ -47,14 +44,39 @@ describe('Group L: Arabic / Mixed-Bidi Content & Suppression Contract', () => {
     );
 
     const json = JSON.stringify(toJSON());
-    // In PrayerHeader, content is grouped with composite label and ornament is hidden
-    expect(json).toContain('"importantForAccessibility":"no"');
+    expect(/[\u0600-\u06FF\uFD00-\uFDFF\uFE70-\uFEFE]/.test(json)).toBe(false);
   });
 
-  it('L-3: PrayerHeader decorative geometric ornament is suppressed from accessibility (OBS-2 / A-7)', async () => {
-    const src = fs.readFileSync('src/components/prayer/PrayerHeader.tsx', 'utf8');
-    expect(src).toContain('importantForAccessibility="no"');
-    expect(src).toContain('accessibilityElementsHidden={true}');
+  it('L-3: Zero files in the production codebase contain Arabic script characters', () => {
+    const ARABIC_REGEX = /[\u0600-\u06FF\uFD00-\uFDFF\uFE70-\uFEFE]/;
+
+    function getFiles(dir: string): string[] {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      const files: string[] = [];
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          const full = `${dir}/${entry.name}`;
+          if (!full.includes('__tests__') && !full.includes('node_modules')) {
+            files.push(...getFiles(full));
+          }
+        } else if (entry.isFile() && (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx'))) {
+          files.push(`${dir}/${entry.name}`);
+        }
+      }
+      return files;
+    }
+
+    const prodFiles = [
+      ...getFiles('app'),
+      ...getFiles('src'),
+      ...getFiles('widgets'),
+    ];
+
+    for (const file of prodFiles) {
+      const content = fs.readFileSync(file, 'utf8');
+      const hasArabic = ARABIC_REGEX.test(content);
+      expect({ file, hasArabic }).toEqual({ file, hasArabic: false });
+    }
   });
 
   it('L-4: English accessible label provides composite prayer information without requiring Arabic TTS', async () => {
@@ -94,6 +116,7 @@ describe('Group L: Arabic / Mixed-Bidi Content & Suppression Contract', () => {
     const prodFiles = [
       ...getFiles('app'),
       ...getFiles('src'),
+      ...getFiles('widgets'),
     ];
 
     for (const file of prodFiles) {
@@ -103,7 +126,7 @@ describe('Group L: Arabic / Mixed-Bidi Content & Suppression Contract', () => {
     }
   });
 
-  it('L-6: DayDetailTaskList English prayer name is readable while Arabic is secondary', async () => {
+  it('L-6: DayDetailTaskList English prayer name is readable', async () => {
     await render(
       <ThemeProvider>
         <DayDetailTaskList selectedDayDetail={sampleSelectedDayDetail} />

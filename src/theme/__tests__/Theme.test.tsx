@@ -343,7 +343,6 @@ describe('Islamic Themes Registry & Provider Integration', () => {
 
     ISLAMIC_THEMES.forEach(theme => {
       expect(theme.name).toBeTruthy();
-      expect(theme.arabicName).toBeTruthy();
       expect(theme.tagline).toBeTruthy();
       expect(typeof theme.isDark).toBe('boolean');
       expect(theme.previewColors.primary).toMatch(/^#[0-9A-Fa-f]{6}$/);

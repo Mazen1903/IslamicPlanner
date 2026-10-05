@@ -78,6 +78,66 @@ export const TASK_ICON_ASSETS: Record<string, any> = {
   'pin': require('../../assets/icons/task_icons/pin.png'),
   'clock': require('../../assets/icons/task_icons/clock.png'),
   'checkmark': require('../../assets/icons/task_icons/checkmark.png'),
+  // ─── 🕌 Deen & Worship Expansion ───
+  'prayer-mat': require('../../assets/icons/task_icons/prayer-mat.png'),
+  'tahajjud': require('../../assets/icons/task_icons/tahajjud.png'),
+  'hajj': require('../../assets/icons/task_icons/hajj.png'),
+  'quran-memorization': require('../../assets/icons/task_icons/quran-memorization.png'),
+  'zakat': require('../../assets/icons/task_icons/zakat.png'),
+  'dates-fruit': require('../../assets/icons/task_icons/dates-fruit.png'),
+  'janazah': require('../../assets/icons/task_icons/janazah.png'),
+  'miswak': require('../../assets/icons/task_icons/miswak.png'),
+  // ─── ☀️ Routine & Daily Life Expansion ───
+  'bed-nap': require('../../assets/icons/task_icons/bed-nap.png'),
+  'toothbrush': require('../../assets/icons/task_icons/toothbrush.png'),
+  'skincare': require('../../assets/icons/task_icons/skincare.png'),
+  'bath': require('../../assets/icons/task_icons/bath.png'),
+  'water-jug': require('../../assets/icons/task_icons/water-jug.png'),
+  // ─── 💼 Work & Study Expansion ───
+  'desk': require('../../assets/icons/task_icons/desk.png'),
+  'meeting': require('../../assets/icons/task_icons/meeting.png'),
+  'certificate': require('../../assets/icons/task_icons/certificate.png'),
+  'folder': require('../../assets/icons/task_icons/folder.png'),
+  'microscope': require('../../assets/icons/task_icons/microscope.png'),
+  // ─── 💰 Finance & Money ───
+  'wallet': require('../../assets/icons/task_icons/wallet.png'),
+  'money': require('../../assets/icons/task_icons/money.png'),
+  'credit-card': require('../../assets/icons/task_icons/credit-card.png'),
+  'piggy-bank': require('../../assets/icons/task_icons/piggy-bank.png'),
+  'invoice': require('../../assets/icons/task_icons/invoice.png'),
+  // ─── ✈️ Travel & Commute ───
+  'luggage': require('../../assets/icons/task_icons/luggage.png'),
+  'bus': require('../../assets/icons/task_icons/bus.png'),
+  'train': require('../../assets/icons/task_icons/train.png'),
+  'passport': require('../../assets/icons/task_icons/passport.png'),
+  'gas-station': require('../../assets/icons/task_icons/gas-station.png'),
+  // ─── 🏃 Health & Fitness Expansion ───
+  'swimming': require('../../assets/icons/task_icons/swimming.png'),
+  'hiking': require('../../assets/icons/task_icons/hiking.png'),
+  'apple': require('../../assets/icons/task_icons/apple.png'),
+  'scale': require('../../assets/icons/task_icons/scale.png'),
+  'sleep-mask': require('../../assets/icons/task_icons/sleep-mask.png'),
+  // ─── 🏠 Home & Chores Expansion ───
+  'bed-making': require('../../assets/icons/task_icons/bed-making.png'),
+  'dishes': require('../../assets/icons/task_icons/dishes.png'),
+  'grocery-cart': require('../../assets/icons/task_icons/grocery-cart.png'),
+  'lightbulb-fixture': require('../../assets/icons/task_icons/lightbulb-fixture.png'),
+  'key': require('../../assets/icons/task_icons/key.png'),
+  // ─── 👥 Family & Social Expansion ───
+  'handshake': require('../../assets/icons/task_icons/handshake.png'),
+  'dinner-table': require('../../assets/icons/task_icons/dinner-table.png'),
+  'crying-baby': require('../../assets/icons/task_icons/crying-baby.png'),
+  'elderly': require('../../assets/icons/task_icons/elderly.png'),
+  // ─── 🎨 Leisure & Hobbies Expansion ───
+  'gardening-trowel': require('../../assets/icons/task_icons/gardening-trowel.png'),
+  'book-shelf': require('../../assets/icons/task_icons/book-shelf.png'),
+  'guitar': require('../../assets/icons/task_icons/guitar.png'),
+  'board-game': require('../../assets/icons/task_icons/board-game.png'),
+  // ─── ⭐ Productivity & Goals Expansion ───
+  'rocket': require('../../assets/icons/task_icons/rocket.png'),
+  'timer': require('../../assets/icons/task_icons/timer.png'),
+  'shield': require('../../assets/icons/task_icons/shield.png'),
+  'calendar': require('../../assets/icons/task_icons/calendar.png'),
 };
 
 /**

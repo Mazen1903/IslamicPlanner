@@ -80,11 +80,9 @@ describe('AppearanceScreen', () => {
     });
 
     expect(getByText('Fajr Awakening')).toBeTruthy();
-    expect(getByText('فجر السكينة')).toBeTruthy();
     expect(getByText('Rawdah Emerald')).toBeTruthy();
-    expect(getByText('الروضة الشريفة')).toBeTruthy();
     expect(getByText('Tahajjud Noor')).toBeTruthy();
-    expect(getByText('نور الليل')).toBeTruthy();
+    expect(getByText('Andalusian Oasis')).toBeTruthy();
   });
 
   it('allows selecting an Islamic theme and displays its tagline banner', async () => {

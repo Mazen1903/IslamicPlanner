@@ -430,6 +430,27 @@ export const SettingsAccDataMgmtIcon = createSettingsBadgeIcon({
   renderIcon: (size, colors) => <Ionicons name="server-outline" size={size} color={colors.textSecondary} />,
 });
 
+export const SettingsAccExportIcon = createSettingsBadgeIcon({
+  defaultSize: 40,
+  label: 'Export Backup',
+  getBgColor: colors => colors.primaryLight,
+  renderIcon: (size, colors) => <Ionicons name="share-outline" size={size} color={colors.primary} />,
+});
+
+export const SettingsAccImportIcon = createSettingsBadgeIcon({
+  defaultSize: 40,
+  label: 'Import Backup',
+  getBgColor: colors => colors.prayerFajr,
+  renderIcon: (size, colors) => <Ionicons name="download-outline" size={size} color={colors.primary} />,
+});
+
+export const SettingsAccEraseIcon = createSettingsBadgeIcon({
+  defaultSize: 40,
+  label: 'Erase All Data',
+  getBgColor: colors => colors.dangerSurface,
+  renderIcon: (size, colors) => <Ionicons name="trash-outline" size={size} color={colors.error} />,
+});
+
 export const SettingsAccSecurityShieldIcon = createSettingsBadgeIcon({
   defaultSize: 40,
   label: 'Encrypted and Secure',

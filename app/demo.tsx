@@ -234,7 +234,7 @@ function DemoContent() {
 
 export default function DesignSystemDemoScreen() {
   if (!__DEV__) {
-    return <Redirect href="/(tabs)/today" />;
+    return <Redirect href="/(tabs)/planner" />;
   }
   return <DemoContent />;
 }

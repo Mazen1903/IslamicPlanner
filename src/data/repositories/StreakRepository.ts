@@ -293,4 +293,14 @@ export class StreakRepository {
     const data = await this.findBySeriesId(seriesId, tx);
     return Boolean(data?.streakEnabled);
   }
+
+  /**
+   * Deletes streak data for a given series.
+   */
+  async deleteBySeriesId(seriesId: string, tx?: any): Promise<void> {
+    const db = getDb(tx);
+    await db.delete(streakData).where(eq(streakData.seriesId, seriesId));
+  }
 }
+
+export const streakRepository = new StreakRepository();

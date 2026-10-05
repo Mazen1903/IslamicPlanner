@@ -13,21 +13,23 @@ import {
   SettingsToggle,
   SettingsInfoCard,
   PastelOptionCard,
-  SettingsAccSignInIcon,
-  SettingsAccCloudSyncIcon,
-  SettingsAccConnectedDevicesIcon,
-  SettingsAccSyncNowIcon,
-  SettingsAccDataMgmtIcon,
-  SettingsAccSecurityShieldIcon,
+  SettingsAccExportIcon,
+  SettingsAccImportIcon,
+  SettingsAccEraseIcon,
 } from '@/components/settings';
-import { Switch } from 'react-native';
+import {
+  dataBackupService as defaultBackupService,
+  DataBackupService,
+} from '@/services/data/DataBackupService';
 
 export interface JournalPrivacyScreenProps {
   controller?: JournalLockController;
+  backupService?: DataBackupService;
 }
 
 export default function JournalPrivacyScreen({
   controller = defaultController,
+  backupService = defaultBackupService,
 }: JournalPrivacyScreenProps) {
   const { colors, spacing, radii, typography, shadows } = useTheme();
   const router = useRouter();
@@ -35,6 +37,7 @@ export default function JournalPrivacyScreen({
   const [isEnabled, setIsEnabled] = useState<boolean>(controller.isEnabled);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
+  const [isOperatingData, setIsOperatingData] = useState<boolean>(false);
 
   useEffect(() => {
     let active = true;
@@ -62,7 +65,6 @@ export default function JournalPrivacyScreen({
     setIsProcessing(true);
     try {
       if (newValue) {
-        // Enabling requires biometric auth
         const res = await controller.enableLock();
         if (res.success) {
           setIsEnabled(true);
@@ -70,7 +72,6 @@ export default function JournalPrivacyScreen({
           Alert.alert('Unable to Enable Lock', res.error, [{ text: 'OK' }]);
         }
       } else {
-        // Disabling requires biometric auth verification
         const res = await controller.disableLock();
         if (res.success) {
           setIsEnabled(false);
@@ -89,7 +90,85 @@ export default function JournalPrivacyScreen({
     }
   };
 
-  const [cloudSync, setCloudSync] = useState(true);
+  const handleExportBackup = async () => {
+    if (isOperatingData) return;
+    setIsOperatingData(true);
+    try {
+      const res = await backupService.exportBackup();
+      if (!res.success && res.error) {
+        Alert.alert('Export Failed', res.error, [{ text: 'OK' }]);
+      }
+    } catch {
+      Alert.alert('Export Error', 'An unexpected error occurred while exporting data.', [{ text: 'OK' }]);
+    } finally {
+      setIsOperatingData(false);
+    }
+  };
+
+  const handleImportBackup = () => {
+    if (isOperatingData) return;
+
+    Alert.alert(
+      'Restore From Backup',
+      'Importing a backup will replace your current tasks, planner settings, and streak data with the backup file. This cannot be undone. Do you wish to continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Choose File & Restore',
+          onPress: async () => {
+            setIsOperatingData(true);
+            try {
+              const res = await backupService.importBackupFromFile();
+              if (res.success) {
+                Alert.alert(
+                  'Restore Complete',
+                  `Your backup data from ${res.importedAt ? new Date(res.importedAt).toLocaleDateString() : 'file'} has been successfully restored.`,
+                  [{ text: 'OK' }]
+                );
+              } else if (res.error && res.error !== 'Document picker was canceled') {
+                Alert.alert('Restore Failed', res.error, [{ text: 'OK' }]);
+              }
+            } catch {
+              Alert.alert('Restore Error', 'An unexpected error occurred during import.', [{ text: 'OK' }]);
+            } finally {
+              setIsOperatingData(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleEraseAllData = () => {
+    if (isOperatingData) return;
+
+    Alert.alert(
+      'Erase All Data',
+      'This will permanently delete all your tasks, journal entries, streaks, and preferences from this device. The app will return to the welcome screen. This action cannot be reversed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Permanently Erase',
+          style: 'destructive',
+          onPress: async () => {
+            setIsOperatingData(true);
+            try {
+              const res = await backupService.eraseAllData();
+              if (res.success) {
+                router.replace('/onboarding' as any);
+              } else {
+                Alert.alert('Erase Failed', res.error || 'Failed to erase data.', [{ text: 'OK' }]);
+              }
+            } catch {
+              Alert.alert('Erase Error', 'An unexpected error occurred while resetting the app.', [{ text: 'OK' }]);
+            } finally {
+              setIsOperatingData(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView
@@ -97,8 +176,8 @@ export default function JournalPrivacyScreen({
       edges={['top', 'left', 'right']}
     >
       <SettingsPastelHeader
-        title="Account & Sync"
-        subtitle="Keep your data safe and in sync."
+        title="Privacy & Data"
+        subtitle="Your data stays on your device."
         showBack
         showMosqueArt
         backTestID="journal-privacy-back-button"
@@ -110,115 +189,31 @@ export default function JournalPrivacyScreen({
         contentContainerStyle={[styles.scrollContent, { paddingHorizontal: spacing.md, paddingBottom: spacing.xxl }]}
         testID="journal-privacy-screen"
       >
-        {/* MOCKUP ACCOUNT & SYNC OPTIONS */}
+        {/* BACKUP & DATA MANAGEMENT SECTION */}
+        <SettingsSectionHeader title="Backup & Restore" />
         <View style={styles.cardsList}>
-          {/* 1. Sign In */}
+          {/* 1. Export Backup */}
           <PastelOptionCard
-            label="Sign In"
-            subtitle="Create or sign in to your account"
-            customBadge={<SettingsAccSignInIcon size={40} />}
-            onPress={() => {}}
-            testID="account-row-sign-in"
+            label="Export Backup"
+            subtitle="Save tasks, settings and streaks as JSON"
+            customBadge={<SettingsAccExportIcon size={40} />}
+            onPress={handleExportBackup}
+            disabled={isOperatingData}
+            testID="privacy-row-export-backup"
           />
 
-          {/* 2. Cloud Sync */}
-          <View
-            style={[
-              styles.syncCard,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                borderRadius: radii.card,
-                padding: spacing.md,
-                marginBottom: spacing.sm,
-              },
-              shadows.card,
-            ]}
-          >
-            <View style={styles.syncTopRow}>
-              <View style={{ marginRight: spacing.md }}>
-                <SettingsAccCloudSyncIcon size={40} />
-              </View>
-              <View style={styles.syncTextContainer}>
-                <Text style={[typography.labelLarge, { color: colors.textPrimary }]}>Cloud Sync</Text>
-                <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>Backup and sync your data</Text>
-              </View>
-              <Switch
-                value={cloudSync}
-                onValueChange={setCloudSync}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor={colors.surface}
-              />
-            </View>
-            <Text style={[typography.caption, { color: colors.textTertiary, marginTop: spacing.sm }]}>
-              Your tasks, settings and progress will be synced across your devices.
-            </Text>
-          </View>
-
-          {/* 3. Connected Devices */}
+          {/* 2. Import Backup */}
           <PastelOptionCard
-            label="Connected Devices"
-            subtitle="Manage your devices"
-            customBadge={<SettingsAccConnectedDevicesIcon size={40} />}
-            onPress={() => {}}
-            testID="account-row-devices"
-          />
-
-          {/* 4. Sync Now */}
-          <PastelOptionCard
-            label="Sync Now"
-            subtitle="Last synced: Today at 9:41 AM"
-            customBadge={<SettingsAccSyncNowIcon size={40} />}
-            onPress={() => {}}
-            testID="account-row-sync-now"
-          />
-
-          {/* 5. Data Management */}
-          <PastelOptionCard
-            label="Data Management"
-            subtitle="Export, import or reset your data"
-            customBadge={<SettingsAccDataMgmtIcon size={40} />}
-            onPress={() => {}}
-            testID="account-row-data-mgmt"
+            label="Import Backup"
+            subtitle="Restore data from a JSON backup file"
+            customBadge={<SettingsAccImportIcon size={40} />}
+            onPress={handleImportBackup}
+            disabled={isOperatingData}
+            testID="privacy-row-import-backup"
           />
         </View>
 
-        {/* Security Shield Notice matching mockup */}
-        <View
-          style={[
-            styles.securityCard,
-            {
-              backgroundColor: colors.primaryLight,
-              borderColor: colors.border,
-              borderRadius: radii.card,
-              padding: spacing.md,
-              marginVertical: spacing.sm,
-              flexDirection: 'row',
-              alignItems: 'center',
-            },
-            shadows.card,
-          ]}
-        >
-          <View style={{ marginRight: spacing.md }}>
-            <SettingsAccSecurityShieldIcon size={38} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[typography.labelMedium, { color: colors.textPrimary, fontWeight: '700' }]}>
-              Your data is encrypted and secure.
-            </Text>
-            <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-              We never share your personal information.
-            </Text>
-          </View>
-        </View>
-
-        <SettingsInfoCard
-          title="On-Device AES-256-GCM Encryption"
-          message="Your personal journal reflections are always encrypted using cryptographic keys stored securely on your device. Enabling Biometric Lock requires Face ID, Touch ID, or Biometric authentication each time the Journal is opened."
-          icon="lock"
-          testID="journal-privacy-info-card"
-        />
-
+        {/* ACCESS PROTECTION SECTION */}
         <SettingsSectionHeader title="Access Protection" />
         <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {isInitializing ? (
@@ -239,7 +234,18 @@ export default function JournalPrivacyScreen({
         </View>
 
         {/* Current Security Status Card */}
-        <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.md, margin: spacing.md, padding: spacing.md }]}>
+        <View
+          style={[
+            styles.statusCard,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderRadius: radii.md,
+              marginVertical: spacing.sm,
+              padding: spacing.md,
+            },
+          ]}
+        >
           <Text style={[typography.labelMedium, { color: colors.textSecondary }]}>
             CURRENT PRIVACY STATUS
           </Text>
@@ -271,6 +277,41 @@ export default function JournalPrivacyScreen({
             Encryption remains fully active regardless of whether biometric locking is enabled.
           </Text>
         </View>
+
+        {/* Info card regarding encryption and local-first architecture */}
+        <SettingsInfoCard
+          title="On-Device AES-256-GCM Encryption"
+          message="Your personal journal reflections are always encrypted using cryptographic keys stored securely on your device. Journal entries are not included in backups to protect your privacy. Enabling Biometric Lock requires Face ID, Touch ID, or Biometric authentication each time the Journal is opened."
+          icon="lock"
+          testID="journal-privacy-info-card"
+        />
+
+        {/* DANGER ZONE SECTION */}
+        <SettingsSectionHeader title="Danger Zone" />
+        <View style={styles.cardsList}>
+          <PastelOptionCard
+            label="Erase All Data"
+            subtitle="Permanently delete all local data and reset app"
+            customBadge={<SettingsAccEraseIcon size={40} />}
+            onPress={handleEraseAllData}
+            disabled={isOperatingData}
+            testID="privacy-row-erase-all"
+          />
+        </View>
+
+        <Text
+          style={[
+            typography.caption,
+            {
+              color: colors.textTertiary,
+              textAlign: 'center',
+              marginHorizontal: spacing.md,
+              marginTop: spacing.md,
+            },
+          ]}
+        >
+          All data is stored exclusively on this device. Backups allow you to transfer data between devices manually.
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -297,21 +338,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   cardsList: {
-    paddingTop: 8,
-  },
-  syncCard: {
-    borderWidth: 1,
-  },
-  syncTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  syncTextContainer: {
-    flex: 1,
-    paddingRight: 8,
-  },
-  securityCard: {
-    borderWidth: 1,
+    paddingTop: 4,
   },
   badge: {
     paddingHorizontal: 10,

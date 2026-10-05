@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, screen } from '@testing-library/react-native';
+import { render, fireEvent, screen, act } from '@testing-library/react-native';
 import { BottomNavBar } from '../BottomNavBar';
 import { ThemeProvider } from '@/theme';
 import { useAddTaskModalStore } from '@/stores/useAddTaskModalStore';
@@ -15,7 +15,7 @@ describe('BottomNavBar (M16 Navigation)', () => {
     state: {
       index: 0,
       routes: [
-        { key: 'today-key', name: 'today' },
+        { key: 'planner-key', name: 'planner' },
         { key: 'calendar-key', name: 'calendar' },
         { key: 'add-key', name: 'add' },
         { key: 'journal-key', name: 'journal' },
@@ -51,14 +51,14 @@ describe('BottomNavBar (M16 Navigation)', () => {
     expect(screen.queryByText('Worship')).toBeNull();
   });
 
-  it('NAV-05: 5 navigation positions are in fixed order: today, calendar, add, journal, settings', async () => {
+  it('NAV-05: 5 navigation positions are in fixed order: planner, calendar, add, journal, settings', async () => {
     await render(
       <ThemeProvider>
         <BottomNavBar {...defaultProps} />
       </ThemeProvider>
     );
 
-    expect(screen.getByTestId('bottom-nav-today')).toBeTruthy();
+    expect(screen.getByTestId('bottom-nav-planner')).toBeTruthy();
     expect(screen.getByTestId('bottom-nav-calendar')).toBeTruthy();
     expect(screen.getByTestId('bottom-nav-add')).toBeTruthy();
     expect(screen.getByTestId('bottom-nav-journal')).toBeTruthy();
@@ -133,5 +133,65 @@ describe('BottomNavBar (M16 Navigation)', () => {
 
     expect(useAddTaskModalStore.getState().isOpen).toBe(true);
     expect(mockNavigation.navigate).not.toHaveBeenCalledWith('add');
+  });
+
+  it('renders sliding pill without border and responds to tab layout', async () => {
+    const { rerender } = await render(
+      <ThemeProvider>
+        <BottomNavBar {...defaultProps} />
+      </ThemeProvider>
+    );
+
+    // Trigger onLayout on the planner tab and its icon container inside act
+    await act(async () => {
+      const plannerTab = screen.getByTestId('bottom-nav-planner');
+      fireEvent(plannerTab, 'layout', {
+        nativeEvent: { layout: { x: 0, y: 0, width: 75, height: 48 } },
+      });
+      const iconContainer = screen.getByTestId('bottom-nav-icon-planner');
+      fireEvent(iconContainer, 'layout', {
+        nativeEvent: { layout: { x: 13, y: 4, width: 48, height: 32 } },
+      });
+    });
+
+    const pill = screen.getByTestId('bottom-nav-sliding-pill');
+    expect(pill).toBeTruthy();
+    expect(pill.props.style).toEqual(
+      expect.objectContaining({
+        backgroundColor: '#E8F5EE',
+      })
+    );
+    expect(pill.props.style).not.toEqual(
+      expect.objectContaining({
+        borderWidth: expect.any(Number),
+      })
+    );
+
+    // Now switch active tab to calendar (index 1) and fire its layout
+    await rerender(
+      <ThemeProvider>
+        <BottomNavBar
+          {...defaultProps}
+          state={{
+            ...defaultProps.state,
+            index: 1,
+          }}
+        />
+      </ThemeProvider>
+    );
+
+    await act(async () => {
+      const calendarTab = screen.getByTestId('bottom-nav-calendar');
+      fireEvent(calendarTab, 'layout', {
+        nativeEvent: { layout: { x: 75, y: 0, width: 75, height: 48 } },
+      });
+      const iconContainer = screen.getByTestId('bottom-nav-icon-calendar');
+      fireEvent(iconContainer, 'layout', {
+        nativeEvent: { layout: { x: 13, y: 4, width: 48, height: 32 } },
+      });
+    });
+
+    const calendarPill = screen.getByTestId('bottom-nav-sliding-pill');
+    expect(calendarPill).toBeTruthy();
   });
 });

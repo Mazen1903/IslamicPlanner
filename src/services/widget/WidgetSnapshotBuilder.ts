@@ -23,7 +23,6 @@
 import { DateTime } from 'luxon';
 import { PRAYER_ORDER, PRAYER_NAMES } from '@/constants/prayers';
 import {
-  PRAYER_ARABIC_NAMES,
   compareScheduledTasks,
   buildTaskCardViewModel,
 } from '@/services/TodayViewModelProjection';
@@ -39,8 +38,35 @@ import type {
   WidgetSnapshot,
   WidgetPrayerEntry,
   WidgetPrayer,
+  WidgetTheme,
 } from './types';
-import { SETUP_REQUIRED_SNAPSHOT } from './types';
+import { SETUP_REQUIRED_SNAPSHOT, DEFAULT_WIDGET_THEME } from './types';
+import { resolveWidgetTheme, type ResolveWidgetThemeParams } from './widgetTheme';
+import { userSettingsRepository } from '@/data/repositories/UserSettingsRepository';
+import * as SecureStore from 'expo-secure-store';
+
+export interface WidgetThemeReader {
+  getThemeParams(): Promise<ResolveWidgetThemeParams>;
+}
+
+export const defaultWidgetThemeReader: WidgetThemeReader = {
+  async getThemeParams(): Promise<ResolveWidgetThemeParams> {
+    let themeMode: string | null = null;
+    let islamicThemeId: string | null = null;
+    try {
+      const settings = await userSettingsRepository.get();
+      themeMode = settings?.themeMode ?? null;
+    } catch {
+      // Non-fatal fallback
+    }
+    try {
+      islamicThemeId = await SecureStore.getItemAsync('app_islamic_theme_id_v1');
+    } catch {
+      // Non-fatal fallback
+    }
+    return { themeMode, islamicThemeId };
+  },
+};
 
 /** Maximum number of tasks shown in the Medium widget. */
 const MAX_WIDGET_TASKS = 3;
@@ -63,7 +89,6 @@ function buildPrayerEntry(
   return {
     prayer,
     name: PRAYER_NAMES[prayer],
-    arabicName: PRAYER_ARABIC_NAMES[prayer],
     startsAt: startsAt.toUTC().toISO()!,
     startsAtLocal: formatLocalTime(startsAt, timezone),
   };
@@ -71,18 +96,44 @@ function buildPrayerEntry(
 
 export class WidgetSnapshotBuilder {
   constructor(
-    private readonly queryService: TodayQueryService = todayQueryService
+    private readonly queryService: TodayQueryService = todayQueryService,
+    private readonly themeReader: WidgetThemeReader = defaultWidgetThemeReader
   ) {}
 
   /**
    * Build a WidgetSnapshot for SETUP_REQUIRED state.
    * Stamped with the current UTC time so generatedAt is always set.
    */
-  buildSetupRequired(now: DateTime): WidgetSnapshot {
+  async buildSetupRequired(now: DateTime, explicitTheme?: WidgetTheme): Promise<WidgetSnapshot> {
+    let theme = explicitTheme;
+    if (!theme) {
+      try {
+        const params = await this.themeReader.getThemeParams();
+        theme = resolveWidgetTheme(params);
+      } catch {
+        theme = DEFAULT_WIDGET_THEME;
+      }
+    }
+
     return {
       ...SETUP_REQUIRED_SNAPSHOT,
+      schemaVersion: 2,
       generatedAt: now.toUTC().toISO()!,
       isSetupRequired: true,
+      theme,
+    };
+  }
+
+  /**
+   * Synchronous fallback for setup required where async is not possible.
+   */
+  buildSetupRequiredSync(now: DateTime, explicitTheme?: WidgetTheme): WidgetSnapshot {
+    return {
+      ...SETUP_REQUIRED_SNAPSHOT,
+      schemaVersion: 2,
+      generatedAt: now.toUTC().toISO()!,
+      isSetupRequired: true,
+      theme: explicitTheme ?? DEFAULT_WIDGET_THEME,
     };
   }
 
@@ -91,9 +142,10 @@ export class WidgetSnapshotBuilder {
    *
    * @param inputs - READY temporal inputs from LocationAwareTodayTemporalInputProvider
    * @param now - Current wall-clock time (Luxon DateTime)
+   * @param explicitTheme - Optional explicit theme override
    * @returns WidgetSnapshot with prayer data and pending tasks
    */
-  async build(inputs: TodayTemporalInputs, now: DateTime): Promise<WidgetSnapshot> {
+  async build(inputs: TodayTemporalInputs, now: DateTime, explicitTheme?: WidgetTheme): Promise<WidgetSnapshot> {
     const { coordinates, params, planningDayConfig } = inputs;
     const timezone = params.timezone;
 
@@ -166,8 +218,18 @@ export class WidgetSnapshotBuilder {
     // Build task entries (0-3 pending tasks)
     const tasks = await this._buildTasks(planningDayKey, planningDay, timeline, now, timezone);
 
+    let theme = explicitTheme;
+    if (!theme) {
+      try {
+        const params = await this.themeReader.getThemeParams();
+        theme = resolveWidgetTheme(params);
+      } catch {
+        theme = DEFAULT_WIDGET_THEME;
+      }
+    }
+
     return {
-      schemaVersion: 1,
+      schemaVersion: 2,
       generatedAt: now.toUTC().toISO()!,
       planningDayKey,
       timezone,
@@ -176,6 +238,7 @@ export class WidgetSnapshotBuilder {
       allPrayers,
       tasks,
       isSetupRequired: false,
+      theme,
     };
   }
 

@@ -96,18 +96,12 @@ describe('Group A: Accessible Names & Traversal Noise', () => {
   });
 
   // A-8
-  it('A-8: PrayerHeader Arabic name is suppressed at child level; composite grouping uses accessible={true} without no-hide-descendants', () => {
+  it('A-8: PrayerHeader uses composite grouping accessible={true} without no-hide-descendants and without Arabic script', () => {
     const src = fs.readFileSync('src/components/prayer/PrayerHeader.tsx', 'utf8');
-    // Child-level suppression of Arabic name is still present and correct:
-    expect(src).toContain('importantForAccessibility="no"');
-    expect(src).toContain('accessibilityElementsHidden={true}');
-    // The composite View itself must NOT use no-hide-descendants alongside accessible={true}:
-    // accessible={true} + no-hide-descendants on the same element is incoherent.
-    // Verified by absence of the combination: the source has accessible={true} and
-    // accessibilityLabel for grouping; no-hide-descendants has been removed from the composite.
-    // (Toggle's inner Switch is the one remaining valid no-hide-descendants use — that
-    // Switch is intentionally suppressed because the wrapping Pressable owns the semantics.)
+    expect(src).toContain('accessible={true}');
+    expect(src).toContain('accessibilityLabel={compositeLabel}');
     expect(src).not.toContain('importantForAccessibility="no-hide-descendants"');
+    expect(/[\u0600-\u06FF\uFD00-\uFDFF\uFE70-\uFEFE]/.test(src)).toBe(false);
   });
 
   // A-9
@@ -168,25 +162,26 @@ describe('Group A: Accessible Names & Traversal Noise', () => {
   });
 
   // A-11
-  it('A-11: DayDetailTaskList suppresses Arabic name with importantForAccessibility="no"', async () => {
+  it('A-11: DayDetailTaskList renders English prayer section name cleanly without Arabic', async () => {
     const sampleDetail: any = {
       civilDate: '2026-09-15',
       hijriFormatted: '3 Rabi al-Awwal 1448 AH',
       prayerSections: [
-        { prayer: 'FAJR', name: 'Fajr', arabicName: 'الفجر', startTime: '5:15 AM', tasks: [] },
+        { prayer: 'FAJR', name: 'Fajr', startTime: '5:15 AM', tasks: [] },
       ],
       anytimeTasks: [],
       totalTasksCount: 0,
     };
 
-    const { toJSON } = await render(
+    const { getByText, toJSON } = await render(
       <ThemeProvider>
         <DayDetailTaskList selectedDayDetail={sampleDetail} />
       </ThemeProvider>
     );
 
+    expect(getByText('Fajr')).toBeTruthy();
     const json = JSON.stringify(toJSON());
-    expect(json).toContain('"importantForAccessibility":"no"');
+    expect(/[\u0600-\u06FF]/.test(json)).toBe(false);
   });
 
   // A-15
@@ -229,8 +224,8 @@ describe('Group A: Accessible Names & Traversal Noise', () => {
     expect(src).toContain('decorative');
   });
 
-  it('A-24: MoreOptionsSection icons have decorative prop', () => {
-    const src = fs.readFileSync('src/components/task-form/MoreOptionsSection.tsx', 'utf8');
+  it('A-24: ReminderSheet icons have decorative prop', () => {
+    const src = fs.readFileSync('src/components/task-form/ReminderSheet.tsx', 'utf8');
     expect(src).toContain('decorative');
   });
 

@@ -24,15 +24,16 @@
  * M18 reference: docs/M18_ARCHITECTURE.md §3 (Android Entry Strategy)
  */
 
+// Install global font defaults for Comic Sans MS BEFORE any other module evaluation
+import './src/theme/installFontDefaults';
+
 import { registerWidgetTaskHandler } from 'react-native-android-widget';
 import { widgetTaskHandler } from './widgets/android/widgetTaskHandler';
 
 // Register handler BEFORE any React runtime initializes
 registerWidgetTaskHandler(widgetTaskHandler);
 
-// Install global font defaults for Comic Sans MS
-import './src/theme/installFontDefaults';
-
 // Initialize app bundle (must be last)
 // eslint-disable-next-line import/first
 import 'expo-router/entry';
+

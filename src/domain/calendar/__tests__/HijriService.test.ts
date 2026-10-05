@@ -713,19 +713,6 @@ describe('HijriService', () => {
       expect(res).toEqual({ kind: 'NO_MATCH' });
     });
 
-    it('I6: new HijriService({ baseMethod: "CALCULATED" }) throws HijriUnsupportedMethodError immediately', () => {
-      expect(() => new HijriService({ baseMethod: 'CALCULATED' })).toThrow(
-        HijriUnsupportedMethodError
-      );
-      try {
-        new HijriService({ baseMethod: 'CALCULATED' });
-        fail('Expected constructor to throw');
-      } catch (err) {
-        expect(err).toBeInstanceOf(HijriUnsupportedMethodError);
-        expect((err as HijriUnsupportedMethodError).method).toBe('CALCULATED');
-      }
-    });
-
     it('I7: raw package errors are never exposed directly without being wrapped in domain error', () => {
       expect(() => service.toHijri('1900-01-01')).toThrow(HijriConversionError);
       expect(() => service.toGregorian({ year: 1200, month: 1, day: 1 })).toThrow(
@@ -748,14 +735,9 @@ describe('HijriService', () => {
       );
     });
 
-    it('I9: new HijriService() defaults to UMM_AL_QURA without error', () => {
+    it('I9: new HijriService() constructs successfully without error', () => {
       const s = new HijriService();
-      expect(s.baseMethod).toBe('UMM_AL_QURA');
-    });
-
-    it('I10: new HijriService({ baseMethod: "UMM_AL_QURA" }) constructs successfully', () => {
-      const s = new HijriService({ baseMethod: 'UMM_AL_QURA' });
-      expect(s.baseMethod).toBe('UMM_AL_QURA');
+      expect(s).toBeInstanceOf(HijriService);
     });
   });
 

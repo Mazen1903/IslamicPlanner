@@ -34,6 +34,7 @@ import { WidgetSnapshotBuilder, widgetSnapshotBuilder } from './WidgetSnapshotBu
 import type { WidgetSnapshot } from './types';
 import { SmallWidgetComponent } from '../../../widgets/android/SmallWidgetComponent';
 import { MediumWidgetComponent } from '../../../widgets/android/MediumWidgetComponent';
+import { toWidgetRepresentation } from '../../../widgets/android/renderWidget';
 
 /** Widget names must match app.json plugin config. */
 const WIDGET_NAME_SMALL = 'IslamicPlannerSmall';
@@ -153,12 +154,12 @@ export class WidgetSyncCoordinator {
     try {
       await requestWidgetUpdate({
         widgetName: WIDGET_NAME_SMALL,
-        renderWidget: () => React.createElement(SmallWidgetComponent, snapshot),
+        renderWidget: () => toWidgetRepresentation(snapshot, SmallWidgetComponent),
       });
 
       await requestWidgetUpdate({
         widgetName: WIDGET_NAME_MEDIUM,
-        renderWidget: () => React.createElement(MediumWidgetComponent, snapshot),
+        renderWidget: () => toWidgetRepresentation(snapshot, MediumWidgetComponent),
       });
     } catch (err) {
       console.warn('[WidgetSyncCoordinator] Android push failed:', err);

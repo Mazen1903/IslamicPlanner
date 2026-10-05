@@ -50,11 +50,6 @@ export const HIJRI_MONTH_NAMES: Record<HijriMonthNumber, string> = {
 };
 
 /**
- * Supported Hijri calculation base methods.
- */
-export type HijriBaseMethod = 'UMM_AL_QURA' | 'CALCULATED';
-
-/**
  * Configuration for Hijri day adjustments.
  * Per ADR-005 and ADR-018:
  * - globalAdjustment: integer in [-2, +2], default conceptually 0.
@@ -98,6 +93,4 @@ export type HijriReverseResolution =
 /**
  * Service configuration passed to HijriService constructor.
  */
-export interface HijriServiceConfig {
-  readonly baseMethod?: HijriBaseMethod;
-}
+export interface HijriServiceConfig {}

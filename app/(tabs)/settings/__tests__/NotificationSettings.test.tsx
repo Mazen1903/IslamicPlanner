@@ -32,10 +32,12 @@ describe('NotificationSettingsScreen', () => {
         canSchedule: true,
         status: 'AUTHORIZED',
       }),
+      scheduleNotification: jest.fn().mockResolvedValue('test-notification-id'),
     };
 
     mockChannelManager = {
       ensureChannel: jest.fn().mockResolvedValue(undefined),
+      getTaskChannelId: jest.fn().mockReturnValue('task-reminders-v2-vib'),
     };
 
     mockReconciliationService = {
@@ -247,6 +249,104 @@ describe('NotificationSettingsScreen', () => {
       expect(upsertSpy).toHaveBeenCalledWith(
         expect.objectContaining({ journalReminderTime: '20:00' }),
       );
+    });
+  });
+
+  it('renders default reminder presets and persists selection', async () => {
+    const { userSettingsRepository } = require('@/data/repositories/UserSettingsRepository');
+    const upsertSpy = jest.spyOn(userSettingsRepository, 'upsert').mockResolvedValue({} as any);
+
+    await renderScreen();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('default-reminder-chip-none')).toBeTruthy();
+      expect(screen.getByTestId('default-reminder-chip--10')).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByTestId('default-reminder-chip--10'));
+
+    await waitFor(() => {
+      expect(upsertSpy).toHaveBeenCalledWith({ defaultReminderMinutes: -10 });
+    });
+  });
+
+  it('shows quiet hours start and end pickers when quiet hours is on and persists times', async () => {
+    const { userSettingsRepository } = require('@/data/repositories/UserSettingsRepository');
+    const upsertSpy = jest.spyOn(userSettingsRepository, 'upsert').mockResolvedValue({} as any);
+
+    await renderScreen();
+
+    // Toggle quiet hours switch to ON
+    fireEvent(screen.getByTestId('quiet-hours-switch'), 'valueChange', true);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('quiet-hours-start-time-row')).toBeTruthy();
+      expect(screen.getByTestId('quiet-hours-end-time-row')).toBeTruthy();
+    });
+
+    // Open start time picker
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('quiet-hours-start-time-row'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('quiet-hours-start-time-row-picker')).toBeTruthy();
+    });
+
+    // Select Hour 11 (11:00 PM = 23:00)
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('time-hour-11'));
+    });
+    // Select Minute 00
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('time-minute-00'));
+    });
+
+    await waitFor(() => {
+      expect(upsertSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ quietHoursStart: '23:00' }),
+      );
+    });
+  });
+
+  it('schedules a test notification 5 seconds out when Send Test button is pressed', async () => {
+    mockAdapter.getPermissionStatus.mockResolvedValueOnce({
+      canSchedule: true,
+      canRequest: false,
+      status: 'AUTHORIZED',
+    });
+
+    await renderScreen();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('send-test-notification-btn')).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('send-test-notification-btn'));
+    });
+
+    await waitFor(() => {
+      expect(mockAdapter.scheduleNotification).toHaveBeenCalledTimes(1);
+      expect(mockAdapter.scheduleNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Test Reminder',
+          data: expect.objectContaining({ kind: 'test-notification', payloadVersion: 2 }),
+        })
+      );
+      expect(screen.getByTestId('test-notification-message')).toBeTruthy();
+      expect(screen.getByText('Test notification scheduled! Arriving in 5 seconds.')).toBeTruthy();
+    });
+  });
+
+  it('hides vibration toggles on iOS', async () => {
+    (Platform as any).OS = 'ios';
+
+    await renderScreen();
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('prayer-vibration-switch')).toBeNull();
+      expect(screen.queryByTestId('task-vibration-switch')).toBeNull();
     });
   });
 });

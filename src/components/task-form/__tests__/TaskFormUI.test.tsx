@@ -4,7 +4,7 @@ import { Alert } from 'react-native';
 import { ThemeProvider } from '@/theme';
 import { ScheduleModeCards } from '../ScheduleModeCards';
 import { RecurrenceSection } from '../RecurrenceSection';
-import { MoreOptionsSection } from '../MoreOptionsSection';
+import { ReminderSheet } from '../ReminderSheet';
 import { EditScopeSheet } from '../EditScopeSheet';
 import { SuccessScreen } from '../SuccessScreen';
 import { PartialSuccessView } from '../PartialSuccessView';
@@ -167,60 +167,51 @@ describe('Task Form UI Components & Accessibility (M10 §6, §11, §14, §16, §
     });
   });
 
-  describe('MoreOptionsSection', () => {
-    it('expands more options and supports priority, reminder, notes, subtasks, and tags', async () => {
-      const state = createInitialFormState({ civilSeedDate: civilToday, planningDayDate: planningDayKey });
-      const dispatch = jest.fn();
+  describe('ReminderSheet', () => {
+    it('renders presets, active reminders, allows adding and removing offsets', async () => {
+      const onAdd = jest.fn();
+      const onRemove = jest.fn();
+      const onClose = jest.fn();
+      const onSetTime = jest.fn();
 
-      const { getByTestId, queryByText } = await render(
+      const mockAdapter = {
+        getPermissionStatus: jest.fn().mockResolvedValue({ canSchedule: true, canRequest: false, status: 'AUTHORIZED' }),
+        requestPermission: jest.fn().mockResolvedValue({ canSchedule: true, canRequest: false, status: 'AUTHORIZED' }),
+        scheduleNotification: jest.fn(),
+        cancelScheduledNotification: jest.fn(),
+        getAllScheduledNotifications: jest.fn().mockResolvedValue([]),
+      };
+
+      const { getByTestId } = await render(
         <ThemeProvider>
-          <MoreOptionsSection state={state} dispatch={dispatch} />
+          <ReminderSheet
+            visible={true}
+            onClose={onClose}
+            reminders={[-10]}
+            onAddReminder={onAdd}
+            onRemoveReminder={onRemove}
+            scheduleMode="EXACT_TIME"
+            reminderTimeOfDay={null}
+            onSetReminderTimeOfDay={onSetTime}
+            adapter={mockAdapter as any}
+          />
         </ThemeProvider>
       );
 
-      // Expand section
-      await fireEvent.press(getByTestId('toggle-more-options'));
-      await waitFor(() => {
-        expect(getByTestId('more-options-body')).toBeTruthy();
-      });
+      expect(getByTestId('reminder-sheet')).toBeTruthy();
+      expect(getByTestId('reminder-chip--10')).toBeTruthy();
 
-      // Priority buttons (Normal vs Important)
-      expect(getByTestId('priority-normal')).toBeTruthy();
-      expect(getByTestId('priority-important')).toBeTruthy();
-      await fireEvent.press(getByTestId('priority-important'));
-      expect(dispatch).toHaveBeenCalledWith({ type: 'SET_PRIORITY', payload: 'IMPORTANT' });
+      // Add preset
+      await fireEvent.press(getByTestId('preset-btn--30'));
+      expect(onAdd).toHaveBeenCalledWith(-30);
 
-      // Reminder preset
-      await fireEvent.press(getByTestId('reminder-preset-15'));
-      expect(dispatch).toHaveBeenCalledWith({ type: 'SET_REMINDER_MINUTES', payload: 15 });
+      // Remove active reminder
+      await fireEvent.press(getByTestId('remove-reminder--10'));
+      expect(onRemove).toHaveBeenCalledWith(-10);
 
-      // Duration preset
-      await fireEvent.press(getByTestId('duration-30'));
-      expect(dispatch).toHaveBeenCalledWith({ type: 'SET_ESTIMATED_MINUTES', payload: 30 });
-
-      // Notes
-      await fireEvent.changeText(getByTestId('task-notes-input'), 'Reading Surah Al-Kahf');
-      expect(dispatch).toHaveBeenCalledWith({ type: 'SET_NOTES', payload: 'Reading Surah Al-Kahf' });
-
-      // Subtasks
-      await fireEvent.changeText(getByTestId('new-subtask-input'), 'Buy fresh flowers');
-      await fireEvent.press(getByTestId('add-subtask-button'));
-      expect(dispatch).toHaveBeenCalledWith({
-        type: 'ADD_SUBTASK',
-        payload: { title: 'Buy fresh flowers' },
-      });
-
-      // Tags
-      await fireEvent.changeText(getByTestId('new-tag-input'), 'family');
-      await fireEvent.press(getByTestId('add-tag-button'));
-      expect(dispatch).toHaveBeenCalledWith({
-        type: 'SET_TAGS',
-        payload: ['family'],
-      });
-
-      // Explicit check: NO Attachment and NO Delete UI
-      expect(queryByText(/attachment/i)).toBeNull();
-      expect(queryByText(/delete task/i)).toBeNull();
+      // Close button
+      await fireEvent.press(getByTestId('reminder-sheet-done-btn'));
+      expect(onClose).toHaveBeenCalled();
     });
   });
 

@@ -74,7 +74,8 @@ describe('Migration 0003 Compatibility', () => {
     nodeDb.exec('PRAGMA foreign_keys = ON;');
 
     const config = loadMigrationConfig();
-    for (const entry of config.journal.entries) {
+    for (let i = 0; i <= 3; i++) {
+      const entry = config.journal.entries[i];
       const key = `m${entry.idx.toString().padStart(4, '0')}`;
       const sql = config.migrations[key];
       if (sql) {

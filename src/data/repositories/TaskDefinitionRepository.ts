@@ -514,6 +514,27 @@ export class TaskDefinitionRepository {
   }
 
   /**
+   * Permanently purges a non-recurring (one-off) TaskDefinition and all associated occurrences.
+   * Strictly enforces that recurrenceRule and hijriRecurrence are NOT set.
+   * Occurrences are explicitly and cascade-deleted.
+   */
+  async purgeOneOff(id: string, tx?: any): Promise<void> {
+    const existing = await this.findById(id, tx);
+    if (!existing) {
+      return;
+    }
+    if (existing.recurrenceRule || existing.hijriRecurrence) {
+      throw new TaskValidationError(
+        `Cannot purge recurring TaskDefinition ${id} with purgeOneOff. Use deactivateSeries or deleteEntireSeries instead.`
+      );
+    }
+
+    const client = getDb(tx);
+    client.delete(taskOccurrences).where(eq(taskOccurrences.taskDefinitionId, id)).run();
+    client.delete(taskDefinitions).where(eq(taskDefinitions.id, id)).run();
+  }
+
+  /**
    * Deactivates all TaskDefinition versions of a logical series.
    */
   async deactivateSeries(seriesId: string, tx?: any): Promise<void> {

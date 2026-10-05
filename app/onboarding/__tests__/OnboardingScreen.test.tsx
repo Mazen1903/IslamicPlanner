@@ -66,9 +66,7 @@ describe('OnboardingScreen Integration (F, L, C, P series tests)', () => {
     polarCircleResolution: 'AQRAB_YAUM',
     prayerAdjustments: '{"fajr":0,"sunrise":0,"dhuhr":0,"asr":0,"maghrib":0,"isha":0}',
     planningDayStart: 'FAJR',
-    hijriBaseMethod: 'UMM_AL_QURA',
     hijriGlobalAdjustment: 0,
-    worshipSuggestionsEnabled: true,
     prayerAlertsEnabled: true,
     completedTasksMode: 'KEEP',
     overdueTasksMode: 'KEEP',
@@ -76,6 +74,9 @@ describe('OnboardingScreen Integration (F, L, C, P series tests)', () => {
     taskRemindersEnabled: true,
     taskVibrationEnabled: true,
     quietHoursEnabled: false,
+    quietHoursStart: '22:00',
+    quietHoursEnd: '06:00',
+    defaultReminderMinutes: 10,
     journalReminderEnabled: false,
     journalReminderTime: '21:30',
     themeMode: 'SYSTEM',
@@ -679,6 +680,6 @@ describe('OnboardingScreen Integration (F, L, C, P series tests)', () => {
 
     // markComplete called BEFORE router.replace
     expect(storeStatusAtReplace).toBe('COMPLETE');
-    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/today');
+    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/planner');
   });
 });

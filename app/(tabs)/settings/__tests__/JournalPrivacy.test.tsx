@@ -42,10 +42,10 @@ describe('JournalPrivacyScreen', () => {
     });
   };
 
-  const renderScreen = async (controller = mockController) => {
+  const renderScreen = async (controller = mockController, backupService?: any) => {
     return render(
       <ThemeProvider>
-        <JournalPrivacyScreen controller={controller} />
+        <JournalPrivacyScreen controller={controller} backupService={backupService} />
       </ThemeProvider>
     );
   };
@@ -129,5 +129,94 @@ describe('JournalPrivacyScreen', () => {
         expect.any(Array)
       );
     });
+  });
+
+  it('renders Export Backup, Import Backup, and Erase All Data cards', async () => {
+    await renderScreen();
+
+    expect(screen.getByTestId('privacy-row-export-backup')).toBeTruthy();
+    expect(screen.getByText('Export Backup')).toBeTruthy();
+
+    expect(screen.getByTestId('privacy-row-import-backup')).toBeTruthy();
+    expect(screen.getByText('Import Backup')).toBeTruthy();
+
+    expect(screen.getByTestId('privacy-row-erase-all')).toBeTruthy();
+    expect(screen.getByText('Erase All Data')).toBeTruthy();
+  });
+
+  it('tapping Export Backup calls backupService.exportBackup()', async () => {
+    const mockBackupService: any = {
+      exportBackup: jest.fn().mockResolvedValue({ success: true, filePath: 'test.json' }),
+      importBackupFromFile: jest.fn().mockResolvedValue({ success: true }),
+      eraseAllData: jest.fn().mockResolvedValue({ success: true }),
+    };
+
+    await renderScreen(mockController, mockBackupService);
+
+    fireEvent.press(screen.getByTestId('privacy-row-export-backup'));
+
+    await waitFor(() => {
+      expect(mockBackupService.exportBackup).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('tapping Import Backup prompts alert and triggers import on confirmation', async () => {
+    let confirmAction: any;
+    jest.spyOn(Alert, 'alert').mockImplementation((title, msg, buttons: any) => {
+      if (buttons && buttons[1]?.onPress) {
+        confirmAction = buttons[1].onPress;
+      }
+    });
+
+    const mockBackupService: any = {
+      exportBackup: jest.fn().mockResolvedValue({ success: true }),
+      importBackupFromFile: jest.fn().mockResolvedValue({ success: true, importedAt: new Date().toISOString() }),
+      eraseAllData: jest.fn().mockResolvedValue({ success: true }),
+    };
+
+    await renderScreen(mockController, mockBackupService);
+
+    fireEvent.press(screen.getByTestId('privacy-row-import-backup'));
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Restore From Backup',
+      expect.any(String),
+      expect.any(Array)
+    );
+
+    expect(confirmAction).toBeDefined();
+    await confirmAction();
+
+    expect(mockBackupService.importBackupFromFile).toHaveBeenCalledTimes(1);
+  });
+
+  it('tapping Erase All Data prompts alert and triggers erase on confirmation', async () => {
+    let confirmAction: any;
+    jest.spyOn(Alert, 'alert').mockImplementation((title, msg, buttons: any) => {
+      if (buttons && buttons[1]?.onPress) {
+        confirmAction = buttons[1].onPress;
+      }
+    });
+
+    const mockBackupService: any = {
+      exportBackup: jest.fn().mockResolvedValue({ success: true }),
+      importBackupFromFile: jest.fn().mockResolvedValue({ success: true }),
+      eraseAllData: jest.fn().mockResolvedValue({ success: true }),
+    };
+
+    await renderScreen(mockController, mockBackupService);
+
+    fireEvent.press(screen.getByTestId('privacy-row-erase-all'));
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Erase All Data',
+      expect.any(String),
+      expect.any(Array)
+    );
+
+    expect(confirmAction).toBeDefined();
+    await confirmAction();
+
+    expect(mockBackupService.eraseAllData).toHaveBeenCalledTimes(1);
   });
 });

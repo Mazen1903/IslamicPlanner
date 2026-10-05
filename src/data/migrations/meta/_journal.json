@@ -50,6 +50,20 @@
       "when": 1790805000000,
       "tag": "0006_streak_data",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1791170000000,
+      "tag": "0007_reminder_overhaul",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1791180000000,
+      "tag": "0008_db_audit_cleanup",
+      "breakpoints": true
     }
   ]
 }

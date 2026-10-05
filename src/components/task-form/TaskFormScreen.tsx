@@ -1,4 +1,4 @@
-import React, { useReducer, useState, useRef, useEffect, useCallback } from 'react';
+import React, { useReducer, useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -31,8 +31,7 @@ import { LocationAwareTodayTemporalInputProvider } from '@/services/TodayTempora
 import { TaskHeaderBanner } from './TaskHeaderBanner';
 import { ScheduleModeCards } from './ScheduleModeCards';
 import { RelativePrayerSubView } from './RelativePrayerSubView';
-import { RecurrenceSubView } from './RecurrenceSubView';
-import { MoreOptionsSubView } from './MoreOptionsSubView';
+import { TaskDetailsCard } from './TaskDetailsCard';
 import { SubtasksSection } from './SubtasksSection';
 import { EditScopeSheet } from './EditScopeSheet';
 import { SuccessScreen } from './SuccessScreen';
@@ -40,8 +39,9 @@ import { PartialSuccessView } from './PartialSuccessView';
 import { IconPickerModal, type IconPickerOrigin } from './IconPickerModal';
 import { TaskCategoryIcon } from '@/components/task/TaskCategoryIcon';
 import { detectTaskIcon } from '@/constants/taskIcons';
+import { useUserSettings } from '@/hooks/useUserSettings';
 
-export type FormView = 'MAIN' | 'RELATIVE_PRAYER' | 'REPEAT' | 'MORE_OPTIONS';
+export type FormView = 'MAIN' | 'RELATIVE_PRAYER';
 
 export interface TaskFormScreenProps {
   initialDefinition?: TaskDefinition;
@@ -54,30 +54,10 @@ export interface TaskFormScreenProps {
   orchestrator?: TaskFormOrchestrator;
   onSuccess: () => void;
   onCancel: () => void;
+  onSaved?: () => void | Promise<void>;
 }
 
 const defaultInputProvider = new LocationAwareTodayTemporalInputProvider();
-
-function getRecurrenceLabel(preset: string, specificDaysCount: number, calendar: string): string {
-  switch (preset) {
-    case 'NONE':
-      return "Doesn't repeat";
-    case 'DAILY':
-      return 'Daily';
-    case 'WEEKDAYS':
-      return 'Weekdays (Mon - Fri)';
-    case 'WEEKLY':
-      return 'Weekly';
-    case 'MONTHLY':
-      return 'Monthly';
-    case 'SPECIFIC_DAYS':
-      return `Specific days (${specificDaysCount} selected)`;
-    case 'CUSTOM':
-      return calendar === 'HIJRI' ? 'Custom (Hijri)' : 'Custom (Gregorian)';
-    default:
-      return "Doesn't repeat";
-  }
-}
 
 export function TaskFormScreen({
   initialDefinition,
@@ -90,8 +70,9 @@ export function TaskFormScreen({
   orchestrator = taskFormOrchestrator,
   onSuccess,
   onCancel,
+  onSaved,
 }: TaskFormScreenProps) {
-  const { colors, spacing, radii, typography, touchTargets, shadows, isDark } = useTheme();
+  const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
 
   const isEdit = Boolean(initialDefinition);
   const isRecurringSeries = Boolean(
@@ -133,6 +114,8 @@ export function TaskFormScreen({
   };
 
   const defaultDate = DateTime.now().toFormat('yyyy-MM-dd');
+  const { settings } = useUserSettings();
+  const defaultReminderMinutes = (settings as any)?.defaultReminderMinutes ?? null;
 
   // Form State via useReducer
   const [state, dispatch] = useReducer(
@@ -144,14 +127,34 @@ export function TaskFormScreen({
       initialDefinition,
       initialOccurrence,
       editScope: initialScope ?? (isRecurringSeries ? 'ALL_OCCURRENCES' : undefined),
+      defaultReminderMinutes,
     },
     createInitialFormState
   );
+
+  // Sync default reminder if user settings load after initial mount
+  useEffect(() => {
+    const defReminder = (settings as any)?.defaultReminderMinutes;
+    if (
+      defReminder !== undefined &&
+      defReminder !== null &&
+      state.mode === 'CREATE' &&
+      !state.isDirty &&
+      state.reminders.length === 0
+    ) {
+      dispatch({ type: 'PREFILL_DEFAULT_REMINDER', payload: defReminder });
+    }
+  }, [settings, state.mode, state.isDirty, state.reminders.length]);
 
   // Synchronous presentation-layer mutex latch
   const submitInFlightRef = useRef(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRetryingSync, setIsRetryingSync] = useState(false);
+
+  // Subtasks expansion state inside unified Task card
+  const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(
+    () => Boolean(state.subtasks && state.subtasks.length > 0)
+  );
 
   // Orchestrator Result state
   const [saveResult, setSaveResult] = useState<OrchestratorResult | null>(null);
@@ -236,6 +239,9 @@ export function TaskFormScreen({
     try {
       const result = await orchestrator.submit(state);
       setSaveResult(result);
+      if (result.status === 'SAVED_AND_SYNCED' || result.status === 'SAVED_SYNC_INCOMPLETE') {
+        onSaved?.();
+      }
     } catch (err: any) {
       Alert.alert('Save Error', err.message || 'An unexpected error occurred while saving.');
     } finally {
@@ -309,54 +315,6 @@ export function TaskFormScreen({
     );
   }
 
-  // Sub-view 3: Repeat options screen (add task3.png)
-  if (currentView === 'REPEAT') {
-    return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['top', 'left', 'right']}
-        testID="task-form-screen"
-      >
-        <TaskHeaderBanner
-          title={isEdit ? 'Edit Task' : 'Add Task'}
-          subtitle="Set how often this task repeats"
-          onBack={() => setCurrentView('MAIN')}
-          backTestID="task-form-back-button"
-        />
-        <RecurrenceSubView
-          state={state}
-          dispatch={dispatch}
-          onBack={() => setCurrentView('MAIN')}
-          onNext={() => setCurrentView('MAIN')}
-        />
-      </SafeAreaView>
-    );
-  }
-
-  // Sub-view 4: More Options screen (add task4.png)
-  if (currentView === 'MORE_OPTIONS') {
-    return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['top', 'left', 'right']}
-        testID="task-form-screen"
-      >
-        <TaskHeaderBanner
-          title={isEdit ? 'Edit Task' : 'Add Task'}
-          subtitle="Customize your task"
-          onBack={() => setCurrentView('MAIN')}
-          backTestID="task-form-back-button"
-        />
-        <MoreOptionsSubView
-          state={state}
-          dispatch={dispatch}
-          onBack={() => setCurrentView('MAIN')}
-          onSave={handleSave}
-          isSubmitting={isSubmitting}
-        />
-      </SafeAreaView>
-    );
-  }
 
   // If THIS_OCCURRENCE scope: only show occurrence-level override fields
   const isThisOccurrenceScope = state.editScope === 'THIS_OCCURRENCE';
@@ -383,11 +341,30 @@ export function TaskFormScreen({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
       >
-        {/* Revamped Task Title Section */}
+        {/* Unified Task & Subtasks Section */}
         <View style={[styles.titleSection, { marginBottom: spacing.md }]}>
-          <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary, marginBottom: 8 }]}>
-            Task name
-          </Text>
+          <View style={styles.taskSectionHeadingRow}>
+            <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary }]}>
+              Task
+            </Text>
+            {state.subtasks.length > 0 && (
+              <View
+                style={{
+                  backgroundColor: colors.primaryLight,
+                  borderRadius: radii.pill,
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                }}
+              >
+                <Text
+                  style={[typography.labelMedium, { color: colors.primaryDark, fontWeight: '700' }]}
+                  testID="task-subtasks-count-badge"
+                >
+                  {`${state.subtasks.length} subtask${state.subtasks.length === 1 ? '' : 's'}`}
+                </Text>
+              </View>
+            )}
+          </View>
           <View
             style={[
               styles.unifiedTaskCard,
@@ -396,11 +373,11 @@ export function TaskFormScreen({
                 backgroundColor: colors.surface,
                 borderColor: state.validationErrors.title ? colors.danger : colors.border,
                 borderRadius: radii.card,
-                padding: spacing.sm,
+                overflow: 'hidden',
               },
             ]}
           >
-            <View style={styles.titleInputRow}>
+            <View style={[styles.titleInputRow, { padding: spacing.sm }]}>
               <Pressable
                 ref={iconPickerButtonRef as any}
                 onPress={handleOpenIconPicker}
@@ -410,8 +387,8 @@ export function TaskFormScreen({
                 style={[
                   styles.iconPickerButton,
                   {
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surfaceSecondary,
-                    borderRadius: 16,
+                    backgroundColor: colors.surfaceSecondary,
+                    borderRadius: 14,
                     marginEnd: spacing.sm,
                   },
                 ]}
@@ -439,6 +416,46 @@ export function TaskFormScreen({
                 ]}
               />
             </View>
+
+            <View style={[styles.cardDivider, { backgroundColor: colors.border, marginStart: 56 }]} />
+
+            {isSubtasksExpanded || state.subtasks.length > 0 ? (
+              <SubtasksSection
+                subtasks={state.subtasks}
+                dispatch={dispatch}
+                hideDivider={true}
+              />
+            ) : (
+              <Pressable
+                onPress={() => setIsSubtasksExpanded(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Add subtask"
+                testID="expand-add-subtask-button"
+                style={({ pressed }) => [
+                  styles.addSubtaskRowButton,
+                  {
+                    opacity: pressed ? 0.7 : 1,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: 10,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.addSubtaskPlusCircle,
+                    {
+                      backgroundColor: colors.primaryLight,
+                      marginEnd: spacing.sm,
+                    },
+                  ]}
+                >
+                  <Icon name="plus" size={14} color={colors.primary} decorative />
+                </View>
+                <Text style={[typography.bodyMedium, { color: colors.primary, fontWeight: '600', fontSize: 15 }]}>
+                  Add subtask
+                </Text>
+              </Pressable>
+            )}
           </View>
           {state.validationErrors.title && (
             <Text
@@ -448,52 +465,6 @@ export function TaskFormScreen({
               {state.validationErrors.title}
             </Text>
           )}
-        </View>
-
-        {/* Revamped Standalone Subtasks Card */}
-        <View style={[styles.titleSection, { marginBottom: spacing.md }]}>
-          <View style={styles.taskSectionHeadingRow}>
-            <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary }]}>
-              Subtasks
-            </Text>
-            {state.subtasks.length > 0 && (
-              <View
-                style={[
-                  {
-                    backgroundColor: colors.primaryLight,
-                    borderRadius: radii.pill,
-                    paddingHorizontal: 8,
-                    paddingVertical: 2,
-                  },
-                ]}
-              >
-                <Text
-                  style={[typography.labelMedium, { color: colors.primaryDark, fontWeight: '700' }]}
-                  testID="task-subtasks-count-badge"
-                >
-                  {`${state.subtasks.length} subtask${state.subtasks.length === 1 ? '' : 's'}`}
-                </Text>
-              </View>
-            )}
-          </View>
-          <View
-            style={[
-              styles.unifiedTaskCard,
-              shadows.card,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                borderRadius: radii.card,
-                overflow: 'hidden',
-              },
-            ]}
-          >
-            <SubtasksSection
-              subtasks={state.subtasks}
-              dispatch={dispatch}
-              hideDivider={true}
-            />
-          </View>
         </View>
 
         {/* If THIS_OCCURRENCE: hide definition-level fields */}
@@ -506,201 +477,14 @@ export function TaskFormScreen({
               previewResult={previewResult}
             />
 
-            {/* Redesigned Reminder Card */}
-            <View
-              style={[
-                styles.reminderCard,
-                shadows.card,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  borderRadius: radii.card,
-                  padding: spacing.md,
-                  marginTop: spacing.md,
-                },
-              ]}
-            >
-              <View style={styles.reminderHeaderRow}>
-                <View
-                  style={[
-                    styles.reminderIconBadge,
-                    {
-                      backgroundColor:
-                        state.reminderMinutes !== null ? colors.primaryLight : colors.surfaceSecondary,
-                      borderRadius: radii.pill,
-                    },
-                  ]}
-                >
-                  <Icon
-                    name="bell"
-                    size={24}
-                    color={state.reminderMinutes !== null ? colors.primary : colors.textSecondary}
-                    decorative
-                  />
-                </View>
-                <View style={styles.reminderHeaderTextContainer}>
-                  <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
-                    Reminder
-                  </Text>
-                  <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 1 }]}>
-                    {state.scheduleMode === 'ANYTIME_TODAY'
-                      ? 'Requires a scheduled time'
-                      : state.reminderMinutes !== null
-                      ? state.reminderMinutes === 0
-                        ? 'At time of task'
-                        : `${state.reminderMinutes} minutes before`
-                      : 'No notification set'}
-                  </Text>
-                </View>
-              </View>
-
-              {state.scheduleMode === 'ANYTIME_TODAY' ? (
-                <View
-                  style={[
-                    styles.reminderHelperBanner,
-                    {
-                      backgroundColor: colors.surfaceSecondary,
-                      borderRadius: radii.md,
-                      marginTop: spacing.sm,
-                      padding: spacing.sm,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[typography.caption, { color: colors.textTertiary, fontStyle: 'italic' }]}
-                    testID="anytime-reminder-helper"
-                  >
-                    Set a time or prayer window above to add a reminder
-                  </Text>
-                </View>
-              ) : (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ flexDirection: 'row', paddingTop: spacing.sm }}
-                  testID="reminder-presets-row"
-                >
-                  {[
-                    { val: null, label: 'None' },
-                    { val: 0, label: 'At time' },
-                    { val: 5, label: '5m' },
-                    { val: 10, label: '10m' },
-                    { val: 15, label: '15m' },
-                    { val: 20, label: '20m' },
-                    { val: 30, label: '30m' },
-                    { val: 45, label: '45m' },
-                    { val: 60, label: '1h' },
-                    { val: 120, label: '2h' },
-                  ].map(item => {
-                    const isSelected = state.reminderMinutes === item.val;
-                    return (
-                      <Pressable
-                        key={item.label}
-                        onPress={() => dispatch({ type: 'SET_REMINDER_MINUTES', payload: item.val })}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: isSelected }}
-                        accessibilityLabel={`Reminder: ${item.label}`}
-                        testID={`reminder-preset-${item.val === null ? 'none' : item.val}`}
-                        style={({ pressed }) => [
-                          styles.reminderChip,
-                          {
-                            backgroundColor: isSelected ? colors.primary : colors.surfaceSecondary,
-                            borderColor: isSelected ? colors.primary : colors.border,
-                            borderRadius: radii.pill,
-                            marginEnd: spacing.xs,
-                            paddingVertical: spacing.xs,
-                            paddingHorizontal: spacing.md,
-                            minHeight: 34,
-                            opacity: pressed ? 0.8 : 1,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            typography.labelMedium,
-                            {
-                              color: isSelected ? colors.textOnPrimary : colors.textPrimary,
-                              fontWeight: isSelected ? '700' : '600',
-                            },
-                          ]}
-                        >
-                          {item.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              )}
-            </View>
-
-            {/* Repeat Row Entry Card (Tapping opens add task3.png) */}
-            <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
-              Repeat
+            {/* Unified Details Card (Reminder, Repeat, Priority, Track Streak, Notes) */}
+            <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary, marginTop: spacing.md, marginBottom: 8 }]}>
+              Details
             </Text>
-            <Pressable
-              onPress={() => setCurrentView('REPEAT')}
-              accessibilityRole="button"
-              accessibilityLabel={`Repeat: ${getRecurrenceLabel(state.recurrencePreset, state.specificDays.length, state.recurrenceCalendar)}`}
-              testID="repeat-entry-card"
-              style={({ pressed }) => [
-                styles.navEntryCard,
-                shadows.card,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  borderRadius: radii.card,
-                  padding: spacing.md,
-                  minHeight: touchTargets.min,
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              <View style={styles.entryIconBox}>
-                <Icon name="refresh" size={28} color={colors.textSecondary} decorative />
-              </View>
-              <View style={styles.entryContent}>
-                <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
-                  {getRecurrenceLabel(state.recurrencePreset, state.specificDays.length, state.recurrenceCalendar)}
-                </Text>
-              </View>
-              <Icon name="chevron-right" size={18} color={colors.primary} directional decorative />
-            </Pressable>
-
-            {/* More Options Row Entry Card (Tapping opens add task4.png) */}
-            <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
-              More options
-            </Text>
-            <Pressable
-              onPress={() => setCurrentView('MORE_OPTIONS')}
-              accessibilityRole="button"
-              accessibilityLabel="More Options"
-              testID="more-options-entry-card"
-              style={({ pressed }) => [
-                styles.navEntryCard,
-                shadows.card,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  borderRadius: radii.card,
-                  padding: spacing.md,
-                  minHeight: touchTargets.min,
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              <View style={styles.entryIconBox}>
-                <Icon name="options" size={28} color={colors.textSecondary} decorative />
-              </View>
-              <View style={styles.entryContent}>
-                <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
-                  More options
-                </Text>
-                <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                  Priority, Notes, and Subtasks
-                </Text>
-              </View>
-              <Icon name="chevron-right" size={18} color={colors.primary} directional decorative />
-            </Pressable>
+            <TaskDetailsCard
+              state={state}
+              dispatch={dispatch}
+            />
 
             {/* Full-width Save Task Button */}
             <Pressable
@@ -858,14 +642,31 @@ const styles = StyleSheet.create({
   unifiedTaskCard: {
     borderWidth: 1,
   },
+  cardDivider: {
+    height: StyleSheet.hairlineWidth,
+    width: '100%',
+  },
+  addSubtaskRowButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 48,
+  },
+  addSubtaskPlusCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   titleInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 60,
+    minHeight: 64,
   },
   iconPickerButton: {
-    width: 50,
-    height: 50,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -874,7 +675,7 @@ const styles = StyleSheet.create({
   iconEditPencilBadge: {
     position: 'absolute',
     bottom: -1,
-    right: -1,
+    end: -1,
     width: 18,
     height: 18,
     borderRadius: 9,
@@ -886,43 +687,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   titleIconBox: {
-    paddingLeft: 8,
-  },
-  reminderCard: {
-    borderWidth: 1,
-  },
-  reminderHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  reminderIconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  reminderHeaderTextContainer: {
-    flex: 1,
-  },
-  reminderHelperBanner: {
-    borderWidth: 0,
-  },
-  navEntryCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  entryIconBox: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  entryContent: {
-    flex: 1,
+    paddingStart: 8,
   },
   saveTaskButton: {
     width: '100%',
@@ -941,10 +706,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     minHeight: 80,
     textAlignVertical: 'top',
-  },
-  reminderChip: {
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

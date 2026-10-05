@@ -11,6 +11,7 @@ export interface PastelOptionCardProps {
   badgeColor?: string;
   customBadge?: React.ReactNode;
   onPress: () => void;
+  disabled?: boolean;
   testID?: string;
 }
 
@@ -22,6 +23,7 @@ export function PastelOptionCard({
   badgeColor,
   customBadge,
   onPress,
+  disabled,
   testID,
 }: PastelOptionCardProps) {
   const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
@@ -32,6 +34,7 @@ export function PastelOptionCard({
       accessibilityRole="button"
       accessibilityLabel={`${label}. ${subtitle}`}
       onPress={onPress}
+      disabled={disabled}
       style={({ pressed }) => [
         styles.card,
         {
@@ -41,7 +44,7 @@ export function PastelOptionCard({
           padding: spacing.md,
           marginBottom: spacing.sm,
           minHeight: touchTargets.comfortable,
-          opacity: pressed ? 0.85 : 1,
+          opacity: disabled ? 0.6 : pressed ? 0.85 : 1,
         },
         shadows.card,
       ]}

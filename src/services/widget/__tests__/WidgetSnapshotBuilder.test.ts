@@ -51,6 +51,25 @@ describe('WidgetSnapshotBuilder', () => {
   // SNAPSHOT BUILDER tests
   // -------------------------------------------------------------------------
   describe('SB: Snapshot structure', () => {
+    it('SB-00: snapshot has schemaVersion 2 and resolved theme', async () => {
+      const builder = new WidgetSnapshotBuilder(makeQueryService());
+      const snapshot = await builder.build(makeInputs(), now);
+
+      expect(snapshot.schemaVersion).toBe(2);
+      expect(snapshot.theme).toBeDefined();
+      expect(snapshot.theme.light).toBeDefined();
+      expect(snapshot.theme.dark).toBeDefined();
+    });
+
+    it('SB-SETUP: buildSetupRequired returns schemaVersion 2 and isSetupRequired: true', async () => {
+      const builder = new WidgetSnapshotBuilder(makeQueryService());
+      const snapshot = await builder.buildSetupRequired(now);
+
+      expect(snapshot.schemaVersion).toBe(2);
+      expect(snapshot.isSetupRequired).toBe(true);
+      expect(snapshot.theme).toBeDefined();
+    });
+
     it('SB-01: READY snapshot has currentPrayer, nextPrayer, allPrayers', async () => {
       const builder = new WidgetSnapshotBuilder(makeQueryService());
       const snapshot = await builder.build(makeInputs(), now);
@@ -197,11 +216,11 @@ describe('WidgetSnapshotBuilder', () => {
       }
     });
 
-    it('SB: schemaVersion is always 1', async () => {
+    it('SB: schemaVersion is 2', async () => {
       const builder = new WidgetSnapshotBuilder(makeQueryService());
       const snapshot = await builder.build(makeInputs(), now);
 
-      expect(snapshot.schemaVersion).toBe(1);
+      expect(snapshot.schemaVersion).toBe(2);
     });
   });
 
@@ -209,23 +228,23 @@ describe('WidgetSnapshotBuilder', () => {
   // SETUP REQUIRED tests
   // -------------------------------------------------------------------------
   describe('SR: Setup required state', () => {
-    it('SR-01: buildSetupRequired returns isSetupRequired = true', () => {
+    it('SR-01: buildSetupRequired returns isSetupRequired = true', async () => {
       const builder = new WidgetSnapshotBuilder(makeQueryService());
-      const snapshot = builder.buildSetupRequired(now);
+      const snapshot = await builder.buildSetupRequired(now);
 
       expect(snapshot.isSetupRequired).toBe(true);
     });
 
-    it('SR-02: buildSetupRequired returns tasks = []', () => {
+    it('SR-02: buildSetupRequired returns tasks = []', async () => {
       const builder = new WidgetSnapshotBuilder(makeQueryService());
-      const snapshot = builder.buildSetupRequired(now);
+      const snapshot = await builder.buildSetupRequired(now);
 
       expect(snapshot.tasks).toEqual([]);
     });
 
-    it('SR-03: buildSetupRequired has no meaningful prayer times (empty startsAt)', () => {
+    it('SR-03: buildSetupRequired has no meaningful prayer times (empty startsAt)', async () => {
       const builder = new WidgetSnapshotBuilder(makeQueryService());
-      const snapshot = builder.buildSetupRequired(now);
+      const snapshot = await builder.buildSetupRequired(now);
 
       // SETUP_REQUIRED_SNAPSHOT has empty startsAt strings - no fake prayer times
       for (const prayer of snapshot.allPrayers) {

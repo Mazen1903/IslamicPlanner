@@ -102,9 +102,9 @@ export function PrayerTabBar({
 
   // Layout tracking for the smooth sliding pill indicator inside modeSegment
   const [tabLayouts, setTabLayouts] = React.useState<Record<string, { x: number; y: number; width: number; height: number }>>({});
-  const translateX = React.useRef(new Animated.Value(0)).current;
-  const indicatorWidth = React.useRef(new Animated.Value(0)).current;
-  const indicatorOpacity = React.useRef(new Animated.Value(0)).current;
+  const [translateX] = React.useState(() => new Animated.Value(0));
+  const [indicatorWidth] = React.useState(() => new Animated.Value(0));
+  const [indicatorOpacity] = React.useState(() => new Animated.Value(0));
   const isInitializedRef = React.useRef(false);
 
   const handleTabLayout = React.useCallback((prayer: Prayer, layout: { x: number; y: number; width: number; height: number }) => {
@@ -161,14 +161,14 @@ export function PrayerTabBar({
         style={[
           styles.modeSegment,
           {
-            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.7)' : '#FFFFFF',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
+            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.7)' : colors.surface,
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.border,
           },
         ]}
         accessibilityRole="tablist"
         testID="prayer-tab-bar"
       >
-        {/* Smooth Sliding Pill Indicator */}
+        {/* Smooth Sliding Solid Green Highlighter for active prayer */}
         {selectedPrayer && tabLayouts[selectedPrayer] ? (
           <Animated.View
             pointerEvents="none"
@@ -179,9 +179,7 @@ export function PrayerTabBar({
                 transform: [{ translateX }],
                 width: indicatorWidth,
                 opacity: indicatorOpacity,
-                backgroundColor: isDark ? 'rgba(34, 197, 94, 0.22)' : '#DCFCE7',
-                borderColor: isDark ? '#4ADE80' : '#16A34A',
-                borderWidth: 1,
+                backgroundColor: colors.primary,
               },
             ]}
           />
@@ -194,16 +192,26 @@ export function PrayerTabBar({
           const isDragTarget = tab.prayer === dragTargetPrayer;
 
           const textColor = active
-            ? isDark
-              ? '#4ADE80'
-              : '#15803D'
+            ? colors.textOnPrimary
+            : isCurrent
+            ? colors.primary
             : isDragTarget
-            ? '#F59E0B'
+            ? colors.warning
             : isPast
             ? colors.textTertiary
             : isDark
-            ? '#94A3B8'
-            : '#64748B';
+            ? colors.textSecondary
+            : colors.textSecondary;
+
+          const timeColor = active
+            ? colors.textOnPrimary
+            : isCurrent
+            ? colors.primary
+            : isPast
+            ? colors.textTertiary
+            : isDark
+            ? colors.textSecondary
+            : colors.textSecondary;
 
           return (
             <TouchableOpacity
@@ -217,13 +225,19 @@ export function PrayerTabBar({
               onLayout={e => handleTabLayout(tab.prayer, e.nativeEvent.layout)}
               style={[
                 styles.modeTab,
+                // Solid green highlight fallback before layout measurement
+                active && !tabLayouts[selectedPrayer] && {
+                  backgroundColor: colors.primary,
+                },
+                // When current prayer is not the active tab, indicate with subtle primary border
                 !active && isCurrent && {
-                  borderColor: isDark ? '#22C55E' : '#16A34A',
-                  backgroundColor: isDark ? 'rgba(34, 197, 94, 0.08)' : '#F0FDF4',
+                  borderColor: colors.primary,
+                  borderWidth: 1.5,
                 },
                 isDragTarget && {
-                  backgroundColor: isDark ? 'rgba(245, 158, 11, 0.25)' : '#FEF3C7',
-                  borderColor: '#F59E0B',
+                  backgroundColor: isDark ? 'rgba(245, 158, 11, 0.25)' : colors.surfaceSecondary,
+                  borderColor: colors.warning,
+                  borderWidth: 1.5,
                 },
               ]}
               onPress={() => {
@@ -232,69 +246,51 @@ export function PrayerTabBar({
               }}
               activeOpacity={0.75}
             >
-              <PrayerTabIcon
-                prayer={tab.prayer}
-                isSelected={active}
-                isCurrent={isCurrent}
-                isPast={isPast}
-                size={20}
-              />
-              <Text
-                style={[
-                  styles.modeTabText,
-                  {
-                    color: textColor,
-                    fontWeight: active || isCurrent ? '700' : '600',
-                  },
-                ]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.75}
-              >
-                {tab.name}
-              </Text>
+              <View style={styles.tabContent}>
+                <View style={styles.tabHeaderRow}>
+                  <PrayerTabIcon
+                    prayer={tab.prayer}
+                    isSelected={active}
+                    isCurrent={isCurrent}
+                    isPast={isPast}
+                    size={16}
+                  />
+                  <Text
+                    style={[
+                      styles.modeTabText,
+                      {
+                        color: textColor,
+                        fontWeight: active || isCurrent ? '700' : '600',
+                      },
+                    ]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.75}
+                  >
+                    {tab.name}
+                  </Text>
+                </View>
+
+                {/* Start time directly inside tab so green highlighter covers the entire prayer */}
+                <Text
+                  style={[
+                    typography.caption,
+                    styles.visibleTimeText,
+                    {
+                      color: timeColor,
+                      fontWeight: active || isCurrent ? '700' : '500',
+                    },
+                  ]}
+                  importantForAccessibility="no"
+                  accessible={false}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                >
+                  {tab.startTime}
+                </Text>
+              </View>
             </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* ── Start times row directly aligned under each tab ── */}
-      <View style={styles.timeRow}>
-        {tabs.map(tab => {
-          const active = tab.prayer === selectedPrayer;
-          const isCurrent = tab.temporalState === 'CURRENT';
-          const isPast = tab.temporalState === 'PAST';
-          const timeColor = active
-            ? isDark
-              ? '#4ADE80'
-              : '#15803D'
-            : isCurrent
-            ? isDark
-              ? '#4ADE80'
-              : '#15803D'
-            : isPast
-            ? colors.textTertiary
-            : isDark
-            ? '#94A3B8'
-            : '#64748B';
-
-          return (
-            <View key={tab.prayer} style={styles.timeColumn}>
-              <Text
-                style={[
-                  typography.caption,
-                  styles.visibleTimeText,
-                  {
-                    color: timeColor,
-                    fontWeight: active || isCurrent ? '700' : '500',
-                  },
-                ]}
-                importantForAccessibility="no"
-                accessible={false}
-              >
-                {tab.startTime}
-              </Text>
-            </View>
           );
         })}
       </View>
@@ -326,20 +322,39 @@ const styles = StyleSheet.create({
 
   modeTab: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 2,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    position: 'relative',
+    zIndex: 1,
+  },
+
+  tabContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+
+  tabHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    position: 'relative',
+    gap: 3,
   },
 
   modeTabText: {
-    fontSize: 12.5,
+    fontSize: 12,
     letterSpacing: -0.2,
+  },
+
+  visibleTimeText: {
+    fontSize: 11,
+    marginTop: 2,
+    textAlign: 'center',
   },
 
   slidingPill: {
@@ -354,26 +369,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-
-
-  timeRow: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    paddingHorizontal: 4,
-    gap: 4,
-    marginTop: 2,
-  },
-
-  timeColumn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  visibleTimeText: {
-    fontSize: 12,
-    textAlign: 'center',
   },
 
   hiddenTimeSlot: {

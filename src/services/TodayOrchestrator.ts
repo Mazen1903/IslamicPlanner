@@ -126,7 +126,8 @@ export class TodayOrchestrator {
       timeline,
       now,
       inputs.params.timezone,
-      streakMap
+      streakMap,
+      queryResult.upcomingOccurrences
     );
 
     // 8. Construct explicit TodayRuntimeContext
@@ -172,7 +173,8 @@ export class TodayOrchestrator {
       runtime.timeline,
       now,
       timezone,
-      streakMap
+      streakMap,
+      queryResult.upcomingOccurrences
     );
   }
 }

@@ -16,6 +16,7 @@ import { generateUuid } from '@/utils/uuid';
 import { parseRecurrenceRule } from '@/domain/recurrence/rruleAdapter';
 import { isoWeekday } from '@/domain/recurrence/dateUtils';
 import { getIconIdFromTags, setIconInTags } from '@/constants/taskIcons';
+import { normalizeReminderRule, DEFAULT_ANYTIME_REMINDER_TIME } from '@/domain/notification/reminderRule';
 
 export interface CreateFormInitialParams {
   civilSeedDate: string;
@@ -25,6 +26,7 @@ export interface CreateFormInitialParams {
   initialOccurrence?: TaskOccurrence;
   editScope?: EditScope;
   initialStreakEnabled?: boolean;
+  defaultReminderMinutes?: number | null;
 }
 
 export const DEFAULT_EXACT_DRAFT: ExactTimeDraft = {
@@ -236,6 +238,10 @@ export function createInitialFormState(params: CreateFormInitialParams): FormSta
       isCompleted: completedSubtaskIds.has(st.id),
     }));
 
+    const normRule = normalizeReminderRule(initialDefinition.reminderRule);
+    const reminders = normRule?.offsetsMinutes ?? [];
+    const reminderTimeOfDay = normRule?.timeOfDay ?? (scheduleMode === 'ANYTIME_TODAY' && reminders.length > 0 ? DEFAULT_ANYTIME_REMINDER_TIME : null);
+
     return {
       mode: 'EDIT',
       editScope: editScope ?? null,
@@ -260,8 +266,10 @@ export function createInitialFormState(params: CreateFormInitialParams): FormSta
       subtasks,
       tags: initialDefinition.tags ? [...initialDefinition.tags] : [],
       icon: initialDefinition.tags ? getIconIdFromTags(initialDefinition.tags) : null,
-      reminderMinutes: scheduleMode === 'ANYTIME_TODAY' ? null : (initialDefinition.reminderRule?.offsetMinutes ?? null),
-      existingReminderRule: scheduleMode === 'ANYTIME_TODAY' ? null : (initialDefinition.reminderRule ?? null),
+      reminders,
+      reminderTimeOfDay,
+      reminderMinutes: reminders.length > 0 ? reminders[0] : null,
+      existingReminderRule: initialDefinition.reminderRule ?? null,
       isDirty: false,
       validationErrors: {},
       savePhase: 'IDLE',
@@ -293,7 +301,15 @@ export function createInitialFormState(params: CreateFormInitialParams): FormSta
     subtasks: [],
     tags: [],
     icon: null,
-    reminderMinutes: null,
+    reminders:
+      params.defaultReminderMinutes !== undefined && params.defaultReminderMinutes !== null
+        ? [params.defaultReminderMinutes]
+        : [],
+    reminderTimeOfDay: null,
+    reminderMinutes:
+      params.defaultReminderMinutes !== undefined && params.defaultReminderMinutes !== null
+        ? params.defaultReminderMinutes
+        : null,
     existingReminderRule: null,
     isDirty: false,
     validationErrors: {},
@@ -336,12 +352,13 @@ export function formReducer(state: FormState, action: FormAction): FormState {
       };
 
     case 'SET_SCHEDULE_MODE':
-      // Switching mode preserves all mode-specific draft values; switching to ANYTIME_TODAY clears reminders
+      // Switching mode preserves drafts and allows reminders for anytime tasks with timeOfDay
       return {
         ...state,
         scheduleMode: action.payload,
-        reminderMinutes: action.payload === 'ANYTIME_TODAY' ? null : state.reminderMinutes,
-        existingReminderRule: action.payload === 'ANYTIME_TODAY' ? null : state.existingReminderRule,
+        reminderTimeOfDay: action.payload === 'ANYTIME_TODAY'
+          ? (state.reminderTimeOfDay || (state.reminders.length > 0 ? DEFAULT_ANYTIME_REMINDER_TIME : null))
+          : state.reminderTimeOfDay,
         isDirty: true,
       };
 
@@ -479,12 +496,67 @@ export function formReducer(state: FormState, action: FormAction): FormState {
         isDirty: true,
       };
 
-    case 'SET_REMINDER_MINUTES':
+    case 'SET_REMINDERS': {
+      const reminders = action.payload.slice(0, 3).sort((a, b) => a - b);
       return {
         ...state,
-        reminderMinutes: action.payload,
+        reminders,
+        reminderMinutes: reminders.length > 0 ? reminders[0] : null,
         isDirty: true,
       };
+    }
+
+    case 'ADD_REMINDER': {
+      if (state.reminders.length >= 3 || state.reminders.includes(action.payload)) {
+        return state;
+      }
+      const updated = [...state.reminders, action.payload].sort((a, b) => a - b);
+      return {
+        ...state,
+        reminders: updated,
+        reminderMinutes: updated[0],
+        isDirty: true,
+      };
+    }
+
+    case 'REMOVE_REMINDER': {
+      const updated = state.reminders.filter(r => r !== action.payload);
+      return {
+        ...state,
+        reminders: updated,
+        reminderMinutes: updated.length > 0 ? updated[0] : null,
+        isDirty: true,
+      };
+    }
+
+    case 'SET_REMINDER_TIME_OF_DAY':
+      return {
+        ...state,
+        reminderTimeOfDay: action.payload,
+        isDirty: true,
+      };
+
+    case 'SET_REMINDER_MINUTES': {
+      const val = action.payload;
+      const updated = val === null ? [] : [val];
+      return {
+        ...state,
+        reminders: updated,
+        reminderMinutes: val,
+        isDirty: true,
+      };
+    }
+
+    case 'PREFILL_DEFAULT_REMINDER': {
+      if (state.mode === 'CREATE' && !state.isDirty && state.reminders.length === 0) {
+        return {
+          ...state,
+          reminders: [action.payload],
+          reminderMinutes: action.payload,
+        };
+      }
+      return state;
+    }
 
     case 'SET_VALIDATION_ERRORS':
       return {

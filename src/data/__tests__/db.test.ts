@@ -19,7 +19,7 @@ describe('Database Schema, Constraints and Migration (0000_initial.sql)', () => 
     cleanupTestDatabase();
   });
 
-  it('verifies 0001_initial.sql creates all 7 tables and sets foreign keys', () => {
+  it('verifies migrations create all 6 application tables and drops dead tables', () => {
     const tables = nodeDb
       .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
       .all()
@@ -29,9 +29,11 @@ describe('Database Schema, Constraints and Migration (0000_initial.sql)', () => 
     expect(tables).toContain('task_occurrences');
     expect(tables).toContain('user_settings');
     expect(tables).toContain('hijri_month_overrides');
-    expect(tables).toContain('worship_item_settings');
-    expect(tables).toContain('prayer_cache');
-    expect(tables).toContain('notification_schedule');
+    expect(tables).toContain('journal_entries');
+    expect(tables).toContain('streak_data');
+    expect(tables).not.toContain('worship_item_settings');
+    expect(tables).not.toContain('prayer_cache');
+    expect(tables).not.toContain('notification_schedule');
   });
 
   it('enforces SQLite CHECK constraint on schedule_type', () => {

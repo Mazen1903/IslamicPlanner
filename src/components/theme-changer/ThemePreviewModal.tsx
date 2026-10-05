@@ -121,7 +121,7 @@ export function ThemePreviewModal({
               Tap to Choose a Theme
             </Text>
             <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-              {selectedItem.name} {selectedItem.arabicName ? `• ${selectedItem.arabicName}` : ''}
+              {selectedItem.name}
             </Text>
           </View>
 

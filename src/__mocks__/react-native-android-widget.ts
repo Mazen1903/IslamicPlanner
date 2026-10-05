@@ -1,18 +1,35 @@
 /**
  * Jest manual mock for react-native-android-widget.
  *
- * Provides no-op implementations of all widget APIs used by WidgetSyncCoordinator
- * and the Android widget task handler.
+ * Imports the real widget JSX primitives (FlexWidget, TextWidget, etc.)
+ * directly from commonjs modules so that buildWidgetTree() can build
+ * and validate the widget tree in tests without loading native android modules.
  */
 
-export const registerWidgetTaskHandler = jest.fn().mockReturnValue(undefined);
-export const requestWidgetUpdate = jest.fn().mockResolvedValue(undefined);
-export const requestWidgetUpdateById = jest.fn().mockResolvedValue(undefined);
+const { FlexWidget } = require('react-native-android-widget/lib/commonjs/widgets/FlexWidget');
+const { TextWidget } = require('react-native-android-widget/lib/commonjs/widgets/TextWidget');
+const { IconWidget } = require('react-native-android-widget/lib/commonjs/widgets/IconWidget');
+const { ImageWidget } = require('react-native-android-widget/lib/commonjs/widgets/ImageWidget');
+const { SvgWidget } = require('react-native-android-widget/lib/commonjs/widgets/SvgWidget');
+const { ListWidget } = require('react-native-android-widget/lib/commonjs/widgets/ListWidget');
+const { OverlapWidget } = require('react-native-android-widget/lib/commonjs/widgets/OverlapWidget');
 
-// WidgetPreview is a React component used for gallery previews. Stub it.
-export const WidgetPreview = jest.fn().mockReturnValue(null);
+module.exports = {
+  FlexWidget,
+  TextWidget,
+  IconWidget,
+  ImageWidget,
+  SvgWidget,
+  ListWidget,
+  OverlapWidget,
 
-// Widget size constants
-export const WIDGET_SIZE_SMALL = 'small';
-export const WIDGET_SIZE_MEDIUM = 'medium';
-export const WIDGET_SIZE_LARGE = 'large';
+  registerWidgetTaskHandler: jest.fn().mockReturnValue(undefined),
+  requestWidgetUpdate: jest.fn().mockResolvedValue(undefined),
+  requestWidgetUpdateById: jest.fn().mockResolvedValue(undefined),
+
+  WidgetPreview: jest.fn().mockReturnValue(null),
+
+  WIDGET_SIZE_SMALL: 'small',
+  WIDGET_SIZE_MEDIUM: 'medium',
+  WIDGET_SIZE_LARGE: 'large',
+};

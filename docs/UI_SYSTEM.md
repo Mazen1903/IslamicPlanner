@@ -146,60 +146,75 @@ export const spacing = {
 
 ### 4.1 Font Families
 
+The primary typeface across the entire application is **Comic Sans MS** (applied globally via `src/theme/installFontDefaults.ts`).
+
 ```typescript
-export const fonts = {
-  display: 'Outfit',         // Friendly, modern display font (via expo-font / Google Fonts)
-  body:    'Inter',           // Clean sans-serif for dense content
-  mono:    'JetBrainsMono',   // Monospace for times (optional)
+export const fontNames = {
+  display:        'ComicSansMS-Bold',       // Bold display typeface
+  displayRegular: 'ComicSansMS',
+  displayBold:    'ComicSansMS-Bold',
+  body:           'ComicSansMS-Bold',       // Default body weight per specifications
+  bodyRegular:    'ComicSansMS',
+  bodyBold:       'ComicSansMS-Bold',
+  bodyItalic:     'ComicSansMS-BoldItalic',
+  mono:           'JetBrainsMono',          // Monospace for code/debug (optional)
 };
 ```
 
-**Loading:** Use `expo-font` to load custom fonts. Fall back to system font until loaded.
+**Loading:** Font assets (`ComicSansMS-Bold.ttf`, `ComicSansMS.ttf`, `ComicSansMS-Italic.ttf`, `ComicSansMS-BoldItalic.ttf`) are loaded asynchronously at startup via `expo-font` in `app/_layout.tsx` before the app transition gate unblocks.
 
 ### 4.2 Type Scale
 
 ```typescript
 export const typography = {
-  // Display — decorative font
-  displayLarge:  { fontFamily: fonts.display, fontSize: 32, fontWeight: '700', lineHeight: 40 },
-  displayMedium: { fontFamily: fonts.display, fontSize: 24, fontWeight: '600', lineHeight: 32 },
-  displaySmall:  { fontFamily: fonts.display, fontSize: 20, fontWeight: '600', lineHeight: 28 },
+  // Display — prominent header elements
+  displayLarge:   { fontFamily: fontNames.display, fontSize: 32, fontWeight: '700', lineHeight: 40 },
+  displayMedium:  { fontFamily: fontNames.display, fontSize: 24, fontWeight: '700', lineHeight: 32 },
+  displaySmall:   { fontFamily: fontNames.display, fontSize: 20, fontWeight: '700', lineHeight: 28 },
   
-  // Headlines — display font, smaller
-  headlineLarge: { fontFamily: fonts.display, fontSize: 18, fontWeight: '600', lineHeight: 24 },
-  headlineMedium:{ fontFamily: fonts.display, fontSize: 16, fontWeight: '600', lineHeight: 22 },
+  // Headlines — section and card headers
+  headlineLarge:  { fontFamily: fontNames.display, fontSize: 18, fontWeight: '700', lineHeight: 24 },
+  headlineMedium: { fontFamily: fontNames.display, fontSize: 16, fontWeight: '700', lineHeight: 22 },
   
-  // Body — sans-serif
-  bodyLarge:     { fontFamily: fonts.body, fontSize: 16, fontWeight: '400', lineHeight: 24 },
-  bodyMedium:    { fontFamily: fonts.body, fontSize: 14, fontWeight: '400', lineHeight: 20 },
-  bodySmall:     { fontFamily: fonts.body, fontSize: 12, fontWeight: '400', lineHeight: 16 },
+  // Body — tasks, descriptions, and lists
+  bodyLarge:      { fontFamily: fontNames.body, fontSize: 16, fontWeight: '400', lineHeight: 24 },
+  bodyMedium:     { fontFamily: fontNames.body, fontSize: 14, fontWeight: '400', lineHeight: 20 },
+  bodySmall:      { fontFamily: fontNames.body, fontSize: 12, fontWeight: '400', lineHeight: 16 },
   
-  // Labels — sans-serif, medium weight
-  labelLarge:    { fontFamily: fonts.body, fontSize: 14, fontWeight: '500', lineHeight: 20 },
-  labelMedium:   { fontFamily: fonts.body, fontSize: 12, fontWeight: '500', lineHeight: 16 },
-  labelSmall:    { fontFamily: fonts.body, fontSize: 10, fontWeight: '500', lineHeight: 14 },
+  // Labels — metadata, chips, and captions
+  labelLarge:     { fontFamily: fontNames.display, fontSize: 14, fontWeight: '500', lineHeight: 20 },
+  labelMedium:    { fontFamily: fontNames.body, fontSize: 12, fontWeight: '500', lineHeight: 16 },
+  labelSmall:     { fontFamily: fontNames.body, fontSize: 10, fontWeight: '500', lineHeight: 14 },
   
   // Caption
-  caption:       { fontFamily: fonts.body, fontSize: 11, fontWeight: '400', lineHeight: 14 },
+  caption:        { fontFamily: fontNames.body, fontSize: 11, fontWeight: '400', lineHeight: 14 },
 };
 ```
 
-### 4.3 Font Usage Rules (§36.3)
+### 4.3 Font Usage & App-Wide Enforcement Rules
 
-| Context | Font |
-|---|---|
-| Screen titles | Display (Outfit) |
-| Selected prayer name in header | Display |
-| Friendly empty states | Display |
-| Short emphasis text | Display |
-| Task names | Body (Inter) |
-| Times and durations | Body |
-| Recurrence labels | Body |
-| Notes content | Body |
-| Settings labels | Body |
-| Long descriptive text | Body |
+1. **Global Default Patch:**
+   - Comic Sans MS (`ComicSansMS-Bold` by default) is injected into `Text` and `TextInput` at the runtime entry point via `src/theme/installFontDefaults.ts`.
+   - The patch directly targets the real `react-native` module exports (`require('react-native')`).
+   - New components simply import `Text` or `TextInput` from `react-native` without having to manually specify `fontFamily`.
 
-**Rule:** Never use the display font for dense task information or long text.
+2. **No Per-Style `fontFamily` Literals:**
+   - Do not write hardcoded `fontFamily: '...'` string literals in component styles.
+   - Use `typography.*` tokens or let the global patch apply the default font.
+   - Enforced via ESLint (`no-restricted-syntax`) and automated static audit (`src/theme/__tests__/FontEnforcement.test.tsx`).
+
+3. **No Namespace Imports of React Native:**
+   - Never write `import * as ReactNative from 'react-native'`. Because `react-native/index.js` does not have an `__esModule` export, Metro and Babel create an isolated copy object when importing all. Patching a namespace copy does not affect named-import consumers.
+
+4. **No Internal `react-native/Libraries/` Imports:**
+   - Always import from `'react-native'`.
+
+5. **Icon & Monospace Preservation:**
+   - Known vector icon libraries (`Ionicons`, `MaterialCommunityIcons`, `FontAwesome5`) and `monospace` fonts are preserved automatically and never overridden by the Comic Sans defaults.
+
+6. **Native & Widget Boundaries:**
+   - Home-screen widgets (iOS SwiftUI, Android RemoteViews) and OS-native dialogs (e.g. system date picker) run outside the React JavaScript engine and require native font asset embedding.
+
 
 ---
 

@@ -1,7 +1,6 @@
 import { DateTime } from 'luxon';
 import { PRAYER_ORDER, PRAYER_NAMES, type Prayer } from '@/constants/prayers';
 import {
-  PRAYER_ARABIC_NAMES,
   buildTaskCardViewModel,
   computeVisibleTabs,
   compareScheduledTasks,
@@ -61,7 +60,6 @@ export interface UpcomingTaskItem {
 export interface SelectedDayPrayerSection {
   prayer: Prayer;
   name: string;
-  arabicName: string;
   startTime: string;
   tasks: TaskCardViewModel[];
 }
@@ -493,7 +491,6 @@ export class CalendarMonthOrchestrator {
       return {
         prayer,
         name: PRAYER_NAMES[prayer],
-        arabicName: PRAYER_ARABIC_NAMES[prayer],
         startTime,
         tasks,
       };

@@ -131,12 +131,32 @@ export function deriveRecurrenceFromState(state: FormState): {
  * Derives reminder rule preserving existing unknown metadata fields on edit.
  */
 export function deriveReminderRuleFromState(state: FormState): ReminderRule | null {
-  if (state.scheduleMode === 'ANYTIME_TODAY' || state.reminderMinutes === null) {
+  const base: Record<string, unknown> = state.existingReminderRule ? { ...state.existingReminderRule } : {};
+  const offsets = state.reminders && state.reminders.length > 0
+    ? state.reminders
+    : (typeof state.reminderMinutes === 'number' ? [state.reminderMinutes] : []);
+
+  if (state.scheduleMode === 'ANYTIME_TODAY') {
+    if (offsets.length === 0 && !state.reminderTimeOfDay) {
+      return null;
+    }
+    if (offsets.length > 0) {
+      base.offsetsMinutes = offsets;
+      base.offsetMinutes = offsets[0];
+    }
+    base.timeOfDay = state.reminderTimeOfDay || '09:00';
+    return base as ReminderRule;
+  }
+
+  if (offsets.length === 0) {
     return null;
   }
 
-  const base: Record<string, unknown> = state.existingReminderRule ? { ...state.existingReminderRule } : {};
-  base.offsetMinutes = state.reminderMinutes;
+  if (state.reminders && state.reminders.length > 0) {
+    base.offsetsMinutes = offsets;
+  }
+  base.offsetMinutes = offsets[0];
+  delete base.timeOfDay;
   return base as ReminderRule;
 }
 

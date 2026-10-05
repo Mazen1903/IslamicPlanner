@@ -36,6 +36,11 @@ const COLORS = {
 type SmallWidgetProps = WidgetSnapshot;
 
 export function SmallWidgetLayout(props: SmallWidgetProps) {
+  const palette =
+    props.theme?.mode === 'FIXED'
+      ? props.theme.light
+      : (props.theme?.dark ?? COLORS);
+
   if (props.isSetupRequired) {
     return (
       <VStack
@@ -43,10 +48,10 @@ export function SmallWidgetLayout(props: SmallWidgetProps) {
         spacing={8}
         modifiers={[padding({ all: 16 }), frame({ maxWidth: 170, maxHeight: 170 })]}
       >
-        <Text modifiers={[font({ size: 14, weight: 'bold' }), foregroundStyle(COLORS.text)]}>
+        <Text modifiers={[font({ size: 14, weight: 'bold' }), foregroundStyle(palette.text)]}>
           Islamic Planner
         </Text>
-        <Text modifiers={[font({ size: 12, weight: 'regular' }), foregroundStyle(COLORS.textMuted)]}>
+        <Text modifiers={[font({ size: 12, weight: 'regular' }), foregroundStyle(palette.textMuted)]}>
           Open app to finish setup.
         </Text>
       </VStack>
@@ -60,18 +65,18 @@ export function SmallWidgetLayout(props: SmallWidgetProps) {
       modifiers={[padding({ all: 12 }), frame({ maxWidth: 170, maxHeight: 170 })]}
     >
       {/* Header */}
-      <Text modifiers={[font({ size: 11, weight: 'semibold' }), foregroundStyle(COLORS.brandGreen)]}>
+      <Text modifiers={[font({ size: 11, weight: 'semibold' }), foregroundStyle(palette.brandGreen)]}>
         Islamic Planner
       </Text>
 
       <Spacer minLength={2} />
 
       {/* Current prayer */}
-      <Text modifiers={[font({ size: 16, weight: 'bold' }), foregroundStyle(COLORS.text)]}>
-        {props.currentPrayer.arabicName}
+      <Text modifiers={[font({ size: 16, weight: 'bold' }), foregroundStyle(palette.text)]}>
+        {props.currentPrayer.name}
       </Text>
-      <Text modifiers={[font({ size: 13, weight: 'medium' }), foregroundStyle(COLORS.text)]}>
-        {props.currentPrayer.name} · {props.currentPrayer.startsAtLocal}
+      <Text modifiers={[font({ size: 13, weight: 'medium' }), foregroundStyle(palette.text)]}>
+        {props.currentPrayer.startsAtLocal}
       </Text>
 
       <Spacer minLength={4} />
@@ -79,22 +84,22 @@ export function SmallWidgetLayout(props: SmallWidgetProps) {
       {/* Next prayer with native WidgetKit countdown timer */}
       {props.nextPrayer ? (
         <VStack alignment="leading" spacing={2}>
-          <Text modifiers={[font({ size: 11, weight: 'medium' }), foregroundStyle(COLORS.textMuted)]}>
+          <Text modifiers={[font({ size: 11, weight: 'medium' }), foregroundStyle(palette.textMuted)]}>
             Next: {props.nextPrayer.name} · {props.nextPrayer.startsAtLocal}
           </Text>
           <HStack alignment="center" spacing={4}>
-            <Text modifiers={[font({ size: 11, weight: 'regular' }), foregroundStyle(COLORS.brandGreen)]}>
+            <Text modifiers={[font({ size: 11, weight: 'regular' }), foregroundStyle(palette.brandGreen)]}>
               in
             </Text>
             <Text
               date={new Date(props.nextPrayer.startsAt)}
               dateStyle="timer"
-              modifiers={[font({ size: 13, weight: 'bold' }), foregroundStyle(COLORS.brandGreen)]}
+              modifiers={[font({ size: 13, weight: 'bold' }), foregroundStyle(palette.brandGreen)]}
             />
           </HStack>
         </VStack>
       ) : (
-        <Text modifiers={[font({ size: 11, weight: 'regular' }), foregroundStyle(COLORS.textMuted)]}>
+        <Text modifiers={[font({ size: 11, weight: 'regular' }), foregroundStyle(palette.textMuted)]}>
           {props.currentPrayer.name} · Last prayer
         </Text>
       )}

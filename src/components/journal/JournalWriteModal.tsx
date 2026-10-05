@@ -55,12 +55,6 @@ export function JournalWriteModal({
   const wordCount = trimmed.length > 0 ? trimmed.split(/\s+/).filter(Boolean).length : 0;
   const readMin = Math.max(1, Math.ceil(wordCount / 150));
 
-  const insertBismillah = () => {
-    const bismillah = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ\n\n';
-    if (!value.includes('بِسْمِ ٱللَّهِ')) {
-      onChangeText(bismillah + value);
-    }
-  };
 
   const insertTimestamp = () => {
     const now = new Date();
@@ -149,25 +143,6 @@ export function JournalWriteModal({
               },
             ]}
           >
-            <Pressable
-              onPress={insertBismillah}
-              accessibilityRole="button"
-              accessibilityLabel="Insert Bismillah heading"
-              style={({ pressed }) => [
-                styles.helperPill,
-                {
-                  backgroundColor: pressed
-                    ? colors.primaryLight
-                    : (isDark ? 'rgba(255,255,255,0.06)' : colors.surfaceSecondary),
-                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : colors.border,
-                  borderRadius: radii.pill,
-                },
-              ]}
-            >
-              <Text style={[styles.helperPillText, { color: colors.primaryDark }]}>
-                ﷽ Bismillah
-              </Text>
-            </Pressable>
 
             <Pressable
               onPress={insertTimestamp}

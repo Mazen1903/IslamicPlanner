@@ -1,5 +1,4 @@
 import React from 'react';
-import * as ReactNative from 'react-native';
 import {
   Platform,
   StyleSheet,
@@ -8,6 +7,17 @@ import {
   type TextProps,
   type TextInputProps,
 } from 'react-native';
+
+export const APP_FONT_PATCHED = Symbol.for('islamic_planner.app_font_patched');
+
+/**
+ * Checks whether the global font defaults are currently patched on the real react-native module.
+ */
+export function isAppFontInstalled(): boolean {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const RN = require('react-native');
+  return Boolean(RN.Text && (RN.Text as any)[APP_FONT_PATCHED]);
+}
 
 const COMIC_BOLD = 'ComicSansMS-Bold';
 const COMIC_REGULAR = 'ComicSansMS';
@@ -127,24 +137,33 @@ export function resolveAppFontStyle(style?: StyleProp<TextStyle>): StyleProp<Tex
   ];
 }
 
-let isInstalled = false;
-
 /**
- * Installs application-wide font defaults by wrapping ReactNative.Text and ReactNative.TextInput.
+ * Installs application-wide font defaults by wrapping Text and TextInput on the real react-native module.
+ *
+ * CRITICAL ARCHITECTURE NOTE:
+ * `react-native/index.js` has no `__esModule` flag. When using `import * as RN from 'react-native'`,
+ * Metro `importAll` and Babel `interopRequireWildcard` return a COPY of the module object.
+ * Patching `ReactNative.Text` on that namespace copy does NOT reach files using `import { Text } from 'react-native'`.
+ * Therefore, we must patch the real module exports object via `require('react-native')`.
+ *
  * Ensures all text across the entire app uses Comic Sans MS and prevents Android from falling back
  * to the phone's system font on interaction.
  */
 export function installFontDefaults(): void {
-  if (isInstalled) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const RN = require('react-native');
+
+  if (!RN || !RN.Text || !RN.TextInput) {
     return;
   }
 
-  const OriginalText = ReactNative.Text;
-  const OriginalTextInput = ReactNative.TextInput;
-
-  if (!OriginalText || !OriginalTextInput) {
+  // Idempotence: skip if already patched on the real module
+  if ((RN.Text as any)[APP_FONT_PATCHED]) {
     return;
   }
+
+  const OriginalText = RN.Text;
+  const OriginalTextInput = RN.TextInput;
 
   const PatchedText = React.forwardRef<any, TextProps>((props: TextProps, ref: any) => {
     const patchedStyle = resolveAppFontStyle(props.style);
@@ -155,7 +174,22 @@ export function installFontDefaults(): void {
     });
   });
 
+  (PatchedText as any)[APP_FONT_PATCHED] = true;
   PatchedText.displayName = 'PatchedAppText';
+
+  // Hoist static properties from OriginalText
+  for (const key of Object.getOwnPropertyNames(OriginalText)) {
+    if (key !== 'length' && key !== 'name' && key !== 'prototype' && key !== 'displayName') {
+      try {
+        const desc = Object.getOwnPropertyDescriptor(OriginalText, key);
+        if (desc) {
+          Object.defineProperty(PatchedText, key, desc);
+        }
+      } catch {
+        // ignore non-configurable
+      }
+    }
+  }
 
   const PatchedTextInput = React.forwardRef<any, TextInputProps>((props: TextInputProps, ref: any) => {
     const patchedStyle = resolveAppFontStyle(props.style);
@@ -166,28 +200,52 @@ export function installFontDefaults(): void {
     });
   });
 
+  (PatchedTextInput as any)[APP_FONT_PATCHED] = true;
   PatchedTextInput.displayName = 'PatchedAppTextInput';
 
+  // Hoist static properties from OriginalTextInput (such as State)
+  for (const key of Object.getOwnPropertyNames(OriginalTextInput)) {
+    if (key !== 'length' && key !== 'name' && key !== 'prototype' && key !== 'displayName') {
+      try {
+        const desc = Object.getOwnPropertyDescriptor(OriginalTextInput, key);
+        if (desc) {
+          Object.defineProperty(PatchedTextInput, key, desc);
+        }
+      } catch {
+        // ignore non-configurable
+      }
+    }
+  }
+
   try {
-    Object.defineProperty(ReactNative, 'Text', {
+    Object.defineProperty(RN, 'Text', {
       value: PatchedText,
       writable: true,
       configurable: true,
       enumerable: true,
     });
 
-    Object.defineProperty(ReactNative, 'TextInput', {
+    Object.defineProperty(RN, 'TextInput', {
       value: PatchedTextInput,
       writable: true,
       configurable: true,
       enumerable: true,
     });
-
-    isInstalled = true;
   } catch (err) {
     console.warn('[installFontDefaults] Failed to patch ReactNative Text/TextInput:', err);
+  }
+
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const verifyRN = require('react-native');
+    if (!verifyRN.Text || !(verifyRN.Text as any)[APP_FONT_PATCHED]) {
+      console.error(
+        '[installFontDefaults] Critical: Global font patch did not apply to react-native module exports. Text components will not receive Comic Sans defaults.'
+      );
+    }
   }
 }
 
 // Auto-install immediately when module is loaded
 installFontDefaults();
+

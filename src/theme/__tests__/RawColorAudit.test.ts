@@ -71,6 +71,7 @@ const CATEGORY_B_APPROVED_FILES = new Set([
   'src/components/task-form/IconPickerModal.tsx',
   'src/components/task-form/TaskFormScreen.tsx',
   'src/components/settings/SettingsIcons.tsx',
+  'src/components/layout/BottomNavBar.tsx',
 ]);
 
 /**

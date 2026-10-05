@@ -96,7 +96,7 @@ export function PhonePreviewCard({ item, style, testID }: PhonePreviewCardProps)
 
           <View style={styles.headerTitleRow}>
             <View>
-              <Text style={[styles.screenTitle, { color: textColor }]}>Today</Text>
+              <Text style={[styles.screenTitle, { color: textColor }]}>Planner</Text>
               <Text style={[styles.hijriDate, { color: primaryColor }]}>
                 18 Ramaḍān 1448 AH
               </Text>
@@ -133,9 +133,6 @@ export function PhonePreviewCard({ item, style, testID }: PhonePreviewCardProps)
             <View style={styles.prayerNameCol}>
               <Text style={[styles.prayerNameEnglish, { color: textColor }]}>
                 'Aṣr
-              </Text>
-              <Text style={[styles.prayerNameArabic, { color: textMuted }]}>
-                العصر
               </Text>
             </View>
             <Text style={[styles.prayerTimeText, { color: primaryColor }]}>
@@ -310,11 +307,11 @@ export function PhonePreviewCard({ item, style, testID }: PhonePreviewCardProps)
             },
           ]}
         >
-          {/* Tab 1: Today (Active) */}
+          {/* Tab 1: Planner (Active) */}
           <View style={styles.navItem}>
             <Icon name="home" size={15} color={primaryColor} decorative />
             <Text style={[styles.navLabel, { color: primaryColor, fontWeight: '700' }]}>
-              Today
+              Planner
             </Text>
           </View>
 
@@ -472,10 +469,6 @@ const styles = StyleSheet.create({
   prayerNameEnglish: {
     fontSize: 16,
     fontWeight: '800',
-  },
-  prayerNameArabic: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   prayerTimeText: {
     fontSize: 15,

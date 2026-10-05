@@ -63,14 +63,18 @@
               "displayName": "Prayer Times",
               "targetName": "IslamicPlannerSmall",
               "entryPoint": "./widgets/ios/SmallWidget.tsx",
-              "supportedFamilies": ["systemSmall"]
+              "supportedFamilies": [
+                "systemSmall"
+              ]
             },
             {
               "name": "IslamicPlannerMedium",
               "displayName": "Prayer and Tasks",
               "targetName": "IslamicPlannerMedium",
               "entryPoint": "./widgets/ios/MediumWidget.tsx",
-              "supportedFamilies": ["systemMedium"]
+              "supportedFamilies": [
+                "systemMedium"
+              ]
             }
           ]
         }
@@ -78,6 +82,10 @@
       [
         "react-native-android-widget",
         {
+          "fonts": [
+            "./assets/fonts/ComicSansMS.ttf",
+            "./assets/fonts/ComicSansMS-Bold.ttf"
+          ],
           "widgets": [
             {
               "name": "IslamicPlannerSmall",
@@ -98,7 +106,8 @@
           ]
         }
       ],
-      "./plugins/withAndroidWorkManagerResolution.js"
+      "./plugins/withAndroidWorkManagerResolution.js",
+      "expo-sharing"
     ]
   }
 }

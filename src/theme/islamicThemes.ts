@@ -4,7 +4,6 @@ import type { ThemeColors } from './tokens';
 export interface IslamicThemeDefinition {
   id: string;
   name: string;
-  arabicName: string;
   tagline: string;
   isDark: boolean;
   wallpaperAsset?: ImageSourcePropType;
@@ -421,7 +420,6 @@ export const ISLAMIC_THEMES: IslamicThemeDefinition[] = [
   {
     id: 'fajr_awakening',
     name: 'Fajr Awakening',
-    arabicName: 'فجر السكينة',
     tagline: 'By the dawn, and by the ten nights... (Surah Al-Fajr)',
     isDark: true,
     wallpaperAsset: require('../../assets/themes/fajr_awakening.jpg'),
@@ -436,7 +434,6 @@ export const ISLAMIC_THEMES: IslamicThemeDefinition[] = [
   {
     id: 'rawdah_emerald',
     name: 'Rawdah Emerald',
-    arabicName: 'الروضة الشريفة',
     tagline: 'Between my house and my pulpit is a garden from Paradise.',
     isDark: false,
     wallpaperAsset: require('../../assets/themes/rawdah_emerald.jpg'),
@@ -451,7 +448,6 @@ export const ISLAMIC_THEMES: IslamicThemeDefinition[] = [
   {
     id: 'tahajjud_noor',
     name: 'Tahajjud Noor',
-    arabicName: 'نور الليل',
     tagline: 'And during a part of the night, keep vigil therein... (Surah Al-Isra)',
     isDark: true,
     wallpaperAsset: require('../../assets/themes/tahajjud_noor.jpg'),
@@ -466,7 +462,6 @@ export const ISLAMIC_THEMES: IslamicThemeDefinition[] = [
   {
     id: 'andalusian_oasis',
     name: 'Andalusian Oasis',
-    arabicName: 'رياض الأندلس',
     tagline: 'Water courtyards, horseshoe arches, and jasmine gardens.',
     isDark: false,
     wallpaperAsset: require('../../assets/themes/andalusian_oasis.jpg'),
@@ -481,7 +476,6 @@ export const ISLAMIC_THEMES: IslamicThemeDefinition[] = [
   {
     id: 'sacred_tawaf',
     name: 'Sacred Tawaf',
-    arabicName: 'مكة المكرمة',
     tagline: 'Concentric rings of devotion around the Holy Kaaba.',
     isDark: true,
     wallpaperAsset: require('../../assets/themes/sacred_tawaf.jpg'),
@@ -496,7 +490,6 @@ export const ISLAMIC_THEMES: IslamicThemeDefinition[] = [
   {
     id: 'blessed_olive',
     name: 'Blessed Olive Grove',
-    arabicName: 'زيتون القدس',
     tagline: 'Lit from a blessed tree, an olive... (Surah An-Nur)',
     isDark: false,
     wallpaperAsset: require('../../assets/themes/blessed_olive.jpg'),
@@ -511,7 +504,6 @@ export const ISLAMIC_THEMES: IslamicThemeDefinition[] = [
   {
     id: 'samarkand_turquoise',
     name: 'Samarkand Turquoise',
-    arabicName: 'سيراميك سمرقند',
     tagline: 'Fluted turquoise domes and glazed Silk Road mosaics.',
     isDark: false,
     wallpaperAsset: require('../../assets/themes/samarkand_turquoise.jpg'),
@@ -526,7 +518,6 @@ export const ISLAMIC_THEMES: IslamicThemeDefinition[] = [
   {
     id: 'celestial_caravan',
     name: 'Celestial Caravan',
-    arabicName: 'قافلة النجوم',
     tagline: 'And landmarks; and by the stars they guide themselves. (Surah An-Nahl)',
     isDark: true,
     wallpaperAsset: require('../../assets/themes/celestial_caravan.jpg'),
@@ -541,7 +532,6 @@ export const ISLAMIC_THEMES: IslamicThemeDefinition[] = [
   {
     id: 'maghrib_lantern',
     name: 'Maghrib Lantern',
-    arabicName: 'غروب الإفطار',
     tagline: 'Warm sunset fellowship, breaking fast, and glowing lanterns.',
     isDark: true,
     wallpaperAsset: require('../../assets/themes/maghrib_lantern.jpg'),
@@ -556,7 +546,6 @@ export const ISLAMIC_THEMES: IslamicThemeDefinition[] = [
   {
     id: 'al_aqsa_sunset',
     name: 'Al-Aqsa Sunset',
-    arabicName: 'قدس السلام',
     tagline: 'The golden dome gleaming under the lavender dusk of Jerusalem.',
     isDark: false,
     wallpaperAsset: require('../../assets/themes/al_aqsa_sunset.jpg'),

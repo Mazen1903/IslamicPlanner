@@ -60,14 +60,17 @@ describe('ExpandingAddTaskModal', () => {
     expect(screen.queryByTestId('expanding-add-task-modal')).toBeNull();
   });
 
-  it('renders modal and content when visible is true', async () => {
+  it('renders modal and content when visible is true with slide-from-bottom configuration', async () => {
     await render(
       <ThemeProvider>
         <ExpandingAddTaskModal {...defaultProps} visible={true} />
       </ThemeProvider>
     );
 
-    expect(screen.getByTestId('expanding-add-task-modal')).toBeTruthy();
+    const modal = screen.getByTestId('expanding-add-task-modal');
+    expect(modal).toBeTruthy();
+    expect(modal.props.animationType).toBe('slide');
+    expect(modal.props.presentationStyle).toBe('fullScreen');
     expect(screen.getByTestId('expanding-add-task-container')).toBeTruthy();
     expect(screen.getByTestId('expanding-add-task-content')).toBeTruthy();
   });

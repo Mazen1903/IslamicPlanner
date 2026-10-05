@@ -103,7 +103,7 @@ describe('M13 Integration Seams & Safeguards', () => {
       expect(deriveReminderRuleFromState(anytimeState)).toBeNull();
     });
 
-    it('clears reminder when switching from scheduled mode to ANYTIME_TODAY', () => {
+    it('preserves reminder when switching from scheduled mode to ANYTIME_TODAY', () => {
       let state = createInitialFormState({
         civilSeedDate: '2026-09-17',
         planningDayDate: '2026-09-17',
@@ -113,14 +113,17 @@ describe('M13 Integration Seams & Safeguards', () => {
 
       expect(state.reminderMinutes).toBe(15);
 
-      // User converts to ANYTIME_TODAY
+      // User converts to ANYTIME_TODAY - reminders are now preserved with default timeOfDay
       state = formReducer(state, { type: 'SET_SCHEDULE_MODE', payload: 'ANYTIME_TODAY' });
-      expect(state.reminderMinutes).toBeNull();
-      expect(state.existingReminderRule).toBeNull();
-      expect(deriveReminderRuleFromState(state)).toBeNull();
+      expect(state.reminderMinutes).toBe(15);
+      expect(state.reminders).toEqual([15]);
+      expect(state.reminderTimeOfDay).toBe('09:00');
+      const rule = deriveReminderRuleFromState(state);
+      expect(rule).not.toBeNull();
+      expect(rule?.timeOfDay).toBe('09:00');
     });
 
-    it('normalizes reminderRule to null when mapping ANYTIME_TODAY state to create params', () => {
+    it('normalizes reminderRule to null when mapping ANYTIME_TODAY state with no reminders to create params', () => {
       let state = createInitialFormState({
         civilSeedDate: '2026-09-17',
         planningDayDate: '2026-09-17',
@@ -133,7 +136,7 @@ describe('M13 Integration Seams & Safeguards', () => {
       expect(params.reminderRule).toBeNull();
     });
 
-    it('normalizes legacy ANYTIME_TODAY definition with residual reminderRule to null only on form edit/save', () => {
+    it('preserves legacy ANYTIME_TODAY definition with reminderRule on form edit/save', () => {
       const legacyDef: any = {
         id: 'legacy-1',
         title: 'Legacy Task',
@@ -141,22 +144,21 @@ describe('M13 Integration Seams & Safeguards', () => {
         scheduleType: 'ANYTIME_TODAY',
         scheduleData: {},
         seriesId: 'series-legacy',
-        reminderRule: { offsetMinutes: 10, channelId: 'old' },
+        reminderRule: { offsetMinutes: -10, channelId: 'old' },
       };
 
-      // Initial state from legacy definition presents reminders as null without mutating DB
       const state = createInitialFormState({
         civilSeedDate: '2026-09-17',
         planningDayDate: '2026-09-17',
         initialDefinition: legacyDef,
       });
 
-      expect(state.reminderMinutes).toBeNull();
-      expect(state.existingReminderRule).toBeNull();
+      expect(state.reminders).toEqual([-10]);
+      expect(state.existingReminderRule).toBeTruthy();
 
-      // On save, it normalizes to null
       const reminder = deriveReminderRuleFromState(state);
-      expect(reminder).toBeNull();
+      expect(reminder).not.toBeNull();
+      expect(reminder?.offsetsMinutes).toEqual([-10]);
     });
   });
 

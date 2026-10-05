@@ -66,12 +66,11 @@ describe('Group H: RTL Logical Styles Contract (RTL-1 & RTL-2)', () => {
   });
 
   // 9. PrayerHeader.tsx
-  it('H-9: PrayerHeader.tsx uses marginStart and marginEnd', () => {
+  it('H-9: PrayerHeader.tsx uses marginEnd without physical margins', () => {
     const src = readSource('src/components/prayer/PrayerHeader.tsx');
-    expect(src).toContain('marginStart: spacing.md');
     expect(src).toContain('marginEnd: spacing.xs');
-    expect(src).not.toContain('marginLeft: spacing.md');
-    expect(src).not.toContain('marginRight: spacing.xs');
+    expect(src).not.toContain('marginLeft:');
+    expect(src).not.toContain('marginRight:');
   });
 
   // 10. PrayerTransitionBanner.tsx
@@ -126,9 +125,11 @@ describe('Group H: RTL Logical Styles Contract (RTL-1 & RTL-2)', () => {
   });
 
   // 18. DayDetailTaskList.tsx
-  it('H-18: DayDetailTaskList.tsx uses marginStart on Arabic text', () => {
+  it('H-18: DayDetailTaskList.tsx uses marginEnd on icon without physical margins', () => {
     const src = readSource('src/components/calendar/DayDetailTaskList.tsx');
-    expect(src).toContain('marginStart: spacing.xs');
+    expect(src).toContain('marginEnd: spacing.xs');
+    expect(src).not.toContain('marginLeft:');
+    expect(src).not.toContain('marginRight:');
   });
 
   // 19. UpcomingSection.tsx
@@ -144,12 +145,11 @@ describe('Group H: RTL Logical Styles Contract (RTL-1 & RTL-2)', () => {
     expect(src).toContain('marginEnd: spacing.sm');
   });
 
-  // 21. MoreOptionsSection.tsx
-  it('H-21: MoreOptionsSection.tsx uses marginEnd and marginStart', () => {
-    const src = readSource('src/components/task-form/MoreOptionsSection.tsx');
+  // 21. ReminderSheet.tsx
+  it('H-21: ReminderSheet.tsx uses marginEnd and marginStart', () => {
+    const src = readSource('src/components/task-form/ReminderSheet.tsx');
     expect(src).toContain('marginEnd: spacing.sm');
-    expect(src).toContain('marginEnd: spacing.xs');
-    expect(src).toContain('marginStart: 4');
+    expect(src).toContain('marginEnd: 4');
   });
 
   // 22. RecurrenceSection.tsx

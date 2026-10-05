@@ -1,5 +1,5 @@
-import React, { useContext, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import React, { useContext, useRef, useCallback, useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable, Dimensions, Animated } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { Icon, type IconName } from '@/components/common/Icon';
@@ -20,6 +20,7 @@ export interface BottomNavBarProps {
 }
 
 const TAB_CONFIG: Record<string, { label: string; icon: IconName }> = {
+  planner: { label: 'Planner', icon: 'clipboard' },
   today: { label: 'Planner', icon: 'clipboard' },
   calendar: { label: 'Calendar', icon: 'calendar' },
   add: { label: 'Add', icon: 'plus' },
@@ -28,7 +29,7 @@ const TAB_CONFIG: Record<string, { label: string; icon: IconName }> = {
 };
 
 export function BottomNavBar(props: BottomNavBarProps) {
-  const { colors, spacing, radii, typography, shadows, touchTargets } = useTheme();
+  const { colors, spacing, radii, typography, shadows, touchTargets, isDark } = useTheme();
   const insetsContext = useContext(SafeAreaInsetsContext);
   const bottomInset = props.insets?.bottom ?? insetsContext?.bottom ?? 0;
 
@@ -52,7 +53,7 @@ export function BottomNavBar(props: BottomNavBarProps) {
   }, []);
 
   const routes = props.state?.routes ?? [
-    { key: 'today', name: 'today' },
+    { key: 'planner', name: 'planner' },
     { key: 'calendar', name: 'calendar' },
     { key: 'add', name: 'add' },
     { key: 'journal', name: 'journal' },
@@ -60,6 +61,117 @@ export function BottomNavBar(props: BottomNavBarProps) {
   ];
 
   const activeIndex = props.state?.index ?? 0;
+  const activeRoute = routes[activeIndex]?.name;
+
+  // Track layout coordinates for the active tab pill
+  const [tabLayouts, setTabLayouts] = useState<
+    Record<string, { x: number; y: number; width: number; height: number }>
+  >({});
+  const [iconLayouts, setIconLayouts] = useState<
+    Record<string, { x: number; y: number; width: number; height: number }>
+  >({});
+
+  const translateX = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const indicatorWidth = useRef(new Animated.Value(0)).current;
+  const indicatorHeight = useRef(new Animated.Value(0)).current;
+  const indicatorOpacity = useRef(new Animated.Value(0)).current;
+  const isInitializedRef = useRef(false);
+
+  const handlePressableLayout = useCallback(
+    (name: string, layout: { x: number; y: number; width: number; height: number }) => {
+      setTabLayouts(prev => {
+        if (
+          prev[name]?.x === layout.x &&
+          prev[name]?.y === layout.y &&
+          prev[name]?.width === layout.width &&
+          prev[name]?.height === layout.height
+        ) {
+          return prev;
+        }
+        return { ...prev, [name]: layout };
+      });
+    },
+    []
+  );
+
+  const handleIconLayout = useCallback(
+    (name: string, layout: { x: number; y: number; width: number; height: number }) => {
+      setIconLayouts(prev => {
+        if (
+          prev[name]?.x === layout.x &&
+          prev[name]?.y === layout.y &&
+          prev[name]?.width === layout.width &&
+          prev[name]?.height === layout.height
+        ) {
+          return prev;
+        }
+        return { ...prev, [name]: layout };
+      });
+    },
+    []
+  );
+
+  const hasPillLayout = Boolean(activeRoute && tabLayouts[activeRoute] && iconLayouts[activeRoute]);
+
+  useEffect(() => {
+    if (!activeRoute || activeRoute === 'add' || !tabLayouts[activeRoute] || !iconLayouts[activeRoute]) {
+      return;
+    }
+
+    const tLayout = tabLayouts[activeRoute];
+    const iLayout = iconLayouts[activeRoute];
+    const targetX = tLayout.x + iLayout.x;
+    const targetY = tLayout.y + iLayout.y;
+    const targetWidth = iLayout.width;
+    const targetHeight = iLayout.height;
+
+    if (!isInitializedRef.current) {
+      translateX.setValue(targetX);
+      translateY.setValue(targetY);
+      indicatorWidth.setValue(targetWidth);
+      indicatorHeight.setValue(targetHeight);
+      indicatorOpacity.setValue(1);
+      isInitializedRef.current = true;
+      return;
+    }
+
+    Animated.parallel([
+      Animated.spring(translateX, {
+        toValue: targetX,
+        damping: 22,
+        stiffness: 220,
+        mass: 0.8,
+        useNativeDriver: false,
+      }),
+      Animated.spring(translateY, {
+        toValue: targetY,
+        damping: 22,
+        stiffness: 220,
+        mass: 0.8,
+        useNativeDriver: false,
+      }),
+      Animated.spring(indicatorWidth, {
+        toValue: targetWidth,
+        damping: 22,
+        stiffness: 220,
+        mass: 0.8,
+        useNativeDriver: false,
+      }),
+      Animated.spring(indicatorHeight, {
+        toValue: targetHeight,
+        damping: 22,
+        stiffness: 220,
+        mass: 0.8,
+        useNativeDriver: false,
+      }),
+      Animated.timing(indicatorOpacity, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [activeRoute, tabLayouts, iconLayouts, translateX, translateY, indicatorWidth, indicatorHeight, indicatorOpacity]);
 
   return (
     <View
@@ -76,6 +188,25 @@ export function BottomNavBar(props: BottomNavBarProps) {
       accessibilityRole="tablist"
       testID="bottom-nav-bar"
     >
+      {/* Smooth Sliding Pill Indicator */}
+      {hasPillLayout ? (
+        <Animated.View
+          pointerEvents="none"
+          testID="bottom-nav-sliding-pill"
+          style={[
+            styles.slidingPill,
+            {
+              transform: [{ translateX }, { translateY }],
+              width: indicatorWidth,
+              height: indicatorHeight,
+              opacity: indicatorOpacity,
+              backgroundColor: colors.primaryLight,
+              borderRadius: radii.pill,
+            },
+          ]}
+        />
+      ) : null}
+
       {routes.map((route: BottomNavBarRoute, index: number) => {
         const isFocused = activeIndex === index;
         const isAdd = route.name === 'add';
@@ -90,7 +221,18 @@ export function BottomNavBar(props: BottomNavBarProps) {
             });
 
             if (!isFocused && !event.defaultPrevented) {
-              props.navigation.navigate(route.name);
+              if (props.state?.key) {
+                props.navigation.dispatch({
+                  type: 'NAVIGATE',
+                  payload: {
+                    name: route.name,
+                    key: route.key,
+                  },
+                  target: props.state.key,
+                });
+              } else {
+                props.navigation.navigate(route.name);
+              }
             }
           }
         };
@@ -118,7 +260,11 @@ export function BottomNavBar(props: BottomNavBarProps) {
           };
 
           return (
-            <View key={route.key} style={styles.addTabWrapper}>
+            <View
+              key={route.key}
+              style={styles.addTabWrapper}
+              onLayout={e => handlePressableLayout('add', e.nativeEvent.layout)}
+            >
               <View
                 ref={addButtonRef}
                 collapsable={false}
@@ -147,9 +293,13 @@ export function BottomNavBar(props: BottomNavBarProps) {
           );
         }
 
+        const activeColor = colors.tabActive;
+        const inactiveColor = colors.tabInactive;
+
         return (
           <Pressable
             key={route.key}
+            onLayout={e => handlePressableLayout(route.name, e.nativeEvent.layout)}
             onPress={onPress}
             accessibilityRole="tab"
             accessibilityState={{ selected: isFocused }}
@@ -164,9 +314,10 @@ export function BottomNavBar(props: BottomNavBarProps) {
             testID={`bottom-nav-${route.name}`}
           >
             <View
+              onLayout={e => handleIconLayout(route.name, e.nativeEvent.layout)}
               style={[
                 styles.iconContainer,
-                isFocused && [
+                isFocused && !hasPillLayout && [
                   styles.activeIconPill,
                   {
                     backgroundColor: colors.primaryLight,
@@ -174,20 +325,21 @@ export function BottomNavBar(props: BottomNavBarProps) {
                   },
                 ],
               ]}
+              testID={`bottom-nav-icon-${route.name}`}
             >
-              {route.name === 'today' ? (
-                <NavPlannerIcon size={22} color={isFocused ? colors.tabActive : colors.tabInactive} />
+              {route.name === 'planner' || route.name === 'today' ? (
+                <NavPlannerIcon size={22} color={isFocused ? activeColor : inactiveColor} />
               ) : route.name === 'calendar' ? (
-                <NavCalendarIcon size={22} color={isFocused ? colors.tabActive : colors.tabInactive} />
+                <NavCalendarIcon size={22} color={isFocused ? activeColor : inactiveColor} />
               ) : route.name === 'journal' ? (
-                <NavLibraryIcon size={22} color={isFocused ? colors.tabActive : colors.tabInactive} />
+                <NavLibraryIcon size={22} color={isFocused ? activeColor : inactiveColor} />
               ) : route.name === 'settings' ? (
-                <NavMoreIcon size={22} color={isFocused ? colors.tabActive : colors.tabInactive} />
+                <NavMoreIcon size={22} color={isFocused ? activeColor : inactiveColor} />
               ) : (
                 <Icon
                   name={config.icon}
                   size={22}
-                  color={isFocused ? colors.tabActive : colors.tabInactive}
+                  color={isFocused ? activeColor : inactiveColor}
                   decorative
                 />
               )}
@@ -196,7 +348,8 @@ export function BottomNavBar(props: BottomNavBarProps) {
               style={[
                 typography.caption,
                 {
-                  color: isFocused ? colors.tabActive : colors.tabInactive,
+                  color: isFocused ? activeColor : inactiveColor,
+                  fontWeight: isFocused ? '600' : '500',
                   marginTop: spacing.xxs,
                 },
               ]}
@@ -218,11 +371,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingBottom: 8,
     paddingTop: 4,
+    position: 'relative',
+  },
+  slidingPill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    zIndex: 0,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1,
   },
   iconContainer: {
     height: 32,
@@ -232,12 +393,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   activeIconPill: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
   },
   addTabWrapper: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1,
   },
   addButton: {
     width: 48,

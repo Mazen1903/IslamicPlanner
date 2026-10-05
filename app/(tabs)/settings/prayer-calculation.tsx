@@ -163,7 +163,7 @@ function PrayerCalculationForm({ settings, reload }: PrayerCalculationFormProps)
       await reload();
       Alert.alert(
         'Settings Saved',
-        'Your calculation settings were saved, but planner refresh encountered a temporary issue. It will refresh automatically when you view Today.',
+        'Your calculation settings were saved, but planner refresh encountered a temporary issue. It will refresh automatically when you view Planner.',
         [{ text: 'OK' }]
       );
     } else {

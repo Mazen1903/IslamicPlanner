@@ -128,7 +128,7 @@ describe('RootGate Routing and Authorization (B-series tests)', () => {
     expect(mockReplace).toHaveBeenCalledWith('/onboarding');
   });
 
-  it('B-10: COMPLETE + route /onboarding -> onboarding component never renders; redirects to /today', async () => {
+  it('B-10: COMPLETE + route /onboarding -> onboarding component never renders; redirects to /planner', async () => {
     useOnboardingStore.setState({ status: 'COMPLETE' });
     mockSegments = ['onboarding'];
 
@@ -140,7 +140,7 @@ describe('RootGate Routing and Authorization (B-series tests)', () => {
 
     expect(screen.queryByTestId('slot-content')).toBeNull();
     expect(screen.getByTestId('bootstrap-loading-view')).toBeTruthy();
-    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/today');
+    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/planner');
   });
 
   it('B-12: No redirect loop: PENDING + /onboarding stays on onboarding and renders Slot', async () => {

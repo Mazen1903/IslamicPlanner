@@ -68,6 +68,17 @@ export interface HijriRecurrenceData {
 }
 
 export interface ReminderRule {
+  /**
+   * Minutes relative to anchor: negative = before anchor, 0 = at time, positive = after. Max 3.
+   */
+  offsetsMinutes?: number[];
+  /**
+   * 'HH:mm' 24h format (e.g. '09:00') — used when scheduleType is ANYTIME_TODAY.
+   */
+  timeOfDay?: string;
+  /**
+   * @deprecated Legacy single offset in minutes. Preserved for backwards compatibility with existing rows.
+   */
   offsetMinutes?: number;
   channelId?: string;
   [key: string]: unknown;

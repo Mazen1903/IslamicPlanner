@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginEnd: 8,
   },
   subtaskText: {
     flex: 1,

@@ -91,11 +91,15 @@ describe('NotificationEdgeCases (NE-01 to NE-07)', () => {
       cancelScheduledNotification: jest.fn().mockImplementation(async id => {
         scheduledMap.delete(id);
       }),
+      scheduleDailyNotification: jest.fn().mockResolvedValue(undefined),
       getAllScheduledNotifications: jest.fn().mockImplementation(async () => Array.from(scheduledMap.values())),
     };
 
     mockChannelManager = {
       ensureChannel: jest.fn().mockResolvedValue(undefined),
+      getTaskChannelId: jest.fn().mockReturnValue('task-reminders-v2-vib'),
+      getPrayerChannelId: jest.fn().mockReturnValue('prayer-alerts-v2-vib'),
+      getJournalChannelId: jest.fn().mockReturnValue('journal-reminders-v2'),
     };
 
     service = new NotificationReconciliationService(

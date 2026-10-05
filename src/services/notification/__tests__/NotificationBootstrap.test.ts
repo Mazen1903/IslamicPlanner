@@ -9,8 +9,31 @@ jest.mock('expo', () => ({
   isRunningInExpoGo: jest.fn(),
 }));
 
+jest.mock('expo-router', () => ({
+  router: {
+    push: jest.fn(),
+  },
+}));
+
+jest.mock('@/domain/task/TaskEngine', () => ({
+  TaskEngine: jest.fn().mockImplementation(() => ({
+    completeTask: jest.fn().mockResolvedValue(undefined),
+  })),
+}));
+
+jest.mock('@/data/repositories/TaskDefinitionRepository', () => ({
+  taskDefinitionRepository: {},
+}));
+
+jest.mock('@/data/repositories/TaskOccurrenceRepository', () => ({
+  taskOccurrenceRepository: {},
+}));
+
 jest.mock('expo-notifications', () => ({
   setNotificationHandler: jest.fn(),
+  setNotificationCategoryAsync: jest.fn().mockResolvedValue(undefined),
+  addNotificationResponseReceivedListener: jest.fn().mockReturnValue({ remove: jest.fn() }),
+  getLastNotificationResponseAsync: jest.fn().mockResolvedValue(null),
 }));
 
 describe('NotificationBootstrap', () => {
@@ -75,4 +98,20 @@ describe('NotificationBootstrap', () => {
 
     expect(Notifications.setNotificationHandler).not.toHaveBeenCalled();
   });
+
+  it('registers notification categories and response listener', async () => {
+    (isRunningInExpoGo as jest.Mock).mockReturnValue(false);
+
+    await initNotificationHandler();
+
+    expect(Notifications.setNotificationCategoryAsync).toHaveBeenCalledWith(
+      'task-reminder-actions',
+      expect.arrayContaining([
+        expect.objectContaining({ identifier: 'ACTION_SNOOZE_10', buttonTitle: 'Snooze 10m' }),
+        expect.objectContaining({ identifier: 'ACTION_MARK_DONE', buttonTitle: 'Mark Done' }),
+      ])
+    );
+    expect(Notifications.addNotificationResponseReceivedListener).toHaveBeenCalled();
+  });
 });
+

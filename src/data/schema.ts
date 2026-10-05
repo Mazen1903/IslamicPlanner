@@ -121,11 +121,7 @@ export const userSettings = sqliteTable('user_settings', {
     .notNull()
     .default('{"fajr":0,"sunrise":0,"dhuhr":0,"asr":0,"maghrib":0,"isha":0}'),
   planningDayStart: text('planning_day_start').notNull().default('FAJR'),
-  hijriBaseMethod: text('hijri_base_method').notNull().default('UMM_AL_QURA'),
   hijriGlobalAdjustment: integer('hijri_global_adjustment').notNull().default(0),
-  worshipSuggestionsEnabled: integer('worship_suggestions_enabled', { mode: 'boolean' })
-    .notNull()
-    .default(true),
   prayerAlertsEnabled: integer('prayer_alerts_enabled', { mode: 'boolean' })
     .notNull()
     .default(true),
@@ -143,6 +139,9 @@ export const userSettings = sqliteTable('user_settings', {
   quietHoursEnabled: integer('quiet_hours_enabled', { mode: 'boolean' })
     .notNull()
     .default(false),
+  quietHoursStart: text('quiet_hours_start').notNull().default('22:00'),
+  quietHoursEnd: text('quiet_hours_end').notNull().default('06:00'),
+  defaultReminderMinutes: integer('default_reminder_minutes'),
   journalReminderEnabled: integer('journal_reminder_enabled', { mode: 'boolean' })
     .notNull()
     .default(false),
@@ -152,7 +151,6 @@ export const userSettings = sqliteTable('user_settings', {
   onboardingCompleted: integer('onboarding_completed', { mode: 'boolean' })
     .notNull()
     .default(false),
-  flameEngine: text('flame_engine').notNull().default('lottie'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -174,46 +172,6 @@ export const hijriMonthOverrides = sqliteTable(
     unique('unique_year_month').on(table.hijriYear, table.hijriMonth),
   ]
 );
-
-// ==========================================
-// 2.5 worship_item_settings
-// ==========================================
-export const worshipItemSettings = sqliteTable('worship_item_settings', {
-  id: text('id').primaryKey(),
-  worshipItemKey: text('worship_item_key').notNull().unique(),
-  isEnabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(true),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
-});
-
-// ==========================================
-// 2.6 prayer_cache
-// ==========================================
-export const prayerCache = sqliteTable('prayer_cache', {
-  fingerprint: text('fingerprint').primaryKey(),
-  date: text('date').notNull(),
-  resultJson: text('result_json').notNull(),
-  cachedAt: text('cached_at').notNull(),
-});
-
-// ==========================================
-// 2.7 notification_schedule
-// ==========================================
-export const notificationSchedule = sqliteTable('notification_schedule', {
-  id: text('id').primaryKey(),
-  taskOccurrenceId: text('task_occurrence_id').references(
-    () => taskOccurrences.id,
-    { onDelete: 'cascade' }
-  ),
-  type: text('type').notNull(),
-  title: text('title').notNull(),
-  body: text('body').notNull(),
-  scheduledFor: text('scheduled_for').notNull(),
-  channelId: text('channel_id').notNull(),
-  platformNotifId: text('platform_notif_id'),
-  status: text('status').notNull().default('SCHEDULED'),
-  createdAt: text('created_at').notNull(),
-});
 
 // ==========================================
 // 2.8 journal_entries

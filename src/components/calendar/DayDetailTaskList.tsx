@@ -70,13 +70,6 @@ export function DayDetailTaskList({
                   <Text style={[typography.headlineMedium, { color: colors.textPrimary }]}>
                     {section.name}
                   </Text>
-                  <Text
-                    importantForAccessibility="no"
-                    accessibilityElementsHidden={true}
-                    style={[typography.bodySmall, { color: colors.textTertiary, marginStart: spacing.xs }]}
-                  >
-                    {section.arabicName}
-                  </Text>
                 </View>
                 <Text style={[typography.caption, { color: colors.primary }]}>
                   {section.startTime}

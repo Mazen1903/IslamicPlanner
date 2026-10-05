@@ -33,11 +33,10 @@ describe('SettingsMutationCoordinator', () => {
   });
 
   describe('validation and safe contract', () => {
-    it('rejects forbidden patch keys (isPremium, onboardingCompleted, worshipSuggestionsEnabled, prayerAlertsEnabled)', async () => {
+    it('rejects forbidden patch keys (isPremium, onboardingCompleted, prayerAlertsEnabled)', async () => {
       const forbiddenKeys = [
         'isPremium',
         'onboardingCompleted',
-        'worshipSuggestionsEnabled',
         'prayerAlertsEnabled',
         'locationMode',
         'manualLatitude',

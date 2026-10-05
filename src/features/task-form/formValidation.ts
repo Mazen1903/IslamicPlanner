@@ -124,9 +124,20 @@ export function validateForm(state: FormState): ValidationResult {
     }
   }
 
-  if (state.reminderMinutes !== null) {
-    if (state.reminderMinutes < 0 || !Number.isInteger(state.reminderMinutes)) {
-      errors.reminderMinutes = 'Reminder offset must be a non-negative integer';
+  if (state.reminders && state.reminders.length > 3) {
+    errors.reminders = 'A maximum of 3 reminders is allowed';
+  } else if (state.reminders) {
+    for (const r of state.reminders) {
+      if (!Number.isInteger(r)) {
+        errors.reminders = 'Reminder offset must be an integer';
+        break;
+      }
+    }
+  }
+
+  if (state.scheduleMode === 'ANYTIME_TODAY' && state.reminderTimeOfDay) {
+    if (!/^\d{2}:\d{2}$/.test(state.reminderTimeOfDay)) {
+      errors.reminderTimeOfDay = 'Invalid time format';
     }
   }
 

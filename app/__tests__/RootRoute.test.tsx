@@ -77,11 +77,11 @@ describe('Root Route Index (IR-01, IR-02, IR-04)', () => {
     jest.spyOn(useOnboardingStore.getState(), 'initialize').mockImplementation(async () => {});
   });
 
-  it('IR-01: app/index.tsx renders only canonical <Redirect href="/(tabs)/today" />', async () => {
+  it('IR-01: app/index.tsx renders only canonical <Redirect href="/(tabs)/planner" />', async () => {
     await render(<Index />);
 
     expect(screen.getByTestId('redirect-component')).toBeTruthy();
-    expect(lastRedirectHref).toBe('/(tabs)/today');
+    expect(lastRedirectHref).toBe('/(tabs)/planner');
   });
 
   it('IR-02: app/index.tsx contains zero store reads, database reads, or onboarding decision logic', () => {
@@ -105,17 +105,17 @@ describe('Root Route Index (IR-01, IR-02, IR-04)', () => {
     expect(content).not.toContain('?');
 
     // Invariant: Pure redirect
-    expect(content).toContain('Redirect href="/(tabs)/today"');
+    expect(content).toContain('Redirect href="/(tabs)/planner"');
   });
 
-  it('IR-04: COMPLETE state at root route "/" permits Slot and resolves toward Today via index redirect', async () => {
+  it('IR-04: COMPLETE state at root route "/" permits Slot and resolves toward Planner via index redirect', async () => {
     useOnboardingStore.setState({ status: 'COMPLETE' });
     mockSegments = []; // root route '/'
 
     await render(<RootLayout />);
 
-    // Slot mounts Index, which renders the redirect to /(tabs)/today
+    // Slot mounts Index, which renders the redirect to /(tabs)/planner
     expect(await screen.findByTestId('redirect-component')).toBeTruthy();
-    expect(lastRedirectHref).toBe('/(tabs)/today');
+    expect(lastRedirectHref).toBe('/(tabs)/planner');
   });
 });

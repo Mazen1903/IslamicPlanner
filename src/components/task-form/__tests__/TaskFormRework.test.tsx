@@ -1,9 +1,8 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import { ThemeProvider } from '@/theme';
 import { TaskFormScreen } from '../TaskFormScreen';
 import { RelativePrayerSubView } from '../RelativePrayerSubView';
-import { MoreOptionsSubView } from '../MoreOptionsSubView';
 import { createInitialFormState, formReducer } from '@/features/task-form/formReducer';
 import type { TodayTemporalInputProvider, TodayTemporalInputs } from '@/services/types';
 
@@ -32,8 +31,8 @@ describe('Task Form Rework (All 5 Approved Phases)', () => {
   };
 
   describe('Phase 3: Reminder on MAIN view', () => {
-    it('surfaces reminder presets directly on MAIN view without navigating to More Options', async () => {
-      const { getByTestId, queryByTestId } = await render(
+    it('surfaces reminder presets directly via ReminderSheet modal', async () => {
+      const { getByTestId, findByTestId } = await render(
         <ThemeProvider>
           <TaskFormScreen
             initialCivilSeedDate={civilToday}
@@ -45,22 +44,25 @@ describe('Task Form Rework (All 5 Approved Phases)', () => {
         </ThemeProvider>
       );
 
-      // Reminder presets should exist on the main screen
-      expect(getByTestId('reminder-preset-none')).toBeTruthy();
-      expect(getByTestId('reminder-preset-0')).toBeTruthy();
-      expect(getByTestId('reminder-preset-5')).toBeTruthy();
-      expect(getByTestId('reminder-preset-10')).toBeTruthy();
-      expect(getByTestId('reminder-preset-15')).toBeTruthy();
-      expect(getByTestId('reminder-preset-30')).toBeTruthy();
-      expect(getByTestId('reminder-preset-60')).toBeTruthy();
+      // Open reminder sheet from task-details-card
+      await fireEvent.press(getByTestId('details-row-reminder'));
+
+      // Reminder sheet should be displayed
+      expect(await findByTestId('reminder-sheet')).toBeTruthy();
+      expect(getByTestId('preset-btn-0')).toBeTruthy();
+      expect(getByTestId('preset-btn--5')).toBeTruthy();
+      expect(getByTestId('preset-btn--10')).toBeTruthy();
+      expect(getByTestId('preset-btn--15')).toBeTruthy();
+      expect(getByTestId('preset-btn--30')).toBeTruthy();
+      expect(getByTestId('preset-btn--60')).toBeTruthy();
 
       // Tap 15m preset
-      await fireEvent.press(getByTestId('reminder-preset-15'));
-      // No crash, active
+      await fireEvent.press(getByTestId('preset-btn--15'));
+      expect(getByTestId('reminder-chip--15')).toBeTruthy();
     });
 
-    it('displays anytime-reminder-helper when scheduleMode is ANYTIME_TODAY', async () => {
-      const { getByTestId, queryByTestId } = await render(
+    it('displays anytime alert time input in ReminderSheet when scheduleMode is ANYTIME_TODAY', async () => {
+      const { getByTestId, findByTestId } = await render(
         <ThemeProvider>
           <TaskFormScreen
             initialCivilSeedDate={civilToday}
@@ -75,14 +77,17 @@ describe('Task Form Rework (All 5 Approved Phases)', () => {
       // Select Anytime Today
       await fireEvent.press(getByTestId('schedule-mode-anytime_today'));
 
-      expect(getByTestId('anytime-reminder-helper')).toBeTruthy();
-      expect(queryByTestId('reminder-preset-15')).toBeNull();
+      // Open reminder sheet
+      await fireEvent.press(getByTestId('details-row-reminder'));
+
+      expect(await findByTestId('reminder-sheet')).toBeTruthy();
+      expect(getByTestId('anytime-reminder-time-input')).toBeTruthy();
     });
   });
 
-  describe('Subtasks displayed on MAIN view underneath task name', () => {
-    it('displays Steps section directly on MAIN view', async () => {
-      const { getByText, getByTestId } = await render(
+  describe('Subtasks displayed on MAIN view inside merged Task card', () => {
+    it('displays Add subtask button when empty, and expands SubtasksSection upon tapping', async () => {
+      const { getByTestId, queryByTestId } = await render(
         <ThemeProvider>
           <TaskFormScreen
             initialCivilSeedDate={civilToday}
@@ -94,6 +99,14 @@ describe('Task Form Rework (All 5 Approved Phases)', () => {
         </ThemeProvider>
       );
 
+      // Initially shows Add subtask row button inside merged Task card
+      expect(getByTestId('expand-add-subtask-button')).toBeTruthy();
+      expect(queryByTestId('subtasks-section')).toBeNull();
+
+      // Tap expand button
+      await fireEvent.press(getByTestId('expand-add-subtask-button'));
+
+      // Now subtasks section and input are visible inside the merged card
       expect(getByTestId('subtasks-section')).toBeTruthy();
       expect(getByTestId('new-subtask-input')).toBeTruthy();
     });
@@ -113,6 +126,9 @@ describe('Task Form Rework (All 5 Approved Phases)', () => {
 
       expect(queryByTestId('task-subtasks-count-badge')).toBeNull();
 
+      // Expand subtask section
+      await fireEvent.press(getByTestId('expand-add-subtask-button'));
+
       await fireEvent.changeText(getByTestId('new-subtask-input'), 'First step');
       await fireEvent.press(getByTestId('add-subtask-button'));
 
@@ -123,6 +139,35 @@ describe('Task Form Rework (All 5 Approved Phases)', () => {
       await fireEvent.press(getByTestId('add-subtask-button'));
 
       expect(await findByText('2 subtasks')).toBeTruthy();
+    });
+
+    it('auto-expands subtasks section when initial definition has subtasks', async () => {
+      const initialDef: any = {
+        id: 'task-1',
+        title: 'Existing Task',
+        icon: 'book',
+        priority: 'MEDIUM',
+        subtasks: [{ id: 'st-1', title: 'Existing subtask', isCompleted: false }],
+        createdAt: '2026-09-24T00:00:00Z',
+        updatedAt: '2026-09-24T00:00:00Z',
+      };
+
+      const { getByTestId, getByText } = await render(
+        <ThemeProvider>
+          <TaskFormScreen
+            initialCivilSeedDate={civilToday}
+            initialPlanningDayDate={planningDayKey}
+            initialDefinition={initialDef}
+            inputProvider={mockProvider}
+            onSuccess={jest.fn()}
+            onCancel={jest.fn()}
+          />
+        </ThemeProvider>
+      );
+
+      expect(getByTestId('subtasks-section')).toBeTruthy();
+      expect(getByText('Existing subtask')).toBeTruthy();
+      expect(getByTestId('task-subtasks-count-badge')).toBeTruthy();
     });
   });
 
@@ -249,36 +294,23 @@ describe('Task Form Rework (All 5 Approved Phases)', () => {
     });
   });
 
-  describe('Phase 5: MoreOptionsSubView streamlined options', () => {
-    it('only contains Priority, Notes, Attachment, and Habit Tracker — removed clutter', async () => {
-      const state = createInitialFormState({ civilSeedDate: civilToday, planningDayDate: planningDayKey });
-      const dispatch = jest.fn();
-
-      const { getByText, queryByText, queryByTestId } = await render(
+  describe('Details Card on MAIN view', () => {
+    it('renders task-details-card and eliminates separate repeat and more-options subviews', async () => {
+      const { getByTestId, queryByTestId } = await render(
         <ThemeProvider>
-          <MoreOptionsSubView
-            state={state}
-            dispatch={dispatch}
-            onBack={jest.fn()}
-            onSave={jest.fn()}
+          <TaskFormScreen
+            initialCivilSeedDate={civilToday}
+            initialPlanningDayDate={planningDayKey}
+            inputProvider={mockProvider}
+            onSuccess={jest.fn()}
+            onCancel={jest.fn()}
           />
         </ThemeProvider>
       );
 
-      // Retained features
-      expect(getByText('Priority')).toBeTruthy();
-      expect(getByText('Notes')).toBeTruthy();
-      expect(getByText('Subtasks')).toBeTruthy();
-      expect(getByText('Attachment')).toBeTruthy();
-
-      // Habit tracker removed per redesign
-      expect(queryByText('Add to Habit Tracker')).toBeNull();
-
-      // Removed clutter from this subview
-      expect(queryByText('Reminder')).toBeNull();
-      expect(queryByText('Duration')).toBeNull();
-      expect(queryByText('Tags')).toBeNull();
-      expect(queryByText('Private Task')).toBeNull();
+      expect(getByTestId('task-details-card')).toBeTruthy();
+      expect(queryByTestId('repeat-entry-card')).toBeNull();
+      expect(queryByTestId('more-options-entry-card')).toBeNull();
     });
   });
 });

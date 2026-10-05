@@ -4,117 +4,169 @@
  * Displays:
  *   - App header "Islamic Planner"
  *   - Current prayer name + start time
- *   - Next prayer: "Prayer at HH:MM AM/PM"
+ *   - Next prayer: "Next: <name>" + start time
  *   - SETUP_REQUIRED: calm setup prompt
  *
- * Architecture notes:
- *   - Uses React Native StyleSheet (no @expo/ui - Android only)
- *   - NO JS countdown timer (display static local time from snapshot)
- *   - Light theme for M18; dark variant deferred to M21
- *   - Tap handled via WIDGET_CLICK event in widgetTaskHandler (deep link)
+ * Architecture constraints:
+ *   - ONLY uses react-native-android-widget primitives (FlexWidget, TextWidget)
+ *   - NO React Native View / Text / StyleSheet (unsupported by RemoteViews generator)
+ *   - Click action opens islamic-planner://planner via native RemoteViews intent
+ *   - Renders with dynamic WidgetPalette (Comic Sans MS typography)
  */
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import type { WidgetSnapshot } from '../../src/services/widget/types';
+import { FlexWidget, TextWidget } from 'react-native-android-widget';
+import type { WidgetSnapshot, WidgetPalette } from '../../src/services/widget/types';
+import { DEFAULT_LIGHT_PALETTE } from '../../src/services/widget/types';
 
-// Design tokens - must be literal values (no @/theme import in widget bundle)
-const COLORS = {
-  background: '#FFFFFF',
-  brandGreen: '#2ECC71',
-  text: '#1A1A2E',
-  textMuted: '#6B7280',
-  separator: '#E5E7EB',
-};
+const FONT_REGULAR = 'ComicSansMS';
+const FONT_BOLD = 'ComicSansMS-Bold';
+const DEEP_LINK_PLANNER = 'islamic-planner://planner';
 
-type SmallWidgetProps = WidgetSnapshot;
+export interface SmallWidgetProps {
+  snapshot: WidgetSnapshot;
+  palette?: WidgetPalette;
+}
 
-export function SmallWidgetComponent(props: SmallWidgetProps) {
-  if (props.isSetupRequired) {
+export function SmallWidgetComponent(props: SmallWidgetProps | WidgetSnapshot) {
+  const snapshot: WidgetSnapshot =
+    'snapshot' in props && props.snapshot ? props.snapshot : (props as WidgetSnapshot);
+  const palette: WidgetPalette =
+    ('palette' in props && props.palette)
+      ? props.palette
+      : (snapshot.theme?.light ?? DEFAULT_LIGHT_PALETTE);
+
+  if (snapshot.isSetupRequired) {
     return (
-      <View style={styles.setupContainer}>
-        <Text style={styles.appTitle}>Islamic Planner</Text>
-        <Text style={styles.setupText}>Open app to finish setup.</Text>
-      </View>
+      <FlexWidget
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          backgroundColor: palette.background,
+          padding: 12,
+          justifyContent: 'center',
+          alignItems: 'center',
+          borderRadius: 16,
+        }}
+        clickAction="OPEN_URI"
+        clickActionData={{ uri: DEEP_LINK_PLANNER }}
+      >
+        <TextWidget
+          text="Islamic Planner"
+          style={{
+            color: palette.brandGreen,
+            fontSize: 13,
+            fontFamily: FONT_BOLD,
+            fontWeight: 'bold',
+            marginBottom: 6,
+          }}
+        />
+        <TextWidget
+          text="Open app to finish setup."
+          style={{
+            color: palette.textMuted,
+            fontSize: 12,
+            fontFamily: FONT_REGULAR,
+            textAlign: 'center',
+          }}
+        />
+      </FlexWidget>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <Text style={styles.appTitle}>Islamic Planner</Text>
+    <FlexWidget
+      style={{
+        height: 'match_parent',
+        width: 'match_parent',
+        backgroundColor: palette.background,
+        padding: 12,
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        borderRadius: 16,
+      }}
+      clickAction="OPEN_URI"
+      clickActionData={{ uri: DEEP_LINK_PLANNER }}
+    >
+      {/* Header & Current Prayer */}
+      <FlexWidget style={{ flexDirection: 'column' }}>
+        <TextWidget
+          text="Islamic Planner"
+          style={{
+            color: palette.brandGreen,
+            fontSize: 11,
+            fontFamily: FONT_BOLD,
+            fontWeight: 'bold',
+            marginBottom: 6,
+          }}
+        />
 
-      {/* Current prayer */}
-      <Text style={styles.arabicName}>{props.currentPrayer.arabicName}</Text>
-      <Text style={styles.prayerName}>{props.currentPrayer.name}</Text>
-      <Text style={styles.prayerTime}>{props.currentPrayer.startsAtLocal}</Text>
+        <TextWidget
+          text={snapshot.currentPrayer.name}
+          style={{
+            color: palette.text,
+            fontSize: 16,
+            fontFamily: FONT_BOLD,
+            fontWeight: 'bold',
+          }}
+        />
+        <TextWidget
+          text={snapshot.currentPrayer.startsAtLocal}
+          style={{
+            color: palette.text,
+            fontSize: 14,
+            fontFamily: FONT_BOLD,
+            fontWeight: 'bold',
+          }}
+        />
+      </FlexWidget>
 
-      {/* Next prayer: static local time (no JS countdown on Android M18) */}
-      {props.nextPrayer && (
-        <View style={styles.nextContainer}>
-          <Text style={styles.nextLabel}>
-            {'Next: '}
-            <Text style={styles.nextTime}>
-              {props.nextPrayer.name} at {props.nextPrayer.startsAtLocal}
-            </Text>
-          </Text>
-        </View>
+      {/* Next Prayer or Last Prayer indicator */}
+      {snapshot.nextPrayer ? (
+        <FlexWidget
+          style={{
+            borderTopWidth: 1,
+            borderTopColor: palette.separator,
+            paddingTop: 6,
+            flexDirection: 'column',
+          }}
+        >
+          <TextWidget
+            text={`Next: ${snapshot.nextPrayer.name}`}
+            style={{
+              color: palette.textMuted,
+              fontSize: 11,
+              fontFamily: FONT_REGULAR,
+            }}
+          />
+          <TextWidget
+            text={snapshot.nextPrayer.startsAtLocal}
+            style={{
+              color: palette.brandGreen,
+              fontSize: 12,
+              fontFamily: FONT_BOLD,
+              fontWeight: 'bold',
+            }}
+          />
+        </FlexWidget>
+      ) : (
+        <FlexWidget
+          style={{
+            borderTopWidth: 1,
+            borderTopColor: palette.separator,
+            paddingTop: 6,
+          }}
+        >
+          <TextWidget
+            text="Last prayer of day"
+            style={{
+              color: palette.textMuted,
+              fontSize: 11,
+              fontFamily: FONT_REGULAR,
+            }}
+          />
+        </FlexWidget>
       )}
-    </View>
+    </FlexWidget>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    padding: 10,
-  },
-  setupContainer: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    padding: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  appTitle: {
-    color: COLORS.brandGreen,
-    fontSize: 11,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  arabicName: {
-    color: COLORS.text,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  prayerName: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-  },
-  prayerTime: {
-    color: COLORS.text,
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  nextContainer: {
-    borderTopWidth: 1,
-    borderTopColor: COLORS.separator,
-    paddingTop: 6,
-  },
-  nextLabel: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-  },
-  nextTime: {
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  setupText: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 6,
-  },
-});

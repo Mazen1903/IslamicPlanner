@@ -72,12 +72,16 @@ describe('NotificationReconciliationService Concurrency (Shared Drain)', () => {
       getPermissionStatus: jest.fn().mockResolvedValue({ canSchedule: true, canRequest: false, status: 'AUTHORIZED' }),
       requestPermission: jest.fn().mockResolvedValue({ canSchedule: true, status: 'AUTHORIZED' }),
       scheduleNotification: jest.fn().mockImplementation(async d => d.identifier),
+      scheduleDailyNotification: jest.fn().mockResolvedValue(undefined),
       cancelScheduledNotification: jest.fn().mockResolvedValue(undefined),
       getAllScheduledNotifications: jest.fn().mockResolvedValue([]),
     };
 
     mockChannelManager = {
       ensureChannel: jest.fn().mockResolvedValue(undefined),
+      getTaskChannelId: jest.fn().mockReturnValue('task-reminders-v2-vib'),
+      getPrayerChannelId: jest.fn().mockReturnValue('prayer-alerts-v2-vib'),
+      getJournalChannelId: jest.fn().mockReturnValue('journal-reminders-v2'),
     };
 
     service = new NotificationReconciliationService(

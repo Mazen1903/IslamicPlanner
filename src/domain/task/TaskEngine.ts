@@ -19,12 +19,15 @@ import type {
 import { TaskValidationError } from '@/domain/task/errors';
 import { assertValidCivilDate, subtractCivilDay } from '@/utils/dateValidation';
 import { StreakService, streakService as defaultStreakService } from '@/services/StreakService';
+import { StreakRepository } from '@/data/repositories/StreakRepository';
+import { notificationReconciliationService } from '@/services/notification/NotificationReconciliationService';
 
 export class TaskEngine {
   constructor(
     private defRepo: TaskDefinitionRepository = taskDefinitionRepository,
     private occRepo: TaskOccurrenceRepository = taskOccurrenceRepository,
-    private streakService: StreakService = defaultStreakService
+    private streakService: StreakService = defaultStreakService,
+    private streakRepo: StreakRepository = new StreakRepository()
   ) {}
 
   /**
@@ -259,6 +262,59 @@ export class TaskEngine {
    */
   async cancelTask(occurrenceId: string, tx?: any): Promise<TaskOccurrence> {
     return await this.occRepo.updateStatus(occurrenceId, 'CANCELLED', undefined, tx);
+  }
+
+  /**
+   * Authoritative canonical delete task method.
+   * Handles:
+   * 1. Non-recurring (one-off): Permanently purges definition and all occurrences (even if completed),
+   *    and deletes the streak record.
+   * 2. Recurring ALL_OCCURRENCES: Deactivates all definitions in the series and cancels pending occurrences,
+   *    retaining history.
+   * 3. Recurring THIS_OCCURRENCE: Tombstones the occurrence to CANCELLED so it does not regenerate.
+   *    If previously COMPLETED, decrements/reverts streak count.
+   * Also cleans up any scheduled OS reminder for the occurrence.
+   */
+  async deleteTask(input: {
+    occurrenceId?: string;
+    definitionId: string;
+    scope: 'THIS_OCCURRENCE' | 'ALL_OCCURRENCES';
+  }): Promise<void> {
+    const def = await this.defRepo.findById(input.definitionId);
+    if (!def) {
+      throw new TaskValidationError(`Task definition ${input.definitionId} not found`);
+    }
+
+    const isRecurring = Boolean(def.recurrenceRule || def.hijriRecurrence);
+
+    if (!isRecurring) {
+      await runInTransaction(async (tx: any) => {
+        await this.defRepo.purgeOneOff(input.definitionId, tx);
+        await this.streakRepo.deleteBySeriesId(def.seriesId, tx);
+      });
+    } else if (input.scope === 'ALL_OCCURRENCES') {
+      await this.deleteEntireSeries(def.seriesId);
+    } else {
+      if (!input.occurrenceId) {
+        throw new TaskValidationError(
+          `Cannot delete recurring task occurrence without occurrenceId`
+        );
+      }
+      const { occurrence, previousStatus } = await this.occRepo.tombstone(input.occurrenceId);
+      if (previousStatus === 'COMPLETED') {
+        try {
+          await this.streakService.onOccurrenceUncompleted(occurrence.seriesId, occurrence.localDate);
+        } catch (e) {
+          console.warn('[TaskEngine] Failed to revert streak on delete:', e);
+        }
+      }
+    }
+
+    if (input.occurrenceId) {
+      try {
+        await notificationReconciliationService.cancelOccurrenceReminder(input.occurrenceId);
+      } catch {}
+    }
   }
 
   /**

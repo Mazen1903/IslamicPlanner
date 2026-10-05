@@ -89,7 +89,7 @@ describe('Onboarding Isolation (ISO-series tests)', () => {
       .map(f => f.split('_')[0])
       .filter(n => /^\d{4}$/.test(n));
     const uniqueNumbers = Array.from(new Set(migrationNumbers));
-    expect(uniqueNumbers.sort()).toEqual(['0000', '0001', '0002', '0003', '0004', '0005', '0006']);
+    expect(uniqueNumbers.sort()).toEqual(['0000', '0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008']);
   });
 
   it('ISO-14: package.json dependencies unchanged from M19 baseline', () => {
@@ -109,6 +109,8 @@ describe('Onboarding Isolation (ISO-series tests)', () => {
       'expo-blur',
       'expo-constants',
       'expo-crypto',
+      'expo-document-picker',
+      'expo-file-system',
       'expo-font',
       'expo-linear-gradient',
       'expo-linking',
@@ -117,6 +119,7 @@ describe('Onboarding Isolation (ISO-series tests)', () => {
       'expo-notifications',
       'expo-router',
       'expo-secure-store',
+      'expo-sharing',
       'expo-sqlite',
       'expo-status-bar',
       'expo-widgets',

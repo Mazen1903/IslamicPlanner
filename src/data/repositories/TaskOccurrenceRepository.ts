@@ -949,6 +949,42 @@ export class TaskOccurrenceRepository {
   }
 
   /**
+   * Idempotent user-intent cancellation tombstone.
+   * Atomically transitions PENDING, COMPLETED, or MISSED occurrence to CANCELLED,
+   * clearing completedAt and missedAt.
+   * If already CANCELLED, returns immediately with previousStatus: 'CANCELLED'.
+   * If not found, throws TaskValidationError.
+   */
+  async tombstone(
+    id: string,
+    tx?: any
+  ): Promise<{ occurrence: TaskOccurrence; previousStatus: OccurrenceStatus }> {
+    const existing = await this.findById(id, tx);
+    if (!existing) {
+      throw new TaskValidationError(`Cannot tombstone non-existent TaskOccurrence ${id}`);
+    }
+
+    if (existing.status === 'CANCELLED') {
+      return { occurrence: existing, previousStatus: 'CANCELLED' };
+    }
+
+    const previousStatus = existing.status;
+    const client = getDb(tx);
+    client
+      .update(taskOccurrences)
+      .set({
+        status: 'CANCELLED',
+        completedAt: null,
+        missedAt: null,
+      })
+      .where(eq(taskOccurrences.id, id))
+      .run();
+
+    const updated = await this.findById(id, tx);
+    return { occurrence: updated!, previousStatus };
+  }
+
+  /**
    * Finds candidate TaskOccurrences for the Today screen.
    *
    * Rule A: All occurrences belonging to activePlanningDayKey (PENDING, COMPLETED, MISSED, CANCELLED).
@@ -1003,7 +1039,7 @@ export class TaskOccurrenceRepository {
           ...(ruleCApplies
             ? [
                 and(
-                  eq(taskOccurrences.status, 'PENDING'),
+                  ne(taskOccurrences.status, 'CANCELLED'),
                   eq(taskOccurrences.localDate, civilDate),
                   ne(taskOccurrences.planningDayKey, activePlanningDayKey)
                 ),

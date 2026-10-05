@@ -98,37 +98,37 @@ describe('TaskCard Visual States — M11 Presentation (Overdue, Missed, Complete
     expect(queryByText(/overdue/i)).toBeNull();
   });
 
-  it('displays calm "Missed" badge for MISSED task, never overdue', async () => {
+  it('does not display "Missed" badge for MISSED task, never overdue', async () => {
     const missedTask: TaskCardViewModel = {
       ...baseTask,
       status: 'MISSED',
       missedAt: '2026-09-15T17:00:00.000Z',
     };
 
-    const { getByText, queryByTestId } = await render(
+    const { queryByText, queryByTestId } = await render(
       <ThemeProvider>
         <TaskCard task={missedTask} />
       </ThemeProvider>
     );
 
-    expect(getByText('Missed')).toBeTruthy();
+    expect(queryByText('Missed')).toBeNull();
     expect(queryByTestId('overdue-badge-occ-card-1')).toBeNull();
   });
 
-  it('displays calm "Completed" badge and strike-through for COMPLETED task, never overdue', async () => {
+  it('does not display "Completed" badge for COMPLETED task, never overdue', async () => {
     const completedTask: TaskCardViewModel = {
       ...baseTask,
       status: 'COMPLETED',
       completedAt: '2026-09-15T14:10:00.000Z',
     };
 
-    const { getByText, queryByTestId } = await render(
+    const { queryByText, queryByTestId } = await render(
       <ThemeProvider>
         <TaskCard task={completedTask} />
       </ThemeProvider>
     );
 
-    expect(getByText('Completed')).toBeTruthy();
+    expect(queryByText('Completed')).toBeNull();
     expect(queryByTestId('overdue-badge-occ-card-1')).toBeNull();
   });
 

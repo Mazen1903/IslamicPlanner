@@ -8,11 +8,11 @@ import fs from 'fs';
 
 describe('Group J: Prayer Tab RTL Order Contract', () => {
   const sampleTabs: PrayerTabViewModel[] = [
-    { prayer: 'FAJR', name: 'Fajr', arabicName: 'الفجر', startTime: '5:15 AM', startDateTime: '2026-09-19T05:15:00Z', temporalState: 'PAST', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
-    { prayer: 'DHUHR', name: 'Dhuhr', arabicName: 'الظهر', startTime: '1:05 PM', startDateTime: '2026-09-19T13:05:00Z', temporalState: 'CURRENT', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
-    { prayer: 'ASR', name: 'Asr', arabicName: 'العصر', startTime: '4:35 PM', startDateTime: '2026-09-19T16:35:00Z', temporalState: 'FUTURE', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
-    { prayer: 'MAGHRIB', name: 'Maghrib', arabicName: 'المغرب', startTime: '7:10 PM', startDateTime: '2026-09-19T19:10:00Z', temporalState: 'FUTURE', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
-    { prayer: 'ISHA', name: 'Isha', arabicName: 'العشاء', startTime: '8:30 PM', startDateTime: '2026-09-19T20:30:00Z', temporalState: 'FUTURE', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
+    { prayer: 'FAJR', name: 'Fajr', startTime: '5:15 AM', startDateTime: '2026-09-19T05:15:00Z', temporalState: 'PAST', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
+    { prayer: 'DHUHR', name: 'Dhuhr', startTime: '1:05 PM', startDateTime: '2026-09-19T13:05:00Z', temporalState: 'CURRENT', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
+    { prayer: 'ASR', name: 'Asr', startTime: '4:35 PM', startDateTime: '2026-09-19T16:35:00Z', temporalState: 'FUTURE', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
+    { prayer: 'MAGHRIB', name: 'Maghrib', startTime: '7:10 PM', startDateTime: '2026-09-19T19:10:00Z', temporalState: 'FUTURE', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
+    { prayer: 'ISHA', name: 'Isha', startTime: '8:30 PM', startDateTime: '2026-09-19T20:30:00Z', temporalState: 'FUTURE', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
   ];
 
   it('J-1: renders tabs in canonical chronological order (Fajr -> Dhuhr -> Asr -> Maghrib -> Isha)', async () => {

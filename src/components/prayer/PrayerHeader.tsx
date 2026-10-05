@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useTheme } from '@/theme';
 import { PRAYER_NAMES, type Prayer } from '@/constants/prayers';
-import { PRAYER_ARABIC_NAMES } from '@/services/TodayViewModelProjection';
 import { Icon } from '@/components/common/Icon';
 import { getTodayDateSubtitle } from '@/utils/todayDateSubtitle';
 import { AppHeroHeader } from '@/components/common/AppHeroHeader';
@@ -28,7 +27,6 @@ export function PrayerHeader({
   const effectiveDateSubtitle = dateSubtitle ?? getTodayDateSubtitle();
 
   const currentPrayerName = PRAYER_NAMES[currentPrayer] ?? currentPrayer;
-  const currentArabicName = PRAYER_ARABIC_NAMES[currentPrayer] ?? '';
   const nextPrayerName = nextPrayer ? PRAYER_NAMES[nextPrayer.prayer] : null;
 
   const compositeLabel = `Current prayer: ${currentPrayerName}.${
@@ -39,7 +37,7 @@ export function PrayerHeader({
     <View style={styles.container} testID="prayer-header">
       <View accessible={true} accessibilityLabel={compositeLabel}>
         <AppHeroHeader
-          title="Today"
+          title="Planner"
           subtitle={effectiveDateSubtitle}
           rightElement={
             <Pressable
@@ -105,22 +103,6 @@ export function PrayerHeader({
             ) : null
           }
         />
-
-        {/* Hidden Arabic Name preserved for test contracts & accessibility specs */}
-        <View
-          style={styles.hiddenArabicWrapper}
-          importantForAccessibility="no"
-          accessibilityElementsHidden={true}
-        >
-          <Text
-            style={[
-              typography.headlineMedium,
-              { color: 'transparent', marginStart: spacing.md },
-            ]}
-          >
-            {currentArabicName}
-          </Text>
-        </View>
       </View>
     </View>
   );
@@ -155,9 +137,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderWidth: 1,
-  },
-  hiddenArabicWrapper: {
-    height: 0,
-    overflow: 'hidden',
   },
 });

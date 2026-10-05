@@ -1,7 +1,6 @@
 import { HijriCalendarAdapter } from './HijriCalendarAdapter';
 import type {
   HijriAdjustmentConfig,
-  HijriBaseMethod,
   HijriDate,
   HijriReverseResolution,
   HijriServiceConfig,
@@ -12,7 +11,6 @@ import {
   HijriAdjustmentError,
   HijriConversionError,
   HijriDateError,
-  HijriUnsupportedMethodError,
   HijriValidationError,
   type HijriValidationErrorCode,
 } from './errors';
@@ -140,17 +138,8 @@ export function addGregorianDays(dateStr: string, days: number): string {
  */
 export class HijriService {
   private readonly adapter: HijriCalendarAdapter;
-  readonly baseMethod: HijriBaseMethod;
 
   constructor(config?: HijriServiceConfig, adapter?: HijriCalendarAdapter) {
-    const method = config?.baseMethod ?? 'UMM_AL_QURA';
-    if (method === 'CALCULATED') {
-      throw new HijriUnsupportedMethodError(
-        'CALCULATED',
-        'The CALCULATED Hijri base method is not yet implemented. Use UMM_AL_QURA (default).'
-      );
-    }
-    this.baseMethod = method;
     this.adapter = adapter ?? new HijriCalendarAdapter();
   }
 

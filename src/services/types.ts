@@ -77,7 +77,6 @@ export type PrayerTabTemporalState = 'PAST' | 'CURRENT' | 'FUTURE';
 export interface PrayerTabViewModel {
   prayer: Prayer;
   name: string;
-  arabicName: string;
   startTime: string;
   startDateTime: string;
   temporalState: PrayerTabTemporalState;
@@ -111,6 +110,7 @@ export interface TodayViewModel {
   currentPrayer: Prayer;
   tabs: PrayerTabViewModel[];
   nextPrayer: { prayer: Prayer; time: string } | null;
+  upcomingDaysTasks?: TaskCardViewModel[];
 }
 
 /**

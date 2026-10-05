@@ -86,7 +86,7 @@ export default function PlanningDayScreen() {
       await reload();
       Alert.alert(
         'Planning Day Updated',
-        'Your planning day was updated to Fajr. Schedule refresh will occur automatically when you visit Today.',
+        'Your planning day was updated to Fajr. Schedule refresh will occur automatically when you visit Planner.',
         [{ text: 'OK' }]
       );
     } else {
@@ -114,7 +114,7 @@ export default function PlanningDayScreen() {
       await reload();
       Alert.alert(
         'Planning Day Updated',
-        'Your planning day was updated to Midnight. Schedule refresh will occur automatically when you visit Today.',
+        'Your planning day was updated to Midnight. Schedule refresh will occur automatically when you visit Planner.',
         [{ text: 'OK' }]
       );
     } else {
@@ -143,7 +143,7 @@ export default function PlanningDayScreen() {
       await reload();
       Alert.alert(
         'Planning Day Updated',
-        'Your planning day was updated. Schedule refresh will occur automatically when you visit Today.',
+        'Your planning day was updated. Schedule refresh will occur automatically when you visit Planner.',
         [{ text: 'OK' }]
       );
     } else {

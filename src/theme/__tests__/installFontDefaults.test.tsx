@@ -1,12 +1,15 @@
 import React from 'react';
-import * as ReactNative from 'react-native';
-import { Platform, StyleSheet } from 'react-native';
+import { Text, TextInput, Platform, StyleSheet } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
-import { resolveAppFontStyle, installFontDefaults } from '../installFontDefaults';
+import { resolveAppFontStyle, installFontDefaults, isAppFontInstalled } from '../installFontDefaults';
 
 describe('Global Font Defaults & Fallback Prevention', () => {
   beforeAll(() => {
     installFontDefaults();
+  });
+
+  it('marks the real react-native module as patched via isAppFontInstalled', () => {
+    expect(isAppFontInstalled()).toBe(true);
   });
 
   describe('resolveAppFontStyle', () => {
@@ -60,11 +63,11 @@ describe('Global Font Defaults & Fallback Prevention', () => {
   });
 
   describe('Monkey-patched Text component', () => {
-    it('renders with ComicSansMS-Bold by default', async () => {
+    it('renders with ComicSansMS-Bold by default via named import', async () => {
       await render(
-        <ReactNative.Text testID="app-text-test" style={{ fontSize: 18, color: '#333' }}>
+        <Text testID="app-text-test" style={{ fontSize: 18, color: '#333' }}>
           Hello World
-        </ReactNative.Text>
+        </Text>
       );
       const el = screen.getByTestId('app-text-test');
       const flat = StyleSheet.flatten(el.props.style);
@@ -72,9 +75,9 @@ describe('Global Font Defaults & Fallback Prevention', () => {
       expect(flat.fontSize).toBe(18);
     });
 
-    it('renders TextInput with ComicSansMS-Bold by default', async () => {
+    it('renders TextInput with ComicSansMS-Bold by default via named import', async () => {
       await render(
-        <ReactNative.TextInput
+        <TextInput
           testID="app-input-test"
           placeholder="Enter text..."
           style={{ fontSize: 14 }}
@@ -87,3 +90,4 @@ describe('Global Font Defaults & Fallback Prevention', () => {
     });
   });
 });
+

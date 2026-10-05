@@ -60,3 +60,5 @@ crop_*
 /*.png
 reference_images/
 assets/icons/task_icons_backup/
+scratch/
+.agents/

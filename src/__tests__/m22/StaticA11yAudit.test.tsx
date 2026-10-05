@@ -63,13 +63,15 @@ describe('Group M: Targeted Static Accessibility Audits', () => {
       'src/components/journal/JournalWriteModal.tsx',
       'src/components/task-form/CustomRecurrenceModal.tsx',
       'src/components/task-form/EditScopeSheet.tsx',
+      'src/components/task-form/ExpandingAddTaskModal.tsx',
+      'src/components/task-form/ReminderSheet.tsx',
       'src/components/theme-changer/ThemePreviewModal.tsx',
       'src/components/premium/PremiumLockedInfo.tsx',
       'src/components/task/ReschedulePrayerModal.tsx',
       'app/(tabs)/settings/hijri-calendar.tsx',
     ];
 
-    expect(modalFiles.length).toBe(9);
+    expect(modalFiles.length).toBe(11);
     for (const expected of expectedModalFiles) {
       expect(modalFiles).toContain(expected);
     }
@@ -82,6 +84,7 @@ describe('Group M: Targeted Static Accessibility Audits', () => {
       'src/components/journal/JournalPrivacySheet.tsx',
       'src/components/task-form/CustomRecurrenceModal.tsx',
       'src/components/task-form/EditScopeSheet.tsx',
+      'src/components/task-form/ReminderSheet.tsx',
       'src/components/premium/PremiumLockedInfo.tsx',
       'src/components/task/ReschedulePrayerModal.tsx',
       'app/(tabs)/settings/hijri-calendar.tsx',
@@ -100,6 +103,7 @@ describe('Group M: Targeted Static Accessibility Audits', () => {
       'src/components/journal/JournalPrivacySheet.tsx',
       'src/components/task-form/CustomRecurrenceModal.tsx',
       'src/components/task-form/EditScopeSheet.tsx',
+      'src/components/task-form/ReminderSheet.tsx',
       'src/components/premium/PremiumLockedInfo.tsx',
       'app/(tabs)/settings/hijri-calendar.tsx',
     ];
@@ -144,7 +148,7 @@ describe('Group M: Targeted Static Accessibility Audits', () => {
   it('M-8: error text containers carry accessibilityLiveRegion="assertive" (A-17)', () => {
     const errorFiles = [
       'src/components/today/SetupRequiredState.tsx',
-      'app/(tabs)/today.tsx',
+      'app/(tabs)/planner.tsx',
       'app/(tabs)/journal.tsx',
     ];
 

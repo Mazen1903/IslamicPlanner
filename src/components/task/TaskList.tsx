@@ -1,20 +1,19 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { StyleSheet, ScrollView, View, Text, Pressable, useWindowDimensions, Vibration, type PanResponderGestureState } from 'react-native';
-import { useRouter } from 'expo-router';
 import { DateTime } from 'luxon';
 import { useTheme } from '@/theme';
 import type { Prayer } from '@/constants/prayers';
 import type { PrayerTabViewModel, TaskCardViewModel } from '@/services/types';
 import { TaskCard } from './TaskCard';
-import { EmptyPrayerState } from './EmptyPrayerState';
 import { AllDoneState } from './AllDoneState';
 import { Icon } from '@/components/common/Icon';
 import { useTodayStore } from '@/stores/useTodayStore';
-import { deriveOverdueState, computeEmptyState } from '@/services/TodayViewModelProjection';
+import { deriveOverdueState } from '@/services/TodayViewModelProjection';
 
 export interface TaskListProps {
   tab: PrayerTabViewModel;
   allTabs?: PrayerTabViewModel[];
+  upcomingDaysTasks?: TaskCardViewModel[];
   selectedPrayer: Prayer;
   currentPrayer: Prayer;
   nextPrayer: Prayer | null;
@@ -31,7 +30,7 @@ export interface TaskListProps {
   onDragTargetChange?: (prayer: Prayer | null) => void;
   completedTasksMode?: 'KEEP' | 'MOVE' | 'HIDE';
   overdueTasksMode?: 'KEEP' | 'MOVE' | 'HIDE';
-  onDeleteTask?: (task: TaskCardViewModel) => void;
+  onDeleteTask?: (task: TaskCardViewModel) => void | boolean | Promise<void | boolean>;
 }
 
 interface SectionHeaderProps {
@@ -86,6 +85,7 @@ function SectionHeader({ title, count, isExpanded, onToggle, testID }: SectionHe
 export function TaskList({
   tab,
   allTabs,
+  upcomingDaysTasks = [],
   selectedPrayer,
   currentPrayer,
   nextPrayer,
@@ -96,7 +96,7 @@ export function TaskList({
   onCompleteTask,
   onUndoTask,
   onToggleSubtask,
-  onAddTask,
+  onAddTask: _onAddTask,
   onSelectPrayer,
   onRescheduleTask,
   onDragTargetChange,
@@ -104,14 +104,14 @@ export function TaskList({
   overdueTasksMode = 'KEEP',
   onDeleteTask,
 }: TaskListProps) {
-  const router = useRouter();
   const { colors, spacing, typography } = useTheme();
 
   // Collapsible section states
   const [previousExpanded, setPreviousExpanded] = useState(false);
   const [previousUserToggled, setPreviousUserToggled] = useState(false);
   const [todayExpanded, setTodayExpanded] = useState(true);
-  const [upcomingExpanded, setUpcomingExpanded] = useState(false);
+  const [upcomingExpanded, setUpcomingExpanded] = useState(true);
+  const [upcomingUserToggled, setUpcomingUserToggled] = useState(false);
   // Fix #3: Derive from prop so it stays in sync when switching prayer tabs
   const completedExpanded = !completedCollapsed;
 
@@ -297,6 +297,7 @@ export function TaskList({
     if (!isShowingCurrentPrayer) {
       // User is explicitly viewing a specific prayer tab (e.g. Fajr, Asr, Maghrib, Isha)
       // All pending tasks scheduled for this prayer appear directly under "Today" so they are immediately visible.
+      // Also retain upcoming tasks from upcoming days below so user does not lose visibility of future schedule.
       if (completedTasksMode !== 'HIDE') {
         for (const task of tab.completedTasks) {
           if (!seenIds.has(task.occurrenceId)) {
@@ -336,10 +337,18 @@ export function TaskList({
         }
       }
 
+      // Retain upcoming days' tasks in the upcoming section
+      for (const task of upcomingDaysTasks) {
+        if (!seenIds.has(task.occurrenceId)) {
+          seenIds.add(task.occurrenceId);
+          upcoming.push(task);
+        }
+      }
+
       return {
         previousTasks: previous,
         todayTasks: today,
-        upcomingTasks: [],
+        upcomingTasks: upcoming,
         completedTasks: completed,
       };
     }
@@ -393,7 +402,7 @@ export function TaskList({
       }
     }
 
-    // 3. Collect upcoming tasks (future prayer tab tasks or future sortInstant in current tab)
+    // 3. Collect upcoming tasks (future prayer tab tasks, future sortInstant in current tab, and upcoming days)
     for (const t of tabsToProcess) {
       if (t.temporalState === 'FUTURE') {
         for (const task of t.scheduledTasks) {
@@ -411,6 +420,14 @@ export function TaskList({
             }
           }
         }
+      }
+    }
+
+    // Plus upcoming tasks from upcoming days
+    for (const task of upcomingDaysTasks) {
+      if (!seenIds.has(task.occurrenceId)) {
+        seenIds.add(task.occurrenceId);
+        upcoming.push(task);
       }
     }
 
@@ -439,23 +456,23 @@ export function TaskList({
       }
     }
 
-    // Deduplicate repetitive tasks in upcoming:
-    // Only show the next upcoming occurrence for repeating tasks (deduplicate so they don't repeat multiple times)
-    // Also avoid repeating a task in upcoming if it is already present in today or previous
+    // Deduplicate repetitive occurrences in upcoming:
+    // Avoid repeating an occurrence already in today or previous
+    // For recurring tasks, only show the earliest upcoming occurrence per series
     const activeKeys = new Set<string>();
     for (const t of today) {
-      const key = t.taskDefinitionId || t.title.toLowerCase().trim();
+      const key = t.taskDefinitionId || t.occurrenceId;
       activeKeys.add(key);
     }
     for (const t of previous) {
-      const key = t.taskDefinitionId || t.title.toLowerCase().trim();
+      const key = t.taskDefinitionId || t.occurrenceId;
       activeKeys.add(key);
     }
 
     const seenUpcomingKeys = new Set<string>();
     const deduplicatedUpcoming: TaskCardViewModel[] = [];
     for (const t of upcoming) {
-      const key = t.taskDefinitionId || t.title.toLowerCase().trim();
+      const key = t.taskDefinitionId || t.occurrenceId;
       if (!activeKeys.has(key) && !seenUpcomingKeys.has(key)) {
         seenUpcomingKeys.add(key);
         deduplicatedUpcoming.push(t);
@@ -468,18 +485,10 @@ export function TaskList({
       upcomingTasks: deduplicatedUpcoming,
       completedTasks: completed,
     };
-  }, [tab, allTabs, selectedPrayer, currentPrayer, completedTasksMode, overdueTasksMode, now, nowIso]);
+  }, [tab, allTabs, upcomingDaysTasks, selectedPrayer, currentPrayer, completedTasksMode, overdueTasksMode, now, nowIso]);
 
   const totalActionableTasks = previousTasks.length + todayTasks.length + upcomingTasks.length;
   const totalTasks = totalActionableTasks + completedTasks.length;
-
-  const handlePressAddTask = () => {
-    if (onAddTask) {
-      onAddTask(selectedPrayer);
-    } else {
-      router.push({ pathname: '/task/add', params: { prayer: selectedPrayer } });
-    }
-  };
 
   const handleToggleCompleted = () => {
     onToggleCompletedCollapsed?.();
@@ -488,6 +497,10 @@ export function TaskList({
   const isPreviousOpen = previousUserToggled
     ? previousExpanded
     : previousExpanded || (todayTasks.length === 0 && previousTasks.length > 0);
+
+  const isUpcomingOpen = upcomingUserToggled
+    ? upcomingExpanded
+    : upcomingTasks.length > 0;
 
   return (
     <ScrollView
@@ -568,11 +581,14 @@ export function TaskList({
         <SectionHeader
           title="Upcoming"
           count={upcomingTasks.length}
-          isExpanded={upcomingExpanded}
-          onToggle={() => setUpcomingExpanded(p => !p)}
+          isExpanded={isUpcomingOpen}
+          onToggle={() => {
+            setUpcomingUserToggled(true);
+            setUpcomingExpanded(!isUpcomingOpen);
+          }}
           testID="section-header-upcoming"
         />
-        {upcomingExpanded && (
+        {isUpcomingOpen && (
           <View style={styles.cardsContainer} testID="section-content-upcoming">
             {upcomingTasks.length === 0 ? (
               <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No upcoming tasks</Text>
@@ -641,16 +657,6 @@ export function TaskList({
             Check all completed tasks
           </Text>
         </Pressable>
-      )}
-
-      {/* Empty State when no tasks exist at all */}
-      {totalTasks === 0 && (
-        <EmptyPrayerState
-          selectedPrayer={selectedPrayer}
-          currentPrayer={currentPrayer}
-          nextPrayer={nextPrayer}
-          onAddTask={handlePressAddTask}
-        />
       )}
 
       {/* All Done State when all scheduled tasks are completed */}

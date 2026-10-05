@@ -1,12 +1,12 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, useWindowDimensions, Easing } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomNavBar } from '@/components/layout/BottomNavBar';
 import { ExpandingAddTaskModal } from '@/components/task-form/ExpandingAddTaskModal';
 import { useAddTaskModalStore, type FabOrigin } from '@/stores/useAddTaskModalStore';
 import { useTodayStore } from '@/stores/useTodayStore';
-import { todayOrchestrator } from '@/services/TodayOrchestrator';
+import { PlannerRefreshCoordinator } from '@/services/PlannerRefreshCoordinator';
 import { DateTime } from 'luxon';
 import { useTheme } from '@/theme';
 
@@ -18,6 +18,7 @@ export default function TabLayout() {
   const initialPrayer = useAddTaskModalStore(s => s.initialPrayer);
   const closeModal = useAddTaskModalStore(s => s.closeModal);
   const insets = useSafeAreaInsets();
+  const coordinatorRef = useRef(new PlannerRefreshCoordinator());
 
   // Track the container's own window-y so we can subtract it from the
   // measureInWindow result (which is screen-absolute) before passing it as
@@ -44,30 +45,58 @@ export default function TabLayout() {
     : null;
 
   const handleSuccess = useCallback(async () => {
+    const store = useTodayStore.getState();
+    const token = store.startRefresh();
     try {
-      const store = useTodayStore.getState();
-      const runtime = store.runtime;
       const now = DateTime.now();
-      if (runtime) {
-        const token = store.startReproject();
-        const vm = await todayOrchestrator.queryAndProject(runtime, now);
-        store.commitReproject(token, vm);
+      const result = await coordinatorRef.current.fullRefresh(now);
+      if (result.status === 'READY') {
+        store.commitRefresh(
+          token,
+          { viewModel: result.viewModel, runtime: result.runtime },
+          false
+        );
       }
-    } catch {
-      // Non-blocking — Today will catch up on next focus or timer tick
+    } catch (err) {
+      console.warn('[TabLayout] Failed to refresh Planner after adding task:', err);
     }
   }, []);
 
   return (
     <View ref={containerRef} style={[styles.container, { backgroundColor: colors.background }]} onLayout={onContainerLayout}>
       <Tabs
+        detachInactiveScreens={false}
         tabBar={props => <BottomNavBar {...props} />}
         screenOptions={{
           headerShown: false,
+          freezeOnBlur: false,
+          transitionSpec: {
+            animation: 'timing',
+            config: {
+              duration: 380,
+              easing: Easing.inOut(Easing.ease),
+            },
+          },
+          sceneStyleInterpolator: ({ current }) => {
+            const screenWidth = screenDimensions.width || 390;
+            return {
+              sceneStyle: {
+                transform: [
+                  {
+                    translateX: current.progress.interpolate({
+                      inputRange: [-1, 0, 1],
+                      outputRange: [-screenWidth, 0, screenWidth],
+                      extrapolate: 'clamp',
+                    }),
+                  },
+                ],
+              },
+            };
+          },
         }}
       >
         <Tabs.Screen
-          name="today"
+          name="planner"
           options={{
             title: 'Planner',
           }}
@@ -94,6 +123,8 @@ export default function TabLayout() {
           name="settings"
           options={{
             title: 'More',
+            lazy: false,
+            freezeOnBlur: false,
           }}
         />
       </Tabs>

@@ -1244,7 +1244,6 @@ describe('TodayViewModelProjection Test Suite', () => {
       const dummyTab = {
         prayer: 'FAJR' as const,
         name: 'Fajr',
-        arabicName: 'الفجر',
         startTime: '5:00 AM',
         startDateTime: '2026-09-15T05:00:00.000Z',
         temporalState: 'PAST' as const,

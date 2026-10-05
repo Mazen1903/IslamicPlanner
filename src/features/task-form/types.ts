@@ -93,6 +93,9 @@ export interface FormState {
   subtasks: SubtaskDraft[];
   tags: string[];
   icon?: string | null;
+  reminders: number[];
+  reminderTimeOfDay: string | null;
+  /** @deprecated Read-compatibility alias for the primary reminder */
   reminderMinutes: number | null;
   existingReminderRule: ReminderRule | null;
 
@@ -125,7 +128,12 @@ export type FormAction =
   | { type: 'TOGGLE_SUBTASK'; payload: { id: string } }
   | { type: 'REMOVE_SUBTASK'; payload: { id: string } }
   | { type: 'SET_TAGS'; payload: string[] }
+  | { type: 'SET_REMINDERS'; payload: number[] }
+  | { type: 'ADD_REMINDER'; payload: number }
+  | { type: 'REMOVE_REMINDER'; payload: number }
+  | { type: 'SET_REMINDER_TIME_OF_DAY'; payload: string | null }
   | { type: 'SET_REMINDER_MINUTES'; payload: number | null }
+  | { type: 'PREFILL_DEFAULT_REMINDER'; payload: number }
   | { type: 'SET_VALIDATION_ERRORS'; payload: Record<string, string> }
   | { type: 'SET_SAVE_PHASE'; payload: SavePhase }
   | { type: 'SET_EDIT_SCOPE'; payload: EditScope };

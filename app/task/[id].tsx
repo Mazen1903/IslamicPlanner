@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { Text, ActivityIndicator, StyleSheet, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
@@ -134,30 +134,16 @@ export default function TaskEditScreen() {
 
   const handleDelete = async (scope: 'THIS_OCCURRENCE' | 'ALL_OCCURRENCES' = 'ALL_OCCURRENCES') => {
     try {
-      const isRecurring = Boolean(definition.recurrenceRule || definition.hijriRecurrence);
-      if (isRecurring && scope === 'THIS_OCCURRENCE') {
-        if (occurrence) {
-          await taskOccurrenceRepository.deleteIfPending(occurrence.id).catch(() => {});
-        }
-      } else if (isRecurring && scope === 'ALL_OCCURRENCES') {
-        if (definition.seriesId) {
-          await taskEngine.deleteEntireSeries(definition.seriesId).catch(() => {});
-        } else {
-          if (occurrence) {
-            await taskOccurrenceRepository.deleteIfPending(occurrence.id).catch(() => {});
-          }
-          await taskDefinitionRepository.delete(definition.id).catch(() => {});
-        }
-      } else {
-        if (occurrence) {
-          await taskOccurrenceRepository.deleteIfPending(occurrence.id).catch(() => {});
-        }
-        await taskDefinitionRepository.delete(definition.id).catch(() => {});
-      }
+      await taskEngine.deleteTask({
+        occurrenceId: occurrence?.id,
+        definitionId: definition.id,
+        scope,
+      });
       await refresh();
       router.back();
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Delete error:', err);
+      Alert.alert("Couldn't delete task", 'Please try again.');
     }
   };
 

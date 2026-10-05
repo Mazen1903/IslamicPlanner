@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, AppState, type AppStateStatus } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { initNotificationHandler } from '@/services/notification/NotificationBoo
 import { useOnboardingStore } from '@/stores/useOnboardingStore';
 import * as Font from 'expo-font';
 import * as SecureStore from 'expo-secure-store';
+import { widgetSyncCoordinator } from '@/services/widget/WidgetSyncCoordinator';
 
 export type BootstrapState = 'LOADING' | 'READY' | 'ERROR';
 
@@ -78,15 +79,15 @@ export function RootGate() {
   const inOnboarding = segments[0] === 'onboarding';
 
   const mustRedirectToOnboarding = status === 'PENDING' && !inOnboarding;
-  const mustRedirectToToday = status === 'COMPLETE' && inOnboarding;
+  const mustRedirectToPlanner = status === 'COMPLETE' && inOnboarding;
 
   useEffect(() => {
     if (mustRedirectToOnboarding) {
       router.replace('/onboarding');
-    } else if (mustRedirectToToday) {
-      router.replace('/(tabs)/today');
+    } else if (mustRedirectToPlanner) {
+      router.replace('/(tabs)/planner');
     }
-  }, [mustRedirectToOnboarding, mustRedirectToToday, router]);
+  }, [mustRedirectToOnboarding, mustRedirectToPlanner, router]);
 
   if (status === 'LOADING') {
     return <BootstrapLoadingView />;
@@ -102,7 +103,7 @@ export function RootGate() {
     );
   }
 
-  if (mustRedirectToOnboarding || mustRedirectToToday) {
+  if (mustRedirectToOnboarding || mustRedirectToPlanner) {
     return <BootstrapLoadingView />;
   }
 
@@ -197,6 +198,17 @@ export default function RootLayout() {
     };
   }, [retryTrigger]);
 
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active') {
+        void widgetSyncCoordinator.sync().catch(() => {});
+      }
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   const handleModeChange = useCallback(async (mode: ThemeMode) => {
     setThemeMode(mode);
     try {
@@ -204,6 +216,7 @@ export default function RootLayout() {
     } catch (err) {
       console.warn('[RootLayout] Failed to persist theme mode:', err);
     }
+    void widgetSyncCoordinator.sync().catch(() => {});
   }, []);
 
   const handleIslamicThemeChange = useCallback(async (themeId: string | null) => {
@@ -217,6 +230,7 @@ export default function RootLayout() {
     } catch (err) {
       console.warn('[RootLayout] Failed to persist Islamic theme:', err);
     }
+    void widgetSyncCoordinator.sync().catch(() => {});
   }, []);
 
   return (

@@ -9,6 +9,7 @@ export default function SettingsLayout() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack
+        detachInactiveScreens={false}
         screenOptions={{
           headerShown: false,
           cardStyle: { backgroundColor: colors.background },
@@ -28,25 +29,38 @@ export default function SettingsLayout() {
               },
             },
           },
-          cardStyleInterpolator: ({ current, next, layouts }) => ({
-            cardStyle: {
-              transform: [
-                {
-                  // True push: settings list slides LEFT at full width,
-                  // sub-screen slides in from RIGHT at the same speed.
-                  translateX: next
-                    ? next.progress.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, -layouts.screen.width],
-                      })
-                    : current.progress.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [layouts.screen.width, 0],
-                      }),
-                },
-              ],
-            },
-          }),
+          cardStyleInterpolator: ({ current, next, layouts, index }) => {
+            const width = layouts?.screen?.width || 390;
+            const isRoot = index == null || index === 0;
+
+            // Root screen (index === 0) should remain stable at 0 and not slide in from the right.
+            // Sub-screens (index > 0) slide in from the right at full width.
+            const translateFocused = isRoot
+              ? 0
+              : current.progress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [width, 0],
+                  extrapolate: 'clamp',
+                });
+
+            // True push: when another screen is pushed on top, slide left at full width.
+            const translateUnfocused = next
+              ? next.progress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -width],
+                  extrapolate: 'clamp',
+                })
+              : 0;
+
+            return {
+              cardStyle: {
+                transform: [
+                  { translateX: translateFocused },
+                  { translateX: translateUnfocused },
+                ],
+              },
+            };
+          },
           gestureEnabled: false,
         }}
       />

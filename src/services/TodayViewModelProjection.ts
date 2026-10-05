@@ -14,13 +14,6 @@ import type {
 import { getCurrentPrayer, getNextPrayer } from '@/domain/prayer/PrayerEngine';
 import { detectTaskIcon } from '@/constants/taskIcons';
 
-export const PRAYER_ARABIC_NAMES: Record<Prayer, string> = {
-  FAJR: 'الفجر',
-  DHUHR: 'الظهر',
-  ASR: 'العصر',
-  MAGHRIB: 'المغرب',
-  ISHA: 'العشاء',
-};
 
 /**
  * Derives the materialization seed range [seedStart, seedEnd]
@@ -482,7 +475,8 @@ export function projectTodayViewModel(
   timeline: PrayerTimeline,
   now: DateTime,
   timezone: string,
-  streakMap?: Map<string, StreakData>
+  streakMap?: Map<string, StreakData>,
+  upcomingOccurrences?: TaskOccurrence[]
 ): TodayViewModel {
   // 1. Initialize empty tab builders for exactly 5 prayer tabs
   const tabBuilders = new Map<
@@ -579,7 +573,6 @@ export function projectTodayViewModel(
     return {
       prayer,
       name: PRAYER_NAMES[prayer],
-      arabicName: PRAYER_ARABIC_NAMES[prayer],
       startTime: rep.period.start.setZone(timezone).toFormat('h:mm a'),
       startDateTime: rep.period.start.toISO()!,
       temporalState: rep.temporalState,
@@ -603,11 +596,52 @@ export function projectTodayViewModel(
     // End of timeline coverage
   }
 
+  // 5. Project upcoming days' tasks (if provided)
+  const upcomingDaysTasks: TaskCardViewModel[] = [];
+  if (upcomingOccurrences && upcomingOccurrences.length > 0) {
+    const rawUpcoming: TaskCardViewModel[] = [];
+    for (const occ of upcomingOccurrences) {
+      if (occ.status !== 'PENDING') continue;
+      const def = definitions.get(occ.taskDefinitionId);
+      if (!def) continue;
+
+      const targetPrayer = occ.calculatedPrayerSection ?? 'FAJR';
+      const card = buildTaskCardViewModel(
+        occ,
+        def,
+        targetPrayer,
+        planningDay,
+        timezone,
+        timeline,
+        streakMap
+      );
+      rawUpcoming.push(card);
+    }
+
+    rawUpcoming.sort((a, b) => {
+      const dateA = a.localDate ?? a.sortInstant ?? '';
+      const dateB = b.localDate ?? b.sortInstant ?? '';
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+      return compareScheduledTasks(a, b);
+    });
+
+    const seenSeries = new Set<string>();
+    for (const item of rawUpcoming) {
+      const def = definitions.get(item.taskDefinitionId);
+      const identityKey = def?.seriesId ?? item.taskDefinitionId;
+      if (!seenSeries.has(identityKey)) {
+        seenSeries.add(identityKey);
+        upcomingDaysTasks.push(item);
+      }
+    }
+  }
+
   return {
     planningDayKey: planningDay.key,
     planningDay,
     currentPrayer,
     tabs,
     nextPrayer: nextPrayerInfo,
+    upcomingDaysTasks,
   };
 }

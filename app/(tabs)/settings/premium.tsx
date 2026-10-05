@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as SecureStore from 'expo-secure-store';
 import { useTheme } from '@/theme';
 import {
   SettingsPastelHeader,
@@ -10,42 +11,88 @@ import {
   SettingsCheckCircleIcon,
 } from '@/components/settings';
 
+export const PREMIUM_NOTIFY_KEY = 'premium_notify_me_v1';
+
 const PREMIUM_FEATURES = [
-  'Custom day start time',
-  'Advanced planner settings',
-  'More themes and backgrounds',
-  'Additional widgets',
-  'Advanced statistics',
-  'Priority support',
-  'And more coming soon',
+  'Custom day start time (e.g. 4:00 AM)',
+  'Midnight day boundary (12:00 AM)',
+  'Early access to new upcoming features',
 ];
 
 const FREE_FEATURES = [
-  'Core features',
-  'Worship suggestions',
-  'Basic themes',
-  'Standard support',
+  'Fajr-based day start',
+  'Precise prayer calculations',
+  'All 125 task icons & categories',
+  'Full theme gallery & dark mode',
+  'Encrypted journal & streak tracker',
+  'Offline JSON backup & restore',
 ];
 
 const PREMIUM_PLAN_FEATURES = [
   'Everything in Free',
-  'Advanced settings',
-  'More customization',
-  'Widgets',
-  'Detailed statistics',
-  'Priority support',
+  'Midnight day boundary',
+  'Custom day start boundary',
+  'Future features in development',
 ];
 
 export default function PremiumScreen() {
   const { colors, spacing, radii, typography, shadows, touchTargets } = useTheme();
   const router = useRouter();
 
-  const handleUpgrade = () => {
-    Alert.alert(
-      'Coming Soon 🌙',
-      "Premium features are in development. You'll be notified when they're available.",
-      [{ text: 'Got it' }]
-    );
+  const [isNotified, setIsNotified] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    SecureStore.getItemAsync(PREMIUM_NOTIFY_KEY)
+      .then(val => {
+        if (active) {
+          setIsNotified(val === 'true');
+          setIsLoading(false);
+        }
+      })
+      .catch(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleToggleNotify = async () => {
+    if (isNotified) {
+      Alert.alert(
+        'Notification Preference',
+        "You're currently set to be notified when Premium launches. Would you like to opt out?",
+        [
+          { text: 'Keep Notification', style: 'cancel' },
+          {
+            text: 'Opt Out',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await SecureStore.deleteItemAsync(PREMIUM_NOTIFY_KEY);
+                setIsNotified(false);
+              } catch (err) {
+                console.warn('[PremiumScreen] Failed to remove notification key:', err);
+              }
+            },
+          },
+        ]
+      );
+    } else {
+      try {
+        await SecureStore.setItemAsync(PREMIUM_NOTIFY_KEY, 'true');
+        setIsNotified(true);
+        Alert.alert(
+          'You are on the list! 🌙',
+          'Thank you for your interest. We will notify you as soon as premium features become available.',
+          [{ text: 'Got it' }]
+        );
+      } catch (err) {
+        console.warn('[PremiumScreen] Failed to save notification key:', err);
+      }
+    }
   };
 
   return (
@@ -90,10 +137,10 @@ export default function PremiumScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[typography.headlineMedium, { color: colors.textPrimary, fontWeight: '700' }]}>
-                Go Premium
+                Islamic Planner Premium
               </Text>
               <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                More features. A more purposeful you.
+                In active development. Coming soon to all users.
               </Text>
             </View>
           </View>
@@ -112,13 +159,20 @@ export default function PremiumScreen() {
 
           {/* Notify Me When Available Button */}
           <Pressable
-            onPress={handleUpgrade}
+            onPress={handleToggleNotify}
+            disabled={isLoading}
             accessibilityRole="button"
-            accessibilityLabel="Notify Me When Available"
+            accessibilityLabel={isNotified ? "You're on the list" : "Notify Me When Available"}
             style={({ pressed }) => [
               styles.upgradeBtn,
               {
-                backgroundColor: pressed ? colors.primaryPressed : colors.primary,
+                backgroundColor: isNotified
+                  ? colors.primaryLight
+                  : pressed
+                  ? colors.primaryPressed
+                  : colors.primary,
+                borderColor: colors.primary,
+                borderWidth: isNotified ? 1.5 : 0,
                 borderRadius: radii.pill,
                 minHeight: touchTargets.comfortable,
                 marginTop: spacing.lg,
@@ -127,8 +181,16 @@ export default function PremiumScreen() {
             ]}
             testID="premium-upgrade-button"
           >
-            <Text style={[typography.labelLarge, { color: colors.textOnPrimary, fontWeight: '700' }]}>
-              Notify Me When Available
+            <Text
+              style={[
+                typography.labelLarge,
+                {
+                  color: isNotified ? colors.primary : colors.textOnPrimary,
+                  fontWeight: '700',
+                },
+              ]}
+            >
+              {isNotified ? "You're on the list ✓" : 'Notify Me When Available'}
             </Text>
           </Pressable>
         </View>

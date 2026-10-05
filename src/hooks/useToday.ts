@@ -1,3 +1,4 @@
+import { Alert } from 'react-native';
 import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { DateTime } from 'luxon';
 import { useTodayStore } from '@/stores/useTodayStore';
@@ -371,22 +372,42 @@ export function useToday(options: UseTodayOptions = {}) {
     []
   );
 
-  const deleteTask = useCallback(async (taskOrId: TaskCardViewModel | string) => {
-    const occurrenceId = typeof taskOrId === 'string' ? taskOrId : taskOrId.occurrenceId;
-    const defId = typeof taskOrId === 'string' ? undefined : taskOrId.taskDefinitionId;
-    const isRecurring = typeof taskOrId === 'string' ? false : Boolean(taskOrId.isRecurring);
+  const deleteTask = useCallback(async (taskOrId: TaskCardViewModel | string): Promise<boolean> => {
+    let occurrenceId: string | undefined;
+    let defId: string | undefined;
+
+    if (typeof taskOrId === 'string') {
+      occurrenceId = taskOrId;
+      const occ = await taskOccurrenceRepository.findById(taskOrId);
+      if (occ) {
+        defId = occ.taskDefinitionId;
+      } else {
+        defId = taskOrId;
+        occurrenceId = undefined;
+      }
+    } else {
+      occurrenceId = taskOrId.occurrenceId;
+      defId = taskOrId.taskDefinitionId;
+    }
+
+    if (!defId) {
+      Alert.alert("Couldn't delete task", 'Task definition not found.');
+      return false;
+    }
 
     try {
-      if (occurrenceId) {
-        await taskOccurrenceRepository.deleteIfPending(occurrenceId).catch(() => {});
-      }
-      // Only delete definition if it is NOT a recurring series!
-      // Recurring series occurrences must be deleted individually without destroying the series.
-      if (defId && !isRecurring) {
-        await taskDefinitionRepository.delete(defId).catch(() => {});
-      }
-    } finally {
+      await taskEngine.deleteTask({
+        occurrenceId,
+        definitionId: defId,
+        scope: 'THIS_OCCURRENCE',
+      });
       await performFullRefresh(false);
+      return true;
+    } catch (err) {
+      console.warn('[useToday] deleteTask failed:', err);
+      Alert.alert("Couldn't delete task", 'Please try again.');
+      await performFullRefresh(false);
+      return false;
     }
   }, [performFullRefresh]);
 

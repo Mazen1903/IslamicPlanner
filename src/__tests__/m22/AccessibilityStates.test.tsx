@@ -29,11 +29,11 @@ jest.mock('@/hooks/useLocation', () => ({
 }));
 
 const mockTabs: PrayerTabViewModel[] = [
-  { prayer: 'FAJR', name: 'Fajr', arabicName: 'الفجر', startTime: '05:00', startDateTime: '2026-09-19T05:00:00Z', temporalState: 'CURRENT', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
-  { prayer: 'DHUHR', name: 'Dhuhr', arabicName: 'الظهر', startTime: '12:30', startDateTime: '2026-09-19T12:30:00Z', temporalState: 'FUTURE', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
-  { prayer: 'ASR', name: 'Asr', arabicName: 'العصر', startTime: '15:45', startDateTime: '2026-09-19T15:45:00Z', temporalState: 'FUTURE', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
-  { prayer: 'MAGHRIB', name: 'Maghrib', arabicName: 'المغرب', startTime: '18:15', startDateTime: '2026-09-19T18:15:00Z', temporalState: 'FUTURE', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
-  { prayer: 'ISHA', name: 'Isha', arabicName: 'العشاء', startTime: '19:30', startDateTime: '2026-09-19T19:30:00Z', temporalState: 'FUTURE', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
+  { prayer: 'FAJR', name: 'Fajr', startTime: '05:00', startDateTime: '2026-09-19T05:00:00Z', temporalState: 'CURRENT', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
+  { prayer: 'DHUHR', name: 'Dhuhr', startTime: '12:30', startDateTime: '2026-09-19T12:30:00Z', temporalState: 'FUTURE', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
+  { prayer: 'ASR', name: 'Asr', startTime: '15:45', startDateTime: '2026-09-19T15:45:00Z', temporalState: 'FUTURE', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
+  { prayer: 'MAGHRIB', name: 'Maghrib', startTime: '18:15', startDateTime: '2026-09-19T18:15:00Z', temporalState: 'FUTURE', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
+  { prayer: 'ISHA', name: 'Isha', startTime: '19:30', startDateTime: '2026-09-19T19:30:00Z', temporalState: 'FUTURE', scheduledTasks: [], missedTasks: [], completedTasks: [], anytimeTasks: [] },
 ];
 
 const mockTask: TaskCardViewModel = {
@@ -314,9 +314,9 @@ describe('Group C: Accessibility States & Live Regions Contract (§6.2, §11)', 
     expect(src).toContain('accessibilityState={{ checked: isSelected }}');
   });
 
-  it('C-18: Screen-level dynamic errors in today.tsx and journal.tsx carry accessibilityLiveRegion="assertive" (A-17)', () => {
-    const todaySrc = fs.readFileSync('app/(tabs)/today.tsx', 'utf8');
-    expect(todaySrc).toContain('accessibilityLiveRegion="assertive"');
+  it('C-18: Screen-level dynamic errors in planner.tsx and journal.tsx carry accessibilityLiveRegion="assertive" (A-17)', () => {
+    const plannerSrc = fs.readFileSync('app/(tabs)/planner.tsx', 'utf8');
+    expect(plannerSrc).toContain('accessibilityLiveRegion="assertive"');
 
     const journalSrc = fs.readFileSync('app/(tabs)/journal.tsx', 'utf8');
     expect(journalSrc).toContain('accessibilityLiveRegion="assertive"');

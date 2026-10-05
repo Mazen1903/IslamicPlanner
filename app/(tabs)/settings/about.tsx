@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { useTheme } from '@/theme';
-import { useUserSettings } from '@/hooks/useUserSettings';
 import { StreakFlameBadge } from '@/components/streak';
 import {
   SettingsPastelHeader,
@@ -13,7 +12,6 @@ import {
   PastelOptionCard,
   SettingsQuoteCard,
   SettingsAboutHelpCenterIcon,
-  SettingsAboutContactSupportIcon,
   SettingsAboutPrivacyPolicyIcon,
   SettingsAboutTermsIcon,
   SettingsAboutRateStarIcon,
@@ -60,28 +58,11 @@ const CREDITS: { name: string; license: string; purpose: string }[] = [
 export default function AboutScreen() {
   const { colors, spacing, radii, typography } = useTheme();
   const router = useRouter();
-  const { settings, updateSettings } = useUserSettings();
 
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
-  const handleToggleFlameEngine = async () => {
-    const nextEngine = settings?.flameEngine === 'skia' ? 'svg' : 'skia';
-    await updateSettings?.({ flameEngine: nextEngine });
-  };
-
-  const openUrl = async (url: string) => {
-    try {
-      await Linking.openURL(url);
-    } catch {
-      Alert.alert('Unable to open link', 'Could not open the requested page.', [{ text: 'OK' }]);
-    }
-  };
-
   const handleRateApp = async () => {
-    const storeUrl =
-      Platform.OS === 'ios'
-        ? 'https://apps.apple.com'
-        : 'market://details?id=com.mm1903.islamicplannerapp';
+    const storeUrl = 'market://details?id=com.mm1903.islamicplannerapp';
     try {
       const canOpen = await Linking.canOpenURL(storeUrl);
       if (canOpen) {
@@ -113,104 +94,103 @@ export default function AboutScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: spacing.xxl }]}
         testID="about-screen"
       >
-        {/* BESPOKE MOCKUP ROWS */}
         <View style={styles.cardsList}>
           {/* 1. Help Center */}
           <PastelOptionCard
             label="Help Center"
             subtitle="Find answers to common questions"
             customBadge={<SettingsAboutHelpCenterIcon size={40} />}
-            onPress={() => openUrl('mailto:contact@islamicplanner.app?subject=Help')}
+            onPress={() => router.push('/(tabs)/settings/help' as any)}
             testID="about-row-help-center"
           />
 
-          {/* 2. Contact Team (Note: text avoids 'Support' substring to keep About.test.tsx constraint intact) */}
-          <PastelOptionCard
-            label="Contact Team"
-            subtitle="We're here to help"
-            customBadge={<SettingsAboutContactSupportIcon size={40} />}
-            onPress={() => openUrl('mailto:contact@islamicplanner.app?subject=Feedback')}
-            testID="about-row-contact"
-          />
-
-          {/* 3. Privacy Policy */}
+          {/* 2. Privacy Policy */}
           <PastelOptionCard
             label="Privacy Policy"
             subtitle="How we protect your data"
             customBadge={<SettingsAboutPrivacyPolicyIcon size={40} />}
-            onPress={() => openUrl('mailto:contact@islamicplanner.app?subject=Privacy%20Policy')}
+            onPress={() => router.push('/(tabs)/settings/privacy-policy' as any)}
             testID="about-row-privacy"
           />
 
-          {/* 4. Terms of Service */}
+          {/* 3. Terms of Service */}
           <PastelOptionCard
             label="Terms of Service"
             subtitle="Our terms and conditions"
             customBadge={<SettingsAboutTermsIcon size={40} />}
-            onPress={() => openUrl('mailto:contact@islamicplanner.app?subject=Terms%20of%20Service')}
+            onPress={() => router.push('/(tabs)/settings/terms' as any)}
             testID="about-row-terms"
           />
 
-          {/* 5. Rate the App */}
-          <PastelOptionCard
-            label="Rate the App"
-            subtitle="Leave a review on the App Store"
-            customBadge={<SettingsAboutRateStarIcon size={40} />}
-            onPress={handleRateApp}
-            testID="about-row-rate"
-          />
+          {/* 4. Rate the App (only on Android where store identifier exists) */}
+          {Platform.OS === 'android' && (
+            <PastelOptionCard
+              label="Rate the App"
+              subtitle="Leave a review on Google Play"
+              customBadge={<SettingsAboutRateStarIcon size={40} />}
+              onPress={handleRateApp}
+              testID="about-row-rate"
+            />
+          )}
         </View>
 
         {/* Hadith Inspiration Card */}
         <SettingsQuoteCard
           quote="“The best of people are those who benefit people.”"
-          citation="— Prophet Muhammad ﷺ"
+          citation="— Prophet Muhammad (peace be upon him)"
           testID="about-hadith-card"
         />
 
-        {/* Streak Flame Animation Engine (Dev / Customization) */}
-        <SettingsSectionHeader title="Streak Flame Animation" testID="flame-section" />
-        <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <SettingsRow
-            label="Flame Engine"
-            subtitle={settings?.flameEngine === 'skia' ? 'Skia Canvas' : 'SVG + Reanimated'}
-            value={settings?.flameEngine === 'skia' ? 'Skia' : 'SVG'}
-            icon="flame"
-            onPress={handleToggleFlameEngine}
-            testID="flame-engine-row"
-          />
-        </View>
-
         {/* Live Flame Tiers Preview */}
-        <View style={[styles.tierPreviewCard, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.lg, padding: spacing.md, marginHorizontal: 16, marginTop: 12 }]}>
+        <View
+          style={[
+            styles.tierPreviewCard,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderRadius: radii.lg,
+              padding: spacing.md,
+              marginHorizontal: 16,
+              marginTop: 12,
+            },
+          ]}
+        >
           <Text style={[typography.labelMedium, { color: colors.textSecondary, marginBottom: spacing.sm }]}>
             Flame Tiers Preview (Custom Palettes)
           </Text>
           <View style={styles.tierRow}>
             <View style={styles.tierItem}>
               <StreakFlameBadge count={3} size={36} testID="flame-preview-warm" />
-              <Text style={[typography.caption, { color: colors.textPrimary, marginTop: 4, fontWeight: '600' }]}>Warm</Text>
+              <Text style={[typography.caption, { color: colors.textPrimary, marginTop: 4, fontWeight: '600' }]}>
+                Warm
+              </Text>
               <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 10 }]}>1-7</Text>
             </View>
             <View style={styles.tierItem}>
               <StreakFlameBadge count={14} size={36} testID="flame-preview-bright" />
-              <Text style={[typography.caption, { color: colors.textPrimary, marginTop: 4, fontWeight: '600' }]}>Bright</Text>
+              <Text style={[typography.caption, { color: colors.textPrimary, marginTop: 4, fontWeight: '600' }]}>
+                Bright
+              </Text>
               <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 10 }]}>8-30</Text>
             </View>
             <View style={styles.tierItem}>
               <StreakFlameBadge count={45} size={36} testID="flame-preview-hot" />
-              <Text style={[typography.caption, { color: colors.textPrimary, marginTop: 4, fontWeight: '600' }]}>Hot</Text>
+              <Text style={[typography.caption, { color: colors.textPrimary, marginTop: 4, fontWeight: '600' }]}>
+                Hot
+              </Text>
               <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 10 }]}>31-99</Text>
             </View>
             <View style={styles.tierItem}>
               <StreakFlameBadge count={120} size={36} testID="flame-preview-electric" />
-              <Text style={[typography.caption, { color: colors.textPrimary, marginTop: 4, fontWeight: '600' }]}>Electric</Text>
+              <Text style={[typography.caption, { color: colors.textPrimary, marginTop: 4, fontWeight: '600' }]}>
+                Electric
+              </Text>
               <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 10 }]}>100+</Text>
             </View>
           </View>
         </View>
 
-        {/* Footer with App Version & Care Notice */}
+        {/* Footer with App Version */}
         <View style={[styles.footerContainer, { marginVertical: spacing.md, alignItems: 'center' }]}>
           <Text
             style={[

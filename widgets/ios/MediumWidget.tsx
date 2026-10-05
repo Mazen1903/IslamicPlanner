@@ -21,7 +21,7 @@ import React from 'react';
 import { createWidget } from 'expo-widgets';
 import { VStack, HStack, Text, Spacer, Divider } from '@expo/ui/swift-ui';
 import { font, foregroundStyle, padding, frame, lineLimit } from '@expo/ui/swift-ui/modifiers';
-import type { WidgetSnapshot, WidgetTaskEntry } from '../../src/services/widget/types';
+import type { WidgetSnapshot, WidgetTaskEntry, WidgetPalette } from '../../src/services/widget/types';
 
 // Design tokens (literal values - cannot import from @/theme in widget bundle)
 const COLORS = {
@@ -35,9 +35,9 @@ const COLORS = {
 
 type MediumWidgetProps = WidgetSnapshot;
 
-function TaskRow({ task }: { task: WidgetTaskEntry }) {
+function TaskRow({ task, palette }: { task: WidgetTaskEntry; palette: WidgetPalette | typeof COLORS }) {
   const dotColor =
-    task.priority === 'IMPORTANT' ? COLORS.importantAccent : COLORS.brandGreen;
+    task.priority === 'IMPORTANT' ? palette.importantAccent : palette.brandGreen;
 
   return (
     <HStack alignment="center" spacing={6}>
@@ -48,7 +48,7 @@ function TaskRow({ task }: { task: WidgetTaskEntry }) {
         <Text
           modifiers={[
             font({ size: 12, weight: 'medium' }),
-            foregroundStyle(COLORS.text),
+            foregroundStyle(palette.text),
             lineLimit(1),
           ]}
         >
@@ -57,7 +57,7 @@ function TaskRow({ task }: { task: WidgetTaskEntry }) {
         <Text
           modifiers={[
             font({ size: 10, weight: 'regular' }),
-            foregroundStyle(COLORS.textMuted),
+            foregroundStyle(palette.textMuted),
             lineLimit(1),
           ]}
         >
@@ -69,6 +69,11 @@ function TaskRow({ task }: { task: WidgetTaskEntry }) {
 }
 
 export function MediumWidgetLayout(props: MediumWidgetProps) {
+  const palette =
+    props.theme?.mode === 'FIXED'
+      ? props.theme.light
+      : (props.theme?.dark ?? COLORS);
+
   if (props.isSetupRequired) {
     return (
       <VStack
@@ -76,10 +81,10 @@ export function MediumWidgetLayout(props: MediumWidgetProps) {
         spacing={8}
         modifiers={[padding({ all: 16 }), frame({ maxWidth: 360, maxHeight: 170 })]}
       >
-        <Text modifiers={[font({ size: 16, weight: 'bold' }), foregroundStyle(COLORS.text)]}>
+        <Text modifiers={[font({ size: 16, weight: 'bold' }), foregroundStyle(palette.text)]}>
           Islamic Planner
         </Text>
-        <Text modifiers={[font({ size: 12, weight: 'regular' }), foregroundStyle(COLORS.textMuted)]}>
+        <Text modifiers={[font({ size: 12, weight: 'regular' }), foregroundStyle(palette.textMuted)]}>
           Open app to finish setup.
         </Text>
       </VStack>
@@ -94,11 +99,11 @@ export function MediumWidgetLayout(props: MediumWidgetProps) {
     >
       {/* Header */}
       <HStack alignment="center">
-        <Text modifiers={[font({ size: 12, weight: 'semibold' }), foregroundStyle(COLORS.brandGreen)]}>
+        <Text modifiers={[font({ size: 12, weight: 'semibold' }), foregroundStyle(palette.brandGreen)]}>
           Islamic Planner
         </Text>
         <Spacer />
-        <Text modifiers={[font({ size: 11, weight: 'regular' }), foregroundStyle(COLORS.textMuted)]}>
+        <Text modifiers={[font({ size: 11, weight: 'regular' }), foregroundStyle(palette.textMuted)]}>
           {props.planningDayKey}
         </Text>
       </HStack>
@@ -106,33 +111,33 @@ export function MediumWidgetLayout(props: MediumWidgetProps) {
       <HStack alignment="top" spacing={12}>
         {/* Left column: Prayer times */}
         <VStack alignment="leading" spacing={3} modifiers={[frame({ minWidth: 120 })]}>
-          <Text modifiers={[font({ size: 15, weight: 'bold' }), foregroundStyle(COLORS.text)]}>
-            {props.currentPrayer.arabicName}
+          <Text modifiers={[font({ size: 15, weight: 'bold' }), foregroundStyle(palette.text)]}>
+            {props.currentPrayer.name}
           </Text>
-          <Text modifiers={[font({ size: 12, weight: 'medium' }), foregroundStyle(COLORS.text)]}>
-            {props.currentPrayer.name} · {props.currentPrayer.startsAtLocal}
+          <Text modifiers={[font({ size: 13, weight: 'medium' }), foregroundStyle(palette.text)]}>
+            {props.currentPrayer.startsAtLocal}
           </Text>
 
           <Spacer minLength={4} />
 
           {props.nextPrayer ? (
             <VStack alignment="leading" spacing={1}>
-              <Text modifiers={[font({ size: 11, weight: 'medium' }), foregroundStyle(COLORS.textMuted)]}>
+              <Text modifiers={[font({ size: 11, weight: 'medium' }), foregroundStyle(palette.textMuted)]}>
                 Next: {props.nextPrayer.name} · {props.nextPrayer.startsAtLocal}
               </Text>
               <HStack alignment="center" spacing={4}>
-                <Text modifiers={[font({ size: 10, weight: 'regular' }), foregroundStyle(COLORS.brandGreen)]}>
+                <Text modifiers={[font({ size: 10, weight: 'regular' }), foregroundStyle(palette.brandGreen)]}>
                   in
                 </Text>
                 <Text
                   date={new Date(props.nextPrayer.startsAt)}
                   dateStyle="timer"
-                  modifiers={[font({ size: 11, weight: 'bold' }), foregroundStyle(COLORS.brandGreen)]}
+                  modifiers={[font({ size: 11, weight: 'bold' }), foregroundStyle(palette.brandGreen)]}
                 />
               </HStack>
             </VStack>
           ) : (
-            <Text modifiers={[font({ size: 11, weight: 'regular' }), foregroundStyle(COLORS.textMuted)]}>
+            <Text modifiers={[font({ size: 11, weight: 'regular' }), foregroundStyle(palette.textMuted)]}>
               Last prayer of day
             </Text>
           )}
@@ -142,15 +147,15 @@ export function MediumWidgetLayout(props: MediumWidgetProps) {
 
         {/* Right column: Upcoming tasks */}
         <VStack alignment="leading" spacing={4} modifiers={[frame({ minWidth: 160 })]}>
-          <Text modifiers={[font({ size: 11, weight: 'semibold' }), foregroundStyle(COLORS.textMuted)]}>
+          <Text modifiers={[font({ size: 11, weight: 'semibold' }), foregroundStyle(palette.textMuted)]}>
             Tasks ({props.tasks.length})
           </Text>
           {props.tasks.length > 0 ? (
             props.tasks.slice(0, 3).map((task: WidgetTaskEntry) => (
-              <TaskRow key={task.occurrenceId} task={task} />
+              <TaskRow key={task.occurrenceId} task={task} palette={palette} />
             ))
           ) : (
-            <Text modifiers={[font({ size: 11, weight: 'regular' }), foregroundStyle(COLORS.textMuted)]}>
+            <Text modifiers={[font({ size: 11, weight: 'regular' }), foregroundStyle(palette.textMuted)]}>
               No tasks scheduled
             </Text>
           )}

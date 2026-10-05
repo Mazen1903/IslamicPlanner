@@ -17,11 +17,11 @@ export default function TabAddScreen() {
 
   const handleSuccess = async () => {
     await refresh();
-    router.replace('/(tabs)/today');
+    router.replace('/(tabs)/planner');
   };
 
   const handleCancel = () => {
-    router.replace('/(tabs)/today');
+    router.replace('/(tabs)/planner');
   };
 
   return (

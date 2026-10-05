@@ -13,7 +13,6 @@ describe('Today Screen Accessibility (AX-01 to AX-05)', () => {
     {
       prayer: 'FAJR',
       name: 'Fajr',
-      arabicName: 'الفجر',
       startTime: '5:15 AM',
       startDateTime: '2026-09-15T05:15:00.000Z',
       temporalState: 'PAST',
@@ -25,7 +24,6 @@ describe('Today Screen Accessibility (AX-01 to AX-05)', () => {
     {
       prayer: 'DHUHR',
       name: 'Dhuhr',
-      arabicName: 'الظهر',
       startTime: '1:05 PM',
       startDateTime: '2026-09-15T13:05:00.000Z',
       temporalState: 'CURRENT',
@@ -37,7 +35,6 @@ describe('Today Screen Accessibility (AX-01 to AX-05)', () => {
     {
       prayer: 'ASR',
       name: 'Asr',
-      arabicName: 'العصر',
       startTime: '4:45 PM',
       startDateTime: '2026-09-15T16:45:00.000Z',
       temporalState: 'FUTURE',
@@ -49,7 +46,6 @@ describe('Today Screen Accessibility (AX-01 to AX-05)', () => {
     {
       prayer: 'MAGHRIB',
       name: 'Maghrib',
-      arabicName: 'المغرب',
       startTime: '7:15 PM',
       startDateTime: '2026-09-15T19:15:00.000Z',
       temporalState: 'FUTURE',
@@ -61,7 +57,6 @@ describe('Today Screen Accessibility (AX-01 to AX-05)', () => {
     {
       prayer: 'ISHA',
       name: 'Isha',
-      arabicName: 'العشاء',
       startTime: '8:35 PM',
       startDateTime: '2026-09-15T20:35:00.000Z',
       temporalState: 'FUTURE',
@@ -172,8 +167,9 @@ describe('Today Screen Accessibility (AX-01 to AX-05)', () => {
       </ThemeProvider>
     );
 
-    // Explicit text badge "Missed"
-    expect(screen.getByText('Missed')).toBeTruthy();
+    // Accessibility label conveys "Missed" and visual badge is removed
+    expect(screen.getByLabelText(/Missed/i)).toBeTruthy();
+    expect(screen.queryByText('Missed')).toBeNull();
 
     await rerender(
       <ThemeProvider>
@@ -181,8 +177,9 @@ describe('Today Screen Accessibility (AX-01 to AX-05)', () => {
       </ThemeProvider>
     );
 
-    // Explicit text badge "Completed" and "IMPORTANT"
-    expect(screen.getByText('Completed')).toBeTruthy();
+    // Accessibility label conveys "Completed" and "IMPORTANT", visual badge is removed
+    expect(screen.getByLabelText(/Completed/i)).toBeTruthy();
+    expect(screen.queryByText('Completed')).toBeNull();
     expect(screen.getByText('IMPORTANT')).toBeTruthy();
   });
 

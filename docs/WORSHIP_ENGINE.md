@@ -119,7 +119,7 @@ interface WorshipContext {
 | `MORNING_ADHKAR` | Morning Adhkar | Prayer Relative: Fajr, AFTER, 5 min | Daily | Sunnah |
 | `EVENING_ADHKAR` | Evening Adhkar | Prayer Relative: Asr, AFTER, 5 min | Daily | Sunnah |
 | `QURAN_READING` | Qur'an Reading | Prayer Window: Fajr → Asr | Daily | Recommended |
-| `SALAWAT` | Send Salawat on the Prophet ﷺ | Anytime Today | Daily | Sunnah |
+| `SALAWAT` | Send Salawat on the Prophet (peace be upon him) | Anytime Today | Daily | Sunnah |
 
 ### 4.4 Special Days & Seasons
 

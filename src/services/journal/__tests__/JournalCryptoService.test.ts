@@ -120,14 +120,14 @@ describe('JournalCryptoService', () => {
     expect(decrypted).toEqual(emptyPayload);
   });
 
-  it('JC-07: Unicode payload — Arabic and emoji text round-trips correctly', async () => {
+  it('JC-07: Unicode payload — Multilingual accented characters and emoji text round-trips correctly', async () => {
     const unicodePayload: JournalPayload = {
-      body: 'الحمد لله رب العالمين 🤲🕌 بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
+      body: 'All praise is due to God, Lord of the worlds 🤲🕌 — Al-ḥamdu li-llāh',
       reflections: {
-        gratitude: 'نعم الله لا تُحصى ✨',
-        wentWell: 'صلاة الفجر في المسجد 🌅',
-        improvement: 'قراءة صفحتين من القرآن الكريم 📖',
-        dua: 'اللهم إني أسألك الهدى والتقى والعفاف والغنى 🤲',
+        gratitude: "Countless blessings ✨ — na'am Allāh",
+        wentWell: 'Fajr prayer in congregation at the masjid 🌅',
+        improvement: 'Read two pages of the Holy Quran 📖',
+        dua: 'O Allah, I ask You for guidance, piety, and modesty 🤲',
       },
     };
 

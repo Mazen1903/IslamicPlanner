@@ -69,7 +69,7 @@ describe('ThemeGalleryScreen', () => {
     });
   });
 
-  it('opens ThemePreviewModal when an Islamic theme card is tapped', async () => {
+  it('directly applies Islamic theme when a theme card is tapped', async () => {
     await render(
       <ThemeProvider>
         <ThemeGalleryScreen />
@@ -80,10 +80,65 @@ describe('ThemeGalleryScreen', () => {
       fireEvent.press(screen.getByTestId(`islamic-theme-${ISLAMIC_THEMES[0].id}`));
     });
 
-    expect(screen.getByText('Tap to Choose a Theme')).toBeTruthy();
-    expect(screen.getByTestId('theme-preview-close')).toBeTruthy();
-    expect(screen.getByTestId('theme-preview-apply')).toBeTruthy();
-    expect(screen.getByTestId(`preview-card-${ISLAMIC_THEMES[0].id}`)).toBeTruthy();
+    expect(screen.getByTestId('active-theme-banner')).toBeTruthy();
+    expect(screen.getByText(`Active: ${ISLAMIC_THEMES[0].name}`)).toBeTruthy();
+  });
+
+  it('renders Appearance header, mode section, and islamic themes section', async () => {
+    await render(
+      <ThemeProvider>
+        <ThemeGalleryScreen />
+      </ThemeProvider>
+    );
+
+    expect(screen.getByTestId('section-header-appearance')).toBeTruthy();
+    expect(screen.getByTestId('theme-back-button')).toBeTruthy();
+    expect(screen.getByTestId('appearance-mode-section')).toBeTruthy();
+    expect(screen.getByTestId('islamic-themes-section-card')).toBeTruthy();
+  });
+
+  it('filters themes by category pill', async () => {
+    await render(
+      <ThemeProvider>
+        <ThemeGalleryScreen />
+      </ThemeProvider>
+    );
+
+    // Initial 'All' filter renders all 10 themes + default
+    expect(screen.getByTestId('theme-category-bar')).toBeTruthy();
+    expect(screen.getByText('Sacred Places')).toBeTruthy();
+    expect(screen.getByText('Celestial & Times')).toBeTruthy();
+    expect(screen.getByText('Nature')).toBeTruthy();
+
+    // Filter by Sacred Places
+    await act(async () => {
+      fireEvent.press(screen.getByText('Sacred Places'));
+    });
+
+    expect(screen.getByTestId('islamic-theme-rawdah_emerald')).toBeTruthy();
+    expect(screen.getByTestId('islamic-theme-sacred_tawaf')).toBeTruthy();
+    expect(screen.getByTestId('islamic-theme-al_aqsa_sunset')).toBeTruthy();
+    // Non-sacred should be filtered out
+    expect(screen.queryByTestId('islamic-theme-fajr_awakening')).toBeNull();
+
+    // Filter by Celestial & Times
+    await act(async () => {
+      fireEvent.press(screen.getByText('Celestial & Times'));
+    });
+
+    expect(screen.getByTestId('islamic-theme-fajr_awakening')).toBeTruthy();
+    expect(screen.getByTestId('islamic-theme-tahajjud_noor')).toBeTruthy();
+    expect(screen.queryByTestId('islamic-theme-rawdah_emerald')).toBeNull();
+
+    // Filter by Nature
+    await act(async () => {
+      fireEvent.press(screen.getByText('Nature'));
+    });
+
+    expect(screen.getByTestId('islamic-theme-blessed_olive')).toBeTruthy();
+    expect(screen.getByTestId('islamic-theme-andalusian_oasis')).toBeTruthy();
+    expect(screen.getByTestId('islamic-theme-samarkand_turquoise')).toBeTruthy();
+    expect(screen.queryByTestId('islamic-theme-fajr_awakening')).toBeNull();
   });
 });
 
@@ -93,7 +148,6 @@ describe('ThemePreviewModal', () => {
     ...ISLAMIC_THEMES.map((t) => ({
       id: t.id,
       name: t.name,
-      arabicName: t.arabicName,
       tagline: t.tagline,
       isDark: t.isDark,
       wallpaperAsset: t.wallpaperAsset,

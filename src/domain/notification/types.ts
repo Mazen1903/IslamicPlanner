@@ -1,17 +1,23 @@
 export const NOTIFICATION_ID_PREFIX = 'task-reminder:';
 export const NOTIFICATION_DEFAULT_SLOT = 'default';
-export const NOTIFICATION_PAYLOAD_VERSION = 1;
-export const NOTIFICATION_CHANNEL_ID = 'task-reminders';
+export const NOTIFICATION_PAYLOAD_VERSION = 2;
+export const NOTIFICATION_CHANNEL_ID = 'task-reminders-v2-vib';
 export const NOTIFICATION_CHANNEL_NAME = 'Task Reminders';
 export const MAX_SCHEDULED_TASK_REMINDERS = 48;
 
+export const NOTIFICATION_CATEGORY_TASK = 'task-reminder-actions';
+export const NOTIFICATION_ACTION_SNOOZE = 'ACTION_SNOOZE_10';
+export const NOTIFICATION_ACTION_DONE = 'ACTION_MARK_DONE';
+
 export interface NotificationPayloadData {
-  kind: 'task-reminder';
-  occurrenceId: string;
-  taskDefinitionId: string;
-  reminderSlot: 'default';
+  kind: 'task-reminder' | 'prayer-alert' | 'journal-reminder' | 'test-notification';
+  occurrenceId?: string;
+  taskDefinitionId?: string;
+  reminderSlot?: string;
+  prayerName?: string;
+  date?: string;
   triggerAtMs: number;
-  payloadVersion: 1;
+  payloadVersion: number;
   [key: string]: unknown;
 }
 
