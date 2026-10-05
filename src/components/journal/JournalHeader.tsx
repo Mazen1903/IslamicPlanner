@@ -1,16 +1,17 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
-import { JournalSaveStatus } from './JournalSaveStatus';
 import { StreakRing } from './StreakRing';
+import { SoftCircleButton } from './JournalCard';
 import { AppHeroHeader } from '@/components/common/AppHeroHeader';
 import type { SaveState } from '@/services/journal/JournalAutosaveController';
 
 export interface JournalHeaderProps {
   gregorianDisplay: string;
   hijriDisplay: string;
-  saveState: SaveState;
+  saveState?: SaveState;
   isHistorical?: boolean;
   lockEnabled?: boolean;
   streak?: number;
@@ -23,7 +24,6 @@ export interface JournalHeaderProps {
 export function JournalHeader({
   gregorianDisplay,
   hijriDisplay,
-  saveState,
   isHistorical = false,
   lockEnabled = false,
   streak,
@@ -32,6 +32,7 @@ export function JournalHeader({
   onReturnToTodayPress,
   testID = 'journal-header',
 }: JournalHeaderProps) {
+  const router = useRouter();
   const { colors, spacing, typography, touchTargets, radii, isDark } = useTheme();
 
   // Dynamic greeting based on device hour
@@ -43,9 +44,17 @@ export function JournalHeader({
     return 'Evening Muhasaba 🌙';
   };
 
+  const handleSettingsPress = () => {
+    router.push('/settings/journal-privacy' as any);
+  };
+
   return (
     <AppHeroHeader
       testID={testID}
+      artworkSource={require('../../../assets/illustrations/journal_hero_mosque.png')}
+      artworkSize={{ width: 230, height: 130 }}
+      artworkPosition={{ right: -8, bottom: -10 }}
+      contentMaxWidth="62%"
       title={
         <View style={styles.titleColumn}>
           <Text style={[typography.headlineLarge, styles.titleText, { color: colors.textPrimary }]}>
@@ -53,8 +62,9 @@ export function JournalHeader({
           </Text>
           <Text
             style={[
-              typography.labelSmall,
-              { color: colors.primaryDark, marginTop: spacing.xxs, fontWeight: '700' },
+              typography.bodyMedium,
+              styles.greetingText,
+              { color: colors.primary },
             ]}
             testID="journal-greeting-text"
           >
@@ -65,85 +75,51 @@ export function JournalHeader({
       rightElement={
         <View style={styles.actionGroup}>
           {onPrivacyPress && (
-            <Pressable
+            <SoftCircleButton
               onPress={onPrivacyPress}
-              accessibilityRole="button"
+              icon="lock"
+              active={lockEnabled}
+              activeBgColor={isDark ? 'rgba(15, 159, 74, 0.25)' : colors.primaryLight}
+              iconColor={lockEnabled ? colors.primary : colors.textSecondary}
               accessibilityLabel={`Journal privacy. Biometric lock is ${lockEnabled ? 'enabled' : 'disabled'}.`}
-              style={({ pressed }) => [
-                styles.iconButton,
-                {
-                  minWidth: touchTargets.min,
-                  minHeight: touchTargets.min,
-                  borderRadius: radii.pill,
-                  backgroundColor: lockEnabled
-                    ? (isDark ? 'rgba(15, 159, 74, 0.25)' : colors.primaryLight)
-                    : (isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)'),
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}
               testID="journal-privacy-btn"
-            >
-              <Icon
-                name="lock"
-                size={18}
-                color={lockEnabled ? colors.primary : colors.textSecondary}
-                decorative
-              />
-            </Pressable>
+            />
           )}
 
-          {onHistoryPress && (
-            <Pressable
-              onPress={onHistoryPress}
-              accessibilityRole="button"
-              accessibilityLabel="View journal history"
-              style={({ pressed }) => [
-                styles.iconButton,
-                {
-                  minWidth: touchTargets.min,
-                  minHeight: touchTargets.min,
-                  borderRadius: radii.pill,
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}
-              testID="journal-history-btn"
-            >
-              <Icon name="clock" size={18} color={colors.textSecondary} decorative />
-            </Pressable>
-          )}
+          <SoftCircleButton
+            onPress={handleSettingsPress}
+            icon="settings"
+            accessibilityLabel="Journal settings"
+            testID="journal-settings-btn"
+          />
         </View>
       }
       bottomElement={
         <View style={styles.bottomContainer}>
-          {/* Streak Ring Row */}
+          {/* Streak Card (Today only) */}
           {streak !== undefined && !isHistorical && (
-            <View style={[styles.streakRow, { marginBottom: spacing.xs }]}>
+            <View style={[styles.streakRow, { marginBottom: spacing.sm }]}>
               <StreakRing streak={streak} onPress={onHistoryPress} testID="streak-banner" />
             </View>
           )}
 
-          {/* Date & Save Status Row */}
+          {/* Date Row */}
           <View style={styles.dateRow}>
             <View style={styles.dateTextContainer}>
               <Text
-                style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '700' }]}
+                style={[typography.bodyMedium, styles.gregorianDate, { color: colors.textPrimary }]}
                 testID="journal-gregorian-date"
               >
                 {gregorianDisplay}
               </Text>
               {hijriDisplay.length > 0 && (
                 <Text
-                  style={[typography.bodySmall, { color: colors.textSecondary, marginTop: spacing.xxs }]}
+                  style={[typography.bodySmall, styles.hijriDate, { color: colors.textSecondary }]}
                   testID="journal-hijri-date"
                 >
                   {hijriDisplay}
                 </Text>
               )}
-            </View>
-
-            <View style={styles.saveStatusContainer}>
-              <JournalSaveStatus state={saveState} />
             </View>
           </View>
 
@@ -158,7 +134,7 @@ export function JournalHeader({
                   styles.backButton,
                   {
                     backgroundColor: pressed ? colors.primaryLight : colors.surface,
-                    borderColor: colors.border,
+                    borderColor: colors.primary,
                     minHeight: touchTargets.min,
                     borderRadius: radii.pill,
                   },
@@ -191,18 +167,18 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     fontWeight: '800',
   },
+  greetingText: {
+    marginTop: 2,
+    fontWeight: '600',
+  },
   actionGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-  },
-  iconButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
   },
   bottomContainer: {
     width: '100%',
-    marginTop: 8,
+    marginTop: 10,
   },
   streakRow: {
     flexDirection: 'row',
@@ -211,15 +187,17 @@ const styles = StyleSheet.create({
   dateRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
   },
   dateTextContainer: {
     flex: 1,
   },
-  saveStatusContainer: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    paddingTop: 2,
+  gregorianDate: {
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  hijriDate: {
+    marginTop: 2,
+    fontWeight: '500',
   },
   historicalBanner: {
     flexDirection: 'row',

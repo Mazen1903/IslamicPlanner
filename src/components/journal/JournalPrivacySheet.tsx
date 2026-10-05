@@ -8,6 +8,8 @@ import {
   Switch,
   ActivityIndicator,
 } from 'react-native';
+import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 
@@ -30,13 +32,19 @@ export function JournalPrivacySheet({
   errorMessage,
   testID = 'journal-privacy-modal',
 }: JournalPrivacySheetProps) {
-  const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
+  const router = useRouter();
+  const { colors, spacing, radii, typography, touchTargets, isDark } = useTheme();
+
+  const handleOpenSettings = () => {
+    onClose();
+    router.push('/settings/journal-privacy' as any);
+  };
 
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="slide"
       onRequestClose={onClose}
       testID={testID}
     >
@@ -46,25 +54,47 @@ export function JournalPrivacySheet({
         <View
           accessibilityViewIsModal={true}
           style={[
-            styles.sheetCard,
-            shadows.elevated,
+            styles.bottomSheet,
             {
-              backgroundColor: colors.surface,
-              borderRadius: radii.xl,
-              padding: spacing.xl,
+              backgroundColor: isDark ? 'rgba(30, 41, 59, 0.96)' : colors.surface,
+              borderTopLeftRadius: radii.xl ?? 24,
+              borderTopRightRadius: radii.xl ?? 24,
+              paddingHorizontal: spacing.lg,
+              paddingTop: spacing.sm,
+              paddingBottom: spacing.xxl,
             },
           ]}
           testID="journal-privacy-content"
         >
+          {/* Grab Handle */}
+          <View style={styles.handleContainer}>
+            <View
+              style={[
+                styles.handle,
+                {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
+                },
+              ]}
+            />
+          </View>
+
           {/* Header */}
           <View style={styles.header}>
-            <View style={[styles.iconCircle, { backgroundColor: colors.primaryLight, borderRadius: radii.pill }]}>
-              <Icon name="lock" size={24} color={colors.primary} />
+            <View
+              style={[
+                styles.iconCircle,
+                {
+                  backgroundColor: isDark ? 'rgba(15, 159, 74, 0.2)' : 'rgba(15, 159, 74, 0.1)',
+                  borderRadius: radii.pill,
+                },
+              ]}
+            >
+              <Icon name="lock" size={22} color={colors.primary} />
             </View>
             <View style={[styles.titleContainer, { marginStart: spacing.md }]}>
               <Text
                 accessibilityRole="header"
-                style={[typography.headlineMedium, { color: colors.textPrimary }]}
+                style={[typography.headlineMedium, styles.titleText, { color: colors.textPrimary }]}
               >
                 Journal Privacy
               </Text>
@@ -74,33 +104,32 @@ export function JournalPrivacySheet({
             </View>
           </View>
 
-          {/* Body description */}
+          {/* Description */}
           <Text
             style={[
               typography.bodyMedium,
               { color: colors.textSecondary, marginTop: spacing.md, lineHeight: 20 },
             ]}
           >
-            Lock your private journal entries on this device. When enabled, Face ID or
-            fingerprint is required each time you open the Journal.
+            Protect your thoughts and personal reflections on this device with Face ID, Touch ID, or PIN.
           </Text>
 
-          {/* Toggle row */}
+          {/* Toggle row card */}
           <View
             style={[
-              styles.toggleRow,
+              styles.toggleCard,
               {
-                backgroundColor: colors.background,
-                borderRadius: radii.md,
-                borderColor: colors.border,
+                backgroundColor: isDark ? 'rgba(15, 23, 42, 0.5)' : colors.background,
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                borderRadius: radii.md ?? 12,
                 padding: spacing.md,
                 marginTop: spacing.lg,
               },
             ]}
           >
             <View style={styles.toggleLabelContainer}>
-              <Text style={[typography.labelLarge, { color: colors.textPrimary }]}>
-                Journal Lock
+              <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
+                Biometric Lock
               </Text>
               <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
                 {lockEnabled ? 'Protected with biometrics' : 'Unrestricted on this device'}
@@ -128,7 +157,7 @@ export function JournalPrivacySheet({
             <Text
               style={[
                 typography.bodySmall,
-                { color: colors.warning, marginTop: spacing.md, textAlign: 'center' },
+                { color: colors.danger, marginTop: spacing.md, textAlign: 'center' },
               ]}
               testID="journal-privacy-error"
             >
@@ -136,26 +165,49 @@ export function JournalPrivacySheet({
             </Text>
           )}
 
+          {/* More Settings Link */}
+          <Pressable
+            onPress={handleOpenSettings}
+            accessibilityRole="button"
+            accessibilityLabel="Open all journal privacy settings"
+            style={({ pressed }) => [
+              styles.moreSettingsLink,
+              { opacity: pressed ? 0.7 : 1, marginTop: spacing.md },
+            ]}
+            testID="journal-privacy-more-settings-btn"
+          >
+            <Text style={[typography.labelMedium, { color: colors.primary, fontWeight: '600' }]}>
+              Advanced privacy settings →
+            </Text>
+          </Pressable>
+
           {/* Done Button */}
           <Pressable
             onPress={onClose}
             accessibilityRole="button"
             accessibilityLabel="Done"
             style={({ pressed }) => [
-              styles.doneButton,
-              {
-                backgroundColor: pressed ? colors.primaryLight : colors.background,
-                borderColor: colors.border,
-                borderRadius: radii.pill,
-                minHeight: touchTargets.min,
-                marginTop: spacing.xl,
-              },
+              styles.doneWrapper,
+              { opacity: pressed ? 0.85 : 1, marginTop: spacing.lg },
             ]}
             testID="journal-privacy-done-btn"
           >
-            <Text style={[typography.labelLarge, { color: colors.textPrimary }]}>
-              Done
-            </Text>
+            <LinearGradient
+              colors={[colors.primary, colors.primaryDark]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[
+                styles.doneGradient,
+                {
+                  borderRadius: radii.pill,
+                  minHeight: touchTargets.comfortable,
+                },
+              ]}
+            >
+              <Text style={[typography.labelLarge, { color: colors.textOnPrimary, fontWeight: '700' }]}>
+                Done
+              </Text>
+            </LinearGradient>
           </Pressable>
         </View>
       </View>
@@ -166,25 +218,28 @@ export function JournalPrivacySheet({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
+    justifyContent: 'flex-end',
   },
   backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    ...StyleSheet.absoluteFill,
   },
-  sheetCard: {
+  bottomSheet: {
     width: '100%',
-    maxWidth: 400,
     zIndex: 1,
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 4,
   },
   iconCircle: {
     width: 44,
@@ -195,7 +250,11 @@ const styles = StyleSheet.create({
   titleContainer: {
     flex: 1,
   },
-  toggleRow: {
+  titleText: {
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  toggleCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -205,9 +264,17 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingEnd: 12,
   },
-  doneButton: {
+  moreSettingsLink: {
+    alignSelf: 'center',
+    paddingVertical: 6,
+  },
+  doneWrapper: {
+    width: '100%',
+  },
+  doneGradient: {
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    paddingVertical: 12,
   },
 });

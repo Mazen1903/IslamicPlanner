@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '@/theme';
-import { Icon } from '@/components/common/Icon';
+import { JournalCard, SoftCircleButton } from './JournalCard';
 import { ReflectionCard } from './ReflectionCard';
 import type { JournalReflections } from '@/domain/journal/types';
 
@@ -15,46 +15,39 @@ export interface ReflectionSectionProps {
 export function ReflectionSection({
   reflections,
   onChangeReflection,
-  initialExpanded = false,
+  initialExpanded = true,
   testID = 'reflection-section',
 }: ReflectionSectionProps) {
-  const { colors, spacing, radii, typography, isDark } = useTheme();
-  const [expanded, setExpanded] = useState(initialExpanded);
+  const { colors, radii, typography, isDark } = useTheme();
+  const [sectionExpanded, setSectionExpanded] = useState(initialExpanded);
+  const [openFieldKey, setOpenFieldKey] = useState<keyof JournalReflections | null>(null);
 
   // Count filled reflections
   const filledCount = Object.values(reflections).filter(
-    val => typeof val === 'string' && val.trim().length > 0
+    (val) => typeof val === 'string' && val.trim().length > 0
   ).length;
 
+  const toggleField = (key: keyof JournalReflections) => {
+    setOpenFieldKey((prev) => (prev === key ? null : key));
+  };
+
   return (
-    <View style={[styles.container, { marginHorizontal: spacing.lg, marginTop: spacing.md }]} testID={testID}>
-      {/* Section Header */}
-      <Pressable
-        onPress={() => setExpanded(prev => !prev)}
-        accessibilityRole="button"
-        accessibilityLabel={`Reflections section. Currently ${expanded ? 'expanded' : 'collapsed'}. ${filledCount} of 4 answered.`}
-        accessibilityState={{ expanded }}
-        style={({ pressed }) => [
-          styles.headerRow,
-          {
-            paddingVertical: spacing.xs + 2,
-            opacity: pressed ? 0.7 : 1,
-          },
-        ]}
-        testID="reflection-section-toggle"
-      >
-        <View style={styles.headerLeft}>
-          <Text style={styles.headerEmoji}>🪞</Text>
-          <Text style={[typography.headlineMedium, styles.headerTitle, { color: colors.textPrimary }]}>
-            Daily Muhasaba
-          </Text>
+    <JournalCard
+      icon="☀️"
+      title="Daily Muhasaba"
+      testID={testID}
+      headerRight={
+        <View style={styles.headerRightRow}>
+          {/* 0/4 Counter Badge */}
           <View
             style={[
               styles.counterBadge,
               {
-                backgroundColor: filledCount > 0
-                  ? (isDark ? 'rgba(15, 159, 74, 0.25)' : colors.primaryLight)
-                  : (isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surfaceSecondary),
+                marginEnd: 4,
+                backgroundColor:
+                  filledCount > 0
+                    ? (isDark ? 'rgba(15, 159, 74, 0.25)' : colors.primaryLight)
+                    : (isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surfaceSecondary),
                 borderColor: filledCount > 0 ? colors.primary : colors.border,
                 borderRadius: radii.pill,
               },
@@ -64,118 +57,106 @@ export function ReflectionSection({
               style={[
                 typography.caption,
                 {
-                  color: filledCount > 0 ? colors.primaryDark : colors.textTertiary,
+                  color: filledCount > 0 ? colors.primaryDark : colors.textSecondary,
                   fontWeight: '700',
-                  fontSize: 10,
+                  fontSize: 11,
                 },
               ]}
             >
               {filledCount}/4
             </Text>
           </View>
-        </View>
 
-        <View style={styles.headerRight}>
-          <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 12, marginEnd: 4 }]}>
-            {expanded ? 'Hide' : 'Show'}
-          </Text>
-          <Icon
-            name={expanded ? 'chevron-down' : 'chevron-right'}
-            size={16}
-            color={colors.textSecondary}
-            decorative
+          {/* Circular collapse toggle */}
+          <SoftCircleButton
+            onPress={() => setSectionExpanded((prev) => !prev)}
+            size={32}
+            icon={sectionExpanded ? 'chevron-up' : 'chevron-down'}
+            iconSize={16}
+            accessibilityLabel={`Daily Muhasaba section. Currently ${sectionExpanded ? 'expanded' : 'collapsed'}. ${filledCount} of 4 answered.`}
+            testID="reflection-section-toggle"
           />
         </View>
-      </Pressable>
-
-      {/* Individual Cards Grid */}
-      {expanded && (
+      }
+    >
+      {sectionExpanded && (
         <View style={styles.cardsContainer} testID="reflection-section-content">
           <ReflectionCard
+            fieldKey="gratitude"
             label="Gratitude"
             emoji="🤲"
+            subtitle="What are you grateful for today?"
             placeholder="What are you grateful for today?"
             value={reflections.gratitude}
-            onChangeText={text => onChangeReflection('gratitude', text)}
-            accentColor="#D97706"
-            bgLight="rgba(217, 119, 6, 0.12)"
-            testID="reflection-field-gratitude"
+            onChangeText={(text) => onChangeReflection('gratitude', text)}
+            accentColor="#F59E0B"
+            bgLight="rgba(245, 158, 11, 0.12)"
+            isExpanded={openFieldKey === 'gratitude'}
+            onToggle={() => toggleField('gratitude')}
           />
 
           <ReflectionCard
+            fieldKey="wentWell"
             label="What Went Well"
             emoji="✅"
+            subtitle="What went well today?"
             placeholder="What went well today?"
             value={reflections.wentWell}
-            onChangeText={text => onChangeReflection('wentWell', text)}
-            accentColor="#059669"
-            bgLight="rgba(5, 150, 105, 0.12)"
-            testID="reflection-field-wentWell"
+            onChangeText={(text) => onChangeReflection('wentWell', text)}
+            accentColor="#10B981"
+            bgLight="rgba(16, 185, 129, 0.12)"
+            isExpanded={openFieldKey === 'wentWell'}
+            onToggle={() => toggleField('wentWell')}
           />
 
           <ReflectionCard
+            fieldKey="improvement"
             label="For Tomorrow"
             emoji="📈"
+            subtitle="What could be better tomorrow?"
             placeholder="What could be better tomorrow?"
             value={reflections.improvement}
-            onChangeText={text => onChangeReflection('improvement', text)}
-            accentColor="#0284C7"
-            bgLight="rgba(2, 132, 199, 0.12)"
-            testID="reflection-field-improvement"
+            onChangeText={(text) => onChangeReflection('improvement', text)}
+            accentColor="#0EA5E9"
+            bgLight="rgba(14, 165, 233, 0.12)"
+            isExpanded={openFieldKey === 'improvement'}
+            onToggle={() => toggleField('improvement')}
           />
 
           <ReflectionCard
+            fieldKey="dua"
             label="Heartfelt Dua"
             emoji="🌙"
+            subtitle="Any prayers or duas on your heart today?"
             placeholder="Any prayers or duas on your heart today?"
             value={reflections.dua}
-            onChangeText={text => onChangeReflection('dua', text)}
+            onChangeText={(text) => onChangeReflection('dua', text)}
             accentColor="#8B5CF6"
             bgLight="rgba(139, 92, 246, 0.12)"
-            testID="reflection-field-dua"
+            isExpanded={openFieldKey === 'dua'}
+            onToggle={() => toggleField('dua')}
           />
         </View>
       )}
-    </View>
+    </JournalCard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    width: 'auto',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  headerLeft: {
+  headerRightRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  headerEmoji: {
-    fontSize: 18,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
   counterBadge: {
     borderWidth: 1,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   cardsContainer: {
     width: '100%',
-    paddingTop: 2,
+    paddingTop: 4,
   },
 });

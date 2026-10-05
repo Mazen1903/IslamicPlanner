@@ -1,5 +1,15 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, type StyleProp, type ViewStyle, type AccessibilityRole } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  type StyleProp,
+  type ViewStyle,
+  type AccessibilityRole,
+  type ImageSourcePropType,
+  type DimensionValue,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme';
 
@@ -13,6 +23,14 @@ export interface AppHeroHeaderProps {
   testID?: string;
   containerStyle?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
+  /** Custom artwork source to override the default mosque skyline (e.g. Journal) */
+  artworkSource?: ImageSourcePropType;
+  /** Custom artwork dimensions */
+  artworkSize?: { width: number; height: number };
+  /** Custom artwork positioning */
+  artworkPosition?: { right?: number; bottom?: number; top?: number; left?: number };
+  /** Constrain max width of content to ensure wide artwork has clear breathing room */
+  contentMaxWidth?: DimensionValue;
 }
 
 /**
@@ -30,6 +48,10 @@ export function AppHeroHeader({
   testID = 'app-hero-header',
   containerStyle,
   children,
+  artworkSource,
+  artworkSize,
+  artworkPosition,
+  contentMaxWidth,
 }: AppHeroHeaderProps) {
   const { colors, typography, spacing, isDark } = useTheme();
 
@@ -56,16 +78,20 @@ export function AppHeroHeader({
           style={StyleSheet.absoluteFill}
         />
 
-        {/* Transparent Mosque Skyline Artwork - Blends seamlessly into dark & light modes */}
+        {/* Transparent Mosque / Custom Skyline Artwork */}
         <View
-          style={styles.mosqueArtWrapper}
+          style={[
+            styles.mosqueArtWrapper,
+            artworkPosition,
+          ]}
           importantForAccessibility="no"
           accessibilityElementsHidden={true}
         >
           <Image
-            source={require('../../../assets/illustrations/mosque_header_transparent.png')}
+            source={artworkSource ?? require('../../../assets/illustrations/mosque_header_transparent.png')}
             style={[
               styles.mosqueArtImage,
+              artworkSize ? { width: artworkSize.width, height: artworkSize.height } : null,
               {
                 opacity: isDark ? 0.72 : 0.88,
               },
@@ -78,7 +104,7 @@ export function AppHeroHeader({
 
         {/* Top Content Row: Title/Dates (Left) and Actions (Right) */}
         <View style={styles.topRow}>
-          <View style={styles.textColumn}>
+          <View style={[styles.textColumn, contentMaxWidth ? { maxWidth: contentMaxWidth } : null]}>
             {typeof title === 'string' ? (
               <Text
                 style={[typography.headlineLarge, styles.titleText, { color: colors.textPrimary }]}
@@ -121,7 +147,11 @@ export function AppHeroHeader({
         </View>
 
         {/* Optional Bottom Element Row (e.g. countdown or status) */}
-        {bottomElement ? <View style={styles.bottomRow}>{bottomElement}</View> : null}
+        {bottomElement ? (
+          <View style={[styles.bottomRow, contentMaxWidth ? { maxWidth: contentMaxWidth } : null]}>
+            {bottomElement}
+          </View>
+        ) : null}
 
         {children}
       </View>

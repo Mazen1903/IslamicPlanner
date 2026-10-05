@@ -36,7 +36,7 @@ describe('JournalHistory', () => {
       </ThemeProvider>
     );
 
-    expect(screen.getByText('History')).toBeTruthy();
+    expect(screen.getByText('Journal History')).toBeTruthy();
     expect(screen.getByTestId('journal-stats-strip')).toBeTruthy();
     expect(screen.getByTestId('journal-calendar')).toBeTruthy();
     expect(screen.getByText('All Entries')).toBeTruthy();
@@ -67,7 +67,7 @@ describe('JournalHistory', () => {
     );
 
     expect(screen.getByTestId('journal-history-empty')).toBeTruthy();
-    expect(screen.getByText('No previous journal entries yet.')).toBeTruthy();
+    expect(screen.getByText('No reflections yet')).toBeTruthy();
     unmount();
   });
 });

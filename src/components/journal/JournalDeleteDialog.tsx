@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useTheme } from '@/theme';
+import { Icon } from '@/components/common/Icon';
 
 export interface JournalDeleteDialogProps {
   visible: boolean;
@@ -24,7 +25,7 @@ export function JournalDeleteDialog({
   isDeleting = false,
   testID = 'journal-delete-dialog',
 }: JournalDeleteDialogProps) {
-  const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
+  const { colors, spacing, radii, typography, touchTargets, shadows, isDark } = useTheme();
 
   return (
     <Modal
@@ -43,16 +44,34 @@ export function JournalDeleteDialog({
             styles.card,
             shadows.elevated,
             {
-              backgroundColor: colors.surface,
-              borderRadius: radii.lg,
+              backgroundColor: isDark ? 'rgba(30, 41, 59, 0.95)' : colors.surface,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+              borderRadius: radii.xl ?? 24,
               padding: spacing.xl,
             },
           ]}
           testID="journal-delete-dialog-content"
         >
+          {/* Danger icon circle */}
+          <View
+            style={[
+              styles.iconCircle,
+              {
+                backgroundColor: isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
+                borderRadius: radii.pill,
+              },
+            ]}
+          >
+            <Icon name="trash" size={24} color={colors.danger} decorative />
+          </View>
+
           <Text
             accessibilityRole="header"
-            style={[typography.headlineMedium, { color: colors.textPrimary }]}
+            style={[
+              typography.headlineMedium,
+              styles.title,
+              { color: colors.textPrimary, marginTop: spacing.md },
+            ]}
           >
             Delete this journal entry?
           </Text>
@@ -60,7 +79,7 @@ export function JournalDeleteDialog({
           <Text
             style={[
               typography.bodyMedium,
-              { color: colors.textSecondary, marginTop: spacing.sm, lineHeight: 20 },
+              { color: colors.textSecondary, marginTop: spacing.xs, textAlign: 'center', lineHeight: 20 },
             ]}
           >
             This entry cannot be recovered.
@@ -73,18 +92,20 @@ export function JournalDeleteDialog({
               accessibilityRole="button"
               accessibilityLabel="Cancel"
               style={({ pressed }) => [
-                styles.button,
+                styles.cancelBtn,
                 {
-                  backgroundColor: pressed ? colors.border : colors.background,
-                  borderColor: colors.border,
-                  borderRadius: radii.sm,
+                  backgroundColor: pressed
+                    ? (isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surfaceSecondary)
+                    : 'transparent',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : colors.border,
+                  borderRadius: radii.pill,
                   minHeight: touchTargets.min,
                   marginEnd: spacing.sm,
                 },
               ]}
               testID="journal-delete-cancel-btn"
             >
-              <Text style={[typography.labelMedium, { color: colors.textPrimary }]}>
+              <Text style={[typography.labelMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
                 Cancel
               </Text>
             </Pressable>
@@ -95,11 +116,12 @@ export function JournalDeleteDialog({
               accessibilityRole="button"
               accessibilityLabel="Delete entry"
               style={({ pressed }) => [
-                styles.button,
+                styles.deleteBtn,
                 {
                   backgroundColor: pressed ? colors.dangerPressed : colors.danger,
-                  borderRadius: radii.sm,
+                  borderRadius: radii.pill,
                   minHeight: touchTargets.min,
+                  opacity: isDeleting ? 0.7 : 1,
                 },
               ]}
               testID="journal-delete-confirm-btn"
@@ -107,7 +129,7 @@ export function JournalDeleteDialog({
               {isDeleting ? (
                 <ActivityIndicator size="small" color={colors.textOnPrimary} />
               ) : (
-                <Text style={[typography.labelMedium, { color: colors.textOnPrimary }]}>
+                <Text style={[typography.labelMedium, { color: colors.textOnPrimary, fontWeight: '700' }]}>
                   Delete
                 </Text>
               )}
@@ -127,25 +149,40 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    ...StyleSheet.absoluteFill,
   },
   card: {
     width: '100%',
-    maxWidth: 340,
-    zIndex: 1,
+    maxWidth: 360,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  iconCircle: {
+    width: 52,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   actionsRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    alignItems: 'center',
+    width: '100%',
   },
-  button: {
+  cancelBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+    paddingVertical: 10,
+  },
+  deleteBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
   },
 });

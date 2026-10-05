@@ -128,11 +128,11 @@ describe('Real SQLite Database & Backend Wiring Integration Suite', () => {
     const initialStreak = await streakRepository.findBySeriesId(def.seriesId);
     expect(initialStreak).toBeDefined();
 
-    // Canonical deletion of one-off task with THIS_AND_FUTURE
+    // Canonical deletion of one-off task with ALL_OCCURRENCES
     await taskEngine.deleteTask({
       definitionId: def.id,
       occurrenceId: occ.id,
-      scope: 'THIS_AND_FUTURE',
+      scope: 'ALL_OCCURRENCES',
     });
 
     // Verify complete purge across all 3 tables

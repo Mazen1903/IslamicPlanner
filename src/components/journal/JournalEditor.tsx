@@ -1,247 +1,242 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
-import { MoodPicker } from './MoodPicker';
-import { PromptDeck } from './PromptDeck';
+import { JournalCard } from './JournalCard';
+import { JournalSaveStatus } from './JournalSaveStatus';
 import { JournalWriteModal } from './JournalWriteModal';
-import type { MoodKey } from '@/domain/journal/types';
 import type { SaveState } from '@/services/journal/JournalAutosaveController';
+
+export interface JournalEditorRef {
+  openFocusMode: () => void;
+}
 
 export interface JournalEditorProps {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
   testID?: string;
-  selectedMood?: MoodKey;
-  onSelectMood?: (mood: MoodKey | undefined) => void;
-  dayKey?: string;
   gregorianDisplay?: string;
   hijriDisplay?: string;
   saveState?: SaveState;
 }
 
-export function JournalEditor({
-  value,
-  onChangeText,
-  placeholder = 'Write your thoughts...',
-  testID = 'journal-editor-input',
-  selectedMood,
-  onSelectMood,
-  dayKey,
-  gregorianDisplay,
-  hijriDisplay,
-  saveState = 'idle',
-}: JournalEditorProps) {
-  const { colors, spacing, radii, typography, shadows, isDark } = useTheme();
-  const [modalVisible, setModalVisible] = useState(false);
+export const JournalEditor = forwardRef<JournalEditorRef, JournalEditorProps>(
+  function JournalEditor(
+    {
+      value,
+      onChangeText,
+      placeholder = 'Write your thoughts...',
+      testID = 'journal-editor-input',
+      gregorianDisplay,
+      hijriDisplay,
+      saveState = 'idle',
+    },
+    ref
+  ) {
+    const { colors, spacing, radii, typography, touchTargets, isDark } = useTheme();
+    const [modalVisible, setModalVisible] = useState(false);
 
-  // Word count & read time
-  const trimmed = value.trim();
-  const wordCount = trimmed.length > 0 ? trimmed.split(/\s+/).filter(Boolean).length : 0;
-  const readMin = Math.max(1, Math.ceil(wordCount / 150));
+    useImperativeHandle(ref, () => ({
+      openFocusMode: () => {
+        setModalVisible(true);
+      },
+    }));
 
-  const handleSelectPrompt = (promptText: string) => {
-    onChangeText(`"${promptText}"\n\n`);
-  };
+    // Word count & read time
+    const trimmed = value.trim();
+    const wordCount = trimmed.length > 0 ? trimmed.split(/\s+/).filter(Boolean).length : 0;
+    const readMin = Math.max(1, Math.ceil(wordCount / 150));
 
-  return (
-    <View
-      style={[
-        styles.cardContainer,
-        shadows.card,
-        {
-          borderRadius: radii.card,
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(15, 159, 74, 0.12)',
-          marginHorizontal: spacing.lg,
-          backgroundColor: isDark ? 'rgba(30, 41, 59, 0.72)' : 'rgba(255, 255, 255, 0.88)',
-        },
-      ]}
-      testID="journal-editor-card"
-    >
-      {/* Frosted Glass Layer */}
-      <BlurView
-        intensity={isDark ? 20 : 35}
-        tint={isDark ? 'dark' : 'light'}
-        style={[StyleSheet.absoluteFill, { borderRadius: radii.card }]}
-      />
-
-      <View style={[styles.innerContent, { padding: spacing.lg }]}>
-        {/* Mood Picker */}
-        {onSelectMood && (
+    return (
+      <JournalCard
+        icon={
           <View
             style={[
-              styles.moodSection,
+              styles.iconCircle,
               {
-                borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
-                borderBottomWidth: 1,
-                paddingBottom: spacing.md,
-                marginBottom: spacing.md,
+                backgroundColor: isDark ? 'rgba(15, 159, 74, 0.2)' : 'rgba(15, 159, 74, 0.1)',
+                borderRadius: radii.pill,
               },
             ]}
           >
-            <MoodPicker
-              selectedMood={selectedMood}
-              onSelectMood={onSelectMood}
-            />
+            <Text style={styles.iconCircleEmoji}>📋</Text>
           </View>
-        )}
-
-        {/* Prompt Deck (Shown when editor is empty and dayKey is provided) */}
-        {dayKey && trimmed.length === 0 && (
-          <PromptDeck
-            dayKey={dayKey}
-            onSelectPrompt={handleSelectPrompt}
-          />
-        )}
-
-        {/* Action bar: Expand to full screen writing */}
-        <View style={styles.expandRow}>
-          <Text
-            style={[
-              typography.labelSmall,
-              {
-                color: colors.textTertiary,
-                textTransform: 'uppercase',
-                letterSpacing: 0.5,
-                fontSize: 10,
-                fontWeight: '700',
-              },
-            ]}
-          >
-            Today's Entry
-          </Text>
-
+        }
+        title="Today's Entry"
+        testID="journal-editor-card"
+        headerRight={
           <Pressable
             onPress={() => setModalVisible(true)}
             accessibilityRole="button"
             accessibilityLabel="Open distraction-free full screen writing mode"
             style={({ pressed }) => [
-              styles.expandButton,
+              styles.focusModeButton,
               {
                 backgroundColor: pressed
                   ? colors.primaryLight
-                  : (isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 159, 74, 0.08)'),
+                  : (isDark ? 'rgba(15, 159, 74, 0.18)' : 'rgba(15, 159, 74, 0.08)'),
+                borderColor: isDark ? 'rgba(15, 159, 74, 0.3)' : 'rgba(15, 159, 74, 0.2)',
                 borderRadius: radii.pill,
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(15, 159, 74, 0.15)',
+                minHeight: touchTargets.min,
               },
             ]}
             testID="journal-fullscreen-btn"
           >
-            <Icon name="edit" size={12} color={colors.primary} decorative />
-            <Text style={[typography.caption, { color: colors.primaryDark, fontWeight: '700', marginStart: 4 }]}>
+            <Icon name="edit" size={13} color={colors.primary} decorative />
+            <Text
+              style={[
+                typography.labelSmall,
+                { color: colors.primaryDark, fontWeight: '700', marginStart: 4 },
+              ]}
+            >
               Focus Mode
             </Text>
           </Pressable>
-        </View>
-
-        {/* Main Text Input */}
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor={colors.textTertiary}
-          multiline
-          textAlignVertical="top"
-          autoCapitalize="sentences"
-          autoCorrect
-          spellCheck
-          style={[
-            styles.input,
-            typography.bodyLarge,
-            {
-              color: colors.textPrimary,
-              lineHeight: 24,
-            },
-          ]}
-          accessibilityLabel="Journal entry body"
-          accessibilityHint="Write your thoughts for this planning day"
-          testID={testID}
-        />
-
-        {/* Word Count / Reading Time / Expand Footer */}
+        }
+      >
+        {/* Bordered Rounded Input Box */}
         <View
           style={[
-            styles.footer,
+            styles.inputContainer,
             {
-              borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
-              borderTopWidth: 1,
-              paddingTop: spacing.sm,
-              marginTop: spacing.sm,
+              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.4)' : colors.background,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+              borderRadius: radii.md ?? 12,
             },
           ]}
         >
-          <Text
+          <TextInput
+            value={value}
+            onChangeText={onChangeText}
+            placeholder={placeholder}
+            placeholderTextColor={colors.textTertiary}
+            multiline
+            textAlignVertical="top"
+            autoCapitalize="sentences"
+            autoCorrect
+            spellCheck
             style={[
-              typography.caption,
-              { color: colors.textTertiary, fontSize: 11 },
+              styles.input,
+              typography.bodyLarge,
+              {
+                color: colors.textPrimary,
+                lineHeight: 22,
+              },
             ]}
-            testID="journal-word-count"
-          >
-            {wordCount > 0 ? `📝 ${wordCount} words • ~${readMin} min read` : 'Tap Focus Mode for distraction-free writing'}
-          </Text>
+            accessibilityLabel="Journal entry body"
+            accessibilityHint="Write your thoughts for this planning day"
+            testID={testID}
+          />
+        </View>
+
+        {/* Footer: Tips or word count + save state on left, Expand on right */}
+        <View style={styles.footerRow}>
+          <View style={styles.footerLeft}>
+            {wordCount > 0 ? (
+              <View style={styles.metricsRow}>
+                <Text
+                  style={[
+                    typography.caption,
+                    { color: colors.textSecondary, fontSize: 11 },
+                  ]}
+                  testID="journal-word-count"
+                >
+                  📝 {wordCount} words • ~{readMin} min read
+                </Text>
+                <View style={styles.saveStatusWrapper}>
+                  <JournalSaveStatus state={saveState} />
+                </View>
+              </View>
+            ) : (
+              <Text
+                style={[
+                  typography.caption,
+                  { color: colors.textSecondary, fontSize: 11 },
+                ]}
+                testID="journal-word-count"
+              >
+                💡 Tap Focus Mode for distraction-free writing
+              </Text>
+            )}
+          </View>
 
           <Pressable
             onPress={() => setModalVisible(true)}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Expand editor"
+            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
           >
-            <Text style={[typography.caption, { color: colors.primary, fontWeight: '600', fontSize: 11 }]}>
+            <Text
+              style={[
+                typography.caption,
+                { color: colors.primary, fontWeight: '700', fontSize: 12 },
+              ]}
+            >
               Expand ↗
             </Text>
           </Pressable>
         </View>
-      </View>
 
-      {/* Full-Screen Writing Modal */}
-      <JournalWriteModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        value={value}
-        onChangeText={onChangeText}
-        gregorianDisplay={gregorianDisplay}
-        hijriDisplay={hijriDisplay}
-        saveState={saveState}
-      />
-    </View>
-  );
-}
+        {/* Full-Screen Writing Modal */}
+        <JournalWriteModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          value={value}
+          onChangeText={onChangeText}
+          gregorianDisplay={gregorianDisplay}
+          hijriDisplay={hijriDisplay}
+          saveState={saveState}
+        />
+      </JournalCard>
+    );
+  }
+);
 
 const styles = StyleSheet.create({
-  cardContainer: {
-    borderWidth: 1,
-    minHeight: 220,
-    overflow: 'hidden',
-    position: 'relative',
+  iconCircle: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  innerContent: {
-    zIndex: 1,
+  iconCircleEmoji: {
+    fontSize: 14,
   },
-  moodSection: {
-    width: '100%',
-  },
-  expandRow: {
+  focusModeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  expandButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderWidth: 1,
+  },
+  inputContainer: {
+    borderWidth: 1,
+    padding: 12,
+    minHeight: 110,
   },
   input: {
-    minHeight: 160,
+    minHeight: 86,
     padding: 0,
   },
-  footer: {
+  footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  footerLeft: {
+    flex: 1,
+    paddingEnd: 8,
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  saveStatusWrapper: {
+    marginStart: 4,
   },
 });

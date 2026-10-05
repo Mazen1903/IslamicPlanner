@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { createRef } from 'react';
 import { render, fireEvent, screen, act } from '@testing-library/react-native';
-import { JournalEditor } from '../JournalEditor';
+import { JournalEditor, type JournalEditorRef } from '../JournalEditor';
 import { ThemeProvider } from '@/theme';
 
 describe('JournalEditor', () => {
@@ -36,42 +36,38 @@ describe('JournalEditor', () => {
     expect(screen.getByText(/5 words/i)).toBeTruthy();
   });
 
-  it('renders MoodPicker when onSelectMood is provided', async () => {
-    const onSelectMood = jest.fn();
+  it('renders tip when value is empty and opens focus mode on button tap', async () => {
     await render(
       <ThemeProvider>
-        <JournalEditor
-          value=""
-          onChangeText={jest.fn()}
-          selectedMood="good"
-          onSelectMood={onSelectMood}
-        />
+        <JournalEditor value="" onChangeText={jest.fn()} />
       </ThemeProvider>
     );
 
-    expect(screen.getByTestId('mood-picker')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('mood-option-great'));
-    expect(onSelectMood).toHaveBeenCalledWith('great');
-  });
+    expect(screen.getByText(/Tap Focus Mode for distraction-free writing/i)).toBeTruthy();
 
-  it('renders PromptDeck when value is empty and dayKey is provided, and inserts prompt on click', async () => {
-    const onChangeText = jest.fn();
-    await render(
-      <ThemeProvider>
-        <JournalEditor
-          value=""
-          onChangeText={onChangeText}
-          dayKey="2026-09-24"
-        />
-      </ThemeProvider>
-    );
-
-    expect(screen.getByTestId('prompt-deck')).toBeTruthy();
+    // Click focus mode button
     await act(async () => {
-      fireEvent.press(screen.getByTestId('prompt-deck-use-btn'));
+      fireEvent.press(screen.getByTestId('journal-fullscreen-btn'));
     });
 
-    expect(onChangeText).toHaveBeenCalledTimes(1);
-    expect(onChangeText.mock.calls[0][0]).toMatch(/^".+"\n\n$/);
+    expect(screen.getByTestId('journal-write-modal')).toBeTruthy();
+  });
+
+  it('exposes openFocusMode method via ref', async () => {
+    const ref = createRef<JournalEditorRef>();
+    await render(
+      <ThemeProvider>
+        <JournalEditor ref={ref} value="Hello world" onChangeText={jest.fn()} />
+      </ThemeProvider>
+    );
+
+    expect(ref.current).toBeDefined();
+    expect(typeof ref.current?.openFocusMode).toBe('function');
+
+    await act(async () => {
+      ref.current?.openFocusMode();
+    });
+
+    expect(screen.getByTestId('journal-write-modal')).toBeTruthy();
   });
 });

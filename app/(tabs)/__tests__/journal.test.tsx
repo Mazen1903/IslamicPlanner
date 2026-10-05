@@ -5,7 +5,7 @@ import JournalScreen from '../journal';
 import * as useJournalModule from '@/hooks/useJournal';
 
 jest.mock('expo-router', () => ({
-  useFocusEffect: jest.fn(cb => cb()),
+  useFocusEffect: jest.fn((cb) => cb()),
   useRouter: jest.fn(() => ({
     push: jest.fn(),
     replace: jest.fn(),
@@ -66,7 +66,7 @@ describe('JournalScreen (M16 Screen)', () => {
     jest.clearAllMocks();
   });
 
-  it('renders READY mode with Header, Editor, and Reflections', async () => {
+  it('renders READY mode with Header, MoodCard, PromptDeck, Editor, and Reflections', async () => {
     jest.spyOn(useJournalModule, 'useJournal').mockReturnValue(defaultHookReturn);
 
     await render(
@@ -78,8 +78,57 @@ describe('JournalScreen (M16 Screen)', () => {
     expect(screen.getByText('Journal')).toBeTruthy();
     expect(screen.getByText('Wednesday, 16 Sep 2026')).toBeTruthy();
     expect(screen.getByText('5 Rabi al-Thani 1448 AH')).toBeTruthy();
+    expect(screen.getByText('How is your heart today?')).toBeTruthy();
+    expect(screen.getByText('Daily Reflection Prompt')).toBeTruthy();
     expect(screen.getByDisplayValue('Today thoughts')).toBeTruthy();
     expect(screen.getByText('Daily Muhasaba')).toBeTruthy();
+    expect(screen.getByTestId('journal-delete-btn')).toBeTruthy();
+  });
+
+  it('hides Delete Entry button when entry is completely empty', async () => {
+    jest.spyOn(useJournalModule, 'useJournal').mockReturnValue({
+      ...defaultHookReturn,
+      draftPayload: {
+        body: '',
+        mood: undefined,
+        reflections: { gratitude: '', wentWell: '', improvement: '', dua: '' },
+      },
+    });
+
+    await render(
+      <ThemeProvider>
+        <JournalScreen />
+      </ThemeProvider>
+    );
+
+    expect(screen.queryByTestId('journal-delete-btn')).toBeNull();
+  });
+
+  it('appends prompt when "Write about this" is pressed without replacing existing text', async () => {
+    const onBodyChange = jest.fn();
+    jest.spyOn(useJournalModule, 'useJournal').mockReturnValue({
+      ...defaultHookReturn,
+      draftPayload: {
+        body: 'Initial thoughts',
+        reflections: { gratitude: '', wentWell: '', improvement: '', dua: '' },
+      },
+      onBodyChange,
+    });
+
+    await render(
+      <ThemeProvider>
+        <JournalScreen />
+      </ThemeProvider>
+    );
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('prompt-deck-use-btn'));
+    });
+
+    expect(onBodyChange).toHaveBeenCalledTimes(1);
+    const updated = onBodyChange.mock.calls[0][0];
+    expect(updated).toContain('Initial thoughts');
+    expect(updated).toMatch(/".+"\n\n$/);
   });
 
   it('renders SETUP_REQUIRED when planning day cannot be resolved', async () => {
@@ -110,7 +159,7 @@ describe('JournalScreen (M16 Screen)', () => {
       </ThemeProvider>
     );
 
-    expect(screen.getByText('Journal Locked')).toBeTruthy();
+    expect(screen.getByText('Journal is Locked')).toBeTruthy();
     expect(screen.getByTestId('journal-unlock-btn')).toBeTruthy();
   });
 
@@ -135,7 +184,7 @@ describe('JournalScreen (M16 Screen)', () => {
       </ThemeProvider>
     );
 
-    expect(screen.getByText('History')).toBeTruthy();
+    expect(screen.getByText('Journal History')).toBeTruthy();
     expect(screen.getByTestId('journal-history-row-2026-09-15')).toBeTruthy();
   });
 

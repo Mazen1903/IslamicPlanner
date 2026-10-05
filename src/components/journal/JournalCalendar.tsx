@@ -125,9 +125,9 @@ export function JournalCalendar({
         styles.card,
         shadows.card,
         {
-          backgroundColor: isDark ? 'rgba(30, 41, 59, 0.72)' : colors.surface,
-          borderRadius: radii.card,
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.border,
+          backgroundColor: isDark ? 'rgba(30, 41, 59, 0.88)' : colors.surface,
+          borderRadius: radii.xl ?? 20,
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
           marginHorizontal: spacing.lg,
           padding: spacing.md,
           marginBottom: spacing.md,

@@ -12,8 +12,10 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
+import { SoftCircleButton } from './JournalCard';
 import { JournalSaveStatus } from './JournalSaveStatus';
 import type { SaveState } from '@/services/journal/JournalAutosaveController';
 
@@ -55,7 +57,6 @@ export function JournalWriteModal({
   const wordCount = trimmed.length > 0 ? trimmed.split(/\s+/).filter(Boolean).length : 0;
   const readMin = Math.max(1, Math.ceil(wordCount / 150));
 
-
   const insertTimestamp = () => {
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -88,23 +89,29 @@ export function JournalWriteModal({
             style={[
               styles.topBar,
               {
-                borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.border,
+                borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
                 paddingHorizontal: spacing.lg,
                 paddingVertical: spacing.sm,
               },
             ]}
           >
-            <View style={styles.dateBlock}>
-              {gregorianDisplay && (
-                <Text style={[typography.labelMedium, { color: colors.textPrimary, fontWeight: '700' }]}>
-                  {gregorianDisplay}
+            <View style={styles.topLeftGroup}>
+              <SoftCircleButton
+                onPress={onClose}
+                icon="chevron-left"
+                accessibilityLabel="Close focus mode"
+                size={34}
+              />
+              <View style={styles.titleColumn}>
+                <Text style={[typography.headlineMedium, styles.screenTitle, { color: colors.textPrimary }]}>
+                  Focus Mode
                 </Text>
-              )}
-              {hijriDisplay && (
-                <Text style={[typography.caption, { color: colors.textSecondary }]}>
-                  {hijriDisplay}
-                </Text>
-              )}
+                {gregorianDisplay && (
+                  <Text style={[typography.caption, { color: colors.textSecondary }]}>
+                    {gregorianDisplay}
+                  </Text>
+                )}
+              </View>
             </View>
 
             <View style={styles.topRightActions}>
@@ -116,18 +123,24 @@ export function JournalWriteModal({
                 onPress={onClose}
                 accessibilityRole="button"
                 accessibilityLabel="Done editing"
-                style={({ pressed }) => [
-                  styles.doneButton,
-                  {
-                    backgroundColor: pressed ? colors.primaryPressed : colors.primary,
-                    borderRadius: radii.pill,
-                  },
-                ]}
+                style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
                 testID="journal-modal-done-btn"
               >
-                <Text style={[typography.labelMedium, { color: colors.textOnPrimary, fontWeight: '700' }]}>
-                  Done
-                </Text>
+                <LinearGradient
+                  colors={[colors.primary, colors.primaryDark]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[
+                    styles.doneButton,
+                    {
+                      borderRadius: radii.pill,
+                    },
+                  ]}
+                >
+                  <Text style={[typography.labelMedium, { color: colors.textOnPrimary, fontWeight: '700' }]}>
+                    Done
+                  </Text>
+                </LinearGradient>
               </Pressable>
             </View>
           </View>
@@ -138,12 +151,11 @@ export function JournalWriteModal({
               styles.helperPillBar,
               {
                 paddingHorizontal: spacing.lg,
-                paddingVertical: spacing.xs,
+                paddingVertical: spacing.xs + 2,
                 borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
               },
             ]}
           >
-
             <Pressable
               onPress={insertTimestamp}
               accessibilityRole="button"
@@ -154,7 +166,7 @@ export function JournalWriteModal({
                   backgroundColor: pressed
                     ? colors.primaryLight
                     : (isDark ? 'rgba(255,255,255,0.06)' : colors.surfaceSecondary),
-                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : colors.border,
+                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 0, 0, 0.06)',
                   borderRadius: radii.pill,
                 },
               ]}
@@ -164,19 +176,25 @@ export function JournalWriteModal({
                 Timestamp
               </Text>
             </Pressable>
+
+            {wordCount > 0 && (
+              <Text style={[typography.caption, { color: colors.textTertiary, marginStart: 'auto', fontSize: 11 }]}>
+                {wordCount} words • ~{readMin} min
+              </Text>
+            )}
           </View>
 
           {/* Main Full-Screen Writing Surface */}
           <ScrollView
-            style={styles.editorScroll}
-            contentContainerStyle={[styles.editorScrollContent, { padding: spacing.lg }]}
+            style={styles.inputScroll}
+            contentContainerStyle={[styles.inputScrollContent, { padding: spacing.lg }]}
             keyboardShouldPersistTaps="handled"
           >
             <TextInput
               ref={inputRef}
               value={value}
               onChangeText={onChangeText}
-              placeholder="What is on your heart and mind today? Take your time..."
+              placeholder="Let your thoughts flow freely..."
               placeholderTextColor={colors.textTertiary}
               multiline
               textAlignVertical="top"
@@ -184,37 +202,17 @@ export function JournalWriteModal({
               autoCorrect
               spellCheck
               style={[
-                styles.textInput,
+                styles.modalInput,
                 typography.bodyLarge,
                 {
                   color: colors.textPrimary,
                   lineHeight: 28,
                 },
               ]}
-              accessibilityLabel="Distraction-free journal editor"
+              accessibilityLabel="Full screen journal editor"
               testID="journal-modal-input"
             />
           </ScrollView>
-
-          {/* Bottom Bar: Word Count & Status */}
-          <View
-            style={[
-              styles.bottomBar,
-              {
-                borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.border,
-                paddingHorizontal: spacing.lg,
-                paddingVertical: spacing.sm,
-              },
-            ]}
-          >
-            <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 12 }]}>
-              📝 {wordCount} {wordCount === 1 ? 'word' : 'words'} • ~{readMin} min read
-            </Text>
-
-            <Text style={[typography.caption, { color: colors.primaryDark, fontWeight: '600', fontSize: 11 }]}>
-              {saveState === 'saving' ? 'Auto-saving...' : 'Auto-saved'}
-            </Text>
-          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
@@ -234,56 +232,57 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderBottomWidth: 1,
   },
-  dateBlock: {
-    flex: 1,
+  topLeftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  titleColumn: {
+    justifyContent: 'center',
+  },
+  screenTitle: {
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   topRightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
   saveStatusWrapper: {
-    justifyContent: 'center',
+    marginEnd: 4,
   },
   doneButton: {
-    paddingHorizontal: 18,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
     alignItems: 'center',
     justifyContent: 'center',
   },
   helperPillBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
     borderBottomWidth: 1,
   },
   helperPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderWidth: 1,
   },
   helperPillText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
-  editorScroll: {
+  inputScroll: {
     flex: 1,
   },
-  editorScrollContent: {
+  inputScrollContent: {
     flexGrow: 1,
-    minHeight: 300,
   },
-  textInput: {
+  modalInput: {
     flex: 1,
+    minHeight: 300,
     padding: 0,
-    fontSize: 16,
-  },
-  bottomBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
   },
 });

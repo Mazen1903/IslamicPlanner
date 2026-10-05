@@ -12,8 +12,8 @@ describe('JournalLockedState', () => {
       </ThemeProvider>
     );
 
-    expect(screen.getByText('Journal Locked')).toBeTruthy();
-    expect(screen.getByText('Private reflections are locked on this device.')).toBeTruthy();
+    expect(screen.getByText('Journal is Locked')).toBeTruthy();
+    expect(screen.getByText('Private reflections are protected on this device.')).toBeTruthy();
 
     const unlockBtn = screen.getByTestId('journal-unlock-btn');
     fireEvent.press(unlockBtn);

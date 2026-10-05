@@ -11,12 +11,12 @@ describe('PromptDeck', () => {
       </ThemeProvider>
     );
 
-    expect(screen.getByText('DAILY REFLECTION PROMPT')).toBeTruthy();
+    expect(screen.getByText('Daily Reflection Prompt')).toBeTruthy();
     expect(screen.getByTestId('prompt-deck-text')).toBeTruthy();
-    expect(screen.getByText('Write about this ✍️')).toBeTruthy();
+    expect(screen.getByText('Write about this →')).toBeTruthy();
   });
 
-  it('cycles to next prompt on refresh press', async () => {
+  it('cycles to next prompt on next button press', async () => {
     await render(
       <ThemeProvider>
         <PromptDeck dayKey="2026-09-24" onSelectPrompt={jest.fn()} />
@@ -26,7 +26,7 @@ describe('PromptDeck', () => {
     const firstPrompt = screen.getByTestId('prompt-deck-text').props.children;
 
     await act(async () => {
-      fireEvent.press(screen.getByTestId('prompt-deck-cycle-btn'));
+      fireEvent.press(screen.getByTestId('prompt-deck-next-btn'));
     });
 
     const secondPrompt = screen.getByTestId('prompt-deck-text').props.children;

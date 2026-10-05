@@ -34,32 +34,43 @@ export function JournalHistoryRow({
         {
           backgroundColor: isSelected
             ? (isDark ? 'rgba(15, 159, 74, 0.2)' : colors.primaryLight)
-            : (isDark ? 'rgba(30, 41, 59, 0.75)' : colors.surface),
-          borderRadius: radii.card,
+            : (isDark ? 'rgba(30, 41, 59, 0.88)' : colors.surface),
+          borderRadius: radii.md ?? 12,
           borderColor: isSelected
             ? colors.primary
-            : (isDark ? 'rgba(255, 255, 255, 0.08)' : colors.border),
+            : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'),
           borderWidth: isSelected ? 1.5 : 1,
           marginHorizontal: spacing.lg,
           marginBottom: spacing.sm,
-          padding: spacing.md,
+          paddingVertical: spacing.sm + 2,
+          paddingStart: spacing.md + 4,
+          paddingEnd: spacing.md,
           minHeight: touchTargets.comfortable,
           opacity: pressed ? 0.75 : 1,
         },
       ]}
       testID={testID}
     >
+      {/* Accent Bar */}
+      <View
+        style={[
+          styles.accentBar,
+          {
+            backgroundColor: isSelected ? colors.primary : colors.primaryLight,
+            borderTopLeftRadius: radii.md ?? 12,
+            borderBottomLeftRadius: radii.md ?? 12,
+          },
+        ]}
+      />
+
       <View style={styles.content}>
         {/* Left icon badge */}
         <View
           style={[
             styles.iconBadge,
             {
-              backgroundColor: isSelected
-                ? colors.primary
-                : (isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surfaceSecondary),
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : colors.border,
-              borderRadius: radii.md,
+              backgroundColor: isDark ? 'rgba(15, 159, 74, 0.2)' : 'rgba(15, 159, 74, 0.1)',
+              borderRadius: radii.pill,
               marginEnd: spacing.md,
             },
           ]}
@@ -79,38 +90,26 @@ export function JournalHistoryRow({
             {gregorianDisplay}
           </Text>
           {hijriDisplay.length > 0 && (
-            <View style={styles.hijriRow}>
-              <Text
-                style={[
-                  typography.caption,
-                  {
-                    color: isSelected ? colors.primaryDark : colors.textSecondary,
-                    marginTop: 2,
-                    fontSize: 11,
-                  },
-                ]}
-              >
-                {hijriDisplay}
-              </Text>
-            </View>
+            <Text
+              style={[
+                typography.caption,
+                {
+                  color: isSelected ? colors.primaryDark : colors.textSecondary,
+                  marginTop: 2,
+                  fontSize: 11,
+                },
+              ]}
+            >
+              {hijriDisplay}
+            </Text>
           )}
         </View>
 
         {/* Right Arrow indicator */}
-        <View
-          style={[
-            styles.arrowCircle,
-            {
-              backgroundColor: isSelected
-                ? colors.primaryLight
-                : (isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.03)'),
-              borderRadius: radii.pill,
-            },
-          ]}
-        >
+        <View style={styles.arrowContainer}>
           <Icon
             name="chevron-right"
-            size={14}
+            size={16}
             color={isSelected ? colors.primary : colors.textTertiary}
             decorative
             directional
@@ -123,17 +122,24 @@ export function JournalHistoryRow({
 
 const styles = StyleSheet.create({
   container: {
-    justifyContent: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  accentBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    zIndex: 2,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
   iconBadge: {
-    width: 40,
-    height: 40,
-    borderWidth: 1,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -142,20 +148,13 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
+    justifyContent: 'center',
   },
   gregorianDate: {
     fontWeight: '700',
-    fontSize: 15,
     letterSpacing: -0.2,
   },
-  hijriRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  arrowCircle: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
+  arrowContainer: {
+    marginStart: 8,
   },
 });

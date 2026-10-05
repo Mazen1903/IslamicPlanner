@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,9 @@ import { SetupRequiredState } from '@/components/today/SetupRequiredState';
 import {
   JournalHeader,
   JournalEditor,
+  type JournalEditorRef,
+  MoodCard,
+  PromptDeck,
   ReflectionSection,
   JournalHistory,
   JournalLockedState,
@@ -26,6 +29,8 @@ import { Icon } from '@/components/common/Icon';
 
 export default function JournalScreen() {
   const { colors, spacing, typography, touchTargets, radii, isDark } = useTheme();
+  const editorRef = useRef<JournalEditorRef>(null);
+
   const {
     mode,
     isHistorical,
@@ -62,6 +67,28 @@ export default function JournalScreen() {
     onRetryLoad,
   } = useJournal();
 
+  // Prompt CTA handler: appends quoted prompt to body without overwriting and opens Focus Mode
+  const handleWriteAboutPrompt = (promptText: string) => {
+    const quoted = `"${promptText}"`;
+    const trimmedBody = draftPayload.body.trim();
+    const nextBody =
+      trimmedBody.length === 0
+        ? `${quoted}\n\n`
+        : `${draftPayload.body.replace(/\s+$/, '')}\n\n${quoted}\n\n`;
+
+    onBodyChange(nextBody);
+    editorRef.current?.openFocusMode();
+  };
+
+  // Whether the current entry has any user content (used to conditionally show Delete Entry)
+  const hasContent = Boolean(
+    draftPayload.body.trim().length > 0 ||
+      draftPayload.mood ||
+      Object.values(draftPayload.reflections).some(
+        (val) => typeof val === 'string' && val.trim().length > 0
+      )
+  );
+
   // 1. Setup Required
   if (mode === 'SETUP_REQUIRED') {
     return (
@@ -86,7 +113,6 @@ export default function JournalScreen() {
         <JournalHeader
           gregorianDisplay={gregorianDisplay}
           hijriDisplay={hijriDisplay}
-          saveState="idle"
         />
         <JournalLockedState
           onUnlockPress={onUnlockPress}
@@ -174,6 +200,8 @@ export default function JournalScreen() {
     );
   }
 
+  const dayKeyForPrompt = activePlanningDayKey ?? pinnedPlanningDayKey ?? undefined;
+
   // 6. Ready / Editor View
   return (
     <SafeAreaView
@@ -190,7 +218,7 @@ export default function JournalScreen() {
           contentContainerStyle={[styles.scrollContent, { paddingBottom: spacing.section }]}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
+          {/* 1. Header */}
           <JournalHeader
             gregorianDisplay={gregorianDisplay}
             hijriDisplay={hijriDisplay}
@@ -212,7 +240,8 @@ export default function JournalScreen() {
                   backgroundColor: isDark ? 'rgba(15, 159, 74, 0.2)' : colors.primaryLight,
                   borderColor: colors.primary,
                   marginHorizontal: spacing.lg,
-                  marginBottom: spacing.md,
+                  marginBottom: spacing.xs,
+                  marginTop: spacing.sm,
                   padding: spacing.md,
                   borderRadius: radii.md,
                 },
@@ -238,46 +267,60 @@ export default function JournalScreen() {
             </View>
           )}
 
-          {/* Main Editor */}
-          <JournalEditor
-            value={draftPayload.body}
-            onChangeText={onBodyChange}
+          {/* 2. Mood Card */}
+          <MoodCard
             selectedMood={draftPayload.mood}
             onSelectMood={onMoodChange}
-            dayKey={activePlanningDayKey ?? pinnedPlanningDayKey ?? undefined}
+          />
+
+          {/* 3. Daily Reflection Prompt (Hidden for historical entries) */}
+          {!isHistorical && dayKeyForPrompt && (
+            <PromptDeck
+              dayKey={dayKeyForPrompt}
+              onSelectPrompt={handleWriteAboutPrompt}
+            />
+          )}
+
+          {/* 4. Today's Entry / Editor */}
+          <JournalEditor
+            ref={editorRef}
+            value={draftPayload.body}
+            onChangeText={onBodyChange}
             gregorianDisplay={gregorianDisplay}
             hijriDisplay={hijriDisplay}
             saveState={saveState}
           />
 
-          {/* Reflections */}
+          {/* 5. Daily Muhasaba / Reflections */}
           <ReflectionSection
             reflections={draftPayload.reflections}
             onChangeReflection={onReflectionChange}
             initialExpanded={true}
           />
 
-          {/* Delete Action (Explicit confirmed delete) */}
-          <View style={[styles.deleteContainer, { marginTop: spacing.xl, paddingHorizontal: spacing.lg }]}>
-            <Pressable
-              onPress={onDeletePress}
-              accessibilityRole="button"
-              accessibilityLabel="Delete journal entry"
-              style={({ pressed }) => [
-                styles.deleteButton,
-                {
-                  opacity: pressed ? 0.7 : 1,
-                  minHeight: touchTargets.min,
-                },
-              ]}
-              testID="journal-delete-btn"
-            >
-              <Icon name="trash" size={16} color={colors.textTertiary} decorative />
-              <Text style={[typography.labelSmall, { color: colors.textTertiary, marginStart: spacing.xs }]}>
-                Delete Entry
-              </Text>
-            </Pressable>
-          </View>
+          {/* 6. Delete Action (Visible only when hasContent) */}
+          {hasContent && (
+            <View style={[styles.deleteContainer, { marginTop: spacing.xl, paddingHorizontal: spacing.lg }]}>
+              <Pressable
+                onPress={onDeletePress}
+                accessibilityRole="button"
+                accessibilityLabel="Delete journal entry"
+                style={({ pressed }) => [
+                  styles.deleteButton,
+                  {
+                    opacity: pressed ? 0.7 : 1,
+                    minHeight: touchTargets.min,
+                  },
+                ]}
+                testID="journal-delete-btn"
+              >
+                <Icon name="trash" size={16} color={colors.textTertiary} decorative />
+                <Text style={[typography.labelSmall, { color: colors.textTertiary, marginStart: spacing.xs }]}>
+                  Delete Entry
+                </Text>
+              </Pressable>
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
 

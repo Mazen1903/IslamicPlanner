@@ -36,7 +36,7 @@ export function JournalHistory({
   return (
     <View style={styles.container} testID={testID}>
       {/* Top Header / Back Action */}
-      <View style={[styles.headerRow, { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }]}>
+      <View style={[styles.headerRow, { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm }]}>
         <Pressable
           onPress={onBackToToday}
           accessibilityRole="button"
@@ -47,7 +47,7 @@ export function JournalHistory({
               backgroundColor: pressed
                 ? colors.primaryLight
                 : (isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surface),
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : colors.border,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
               minHeight: touchTargets.min,
               borderRadius: radii.pill,
             },
@@ -60,23 +60,38 @@ export function JournalHistory({
           </Text>
         </Pressable>
 
-        <Text style={[typography.headlineMedium, styles.title, { color: colors.textPrimary }]}>
-          History
-        </Text>
+        <View style={styles.headerTitleGroup}>
+          <Text style={[typography.headlineMedium, styles.title, { color: colors.textPrimary }]}>
+            Journal History
+          </Text>
+        </View>
       </View>
 
       {/* Empty State */}
       {entries.length === 0 ? (
         <View style={[styles.emptyContainer, { padding: spacing.xl }]} testID="journal-history-empty">
-          <Text style={styles.emptyEmoji}>📜</Text>
-          <Text style={[typography.bodyMedium, { color: colors.textSecondary, marginTop: spacing.md, textAlign: 'center' }]}>
-            No previous journal entries yet.
+          <View
+            style={[
+              styles.emptyIconCircle,
+              {
+                backgroundColor: isDark ? 'rgba(15, 159, 74, 0.15)' : 'rgba(15, 159, 74, 0.08)',
+                borderRadius: radii.pill,
+              },
+            ]}
+          >
+            <Text style={styles.emptyEmoji}>📜</Text>
+          </View>
+          <Text style={[typography.headlineMedium, { color: colors.textPrimary, marginTop: spacing.md, fontWeight: '700' }]}>
+            No reflections yet
+          </Text>
+          <Text style={[typography.bodyMedium, { color: colors.textSecondary, marginTop: spacing.xs, textAlign: 'center' }]}>
+            Previous journal entries will appear here once you write and save them.
           </Text>
         </View>
       ) : (
         <FlatList
           data={entries}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           ListHeaderComponent={
             <View style={styles.listHeader}>
               {/* Stats Strip */}
@@ -94,23 +109,34 @@ export function JournalHistory({
               />
 
               {/* Section Header */}
-              <View style={[styles.sectionHeader, { paddingHorizontal: spacing.lg, marginTop: spacing.xs, marginBottom: spacing.sm }]}>
+              <View
+                style={[
+                  styles.sectionHeader,
+                  { paddingHorizontal: spacing.lg, marginTop: spacing.sm, marginBottom: spacing.xs },
+                ]}
+              >
                 <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary }]}>
                   All Entries
                 </Text>
               </View>
             </View>
           }
-          renderItem={({ item }) => (
-            <JournalHistoryRow
-              metadata={item}
-              gregorianDisplay={formatGregorianJournalDate(item.planningDayKey)}
-              hijriDisplay={formatHijriJournalDate(item.planningDayKey, hijriAdjustment)}
-              isSelected={item.planningDayKey === selectedPlanningDayKey}
-              onPress={() => onSelectEntry(item)}
-            />
-          )}
-          contentContainerStyle={[styles.listContent, { paddingBottom: spacing.section }]}
+          renderItem={({ item }) => {
+            const isSelected = item.planningDayKey === selectedPlanningDayKey;
+            const gregorianDisplay = formatGregorianJournalDate(item.planningDayKey);
+            const hijriDisplay = formatHijriJournalDate(item.planningDayKey, hijriAdjustment);
+
+            return (
+              <JournalHistoryRow
+                metadata={item}
+                gregorianDisplay={gregorianDisplay}
+                hijriDisplay={hijriDisplay}
+                isSelected={isSelected}
+                onPress={() => onSelectEntry(item)}
+              />
+            );
+          }}
+          contentContainerStyle={{ paddingBottom: spacing.section }}
         />
       )}
     </View>
@@ -125,7 +151,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 8,
   },
   backButton: {
     flexDirection: 'row',
@@ -133,33 +158,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderWidth: 1,
   },
+  headerTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   title: {
     fontWeight: '700',
-    fontSize: 18,
     letterSpacing: -0.3,
   },
   listHeader: {
-    paddingTop: 4,
+    width: '100%',
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.2,
-  },
-  listContent: {
-    paddingTop: 4,
   },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 250,
+    marginTop: 60,
+  },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyEmoji: {
-    fontSize: 40,
+    fontSize: 28,
   },
 });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 
@@ -19,16 +20,16 @@ export function JournalLockedState({
   const { colors, spacing, radii, typography, touchTargets, shadows, isDark } = useTheme();
 
   return (
-    <View style={[styles.container, { padding: spacing.xl }]} testID={testID}>
+    <View style={[styles.container, { padding: spacing.lg }]} testID={testID}>
       <View
         style={[
           styles.card,
-          shadows.elevated,
+          shadows.card,
           {
-            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.85)' : colors.surface,
-            borderRadius: radii.card,
-            padding: spacing.xxl,
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : colors.border,
+            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.88)' : colors.surface,
+            borderRadius: radii.xl ?? 24,
+            padding: spacing.xl,
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
           },
         ]}
       >
@@ -36,8 +37,7 @@ export function JournalLockedState({
           style={[
             styles.iconCircle,
             {
-              backgroundColor: isDark ? 'rgba(15, 159, 74, 0.2)' : colors.primaryLight,
-              borderColor: isDark ? 'rgba(15, 159, 74, 0.4)' : colors.primary,
+              backgroundColor: isDark ? 'rgba(15, 159, 74, 0.2)' : 'rgba(15, 159, 74, 0.1)',
               borderRadius: radii.pill,
             },
           ]}
@@ -45,18 +45,24 @@ export function JournalLockedState({
           <Icon name="lock" size={32} color={colors.primary} />
         </View>
 
-        <Text style={[typography.headlineMedium, styles.title, { color: colors.textPrimary, marginTop: spacing.lg }]}>
-          Journal Locked
+        <Text
+          style={[
+            typography.headlineMedium,
+            styles.title,
+            { color: colors.textPrimary, marginTop: spacing.md },
+          ]}
+        >
+          Journal is Locked
         </Text>
 
         <Text
           style={[
             typography.bodyMedium,
             styles.subtitle,
-            { color: colors.textSecondary, marginTop: spacing.sm, textAlign: 'center' },
+            { color: colors.textSecondary, marginTop: spacing.xs, textAlign: 'center' },
           ]}
         >
-          Private reflections are locked on this device.
+          Private reflections are protected on this device.
         </Text>
 
         {errorMessage && (
@@ -64,7 +70,7 @@ export function JournalLockedState({
             style={[
               typography.bodySmall,
               styles.errorText,
-              { color: colors.warning, marginTop: spacing.md, textAlign: 'center' },
+              { color: colors.danger, marginTop: spacing.sm, textAlign: 'center' },
             ]}
             testID="journal-lock-error-text"
           >
@@ -79,25 +85,31 @@ export function JournalLockedState({
           accessibilityLabel="Unlock Journal"
           accessibilityState={{ disabled: isUnlocking }}
           style={({ pressed }) => [
-            styles.unlockButton,
-            shadows.card,
-            {
-              backgroundColor: pressed ? colors.primaryPressed : colors.primary,
-              borderRadius: radii.pill,
-              minHeight: touchTargets.comfortable,
-              marginTop: spacing.xl,
-              opacity: isUnlocking ? 0.7 : 1,
-            },
+            styles.unlockButtonWrapper,
+            { opacity: pressed ? 0.85 : isUnlocking ? 0.7 : 1 },
           ]}
           testID="journal-unlock-btn"
         >
-          {isUnlocking ? (
-            <ActivityIndicator size="small" color={colors.textOnPrimary} />
-          ) : (
-            <Text style={[typography.labelLarge, { color: colors.textOnPrimary, fontWeight: '700' }]}>
-              Unlock Journal
-            </Text>
-          )}
+          <LinearGradient
+            colors={[colors.primary, colors.primaryDark]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[
+              styles.unlockGradient,
+              {
+                borderRadius: radii.pill,
+                minHeight: touchTargets.comfortable,
+              },
+            ]}
+          >
+            {isUnlocking ? (
+              <ActivityIndicator size="small" color={colors.textOnPrimary} />
+            ) : (
+              <Text style={[typography.labelLarge, { color: colors.textOnPrimary, fontWeight: '700' }]}>
+                Unlock Journal
+              </Text>
+            )}
+          </LinearGradient>
         </Pressable>
       </View>
     </View>
@@ -107,35 +119,39 @@ export function JournalLockedState({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   card: {
     width: '100%',
-    maxWidth: 360,
+    maxWidth: 380,
     alignItems: 'center',
     borderWidth: 1,
   },
   iconCircle: {
-    width: 68,
-    height: 68,
+    width: 64,
+    height: 64,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
   },
   title: {
-    textAlign: 'center',
+    fontWeight: '700',
     letterSpacing: -0.3,
   },
   subtitle: {
-    lineHeight: 22,
+    lineHeight: 20,
   },
   errorText: {
-    lineHeight: 18,
+    fontWeight: '500',
   },
-  unlockButton: {
+  unlockButtonWrapper: {
+    width: '100%',
+    marginTop: 20,
+  },
+  unlockGradient: {
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 12,
   },
 });

@@ -3,7 +3,18 @@ import { render, fireEvent, screen, act } from '@testing-library/react-native';
 import { JournalPrivacySheet } from '../JournalPrivacySheet';
 import { ThemeProvider } from '@/theme';
 
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
+
 describe('JournalPrivacySheet', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('renders modal content and toggles lock switch', async () => {
     const onToggleLock = jest.fn();
     const onClose = jest.fn();
@@ -20,7 +31,7 @@ describe('JournalPrivacySheet', () => {
     );
 
     expect(screen.getByText('Journal Privacy')).toBeTruthy();
-    expect(screen.getByText('Journal Lock')).toBeTruthy();
+    expect(screen.getByText('Biometric Lock')).toBeTruthy();
 
     const toggle = screen.getByTestId('journal-lock-switch');
     await act(async () => {
@@ -33,6 +44,29 @@ describe('JournalPrivacySheet', () => {
       fireEvent.press(doneBtn);
     });
     expect(onClose).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it('navigates to settings on advanced privacy settings link click', async () => {
+    const onClose = jest.fn();
+    const { unmount } = await render(
+      <ThemeProvider>
+        <JournalPrivacySheet
+          visible={true}
+          lockEnabled={false}
+          onToggleLock={jest.fn()}
+          onClose={onClose}
+        />
+      </ThemeProvider>
+    );
+
+    const settingsLink = screen.getByTestId('journal-privacy-more-settings-btn');
+    await act(async () => {
+      fireEvent.press(settingsLink);
+    });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith('/settings/journal-privacy');
     unmount();
   });
 

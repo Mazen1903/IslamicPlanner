@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Pressable,
   PanResponder,
+  Image,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -13,8 +14,10 @@ import Animated, {
   withSpring,
   runOnJS,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
+import { JournalCard, SoftCircleButton } from './JournalCard';
 import { getDailyPrompts } from '@/constants/journalPrompts';
 
 export interface PromptDeckProps {
@@ -28,11 +31,15 @@ export function PromptDeck({
   onSelectPrompt,
   testID = 'prompt-deck',
 }: PromptDeckProps) {
-  const { colors, spacing, radii, typography, touchTargets, isDark, shadows } = useTheme();
+  const { colors, spacing, radii, typography, touchTargets, isDark } = useTheme();
   const prompts = React.useMemo(() => getDailyPrompts(dayKey, 5), [dayKey]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const activePrompt = prompts[currentIndex % prompts.length];
+
+  // Keep a ref of currentIndex to avoid stale closures in PanResponder
+  const currentIndexRef = useRef(currentIndex);
+  currentIndexRef.current = currentIndex;
 
   // Reanimated values for card slide animation
   const translateX = useSharedValue(0);
@@ -40,7 +47,7 @@ export function PromptDeck({
 
   const handleNext = () => {
     opacity.value = withTiming(0, { duration: 120 }, () => {
-      runOnJS(setCurrentIndex)((currentIndex + 1) % prompts.length);
+      runOnJS(setCurrentIndex)((currentIndexRef.current + 1) % prompts.length);
       translateX.value = 30;
       translateX.value = withSpring(0, { damping: 14 });
       opacity.value = withTiming(1, { duration: 160 });
@@ -49,7 +56,7 @@ export function PromptDeck({
 
   const handlePrev = () => {
     opacity.value = withTiming(0, { duration: 120 }, () => {
-      runOnJS(setCurrentIndex)((currentIndex - 1 + prompts.length) % prompts.length);
+      runOnJS(setCurrentIndex)((currentIndexRef.current - 1 + prompts.length) % prompts.length);
       translateX.value = -30;
       translateX.value = withSpring(0, { damping: 14 });
       opacity.value = withTiming(1, { duration: 160 });
@@ -76,39 +83,17 @@ export function PromptDeck({
     opacity: opacity.value,
   }));
 
-  return (
-    <View
-      style={[
-        styles.container,
-        shadows.card,
-        {
-          backgroundColor: isDark ? 'rgba(30, 41, 59, 0.65)' : 'rgba(244, 247, 245, 0.9)',
-          borderRadius: radii.card,
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 159, 74, 0.12)',
-          padding: spacing.md,
-          marginBottom: spacing.md,
-        },
-      ]}
-      testID={testID}
-      {...panResponder.panHandlers}
-    >
-      {/* Top Header */}
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Text style={styles.sparkleIcon}>✨</Text>
-          <Text
-            style={[
-              typography.labelSmall,
-              styles.headerLabel,
-              { color: colors.primaryDark },
-            ]}
-          >
-            DAILY REFLECTION PROMPT
-          </Text>
-        </View>
+  const activeDotIndex = currentIndex % prompts.length;
 
-        {/* Indicators and cycle button */}
-        <View style={styles.actionRow}>
+  return (
+    <JournalCard
+      icon="✨"
+      title="Daily Reflection Prompt"
+      titleColor={colors.primaryDark}
+      testID={testID}
+      headerRight={
+        <View style={styles.headerControls}>
+          {/* Pagination dots */}
           <View style={styles.dotsContainer}>
             {prompts.map((_, idx) => (
               <View
@@ -117,104 +102,132 @@ export function PromptDeck({
                   styles.dot,
                   {
                     backgroundColor:
-                      idx === currentIndex % prompts.length
+                      idx === activeDotIndex
                         ? colors.primary
-                        : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'),
-                    width: idx === currentIndex % prompts.length ? 14 : 5,
+                        : (isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.12)'),
+                    width: idx === activeDotIndex ? 8 : 6,
+                    height: idx === activeDotIndex ? 8 : 6,
                   },
                 ]}
               />
             ))}
           </View>
 
-          <Pressable
-            onPress={handleNext}
-            accessibilityRole="button"
-            accessibilityLabel="Cycle to next reflection prompt"
-            style={({ pressed }) => [
-              styles.cycleButton,
-              {
-                borderRadius: radii.pill,
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 159, 74, 0.08)',
-                opacity: pressed ? 0.6 : 1,
-              },
-            ]}
-            testID="prompt-deck-cycle-btn"
-          >
-            <Icon name="refresh" size={13} color={colors.primary} decorative />
-          </Pressable>
+          {/* Prev / Next buttons */}
+          <View style={styles.arrowButtons}>
+            <SoftCircleButton
+              onPress={handlePrev}
+              size={30}
+              icon="chevron-left"
+              iconSize={15}
+              accessibilityLabel="Previous reflection prompt"
+              testID="prompt-deck-prev-btn"
+            />
+            <SoftCircleButton
+              onPress={handleNext}
+              size={30}
+              icon="chevron-right"
+              iconSize={15}
+              accessibilityLabel="Next reflection prompt"
+              testID="prompt-deck-next-btn"
+            />
+          </View>
         </View>
-      </View>
-
-      {/* Animated Prompt Card Body */}
-      <Animated.View style={[styles.cardContent, cardAnimatedStyle]}>
-        <View style={styles.quoteRow}>
-          <View style={[styles.accentBar, { backgroundColor: colors.primary }]} />
-          <Text
-            style={[
-              typography.bodyMedium,
-              styles.promptText,
-              { color: colors.textPrimary },
-            ]}
-            testID="prompt-deck-text"
+      }
+    >
+      <View {...panResponder.panHandlers}>
+        {/* Inner Mint Box */}
+        <View
+          style={[
+            styles.innerBox,
+            {
+              backgroundColor: isDark ? 'rgba(15, 159, 74, 0.12)' : 'rgba(15, 159, 74, 0.07)',
+              borderColor: isDark ? 'rgba(15, 159, 74, 0.25)' : 'rgba(15, 159, 74, 0.15)',
+              borderRadius: radii.lg ?? 16,
+            },
+          ]}
+        >
+          {/* Decorative Lantern on right bottom */}
+          <View
+            style={styles.lanternWrapper}
+            importantForAccessibility="no"
+            accessibilityElementsHidden={true}
           >
-            "{activePrompt}"
-          </Text>
+            <Image
+              source={require('../../../assets/illustrations/journal_prompt_lantern.png')}
+              style={[
+                styles.lanternImage,
+                { opacity: isDark ? 0.65 : 0.88 },
+              ]}
+              resizeMode="contain"
+            />
+          </View>
+
+          <Animated.View style={[styles.cardContent, cardAnimatedStyle]}>
+            <View style={styles.quoteRow}>
+              <Text style={[styles.quoteMark, { color: colors.primary }]}>“</Text>
+              <Text
+                style={[
+                  typography.bodyLarge,
+                  styles.promptText,
+                  { color: colors.textPrimary },
+                ]}
+                testID="prompt-deck-text"
+              >
+                "{activePrompt}"
+              </Text>
+            </View>
+          </Animated.View>
         </View>
 
-        {/* Action to insert prompt */}
+        {/* Footer Row: Gradient Pill CTA + Swipe hint */}
         <View style={styles.footerRow}>
           <Pressable
             onPress={() => onSelectPrompt(activePrompt)}
             accessibilityRole="button"
-            accessibilityLabel={`Use prompt: ${activePrompt}`}
+            accessibilityLabel={`Write about prompt: ${activePrompt}`}
             style={({ pressed }) => [
-              styles.useButton,
-              {
-                backgroundColor: pressed ? colors.primaryPressed : colors.primary,
-                borderRadius: radii.pill,
-                minHeight: touchTargets.min,
-              },
+              styles.useButtonWrapper,
+              { opacity: pressed ? 0.85 : 1 },
             ]}
             testID="prompt-deck-use-btn"
           >
-            <Text style={[typography.labelSmall, { color: colors.textOnPrimary, fontWeight: '700' }]}>
-              Write about this ✍️
-            </Text>
+            <LinearGradient
+              colors={[colors.primary, colors.primaryDark]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[
+                styles.gradientPill,
+                {
+                  borderRadius: radii.pill,
+                  minHeight: touchTargets.min,
+                },
+              ]}
+            >
+              <Icon name="edit" size={14} color={colors.textOnPrimary} decorative />
+              <Text
+                style={[
+                  typography.labelMedium,
+                  styles.useButtonText,
+                  { color: colors.textOnPrimary },
+                ]}
+              >
+                Write about this →
+              </Text>
+            </LinearGradient>
           </Pressable>
+
           <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 11 }]}>
             Swipe for more →
           </Text>
         </View>
-      </Animated.View>
-    </View>
+      </View>
+    </JournalCard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    borderWidth: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sparkleIcon: {
-    fontSize: 13,
-  },
-  headerLabel: {
-    marginStart: 4,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    fontSize: 11,
-  },
-  actionRow: {
+  headerControls: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -223,48 +236,74 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    marginEnd: 4,
   },
   dot: {
-    height: 5,
-    borderRadius: 3,
+    borderRadius: 99,
   },
-  cycleButton: {
-    width: 28,
-    height: 28,
+  arrowButtons: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
+  },
+  innerBox: {
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    position: 'relative',
+    overflow: 'hidden',
+    minHeight: 110,
     justifyContent: 'center',
   },
+  lanternWrapper: {
+    position: 'absolute',
+    right: -4,
+    bottom: -6,
+    zIndex: 0,
+    pointerEvents: 'none',
+  },
+  lanternImage: {
+    width: 90,
+    height: 75,
+  },
   cardContent: {
-    width: '100%',
+    zIndex: 1,
+    paddingEnd: 60, // Keep space for lantern
   },
   quoteRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginVertical: 4,
   },
-  accentBar: {
-    width: 3,
-    borderRadius: 2,
-    alignSelf: 'stretch',
-    marginEnd: 10,
-    opacity: 0.8,
+  quoteMark: {
+    fontSize: 28,
+    lineHeight: 28,
+    fontWeight: '800',
+    marginEnd: 6,
+    marginTop: -2,
   },
   promptText: {
     flex: 1,
     fontStyle: 'italic',
     lineHeight: 22,
-    fontSize: 14,
+    fontWeight: '500',
   },
   footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 12,
   },
-  useButton: {
+  useButtonWrapper: {
+    alignSelf: 'flex-start',
+  },
+  gradientPill: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 7,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  useButtonText: {
+    fontWeight: '700',
   },
 });

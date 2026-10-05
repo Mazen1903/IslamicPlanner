@@ -20,6 +20,7 @@ export const MOOD_OPTIONS: (MoodOption & { accentColor: string; bgLight: string 
 export interface MoodPickerProps {
   selectedMood?: MoodKey;
   onSelectMood: (mood: MoodKey | undefined) => void;
+  hideTitle?: boolean;
   testID?: string;
 }
 
@@ -32,15 +33,15 @@ interface MoodItemProps {
 function MoodItem({ item, isSelected, onPress }: MoodItemProps) {
   const { colors, spacing, radii, typography, touchTargets, isDark } = useTheme();
   const scale = useSharedValue(isSelected ? 1.05 : 1);
-  const opacity = useSharedValue(isSelected ? 1 : 0.85);
+  const opacity = useSharedValue(isSelected ? 1 : 0.9);
 
   useEffect(() => {
     if (isSelected) {
-      scale.value = withSpring(1.08, { damping: 10, stiffness: 180 });
+      scale.value = withSpring(1.06, { damping: 10, stiffness: 180 });
       opacity.value = withTiming(1, { duration: 150 });
     } else {
       scale.value = withSpring(1, { damping: 14, stiffness: 160 });
-      opacity.value = withTiming(0.8, { duration: 150 });
+      opacity.value = withTiming(0.9, { duration: 150 });
     }
   }, [isSelected, scale, opacity]);
 
@@ -54,7 +55,7 @@ function MoodItem({ item, isSelected, onPress }: MoodItemProps) {
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(isSelected ? 1.08 : 1, { damping: 12, stiffness: 200 });
+    scale.value = withSpring(isSelected ? 1.06 : 1, { damping: 12, stiffness: 200 });
   };
 
   return (
@@ -69,19 +70,19 @@ function MoodItem({ item, isSelected, onPress }: MoodItemProps) {
         style={[
           styles.moodButton,
           {
-            borderRadius: radii.md,
+            borderRadius: radii.md ?? 12,
             minHeight: touchTargets.min,
             backgroundColor: isSelected
               ? (isDark ? 'rgba(255, 255, 255, 0.12)' : item.bgLight)
               : (isDark ? 'rgba(255, 255, 255, 0.04)' : colors.surfaceSecondary),
             borderColor: isSelected
               ? item.accentColor
-              : (isDark ? 'rgba(255, 255, 255, 0.08)' : colors.border),
+              : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'),
             borderWidth: isSelected ? 2 : 1,
             shadowColor: isSelected ? item.accentColor : 'transparent',
-            shadowOpacity: isSelected ? 0.3 : 0,
+            shadowOpacity: isSelected ? 0.25 : 0,
             shadowRadius: isSelected ? 6 : 0,
-            elevation: isSelected ? 3 : 0,
+            elevation: isSelected ? 2 : 0,
           },
         ]}
         testID={`mood-option-${item.key}`}
@@ -91,11 +92,11 @@ function MoodItem({ item, isSelected, onPress }: MoodItemProps) {
           style={[
             typography.caption,
             {
-              color: isSelected ? item.accentColor : colors.textTertiary,
-              fontWeight: isSelected ? '700' : '500',
-              marginTop: spacing.xxs,
-              fontSize: 10,
-              letterSpacing: 0.2,
+              color: isSelected ? item.accentColor : colors.textSecondary,
+              fontWeight: isSelected ? '700' : '600',
+              marginTop: spacing.xxs + 1,
+              fontSize: 11,
+              letterSpacing: 0.1,
             },
           ]}
           numberOfLines={1}
@@ -110,35 +111,38 @@ function MoodItem({ item, isSelected, onPress }: MoodItemProps) {
 export function MoodPicker({
   selectedMood,
   onSelectMood,
+  hideTitle = false,
   testID = 'mood-picker',
 }: MoodPickerProps) {
-  const { colors, spacing, typography } = useTheme();
+  const { colors, typography } = useTheme();
 
   return (
     <View style={styles.container} testID={testID}>
-      <View style={styles.headerRow}>
-        <Text
-          style={[
-            typography.labelSmall,
-            styles.title,
-            { color: colors.textSecondary },
-          ]}
-        >
-          How is your heart today?
-        </Text>
-        {selectedMood && (
-          <Pressable
-            onPress={() => onSelectMood(undefined)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Clear selected mood"
+      {!hideTitle && (
+        <View style={styles.headerRow}>
+          <Text
+            style={[
+              typography.labelSmall,
+              styles.title,
+              { color: colors.textSecondary },
+            ]}
           >
-            <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 11 }]}>
-              Clear
-            </Text>
-          </Pressable>
-        )}
-      </View>
+            How is your heart today?
+          </Text>
+          {selectedMood && (
+            <Pressable
+              onPress={() => onSelectMood(undefined)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Clear selected mood"
+            >
+              <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 11 }]}>
+                Clear
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      )}
 
       <View style={styles.row}>
         {MOOD_OPTIONS.map((item) => {
@@ -160,7 +164,6 @@ export function MoodPicker({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    paddingBottom: 4,
   },
   headerRow: {
     flexDirection: 'row',
@@ -169,10 +172,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    fontSize: 11,
     fontWeight: '700',
+    letterSpacing: 0.2,
   },
   row: {
     flexDirection: 'row',
@@ -184,18 +185,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   moodButton: {
-    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 2,
   },
   emoji: {
-    fontSize: 22,
-    lineHeight: 26,
+    fontSize: 24,
   },
   emojiSelected: {
-    fontSize: 24,
-    lineHeight: 28,
+    transform: [{ scale: 1.05 }],
   },
 });
