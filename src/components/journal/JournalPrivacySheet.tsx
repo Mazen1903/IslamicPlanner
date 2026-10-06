@@ -48,7 +48,7 @@ export function JournalPrivacySheet({
       onRequestClose={onClose}
       testID={testID}
     >
-      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+      <View style={[styles.overlay, { backgroundColor: 'transparent' }]}>
         <Pressable style={styles.backdrop} onPress={onClose} accessible={false} />
 
         <View

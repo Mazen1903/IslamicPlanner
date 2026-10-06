@@ -7,7 +7,7 @@ import type {
   PrayerTimeline,
   PrayerTimesResult,
 } from './types';
-import { calculate } from './PrayerEngine';
+import { calculate } from './PrayerCalculator';
 
 /**
  * Domain error thrown when a time query cannot be resolved within a PrayerTimeline.

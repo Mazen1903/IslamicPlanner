@@ -10,6 +10,7 @@ export interface CalendarHeaderProps {
   onPreviousMonth: () => void;
   onNextMonth: () => void;
   onTodayPress: () => void;
+  onTitlePress?: () => void;
   testID?: string;
 }
 
@@ -19,6 +20,7 @@ export function CalendarHeader({
   onPreviousMonth,
   onNextMonth,
   onTodayPress,
+  onTitlePress,
   testID = 'calendar-header',
 }: CalendarHeaderProps) {
   const { colors, spacing, typography, radii, touchTargets } = useTheme();
@@ -27,12 +29,30 @@ export function CalendarHeader({
     <AppHeroHeader
       testID={testID}
       title={
-        <Text
-          style={[typography.headlineMedium, styles.titleText, { color: colors.textPrimary }]}
-          accessibilityRole="header"
-        >
-          {gregorianTitle}
-        </Text>
+        onTitlePress ? (
+          <Pressable
+            onPress={onTitlePress}
+            style={styles.titlePressable}
+            accessibilityRole="button"
+            accessibilityLabel={`Change month and year, currently ${gregorianTitle}`}
+            testID="calendar-month-picker-trigger"
+          >
+            <Text
+              style={[typography.headlineMedium, styles.titleText, { color: colors.textPrimary }]}
+              accessibilityRole="header"
+            >
+              {gregorianTitle}
+            </Text>
+            <Icon name="chevron-down" size={16} color={colors.textSecondary} style={{ marginStart: 4 }} decorative />
+          </Pressable>
+        ) : (
+          <Text
+            style={[typography.headlineMedium, styles.titleText, { color: colors.textPrimary }]}
+            accessibilityRole="header"
+          >
+            {gregorianTitle}
+          </Text>
+        )
       }
       hijriSubtitle={
         <Text style={[typography.bodySmall, styles.hijriText, { color: colors.primary, marginTop: spacing.xxs }]}>
@@ -104,6 +124,10 @@ export function CalendarHeader({
 }
 
 const styles = StyleSheet.create({
+  titlePressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   titleText: {
     fontWeight: '800',
     letterSpacing: -0.4,

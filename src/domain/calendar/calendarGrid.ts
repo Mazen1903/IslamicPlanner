@@ -6,6 +6,7 @@ import {
   type HijriDate,
   type HijriMonthNumber,
 } from './types';
+import { getMajorOccasionForGrid, type Occasion } from './IslamicOccasions';
 
 export interface TaskDaySummary {
   total: number;
@@ -31,6 +32,8 @@ export interface CalendarDayCellModel {
   isSelected: boolean;
   /** True if this date has at least one visible non-CANCELLED task (in-month cells only) */
   hasTasks: boolean;
+  /** Major Islamic occasion for this date if present (in-month cells only) */
+  majorOccasion?: Occasion;
   /** Detailed task count breakdown for accessibility */
   taskSummary: TaskDaySummary;
   /** Full accessible label for screen readers */
@@ -84,7 +87,8 @@ export function buildCellAccessibleLabel(
   isCurrentMonth: boolean,
   isCivilToday: boolean,
   isSelected: boolean,
-  taskSummary: TaskDaySummary
+  taskSummary: TaskDaySummary,
+  majorOccasion?: Occasion
 ): string {
   const dt = DateTime.fromISO(date);
   const gregorianFormatted = dt.toFormat('cccc, MMMM d, yyyy');
@@ -99,6 +103,10 @@ export function buildCellAccessibleLabel(
 
   parts.push(gregorianFormatted);
   parts.push(hijriFormatted);
+
+  if (isCurrentMonth && majorOccasion) {
+    parts.push(majorOccasion.name);
+  }
 
   if (isCurrentMonth) {
     if (taskSummary.total === 0) {
@@ -140,7 +148,8 @@ export function buildCalendarMonthGrid(
   selectedDate: string, // YYYY-MM-DD
   hijriService: HijriService,
   adjustmentConfig?: HijriAdjustmentConfig,
-  tasksByPlanningDay?: Map<string, TaskDaySummary>
+  tasksByPlanningDay?: Map<string, TaskDaySummary>,
+  showOccasions: boolean = true
 ): CalendarMonthGridModel {
   const monthStartDt = DateTime.utc(year, month, 1);
   const daysInMonth = monthStartDt.daysInMonth!;
@@ -198,13 +207,18 @@ export function buildCalendarMonthGrid(
       }
     }
 
+    const majorOccasion = isCurrentMonth && showOccasions
+      ? getMajorOccasionForGrid(hijriDate, dateStr)
+      : undefined;
+
     const accessibleLabel = buildCellAccessibleLabel(
       dateStr,
       hijriDate,
       isCurrentMonth,
       isCivilToday,
       isSelected,
-      taskSummary
+      taskSummary,
+      majorOccasion
     );
 
     cells.push({
@@ -216,6 +230,7 @@ export function buildCalendarMonthGrid(
       isCivilToday,
       isSelected,
       hasTasks,
+      majorOccasion,
       taskSummary,
       accessibleLabel,
     });

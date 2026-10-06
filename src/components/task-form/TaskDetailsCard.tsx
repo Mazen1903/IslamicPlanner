@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   Switch,
   Alert,
@@ -12,10 +11,12 @@ import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import { LottiePriorityBadge } from '@/components/task/LottiePriorityBadge';
 import { LottieFlameIcon } from '@/components/streak';
-import type { FormState, FormAction, RecurrencePreset } from '@/features/task-form/types';
-import type { ISOWeekday } from '@/domain/recurrence/types';
-import { CustomRecurrenceModal } from './CustomRecurrenceModal';
+import type { FormState, FormAction } from '@/features/task-form/types';
 import { ReminderSheet } from './ReminderSheet';
+import { RepeatSheet } from './RepeatSheet';
+import { PrioritySheet } from './PrioritySheet';
+import { TrackStreakSheet } from './TrackStreakSheet';
+import { NotesSheet } from './NotesSheet';
 import { formatReminderSummary } from '@/domain/notification/reminderRule';
 
 export interface TaskDetailsCardProps {
@@ -64,34 +65,14 @@ export function getNotesSummary(notes: string): string {
   return firstLine.length > 22 ? `${firstLine.slice(0, 20)}...` : firstLine;
 }
 
-const REPEAT_PRESETS: { preset: RecurrencePreset; label: string }[] = [
-  { preset: 'NONE', label: 'Never' },
-  { preset: 'DAILY', label: 'Daily' },
-  { preset: 'WEEKDAYS', label: 'Weekdays' },
-  { preset: 'WEEKLY', label: 'Weekly' },
-  { preset: 'MONTHLY', label: 'Monthly' },
-  { preset: 'SPECIFIC_DAYS', label: 'Specific days' },
-  { preset: 'CUSTOM', label: 'Custom' },
-];
-
-const ALL_WEEKDAYS: { iso: ISOWeekday; label: string }[] = [
-  { iso: 1, label: 'M' },
-  { iso: 2, label: 'T' },
-  { iso: 3, label: 'W' },
-  { iso: 4, label: 'T' },
-  { iso: 5, label: 'F' },
-  { iso: 6, label: 'S' },
-  { iso: 7, label: 'S' },
-];
-
-type ExpandedRow = 'reminder' | 'repeat' | 'notes' | null;
-
 export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
   const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
 
-  const [expandedRow, setExpandedRow] = useState<ExpandedRow>(null);
-  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [showNotesSheet, setShowNotesSheet] = useState(false);
   const [showReminderSheet, setShowReminderSheet] = useState(false);
+  const [showRepeatSheet, setShowRepeatSheet] = useState(false);
+  const [showPrioritySheet, setShowPrioritySheet] = useState(false);
+  const [showStreakSheet, setShowStreakSheet] = useState(false);
 
   const activeReminders = state.reminders && state.reminders.length > 0
     ? state.reminders
@@ -102,28 +83,6 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
     state.reminderTimeOfDay
   );
   const hasReminder = activeReminders.length > 0 || (state.scheduleMode === 'ANYTIME_TODAY' && !!state.reminderTimeOfDay);
-
-  const isRepeatOpen = expandedRow === 'repeat';
-  const isNotesOpen = expandedRow === 'notes';
-
-  const toggleRow = (row: 'repeat' | 'notes') => {
-    setExpandedRow(prev => (prev === row ? null : row));
-  };
-
-  const handleSelectPreset = (preset: RecurrencePreset) => {
-    dispatch({ type: 'SET_RECURRENCE_PRESET', payload: preset });
-    if (preset === 'CUSTOM') {
-      setShowCustomModal(true);
-    }
-  };
-
-  const toggleSpecificDay = (iso: ISOWeekday) => {
-    const existing = state.specificDays;
-    const updated = existing.includes(iso)
-      ? existing.filter(d => d !== iso)
-      : [...existing, iso];
-    dispatch({ type: 'SET_SPECIFIC_DAYS', payload: updated });
-  };
 
   const repeatSummary = getRecurrenceLabel(
     state.recurrencePreset,
@@ -212,9 +171,8 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
 
       {/* 2. Repeat Row */}
       <Pressable
-        onPress={() => toggleRow('repeat')}
+        onPress={() => setShowRepeatSheet(true)}
         accessibilityRole="button"
-        accessibilityState={{ expanded: isRepeatOpen }}
         accessibilityLabel={`Repeat: ${repeatSummary}`}
         testID="details-row-repeat"
         style={({ pressed }) => [
@@ -268,7 +226,7 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
             {repeatSummary}
           </Text>
           <Icon
-            name={isRepeatOpen ? 'chevron-down' : 'chevron-right'}
+            name="chevron-right"
             size={14}
             color={colors.textTertiary}
             directional
@@ -277,162 +235,22 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
         </View>
       </Pressable>
 
-      {/* Expanded Repeat Drawer */}
-      {isRepeatOpen && (
-        <View
-          style={[
-            styles.drawerContent,
-            {
-              backgroundColor: colors.surfaceSecondary,
-              borderRadius: radii.md,
-              marginHorizontal: spacing.sm,
-              marginBottom: spacing.sm,
-              padding: spacing.md,
-            },
-          ]}
-        >
-          <Text style={[typography.caption, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-            Frequency:
-          </Text>
-          {/* Wrapping Preset Chips */}
-          <View style={styles.wrappingChipsContainer}>
-            {REPEAT_PRESETS.map(item => {
-              const isSelected = state.recurrencePreset === item.preset;
-              return (
-                <Pressable
-                  key={item.preset}
-                  onPress={() => handleSelectPreset(item.preset)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isSelected }}
-                  accessibilityLabel={`Repeat: ${item.label}`}
-                  testID={`repeat-preset-${item.preset.toLowerCase()}`}
-                  style={({ pressed }) => [
-                    styles.chip,
-                    isSelected && shadows.card,
-                    {
-                      backgroundColor: isSelected ? colors.primary : colors.surface,
-                      borderColor: isSelected ? colors.primary : colors.border,
-                      borderRadius: radii.pill,
-                      paddingVertical: 7,
-                      paddingHorizontal: 14,
-                      minHeight: 34,
-                      opacity: pressed ? 0.75 : 1,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      typography.labelMedium,
-                      {
-                        color: isSelected ? colors.textOnPrimary : colors.textPrimary,
-                        fontWeight: isSelected ? '700' : '500',
-                      },
-                    ]}
-                  >
-                    {item.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          {/* Inline Specific Days Controls */}
-          {state.recurrencePreset === 'SPECIFIC_DAYS' && (
-            <View
-              style={[
-                styles.specificDaysContainer,
-                {
-                  backgroundColor: colors.surface,
-                  borderRadius: radii.md,
-                  borderColor: colors.border,
-                  padding: spacing.sm,
-                  marginTop: spacing.sm,
-                },
-              ]}
-              testID="specific-days-controls"
-            >
-              <Text style={[typography.caption, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-                Select days of the week:
-              </Text>
-              <View style={styles.weekdayRow}>
-                {ALL_WEEKDAYS.map(w => {
-                  const isDaySelected = state.specificDays.includes(w.iso);
-                  return (
-                    <Pressable
-                      key={w.iso}
-                      onPress={() => toggleSpecificDay(w.iso)}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: isDaySelected }}
-                      accessibilityLabel={`Repeat on weekday ${w.iso}`}
-                      testID={`weekday-toggle-${w.iso}`}
-                      style={[
-                        styles.weekdayCircle,
-                        isDaySelected && shadows.card,
-                        {
-                          backgroundColor: isDaySelected ? colors.primary : colors.surfaceSecondary,
-                          borderColor: isDaySelected ? colors.primary : colors.border,
-                          borderRadius: radii.pill,
-                          width: 36,
-                          height: 36,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          typography.labelMedium,
-                          {
-                            color: isDaySelected ? colors.textOnPrimary : colors.textPrimary,
-                            fontWeight: '700',
-                          },
-                        ]}
-                      >
-                        {w.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          )}
-
-          {/* Edit Custom Schedule shortcut button when CUSTOM is selected */}
-          {state.recurrencePreset === 'CUSTOM' && (
-            <Pressable
-              onPress={() => setShowCustomModal(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Configure custom repeat rules"
-              testID="open-custom-recurrence-modal"
-              style={({ pressed }) => [
-                styles.customConfigureButton,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  borderRadius: radii.md,
-                  padding: spacing.sm,
-                  marginTop: spacing.sm,
-                  opacity: pressed ? 0.75 : 1,
-                },
-              ]}
-            >
-              <Text style={[typography.labelMedium, { color: colors.primary, fontWeight: '700' }]}>
-                Edit Custom Recurrence Rules...
-              </Text>
-            </Pressable>
-          )}
-        </View>
-      )}
-
       {/* Inset Divider */}
       <View style={[styles.insetDivider, { backgroundColor: colors.border }]} />
 
-      {/* 3. Priority Row (Inline Pill) */}
-      <View
-        style={[
+      {/* 3. Priority Row */}
+      <Pressable
+        onPress={() => setShowPrioritySheet(true)}
+        accessibilityRole="button"
+        accessibilityLabel={`Priority: ${state.priority === 'IMPORTANT' ? 'Important' : 'Normal'}`}
+        testID="details-row-priority"
+        style={({ pressed }) => [
           styles.rowHeader,
           {
             minHeight: Math.max(touchTargets.min, 56),
             paddingHorizontal: spacing.md,
             paddingVertical: 12,
+            opacity: pressed ? 0.75 : 1,
           },
         ]}
       >
@@ -464,64 +282,73 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
           </Text>
         </View>
 
-        <Pressable
-          onPress={() =>
-            dispatch({
-              type: 'SET_PRIORITY',
-              payload: state.priority === 'IMPORTANT' ? 'NORMAL' : 'IMPORTANT',
-            })
-          }
-          accessibilityRole="button"
-          accessibilityLabel={`Priority: ${state.priority === 'IMPORTANT' ? 'Important' : 'Normal'}`}
-          testID={state.priority === 'IMPORTANT' ? 'priority-important' : 'priority-normal'}
-          style={({ pressed }) => [
-            styles.priorityPill,
-            state.priority === 'IMPORTANT' && shadows.card,
-            {
-              backgroundColor:
-                state.priority === 'IMPORTANT'
-                  ? colors.error + '18'
-                  : colors.surfaceSecondary,
-              borderColor:
-                state.priority === 'IMPORTANT'
-                  ? colors.error
-                  : colors.border,
-              borderRadius: radii.pill,
-              paddingVertical: 5,
-              paddingHorizontal: 12,
-              minHeight: 32,
-              opacity: pressed ? 0.75 : 1,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              typography.labelMedium,
+        <View style={styles.rowRightControl}>
+          <Pressable
+            onPress={() => setShowPrioritySheet(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`Priority: ${state.priority === 'IMPORTANT' ? 'Important' : 'Normal'}`}
+            testID={state.priority === 'IMPORTANT' ? 'priority-important' : 'priority-normal'}
+            style={({ pressed }) => [
+              styles.priorityPill,
+              state.priority === 'IMPORTANT' && shadows.card,
               {
-                color: state.priority === 'IMPORTANT' ? colors.error : colors.textPrimary,
-                fontWeight: state.priority === 'IMPORTANT' ? '700' : '500',
+                backgroundColor:
+                  state.priority === 'IMPORTANT'
+                    ? colors.error + '18'
+                    : colors.surfaceSecondary,
+                borderColor:
+                  state.priority === 'IMPORTANT'
+                    ? colors.error
+                    : colors.border,
+                borderRadius: radii.pill,
+                paddingVertical: 5,
+                paddingHorizontal: 12,
+                minHeight: 32,
+                marginEnd: 4,
+                opacity: pressed ? 0.75 : 1,
               },
             ]}
           >
-            {state.priority === 'IMPORTANT' ? 'Important' : 'Normal'}
-          </Text>
-        </Pressable>
-      </View>
+            <Text
+              style={[
+                typography.labelMedium,
+                {
+                  color: state.priority === 'IMPORTANT' ? colors.error : colors.textPrimary,
+                  fontWeight: state.priority === 'IMPORTANT' ? '700' : '500',
+                },
+              ]}
+            >
+              {state.priority === 'IMPORTANT' ? 'Important' : 'Normal'}
+            </Text>
+          </Pressable>
+          <Icon
+            name="chevron-right"
+            size={14}
+            color={colors.textTertiary}
+            directional
+            decorative
+          />
+        </View>
+      </Pressable>
 
       {/* Inset Divider */}
       <View style={[styles.insetDivider, { backgroundColor: colors.border }]} />
 
-      {/* 4. Track Streak Row (Inline Switch) */}
-      <View
-        style={[
+      {/* 4. Track Streak Row */}
+      <Pressable
+        onPress={() => setShowStreakSheet(true)}
+        accessibilityRole="button"
+        accessibilityLabel={`Track Streak: ${state.streakEnabled ? 'Enabled' : 'Disabled'}`}
+        testID="streak-option-row"
+        style={({ pressed }) => [
           styles.rowHeader,
           {
             minHeight: Math.max(touchTargets.min, 56),
             paddingHorizontal: spacing.md,
             paddingVertical: 12,
+            opacity: pressed ? 0.85 : 1,
           },
         ]}
-        testID="streak-option-row"
       >
         <View
           style={[
@@ -580,16 +407,15 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
           accessibilityLabel="Track streak toggle"
           testID="track-streak-switch"
         />
-      </View>
+      </Pressable>
 
       {/* Inset Divider */}
       <View style={[styles.insetDivider, { backgroundColor: colors.border }]} />
 
       {/* 5. Notes Row */}
       <Pressable
-        onPress={() => toggleRow('notes')}
+        onPress={() => setShowNotesSheet(true)}
         accessibilityRole="button"
-        accessibilityState={{ expanded: isNotesOpen }}
         accessibilityLabel={`Notes: ${getNotesSummary(state.notes)}`}
         testID="details-row-notes"
         style={({ pressed }) => [
@@ -644,7 +470,7 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
             {getNotesSummary(state.notes)}
           </Text>
           <Icon
-            name={isNotesOpen ? 'chevron-down' : 'chevron-right'}
+            name="chevron-right"
             size={14}
             color={colors.textTertiary}
             directional
@@ -653,50 +479,38 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
         </View>
       </Pressable>
 
-      {/* Expanded Notes TextInput Drawer */}
-      {isNotesOpen && (
-        <View
-          style={[
-            styles.drawerContent,
-            {
-              backgroundColor: colors.surfaceSecondary,
-              borderRadius: radii.md,
-              marginHorizontal: spacing.sm,
-              marginBottom: spacing.sm,
-              padding: spacing.md,
-            },
-          ]}
-        >
-          <TextInput
-            value={state.notes}
-            onChangeText={text => dispatch({ type: 'SET_NOTES', payload: text })}
-            placeholder="Add notes..."
-            placeholderTextColor={colors.textTertiary}
-            accessibilityLabel="Task notes"
-            testID="task-notes-input"
-            multiline={true}
-            numberOfLines={3}
-            style={[
-              styles.notesInput,
-              typography.bodyMedium,
-              {
-                borderColor: colors.border,
-                borderRadius: radii.md,
-                backgroundColor: colors.surface,
-                color: colors.textPrimary,
-                padding: spacing.md,
-              },
-            ]}
-          />
-        </View>
-      )}
-
-      {/* Custom Recurrence Modal */}
-      <CustomRecurrenceModal
-        visible={showCustomModal}
-        onClose={() => setShowCustomModal(false)}
+      {/* Repeat Sheet Modal */}
+      <RepeatSheet
+        visible={showRepeatSheet}
+        onClose={() => setShowRepeatSheet(false)}
         state={state}
         dispatch={dispatch}
+      />
+
+      {/* Priority Sheet Modal */}
+      <PrioritySheet
+        visible={showPrioritySheet}
+        onClose={() => setShowPrioritySheet(false)}
+        priority={state.priority}
+        onSelectPriority={p => dispatch({ type: 'SET_PRIORITY', payload: p })}
+      />
+
+      {/* Track Streak Sheet Modal */}
+      <TrackStreakSheet
+        visible={showStreakSheet}
+        onClose={() => setShowStreakSheet(false)}
+        streakEnabled={state.streakEnabled}
+        onToggleStreak={val => dispatch({ type: 'SET_STREAK_ENABLED', payload: val })}
+        recurrencePreset={state.recurrencePreset}
+        onSetRecurrencePreset={preset => dispatch({ type: 'SET_RECURRENCE_PRESET', payload: preset })}
+      />
+
+      {/* Notes Sheet Modal */}
+      <NotesSheet
+        visible={showNotesSheet}
+        onClose={() => setShowNotesSheet(false)}
+        notes={state.notes}
+        onChangeNotes={text => dispatch({ type: 'SET_NOTES', payload: text })}
       />
 
       {/* Reminder Sheet Modal */}
@@ -710,6 +524,7 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
         reminderTimeOfDay={state.reminderTimeOfDay}
         onSetReminderTimeOfDay={(timeStr) => dispatch({ type: 'SET_REMINDER_TIME_OF_DAY', payload: timeStr })}
       />
+
     </View>
   );
 }
@@ -746,47 +561,11 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     marginStart: 72,
   },
-  drawerContent: {
-    overflow: 'hidden',
-  },
-  wrappingChipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   priorityPill: {
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  specificDaysContainer: {
-    borderWidth: 1,
-    width: '100%',
-  },
-  weekdayRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  weekdayCircle: {
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  customConfigureButton: {
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notesInput: {
-    borderWidth: 1,
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
 });
+
+

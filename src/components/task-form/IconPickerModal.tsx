@@ -383,7 +383,7 @@ export function IconPickerModal({
     >
       {/* 1. Backdrop */}
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropOpacity }]}>
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.overlay }]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'transparent' }]} />
         <Pressable style={StyleSheet.absoluteFill} onPress={() => handleClose()} />
       </Animated.View>
 

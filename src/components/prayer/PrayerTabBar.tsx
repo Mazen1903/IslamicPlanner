@@ -5,8 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   LayoutAnimation,
-  Platform,
-  UIManager,
   Image,
   Animated,
   type StyleProp,
@@ -16,10 +14,6 @@ import {
 import { useTheme } from '@/theme';
 import type { Prayer } from '@/constants/prayers';
 import type { PrayerTabViewModel } from '@/services/types';
-
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 export interface PrayerTabBarProps {
   tabs: PrayerTabViewModel[];

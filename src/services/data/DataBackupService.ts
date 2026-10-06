@@ -2,7 +2,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import * as SecureStore from 'expo-secure-store';
-import * as Notifications from 'expo-notifications';
+import { getNotificationsModule } from '@/services/notification/notificationRuntime';
 import { getDatabase, runInTransaction, type AppDatabase } from '@/data/db';
 import { getTableColumns } from 'drizzle-orm';
 import {
@@ -290,7 +290,8 @@ export class DataBackupService {
 
       // 3. Cancel all scheduled notifications
       try {
-        await Notifications.cancelAllScheduledNotificationsAsync();
+        const Notifications = await getNotificationsModule();
+        await Notifications?.cancelAllScheduledNotificationsAsync();
       } catch (err) {
         console.warn('[DataBackupService] Failed to cancel notifications on wipe:', err);
       }

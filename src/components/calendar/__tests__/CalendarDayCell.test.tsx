@@ -90,4 +90,26 @@ describe('CalendarDayCell (M14)', () => {
     fireEvent.press(getByTestId('calendar-cell-2026-09-15'));
     expect(onPress).toHaveBeenCalledWith(baseCell);
   });
+
+  it('renders pastel occasion dot when majorOccasion is present', async () => {
+    const occasionCell: CalendarDayCellModel = {
+      ...baseCell,
+      majorOccasion: {
+        id: 'ashura',
+        name: 'Day of Ashura',
+        tier: 'MAJOR',
+        group: 'CORE',
+        tint: 'teal',
+        fastingAllowed: true,
+      },
+    };
+
+    const { getByTestId } = await render(
+      <ThemeProvider>
+        <CalendarDayCell cell={occasionCell} onPress={jest.fn()} />
+      </ThemeProvider>
+    );
+
+    expect(getByTestId('occasion-dot-2026-09-15')).toBeTruthy();
+  });
 });

@@ -107,6 +107,7 @@
         }
       ],
       "./plugins/withAndroidWorkManagerResolution.js",
+      "./plugins/withAndroidReleaseShrink.js",
       "expo-sharing"
     ]
   }

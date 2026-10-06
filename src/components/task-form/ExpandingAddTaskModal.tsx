@@ -19,6 +19,8 @@ export interface ExpandingAddTaskModalProps {
   visible: boolean;
   origin?: FabOrigin;
   initialPrayerTab?: Prayer;
+  initialDate?: string | null;
+  initialTitle?: string | null;
   onClose: () => void;
   onSuccess: () => void | Promise<void>;
 }
@@ -26,6 +28,8 @@ export interface ExpandingAddTaskModalProps {
 export function ExpandingAddTaskModal({
   visible,
   initialPrayerTab,
+  initialDate,
+  initialTitle,
   onClose,
   onSuccess,
 }: ExpandingAddTaskModalProps) {
@@ -34,7 +38,7 @@ export function ExpandingAddTaskModal({
 
   const civilToday = DateTime.now().toFormat('yyyy-MM-dd');
   const viewModel = useTodayStore(s => s.viewModel);
-  const planningDayKey = viewModel?.planningDayKey ?? civilToday;
+  const planningDayKey = initialDate ?? viewModel?.planningDayKey ?? civilToday;
   const currentPrayer = initialPrayerTab ?? viewModel?.currentPrayer;
 
   const handleClose = useCallback(() => {
@@ -90,9 +94,10 @@ export function ExpandingAddTaskModal({
       >
         <View testID="expanding-add-task-content" style={styles.content}>
           <TaskFormScreen
-            initialCivilSeedDate={civilToday}
+            initialCivilSeedDate={initialDate ?? civilToday}
             initialPlanningDayDate={planningDayKey}
             initialPrayerTab={currentPrayer}
+            initialTitle={initialTitle ?? undefined}
             onSuccess={handleSuccess}
             onCancel={handleClose}
             onSaved={handleSaved}

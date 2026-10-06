@@ -117,7 +117,6 @@ describe('ThemeGalleryScreen', () => {
 
     expect(screen.getByTestId('islamic-theme-rawdah_emerald')).toBeTruthy();
     expect(screen.getByTestId('islamic-theme-sacred_tawaf')).toBeTruthy();
-    expect(screen.getByTestId('islamic-theme-al_aqsa_sunset')).toBeTruthy();
     // Non-sacred should be filtered out
     expect(screen.queryByTestId('islamic-theme-fajr_awakening')).toBeNull();
 

@@ -1,22 +1,59 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { DateTime } from 'luxon';
 import { useTheme } from '@/theme';
-import type { UpcomingTaskItem } from '@/services/CalendarMonthOrchestrator';
+import type {
+  UpcomingTaskItem,
+  UpcomingOccasionItem,
+} from '@/services/CalendarMonthOrchestrator';
 import { Icon } from '@/components/common/Icon';
+import { getOccasionPalette } from './OccasionBanner';
+import { useAddTaskModalStore } from '@/stores/useAddTaskModalStore';
 
 export interface UpcomingSectionProps {
   upcomingTasks: UpcomingTaskItem[];
+  upcomingOccasions?: UpcomingOccasionItem[];
   hasMoreUpcoming: boolean;
   testID?: string;
 }
 
+type UpcomingListItem =
+  | { type: 'TASK'; date: string; task: UpcomingTaskItem }
+  | { type: 'OCCASION'; date: string; occasion: UpcomingOccasionItem };
+
 export function UpcomingSection({
   upcomingTasks,
+  upcomingOccasions = [],
   hasMoreUpcoming,
   testID = 'upcoming-section',
 }: UpcomingSectionProps) {
-  const { colors, spacing, typography, radii, shadows } = useTheme();
+  const { colors, spacing, typography, radii, shadows, isDark } = useTheme();
+  const openModal = useAddTaskModalStore(s => s.openModal);
+
+  // Combine and sort chronologically by date
+  const combinedItems: UpcomingListItem[] = [
+    ...upcomingTasks.map(t => ({
+      type: 'TASK' as const,
+      date: t.planningDayKey,
+      task: t,
+    })),
+    ...upcomingOccasions.map(o => ({
+      type: 'OCCASION' as const,
+      date: o.date,
+      occasion: o,
+    })),
+  ].sort((a, b) => {
+    if (a.date !== b.date) {
+      return a.date.localeCompare(b.date);
+    }
+    // Occasions show before tasks on the same date
+    if (a.type !== b.type) {
+      return a.type === 'OCCASION' ? -1 : 1;
+    }
+    return 0;
+  });
+
+  const totalCount = combinedItems.length;
 
   return (
     <View style={[styles.container, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md }]} testID={testID}>
@@ -40,13 +77,13 @@ export function UpcomingSection({
           ]}
         >
           <Text style={[typography.caption, { color: colors.primary, fontWeight: '600' }]}>
-            {upcomingTasks.length}
+            {totalCount}
           </Text>
         </View>
       </View>
 
-      {/* Task Cards List */}
-      {upcomingTasks.length === 0 ? (
+      {/* List Content */}
+      {totalCount === 0 ? (
         <View
           style={[
             styles.emptyContainer,
@@ -58,20 +95,176 @@ export function UpcomingSection({
           ]}
         >
           <Text style={[typography.bodyMedium, { color: colors.textSecondary, textAlign: 'center' }]}>
-            No upcoming tasks for the remainder of this month
+            No upcoming tasks or occasions for the remainder of this month
           </Text>
         </View>
       ) : (
-        <View style={styles.tasksList}>
-          {upcomingTasks.map(item => {
-            const dateDt = DateTime.fromISO(item.planningDayKey);
-            const dateBadgeText = dateDt.isValid ? dateDt.toFormat('MMM d') : item.planningDayKey;
+        <View style={styles.itemsList}>
+          {combinedItems.map((item, index) => {
+            if (item.type === 'OCCASION') {
+              const occ = item.occasion;
+              const palette = getOccasionPalette(occ.tint, isDark);
+              const dateDt = DateTime.fromISO(occ.date);
+              const gregorianBadge = dateDt.isValid ? dateDt.toFormat('MMM d') : occ.date;
+
+              return (
+                <View
+                  key={`occ-${occ.id}-${index}`}
+                  style={[
+                    styles.card,
+                    shadows.card,
+                    {
+                      backgroundColor: palette.bg,
+                      borderColor: palette.border,
+                      borderRadius: radii.card,
+                      padding: spacing.md,
+                      marginBottom: spacing.sm,
+                    },
+                  ]}
+                  testID={`upcoming-occasion-${occ.id}`}
+                >
+                  <View style={styles.cardHeaderRow}>
+                    {/* 40x40 squircle icon badge */}
+                    <View
+                      style={[
+                        styles.squircleBadge,
+                        {
+                          backgroundColor: palette.badgeBg,
+                          borderRadius: radii.md,
+                        },
+                      ]}
+                    >
+                      <Icon name="calendar-star" size="sm" color={palette.icon} />
+                    </View>
+
+                    <View style={styles.headerMeta}>
+                      <View style={styles.badgePillsRow}>
+                        {/* Gregorian Date */}
+                        <View
+                          style={[
+                            styles.pill,
+                            {
+                              backgroundColor: palette.badgeBg,
+                              borderRadius: radii.pill,
+                            },
+                          ]}
+                        >
+                          <Text style={[typography.caption, { color: palette.text, fontWeight: '700', fontSize: 11 }]}>
+                            {gregorianBadge}
+                          </Text>
+                        </View>
+
+                        {/* Hijri Date */}
+                        {occ.hijriFormatted ? (
+                          <View
+                            style={[
+                              styles.pill,
+                              {
+                                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                                borderRadius: radii.pill,
+                              },
+                            ]}
+                          >
+                            <Text style={[typography.caption, { color: colors.textSecondary, fontSize: 11 }]}>
+                              {occ.hijriFormatted}
+                            </Text>
+                          </View>
+                        ) : null}
+
+                        {/* Occasion Label */}
+                        <View
+                          style={[
+                            styles.pill,
+                            {
+                              backgroundColor: palette.badgeBg,
+                              borderRadius: radii.pill,
+                            },
+                          ]}
+                        >
+                          <Text style={[typography.caption, { color: palette.text, fontWeight: '700', fontSize: 10 }]}>
+                            Special
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Occasion Name */}
+                      <Text
+                        style={[
+                          typography.bodyLarge,
+                          { color: colors.textPrimary, fontWeight: '700', marginTop: 4 },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {occ.name}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Description & 1-Tap Add to Plan */}
+                  {occ.description || occ.suggestedTaskTitle ? (
+                    <View style={styles.occasionFooter}>
+                      {occ.description ? (
+                        <Text
+                          style={[
+                            typography.caption,
+                            { color: colors.textSecondary, flex: 1, marginEnd: 8 },
+                          ]}
+                          numberOfLines={2}
+                        >
+                          {occ.description}
+                        </Text>
+                      ) : (
+                        <View style={{ flex: 1 }} />
+                      )}
+
+                      {occ.suggestedTaskTitle && (
+                        <Pressable
+                          onPress={() => {
+                            openModal(undefined, undefined, occ.date, occ.suggestedTaskTitle);
+                          }}
+                          style={({ pressed }) => [
+                            styles.planButton,
+                            {
+                              backgroundColor: pressed ? palette.badgeBg : 'transparent',
+                              borderColor: palette.border,
+                              borderRadius: radii.pill,
+                            },
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Add task for ${occ.name}: ${occ.suggestedTaskTitle}`}
+                          testID={`upcoming-add-task-${occ.id}`}
+                        >
+                          <Icon name="plus" size="xs" color={palette.icon} />
+                          <Text
+                            style={[
+                              typography.caption,
+                              {
+                                color: palette.text,
+                                fontWeight: '700',
+                                marginStart: 4,
+                              },
+                            ]}
+                          >
+                            Plan
+                          </Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  ) : null}
+                </View>
+              );
+            }
+
+            // Task item
+            const task = item.task;
+            const dateDt = DateTime.fromISO(task.planningDayKey);
+            const dateBadgeText = dateDt.isValid ? dateDt.toFormat('MMM d') : task.planningDayKey;
 
             return (
               <View
-                key={item.occurrenceId}
+                key={task.occurrenceId}
                 style={[
-                  styles.taskCard,
+                  styles.card,
                   shadows.card,
                   {
                     backgroundColor: colors.surface,
@@ -81,63 +274,80 @@ export function UpcomingSection({
                     marginBottom: spacing.sm,
                   },
                 ]}
-                testID={`upcoming-item-${item.occurrenceId}`}
+                testID={`upcoming-item-${task.occurrenceId}`}
               >
                 <View style={styles.cardHeaderRow}>
-                  {/* Date badge */}
+                  {/* 40x40 squircle icon badge */}
                   <View
                     style={[
-                      styles.dateBadge,
+                      styles.squircleBadge,
                       {
-                        backgroundColor: colors.surfaceSecondary,
-                        borderRadius: radii.sm,
-                        paddingHorizontal: spacing.xs,
-                        paddingVertical: 2,
+                        backgroundColor: colors.primaryLight,
+                        borderRadius: radii.md,
                       },
                     ]}
                   >
-                    <Text style={[typography.caption, { color: colors.textSecondary, fontWeight: '600' }]}>
-                      {dateBadgeText}
-                    </Text>
+                    <Icon name="calendar" size="sm" color={colors.primary} />
                   </View>
 
-                  {/* Schedule label */}
-                  {item.scheduleLabel ? (
-                    <View style={styles.scheduleInfo}>
-                      <Icon name="clock" size={12} color={colors.textTertiary} style={{ marginEnd: 4 }} decorative />
-                      <Text style={[typography.caption, { color: colors.textSecondary }]}>
-                        {item.scheduleLabel}
-                      </Text>
-                    </View>
-                  ) : null}
+                  <View style={styles.headerMeta}>
+                    <View style={styles.badgePillsRow}>
+                      {/* Date badge */}
+                      <View
+                        style={[
+                          styles.pill,
+                          {
+                            backgroundColor: colors.surfaceSecondary,
+                            borderRadius: radii.pill,
+                          },
+                        ]}
+                      >
+                        <Text style={[typography.caption, { color: colors.textSecondary, fontWeight: '700', fontSize: 11 }]}>
+                          {dateBadgeText}
+                        </Text>
+                      </View>
 
-                  {/* Important Priority Badge */}
-                  {item.priority === 'IMPORTANT' && (
-                    <View
+                      {/* Schedule label */}
+                      {task.scheduleLabel ? (
+                        <View style={styles.scheduleInfo}>
+                          <Icon name="clock" size={11} color={colors.textTertiary} style={{ marginEnd: 4 }} decorative />
+                          <Text style={[typography.caption, { color: colors.textSecondary, fontSize: 11 }]}>
+                            {task.scheduleLabel}
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      {/* Important Priority Badge */}
+                      {task.priority === 'IMPORTANT' && (
+                        <View
+                          style={[
+                            styles.importantBadge,
+                            {
+                              backgroundColor: colors.danger + '1A',
+                              borderColor: colors.danger,
+                              borderRadius: radii.pill,
+                            },
+                          ]}
+                        >
+                          <Text style={[typography.caption, { color: colors.danger, fontWeight: '700', fontSize: 10 }]}>
+                            IMPORTANT
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Task Title */}
+                    <Text
                       style={[
-                        styles.importantBadge,
-                        {
-                          backgroundColor: colors.danger + '1A',
-                          borderColor: colors.danger,
-                          borderRadius: radii.pill,
-                          paddingHorizontal: spacing.xs,
-                        },
+                        typography.bodyLarge,
+                        { color: colors.textPrimary, fontWeight: '600', marginTop: 4 },
                       ]}
+                      numberOfLines={2}
                     >
-                      <Text style={[typography.caption, { color: colors.danger, fontWeight: '700', fontSize: 10 }]}>
-                        IMPORTANT
-                      </Text>
-                    </View>
-                  )}
+                      {task.title}
+                    </Text>
+                  </View>
                 </View>
-
-                {/* Title */}
-                <Text
-                  style={[typography.bodyLarge, { color: colors.textPrimary, fontWeight: '600', marginTop: spacing.xs }]}
-                  numberOfLines={2}
-                >
-                  {item.title}
-                </Text>
               </View>
             );
           })}
@@ -188,28 +398,62 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tasksList: {
+  itemsList: {
     width: '100%',
   },
-  taskCard: {
+  card: {
     borderWidth: 1,
   },
   cardHeaderRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    alignItems: 'flex-start',
   },
-  dateBadge: {
+  squircleBadge: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginEnd: 12,
+  },
+  headerMeta: {
+    flex: 1,
+  },
+  badgePillsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  pill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   scheduleInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
   importantBadge: {
     borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  occasionFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    paddingTop: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(0,0,0,0.06)',
+  },
+  planButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   moreContainer: {
     alignItems: 'center',

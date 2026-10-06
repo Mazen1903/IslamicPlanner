@@ -72,6 +72,10 @@ const CATEGORY_B_APPROVED_FILES = new Set([
   'src/components/task-form/TaskFormScreen.tsx',
   'src/components/settings/SettingsIcons.tsx',
   'src/components/layout/BottomNavBar.tsx',
+  'src/components/calendar/CalendarDayCell.tsx',
+  'src/components/calendar/OccasionBanner.tsx',
+  'src/components/calendar/UpcomingSection.tsx',
+  'src/components/task-form/NotesIcons.tsx',
 ]);
 
 /**

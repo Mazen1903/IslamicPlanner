@@ -1,9 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { DateTime } from 'luxon';
 import { useTheme } from '@/theme';
 import type { SelectedDayDetailModel } from '@/services/CalendarMonthOrchestrator';
 import { TaskCard } from '@/components/task/TaskCard';
 import { PrayerTabIcon } from '@/components/prayer/PrayerTabBar';
+import { Icon } from '@/components/common/Icon';
+import { OccasionBanner } from './OccasionBanner';
+import { useAddTaskModalStore } from '@/stores/useAddTaskModalStore';
 
 export interface DayDetailTaskListProps {
   selectedDayDetail: SelectedDayDetailModel | null;
@@ -15,6 +19,7 @@ export function DayDetailTaskList({
   testID = 'day-detail-task-list',
 }: DayDetailTaskListProps) {
   const { colors, spacing, typography, radii } = useTheme();
+  const openModal = useAddTaskModalStore(s => s.openModal);
 
   if (!selectedDayDetail) {
     return null;
@@ -26,19 +31,56 @@ export function DayDetailTaskList({
     prayerSections,
     anytimeTasks,
     totalTasksCount,
+    occasions = [],
   } = selectedDayDetail;
+
+  const civilToday = DateTime.now().toISODate()!;
+  const isFutureOrToday = civilDate >= civilToday;
+  const formattedDayTitle = DateTime.fromISO(civilDate).isValid
+    ? DateTime.fromISO(civilDate).toFormat('cccc, MMMM d')
+    : civilDate;
 
   return (
     <View style={[styles.container, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md }]} testID={testID}>
       {/* Selected Day Header */}
       <View style={[styles.headerContainer, { borderBottomColor: colors.border, borderBottomWidth: 1, paddingBottom: spacing.sm, marginBottom: spacing.md }]}>
-        <Text style={[typography.headlineLarge, { color: colors.textPrimary }]} testID="selected-day-title">
-          {civilDate}
-        </Text>
-        <Text style={[typography.bodySmall, { color: colors.primary, marginTop: spacing.xxs }]}>
-          {hijriFormatted}
-        </Text>
+        <View style={styles.headerRow}>
+          <View style={styles.headerTitles}>
+            <Text style={[typography.headlineLarge, { color: colors.textPrimary }]} testID="selected-day-title">
+              {formattedDayTitle}
+            </Text>
+            <Text style={[typography.bodySmall, { color: colors.primary, marginTop: spacing.xxs }]}>
+              {hijriFormatted}
+            </Text>
+          </View>
+          {isFutureOrToday && (
+            <Pressable
+              onPress={() => {
+                openModal(undefined, undefined, civilDate, undefined);
+              }}
+              style={({ pressed }) => [
+                styles.addTaskButton,
+                {
+                  backgroundColor: pressed ? colors.primaryLight : colors.surfaceSecondary,
+                  borderColor: colors.border,
+                  borderRadius: radii.pill,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={`Add task for ${formattedDayTitle}`}
+              testID="calendar-add-task-button"
+            >
+              <Icon name="plus" size="xs" color={colors.primary} />
+              <Text style={[typography.labelMedium, { color: colors.primary, marginStart: 4, fontWeight: '600' }]}>
+                Add Task
+              </Text>
+            </Pressable>
+          )}
+        </View>
       </View>
+
+      {/* Islamic Occasions Banner for Selected Day */}
+      <OccasionBanner occasions={occasions} selectedDate={civilDate} />
 
       {totalTasksCount === 0 && (
         <View style={[styles.emptyDayContainer, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md, padding: spacing.lg, marginBottom: spacing.md }]}>
@@ -147,6 +189,22 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     width: '100%',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitles: {
+    flex: 1,
+  },
+  addTaskButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    marginStart: 12,
   },
   emptyDayContainer: {
     alignItems: 'center',

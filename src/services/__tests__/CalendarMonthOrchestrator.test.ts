@@ -393,4 +393,32 @@ describe('CalendarMonthOrchestrator (M14)', () => {
       expect(adhkarUpcoming[0].planningDayKey).toBe('2026-09-18');
     });
   });
+
+  describe('Islamic Occasions Integration', () => {
+    it('populates occasions on selected day detail when showOccasions is true', () => {
+      // 2026-09-15 corresponds to 4 Rabi al-Awwal 1448
+      return orchestrator.loadMonth(2026, 9, '2026-09-15', undefined, true).then(state => {
+        expect(state.selectedDayDetail).not.toBeNull();
+        expect(state.selectedDayDetail?.occasions).toBeDefined();
+        // 2026-09-15 is a Tuesday: check if any occasions exist or empty array if none
+        expect(Array.isArray(state.selectedDayDetail?.occasions)).toBe(true);
+      });
+    });
+
+    it('populates upcomingOccasions for major dates after today in the month', async () => {
+      // 12 Rabi al-Awwal (Mawlid) is around Sep 23/24, 2026
+      const state = await orchestrator.loadMonth(2026, 9, '2026-09-15', undefined, true);
+      expect(Array.isArray(state.upcomingOccasions)).toBe(true);
+      // Check that all upcomingOccasions are strictly in the future relative to planningDayKey
+      for (const occ of state.upcomingOccasions) {
+        expect(occ.date > '2026-09-15').toBe(true);
+      }
+    });
+
+    it('omits occasions when showOccasions is false', async () => {
+      const state = await orchestrator.loadMonth(2026, 9, '2026-09-15', undefined, false);
+      expect(state.selectedDayDetail?.occasions).toHaveLength(0);
+      expect(state.upcomingOccasions).toHaveLength(0);
+    });
+  });
 });

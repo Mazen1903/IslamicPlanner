@@ -1,27 +1,34 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   Modal,
   View,
   Text,
   TextInput,
   Pressable,
-  Linking,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import { TimePickerInput } from './DateTimePickerInput';
 import {
   formatReminderOffset,
-  MAX_REMINDERS_PER_TASK,
   DEFAULT_ANYTIME_REMINDER_TIME,
 } from '@/domain/notification/reminderRule';
 import {
-  notificationSchedulerAdapter,
-  type PermissionStatusResult,
-} from '@/services/notification/NotificationSchedulerAdapter';
+  ReminderHeaderBadgeIcon,
+  ReminderCardBadgeIcon,
+  ReminderEmptyStateIcon,
+  ReminderStepperMinusIcon,
+  ReminderStepperPlusIcon,
+  ReminderUnitIcon,
+  ReminderTrashIcon,
+} from './ReminderIcons';
+import type { notificationSchedulerAdapter } from '@/services/notification/NotificationSchedulerAdapter';
+
+export type ReminderUnit = 'at_time' | 'minutes' | 'hours' | 'days';
 
 export interface ReminderSheetProps {
   visible: boolean;
@@ -35,17 +42,6 @@ export interface ReminderSheetProps {
   adapter?: typeof notificationSchedulerAdapter;
 }
 
-const PRESET_OPTIONS: { offset: number; label: string }[] = [
-  { offset: 0, label: 'At time' },
-  { offset: -5, label: '5m before' },
-  { offset: -10, label: '10m before' },
-  { offset: -15, label: '15m before' },
-  { offset: -30, label: '30m before' },
-  { offset: -60, label: '1h before' },
-  { offset: -120, label: '2h before' },
-  { offset: -1440, label: '1d before' },
-];
-
 export function ReminderSheet({
   visible,
   onClose,
@@ -55,78 +51,79 @@ export function ReminderSheet({
   scheduleMode,
   reminderTimeOfDay,
   onSetReminderTimeOfDay,
-  adapter = notificationSchedulerAdapter,
 }: ReminderSheetProps) {
   const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
 
-  const [permission, setPermission] = useState<PermissionStatusResult | null>(null);
-  const [isRequesting, setIsRequesting] = useState(false);
-  const [customValue, setCustomValue] = useState('');
-  const [customUnit, setCustomUnit] = useState<'minutes' | 'hours'>('minutes');
+  const [customValue, setCustomValue] = useState('15');
+  const [customUnit, setCustomUnit] = useState<ReminderUnit>('minutes');
 
   const isAnytime = scheduleMode === 'ANYTIME_TODAY';
-  const isCapped = reminders.length >= MAX_REMINDERS_PER_TASK;
 
-  const checkPermission = useCallback(async () => {
-    try {
-      const res = await adapter.getPermissionStatus();
-      setPermission(res);
-    } catch {
-      setPermission({ canSchedule: false, canRequest: false, status: 'DENIED' });
-    }
-  }, [adapter]);
-
-  useEffect(() => {
-    if (visible) {
-      checkPermission();
-    }
-  }, [visible, checkPermission]);
-
-  const handleRequestPermission = async () => {
-    setIsRequesting(true);
-    try {
-      const res = await adapter.requestPermission();
-      setPermission(res);
-    } catch {
-      setPermission({ canSchedule: false, canRequest: false, status: 'DENIED' });
-    } finally {
-      setIsRequesting(false);
+  // Stepping logic adaptively sized per unit: 5m for minutes, 1h for hours, 1d for days
+  const getStepSize = (unit: ReminderUnit) => {
+    switch (unit) {
+      case 'minutes':
+        return 5;
+      case 'hours':
+      case 'days':
+      default:
+        return 1;
     }
   };
 
-  const handleOpenSettings = async () => {
-    try {
-      await Linking.openSettings();
-    } catch (err) {
-      console.warn('[ReminderSheet] Failed to open settings:', err);
+  const handleIncrement = () => {
+    if (customUnit === 'at_time') {
+      setCustomUnit('minutes');
+      setCustomValue('5');
+      return;
     }
+    const current = parseInt(customValue.trim(), 10) || 0;
+    const step = getStepSize(customUnit);
+    const nextVal = current + step;
+    setCustomValue(String(nextVal));
   };
 
-  const handleSelectPreset = async (offset: number) => {
-    if (isCapped || reminders.includes(offset)) return;
-
-    if (permission && !permission.canSchedule && permission.canRequest) {
-      await handleRequestPermission();
-    }
-    onAddReminder(offset);
+  const handleDecrement = () => {
+    if (customUnit === 'at_time') return;
+    const current = parseInt(customValue.trim(), 10) || 0;
+    const step = getStepSize(customUnit);
+    const nextVal = Math.max(step, current - step);
+    setCustomValue(String(nextVal));
   };
 
-  const handleAddCustom = async () => {
+  const handleTextChange = (text: string) => {
+    // Only allow numeric digits
+    const cleaned = text.replace(/[^0-9]/g, '');
+    setCustomValue(cleaned);
+  };
+
+  const handleAddCustom = () => {
+    if (customUnit === 'at_time') {
+      if (!reminders.includes(0)) {
+        onAddReminder(0);
+      }
+      return;
+    }
+
     const parsed = parseInt(customValue.trim(), 10);
-    if (Number.isNaN(parsed) || parsed <= 0 || isCapped) return;
+    if (Number.isNaN(parsed) || parsed <= 0) return;
 
-    const minutes = customUnit === 'hours' ? parsed * 60 : parsed;
-    const offset = -minutes; // before task
-
-    if (reminders.includes(offset)) return;
-
-    if (permission && !permission.canSchedule && permission.canRequest) {
-      await handleRequestPermission();
+    let minutes = parsed;
+    if (customUnit === 'hours') {
+      minutes = parsed * 60;
+    } else if (customUnit === 'days') {
+      minutes = parsed * 1440;
     }
 
-    onAddReminder(offset);
-    setCustomValue('');
+    const offset = -minutes; // before task
+    if (!reminders.includes(offset)) {
+      onAddReminder(offset);
+    }
   };
+
+  const isAddDisabled =
+    customUnit !== 'at_time' &&
+    (!customValue.trim() || parseInt(customValue.trim(), 10) <= 0);
 
   return (
     <Modal
@@ -136,7 +133,16 @@ export function ReminderSheet({
       onRequestClose={onClose}
       testID="reminder-sheet-modal"
     >
-      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={[styles.overlay, { backgroundColor: 'transparent' }]}
+      >
+        <Pressable
+          style={styles.backdrop}
+          onPress={onClose}
+          accessible={false}
+          testID="reminder-sheet-backdrop"
+        />
         <View
           accessibilityViewIsModal={true}
           style={[
@@ -144,7 +150,8 @@ export function ReminderSheet({
             shadows.elevated,
             {
               backgroundColor: colors.surface,
-              borderRadius: radii.xl,
+              borderTopLeftRadius: radii.xl,
+              borderTopRightRadius: radii.xl,
               padding: spacing.lg,
             },
           ]}
@@ -152,18 +159,21 @@ export function ReminderSheet({
         >
           {/* Header */}
           <View style={styles.headerRow}>
-            <View style={styles.titleContainer}>
-              <Text
-                accessibilityRole="header"
-                style={[typography.headlineMedium, { color: colors.textPrimary }]}
-              >
-                Task Reminders
-              </Text>
-              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                {isAnytime
-                  ? 'Set a notification time for this anytime task'
-                  : `Add up to ${MAX_REMINDERS_PER_TASK} alerts before this task`}
-              </Text>
+            <View style={styles.headerLeftContainer}>
+              <ReminderHeaderBadgeIcon size={44} style={{ marginEnd: spacing.sm }} decorative />
+              <View style={styles.titleContainer}>
+                <Text
+                  accessibilityRole="header"
+                  style={[typography.headlineMedium, { color: colors.textPrimary, fontWeight: '700' }]}
+                >
+                  Task Reminders
+                </Text>
+                <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+                  {isAnytime
+                    ? 'Set a notification time for this anytime task'
+                    : 'Set custom alerts to stay on track'}
+                </Text>
+              </View>
             </View>
 
             <Pressable
@@ -173,156 +183,166 @@ export function ReminderSheet({
               testID="reminder-sheet-close-btn"
               style={[
                 styles.closeButton,
-                { minHeight: touchTargets.min, minWidth: touchTargets.min },
+                {
+                  minHeight: touchTargets.min,
+                  minWidth: touchTargets.min,
+                  borderRadius: radii.pill,
+                  backgroundColor: colors.surfaceSecondary,
+                },
               ]}
             >
-              <Icon name="close" size={20} color={colors.textSecondary} />
+              <Icon name="close" size={20} color={colors.textSecondary} decorative />
             </Pressable>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: spacing.sm }}>
-            {/* Permission Banner */}
-            {permission && !permission.canSchedule && (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingVertical: spacing.sm }}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* ANYTIME_TODAY UI */}
+            {isAnytime ? (
               <View
                 style={[
-                  styles.noticeBox,
+                  styles.anytimeCard,
+                  shadows.card,
                   {
                     backgroundColor: colors.surfaceSecondary,
                     borderColor: colors.border,
-                    borderRadius: radii.md,
+                    borderRadius: radii.card,
                     padding: spacing.md,
                     marginBottom: spacing.md,
                   },
                 ]}
-                testID="reminder-permission-banner"
               >
-                {permission.status === 'DENIED' ? (
-                  <>
-                    <Text style={[typography.bodyMedium, { color: colors.textPrimary, marginBottom: spacing.xs }]}>
-                      Notifications are turned off
+                <View style={styles.anytimeHeaderRow}>
+                  <View
+                    style={[
+                      styles.anytimeIconBadge,
+                      { backgroundColor: colors.primaryLight, borderRadius: radii.md, marginEnd: spacing.sm },
+                    ]}
+                  >
+                    <Icon name="sun" size={24} color={colors.primary} decorative />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[typography.headlineMedium, { color: colors.textPrimary, fontSize: 16 }]}>
+                      Daily Notification Time
                     </Text>
-                    <Text style={[typography.caption, { color: colors.textSecondary, marginBottom: spacing.sm }]}>
-                      Enable notifications in device settings to receive task alerts.
+                    <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 1 }]}>
+                      Receive an alert on the day of this task
                     </Text>
-                    <Pressable
-                      onPress={handleOpenSettings}
-                      accessibilityRole="button"
-                      accessibilityLabel="Open Settings"
-                      testID="reminder-open-settings-btn"
-                      style={[
-                        styles.actionButton,
-                        {
-                          backgroundColor: colors.surface,
-                          borderColor: colors.border,
-                          borderRadius: radii.sm,
-                          paddingVertical: spacing.xs,
-                          paddingHorizontal: spacing.md,
-                        },
-                      ]}
-                    >
-                      <Icon name="settings" size="xs" color={colors.textPrimary} style={{ marginEnd: 6 }} decorative />
-                      <Text style={[typography.labelSmall, { color: colors.textPrimary }]}>Open Settings</Text>
-                    </Pressable>
-                  </>
-                ) : (
-                  <>
-                    <Text style={[typography.bodyMedium, { color: colors.textPrimary, marginBottom: spacing.xs }]}>
-                      Allow notifications?
-                    </Text>
-                    <Text style={[typography.caption, { color: colors.textSecondary, marginBottom: spacing.sm }]}>
-                      Enable notifications so you get reminded when this task is due.
-                    </Text>
-                    <Pressable
-                      onPress={handleRequestPermission}
-                      disabled={isRequesting}
-                      accessibilityRole="button"
-                      accessibilityLabel="Enable Notifications"
-                      testID="reminder-enable-notifications-btn"
-                      style={[
-                        styles.actionButton,
-                        {
-                          backgroundColor: colors.primary,
-                          borderColor: colors.primary,
-                          borderRadius: radii.sm,
-                          paddingVertical: spacing.xs,
-                          paddingHorizontal: spacing.md,
-                        },
-                      ]}
-                    >
-                      {isRequesting ? (
-                        <ActivityIndicator size="small" color={colors.textOnPrimary} />
-                      ) : (
-                        <>
-                          <Icon name="bell" size="xs" color={colors.textOnPrimary} style={{ marginEnd: 6 }} decorative />
-                          <Text style={[typography.labelSmall, { color: colors.textOnPrimary }]}>Enable Notifications</Text>
-                        </>
-                      )}
-                    </Pressable>
-                  </>
-                )}
-              </View>
-            )}
+                  </View>
+                </View>
 
-            {/* ANYTIME_TODAY UI */}
-            {isAnytime ? (
-              <View style={styles.sectionContainer}>
-                <Text style={[typography.labelMedium, { color: colors.textPrimary, marginBottom: spacing.xs }]}>
-                  Alert Time
-                </Text>
-                <TimePickerInput
-                  value={reminderTimeOfDay || DEFAULT_ANYTIME_REMINDER_TIME}
-                  onChange={(newTime) => onSetReminderTimeOfDay(newTime)}
-                  label="Notification Time"
-                  testID="anytime-reminder-time-input"
-                />
+                <View style={{ marginTop: spacing.md }}>
+                  <TimePickerInput
+                    value={reminderTimeOfDay || DEFAULT_ANYTIME_REMINDER_TIME}
+                    onChange={(newTime) => onSetReminderTimeOfDay(newTime)}
+                    label="Notification Time"
+                    testID="anytime-reminder-time-input"
+                  />
+                </View>
+
+                {reminderTimeOfDay && (
+                  <Pressable
+                    onPress={() => onSetReminderTimeOfDay(null)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear alert time"
+                    style={[styles.clearAnytimeButton, { marginTop: spacing.sm }]}
+                  >
+                    <Icon name="close" size={14} color={colors.textTertiary} style={{ marginEnd: 4 }} decorative />
+                    <Text style={[typography.caption, { color: colors.textTertiary }]}>
+                      Turn off anytime alert
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             ) : (
               /* Timed Tasks UI */
               <>
-                {/* Active Reminders List */}
+                {/* 1. Active Reminders List */}
                 <View style={styles.sectionContainer}>
                   <Text style={[typography.labelMedium, { color: colors.textPrimary, marginBottom: spacing.xs }]}>
-                    Active Reminders ({reminders.length}/{MAX_REMINDERS_PER_TASK})
+                    Active Reminders ({reminders.length})
                   </Text>
 
                   {reminders.length === 0 ? (
-                    <Text
-                      style={[typography.caption, { color: colors.textTertiary, fontStyle: 'italic', marginVertical: spacing.xs }]}
-                      testID="no-reminders-text"
+                    <View
+                      style={[
+                        styles.emptyContainer,
+                        {
+                          backgroundColor: colors.surfaceSecondary,
+                          borderColor: colors.border,
+                          borderRadius: radii.card,
+                          padding: spacing.lg,
+                        },
+                      ]}
                     >
-                      No reminders set yet. Choose a preset below.
-                    </Text>
+                      <ReminderEmptyStateIcon size={56} style={{ marginBottom: spacing.sm }} decorative />
+                      <Text
+                        style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}
+                        testID="no-reminders-text"
+                      >
+                        No reminders set yet
+                      </Text>
+                      <Text
+                        style={[
+                          typography.caption,
+                          { color: colors.textSecondary, textAlign: 'center', marginTop: 2 },
+                        ]}
+                      >
+                        Use the controls below to configure custom alerts.
+                      </Text>
+                    </View>
                   ) : (
                     <View style={styles.activeList} testID="active-reminders-list">
                       {reminders.map((offset) => (
                         <View
                           key={offset}
                           style={[
-                            styles.activeChip,
+                            styles.activeCard,
+                            shadows.card,
                             {
-                              backgroundColor: colors.primaryLight,
-                              borderColor: colors.primary,
+                              backgroundColor: colors.surface,
+                              borderColor: colors.border,
                               borderRadius: radii.md,
-                              paddingVertical: 6,
+                              paddingVertical: 10,
                               paddingHorizontal: 12,
-                              marginEnd: spacing.sm,
                               marginBottom: spacing.sm,
                             },
                           ]}
                           testID={`reminder-chip-${offset}`}
+                          accessibilityLabel={`Reminder: ${formatReminderOffset(offset)}`}
                         >
-                          <Icon name="bell" size={14} color={colors.primary} style={{ marginEnd: 6 }} decorative />
-                          <Text style={[typography.bodyMedium, { color: colors.primary, fontWeight: '600', marginEnd: 8 }]}>
-                            {formatReminderOffset(offset)}
-                          </Text>
+                          <ReminderCardBadgeIcon size={34} style={{ marginEnd: spacing.sm }} decorative />
+                          <View style={styles.activeCardTextContainer}>
+                            <Text
+                              style={[
+                                typography.bodyMedium,
+                                { color: colors.textPrimary, fontWeight: '600', fontSize: 15 },
+                              ]}
+                            >
+                              {formatReminderOffset(offset)}
+                            </Text>
+                            <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 1 }]}>
+                              {offset === 0 ? 'At time of task' : `${Math.abs(offset)} min before task`}
+                            </Text>
+                          </View>
                           <Pressable
                             onPress={() => onRemoveReminder(offset)}
                             accessibilityRole="button"
                             accessibilityLabel={`Remove reminder ${formatReminderOffset(offset)}`}
                             testID={`remove-reminder-${offset}`}
                             hitSlop={8}
+                            style={[
+                              styles.trashBtn,
+                              {
+                                minHeight: touchTargets.min,
+                                minWidth: touchTargets.min,
+                              },
+                            ]}
                           >
-                            <Icon name="close" size={14} color={colors.primary} />
+                            <ReminderTrashIcon size={18} decorative />
                           </Pressable>
                         </View>
                       ))}
@@ -330,178 +350,200 @@ export function ReminderSheet({
                   )}
                 </View>
 
-                {/* Preset Chips */}
-                {!isCapped && (
-                  <View style={styles.sectionContainer}>
-                    <Text style={[typography.labelMedium, { color: colors.textPrimary, marginBottom: spacing.xs }]}>
-                      Quick Presets
-                    </Text>
-                    <View style={styles.presetWrap}>
-                      {PRESET_OPTIONS.map((item) => {
-                        const isSelected = reminders.includes(item.offset);
+                {/* 2. Redesigned Custom Reminder Builder */}
+                <View style={styles.sectionContainer}>
+                  <Text style={[typography.labelMedium, { color: colors.textPrimary, marginBottom: spacing.xs }]}>
+                    Add Custom Reminder
+                  </Text>
+
+                  <View
+                    style={[
+                      styles.builderCard,
+                      shadows.card,
+                      {
+                        backgroundColor: colors.surfaceSecondary,
+                        borderColor: colors.border,
+                        borderRadius: radii.card,
+                        padding: spacing.md,
+                      },
+                    ]}
+                  >
+                    {/* Unit Selector Tabs */}
+                    <View style={styles.unitSelector}>
+                      {(['at_time', 'minutes', 'hours', 'days'] as const).map((unit) => {
+                        const isSelected = customUnit === unit;
+                        const label =
+                          unit === 'at_time'
+                            ? 'At time'
+                            : unit === 'minutes'
+                            ? 'min'
+                            : unit === 'hours'
+                            ? 'hours'
+                            : 'days';
+
                         return (
                           <Pressable
-                            key={item.offset}
-                            onPress={() => handleSelectPreset(item.offset)}
-                            disabled={isSelected}
+                            key={unit}
+                            onPress={() => setCustomUnit(unit)}
                             accessibilityRole="button"
-                            accessibilityLabel={`Add reminder ${item.label}`}
-                            testID={`preset-btn-${item.offset}`}
-                            style={({ pressed }) => [
-                              styles.presetChip,
+                            accessibilityState={{ selected: isSelected }}
+                            accessibilityLabel={`Unit: ${label}`}
+                            testID={`custom-unit-${unit.replace('_', '-')}`}
+                            style={[
+                              styles.unitTab,
                               {
-                                backgroundColor: isSelected
-                                  ? colors.surfaceSecondary
-                                  : pressed
-                                  ? colors.primaryLight
-                                  : colors.surface,
-                                borderColor: isSelected ? colors.border : colors.primary,
-                                borderRadius: radii.md,
-                                opacity: isSelected ? 0.5 : 1,
-                                paddingVertical: 8,
-                                paddingHorizontal: 12,
+                                backgroundColor: isSelected ? colors.primary : colors.surface,
+                                borderColor: isSelected ? colors.primary : colors.border,
+                                borderRadius: radii.pill,
+                                paddingVertical: 7,
+                                paddingHorizontal: 10,
                                 marginEnd: spacing.sm,
-                                marginBottom: spacing.sm,
                               },
                             ]}
                           >
+                            <ReminderUnitIcon
+                              unit={unit}
+                              size={14}
+                              color={isSelected ? colors.textOnPrimary : colors.textSecondary}
+                              style={{ marginEnd: 4 }}
+                              decorative
+                            />
                             <Text
                               style={[
                                 typography.labelSmall,
                                 {
-                                  color: isSelected ? colors.textTertiary : colors.primary,
-                                  fontWeight: '600',
+                                  color: isSelected ? colors.textOnPrimary : colors.textPrimary,
+                                  fontWeight: isSelected ? '700' : '500',
                                 },
                               ]}
                             >
-                              + {item.label}
+                              {label}
                             </Text>
                           </Pressable>
                         );
                       })}
                     </View>
-                  </View>
-                )}
 
-                {/* Custom Minutes Input */}
-                {!isCapped && (
-                  <View style={styles.sectionContainer}>
-                    <Text style={[typography.labelMedium, { color: colors.textPrimary, marginBottom: spacing.xs }]}>
-                      Custom Reminder
-                    </Text>
-                    <View style={styles.customRow}>
-                      <TextInput
-                        value={customValue}
-                        onChangeText={setCustomValue}
-                        placeholder="e.g. 45"
-                        placeholderTextColor={colors.textTertiary}
-                        keyboardType="number-pad"
+                    {/* Stepper & Numeric Input (hidden when "At time" selected) */}
+                    {customUnit === 'at_time' ? (
+                      <View
                         style={[
-                          styles.customInput,
-                          typography.bodyMedium,
+                          styles.atTimeNotice,
                           {
-                            color: colors.textPrimary,
-                            backgroundColor: colors.surfaceSecondary,
+                            backgroundColor: colors.surface,
                             borderColor: colors.border,
-                            borderRadius: radii.sm,
-                            paddingHorizontal: spacing.sm,
-                            paddingVertical: 8,
-                            marginEnd: spacing.sm,
-                            minWidth: 70,
+                            borderRadius: radii.md,
+                            padding: spacing.md,
+                            marginTop: spacing.md,
                           },
                         ]}
-                        testID="custom-reminder-input"
-                      />
-
-                      <View style={styles.unitSelector}>
+                      >
+                        <Icon name="bell" size={20} color={colors.primary} style={{ marginEnd: spacing.sm }} decorative />
+                        <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
+                          Alert will trigger promptly at the scheduled task time.
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={[styles.stepperContainer, { marginTop: spacing.md }]}>
+                        {/* Decrement Button */}
                         <Pressable
-                          onPress={() => setCustomUnit('minutes')}
-                          style={[
-                            styles.unitBtn,
-                            {
-                              backgroundColor: customUnit === 'minutes' ? colors.primary : colors.surfaceSecondary,
-                              borderRadius: radii.sm,
-                              paddingVertical: 8,
-                              paddingHorizontal: 10,
-                              marginEnd: 4,
-                            },
-                          ]}
-                          testID="custom-unit-minutes"
+                          onPress={handleDecrement}
+                          accessibilityRole="button"
+                          accessibilityLabel="Decrease reminder time"
+                          testID="reminder-stepper-minus-btn"
+                          hitSlop={8}
+                          style={styles.stepperPressable}
                         >
-                          <Text
-                            style={[
-                              typography.labelSmall,
-                              { color: customUnit === 'minutes' ? colors.textOnPrimary : colors.textSecondary },
-                            ]}
-                          >
-                            min
-                          </Text>
+                          <ReminderStepperMinusIcon size={44} decorative />
                         </Pressable>
 
-                        <Pressable
-                          onPress={() => setCustomUnit('hours')}
+                        {/* Direct Number Input Display */}
+                        <View
                           style={[
-                            styles.unitBtn,
+                            styles.stepperValueCard,
                             {
-                              backgroundColor: customUnit === 'hours' ? colors.primary : colors.surfaceSecondary,
-                              borderRadius: radii.sm,
-                              paddingVertical: 8,
-                              paddingHorizontal: 10,
-                              marginEnd: spacing.sm,
+                              backgroundColor: colors.surface,
+                              borderColor: colors.border,
+                              borderRadius: radii.md,
                             },
                           ]}
-                          testID="custom-unit-hours"
                         >
+                          <TextInput
+                            value={customValue}
+                            onChangeText={handleTextChange}
+                            keyboardType="number-pad"
+                            maxLength={4}
+                            accessibilityLabel="Custom reminder duration"
+                            testID="custom-reminder-input"
+                            style={[
+                              typography.headlineMedium,
+                              styles.stepperTextInput,
+                              { color: colors.textPrimary },
+                            ]}
+                          />
                           <Text
                             style={[
                               typography.labelSmall,
-                              { color: customUnit === 'hours' ? colors.textOnPrimary : colors.textSecondary },
+                              { color: colors.textSecondary, marginStart: 4 },
                             ]}
                           >
-                            hours
+                            {customUnit === 'minutes' ? 'min' : customUnit}
                           </Text>
+                        </View>
+
+                        {/* Increment Button */}
+                        <Pressable
+                          onPress={handleIncrement}
+                          accessibilityRole="button"
+                          accessibilityLabel="Increase reminder time"
+                          testID="reminder-stepper-plus-btn"
+                          hitSlop={8}
+                          style={styles.stepperPressable}
+                        >
+                          <ReminderStepperPlusIcon size={44} decorative />
                         </Pressable>
                       </View>
+                    )}
 
-                      <Pressable
-                        onPress={handleAddCustom}
-                        disabled={!customValue.trim()}
+                    {/* Add Alert Button */}
+                    <Pressable
+                      onPress={handleAddCustom}
+                      disabled={isAddDisabled}
+                      accessibilityRole="button"
+                      accessibilityLabel="Add reminder alert"
+                      testID="add-custom-reminder-btn"
+                      style={({ pressed }) => [
+                        styles.addCustomBtn,
+                        shadows.card,
+                        {
+                          backgroundColor: isAddDisabled ? colors.surfaceSecondary : colors.primary,
+                          borderColor: isAddDisabled ? colors.border : colors.primary,
+                          borderRadius: radii.md,
+                          paddingVertical: 12,
+                          marginTop: spacing.md,
+                          opacity: pressed ? 0.8 : 1,
+                        },
+                      ]}
+                    >
+                      <Text
                         style={[
-                          styles.addCustomBtn,
+                          typography.labelMedium,
                           {
-                            backgroundColor: customValue.trim() ? colors.primary : colors.surfaceSecondary,
-                            borderRadius: radii.sm,
-                            paddingVertical: 8,
-                            paddingHorizontal: 14,
-                            opacity: customValue.trim() ? 1 : 0.6,
+                            color: isAddDisabled ? colors.textTertiary : colors.textOnPrimary,
+                            fontWeight: '700',
+                            fontSize: 15,
                           },
                         ]}
-                        testID="add-custom-reminder-btn"
                       >
-                        <Text
-                          style={[
-                            typography.labelSmall,
-                            {
-                              color: customValue.trim() ? colors.textOnPrimary : colors.textTertiary,
-                              fontWeight: '700',
-                            },
-                          ]}
-                        >
-                          Add
-                        </Text>
-                      </Pressable>
-                    </View>
+                        {customUnit === 'at_time'
+                          ? '+ Add Alert (At task time)'
+                          : `+ Add Alert (${customValue || '0'} ${
+                              customUnit === 'minutes' ? 'min' : customUnit
+                            } before)`}
+                      </Text>
+                    </Pressable>
                   </View>
-                )}
-
-                {isCapped && (
-                  <Text
-                    style={[typography.caption, { color: colors.textSecondary, fontStyle: 'italic', marginTop: spacing.xs }]}
-                    testID="max-reminders-note"
-                  >
-                    You have reached the maximum limit of {MAX_REMINDERS_PER_TASK} reminders.
-                  </Text>
-                )}
+                </View>
               </>
             )}
           </ScrollView>
@@ -517,7 +559,7 @@ export function ReminderSheet({
               {
                 backgroundColor: colors.primary,
                 borderRadius: radii.md,
-                paddingVertical: 12,
+                paddingVertical: 14,
                 marginTop: spacing.md,
               },
             ]}
@@ -527,7 +569,7 @@ export function ReminderSheet({
             </Text>
           </Pressable>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -537,14 +579,27 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   sheetContainer: {
-    maxHeight: '85%',
+    maxHeight: '88%',
+    zIndex: 1,
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  headerLeftContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   titleContainer: {
     flex: 1,
@@ -554,57 +609,99 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sectionContainer: {
-    marginBottom: 16,
+    marginBottom: 18,
   },
-  noticeBox: {
+  emptyContainer: {
     borderWidth: 1,
-  },
-  actionButton: {
-    flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderWidth: 1,
+    justifyContent: 'center',
   },
   activeList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: 'column',
     marginTop: 4,
   },
-  activeChip: {
+  activeCard: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
   },
-  presetWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 4,
+  activeCardTextContainer: {
+    flex: 1,
   },
-  presetChip: {
-    borderWidth: 1,
-  },
-  customRow: {
-    flexDirection: 'row',
+  trashBtn: {
     alignItems: 'center',
-    marginTop: 4,
+    justifyContent: 'center',
   },
-  customInput: {
+  builderCard: {
     borderWidth: 1,
-    height: 40,
   },
   unitSelector: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
   },
-  unitBtn: {
+  unitTab: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 40,
+    borderWidth: 1,
+    marginBottom: 6,
+  },
+  atTimeNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  stepperContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperPressable: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperValueCard: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    marginHorizontal: 12,
+    minWidth: 110,
+  },
+  stepperTextInput: {
+    fontSize: 24,
+    fontWeight: '700',
+    textAlign: 'center',
+    minWidth: 40,
+    padding: 0,
   },
   addCustomBtn: {
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+  },
+  anytimeCard: {
+    borderWidth: 1,
+  },
+  anytimeHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  anytimeIconBadge: {
+    width: 40,
     height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearAnytimeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
   },
   doneButton: {
     alignItems: 'center',

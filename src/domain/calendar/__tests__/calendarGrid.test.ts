@@ -186,5 +186,45 @@ describe('CalendarGrid (M14 §15, §8, §9, §16)', () => {
       expect(label).toContain('Adjacent month');
       expect(label).not.toContain('tasks');
     });
+
+    it('includes major occasion in accessible label when present on in-month cells', () => {
+      const occasion = {
+        id: 'ashura',
+        name: 'Day of Ashura',
+        tier: 'MAJOR' as const,
+        group: 'CORE' as const,
+        tint: 'teal' as const,
+        fastingAllowed: true,
+        description: '10th of Muharram',
+      };
+      const label = buildCellAccessibleLabel(
+        '2026-06-25',
+        { year: 1448, month: 1, day: 10 },
+        true,
+        false,
+        false,
+        { total: 0, completed: 0, pending: 0, missed: 0 },
+        occasion
+      );
+
+      expect(label).toContain('Day of Ashura');
+      expect(label).toContain('No tasks');
+    });
+  });
+
+  describe('Islamic Occasions Grid Integration', () => {
+    it('populates majorOccasion for major dates when showOccasions is true', () => {
+      // 1 Muharram 1448 is around mid-June 2026
+      const grid = buildCalendarMonthGrid(2026, 6, '2026-06-01', '2026-06-01', hijriService, undefined, undefined, true);
+      const cellWithOccasion = grid.cells.find(c => c.isCurrentMonth && c.majorOccasion !== undefined);
+      expect(cellWithOccasion).toBeDefined();
+      expect(cellWithOccasion?.majorOccasion?.tier).toBe('MAJOR');
+    });
+
+    it('omits majorOccasion when showOccasions is false', () => {
+      const grid = buildCalendarMonthGrid(2026, 6, '2026-06-01', '2026-06-01', hijriService, undefined, undefined, false);
+      const cellsWithOccasion = grid.cells.filter(c => c.majorOccasion !== undefined);
+      expect(cellsWithOccasion).toHaveLength(0);
+    });
   });
 });

@@ -23,9 +23,9 @@ import { SettingsOptThemeMonitor } from '@/components/settings';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GRID_GAP = 8;
-// Reference (docs/appearance.jpeg, 881px wide): grid 765px, cards ~374x190 (~1.97:1).
-// Card artwork files are 480x242, so use the exact same ratio to avoid any distortion.
-const CARD_ASPECT = 480 / 242;
+// Reference: Unified natural card artwork files are 480x290 (~1.655:1).
+// Use the exact same ratio so cards display at full fidelity without distortion.
+const CARD_ASPECT = 480 / 290;
 // Initial estimate before onLayout: screen padding 12 + section padding 14 + 1px border, each side
 const INITIAL_GRID_WIDTH = SCREEN_WIDTH - 2 * (12 + 14 + 1);
 
@@ -40,13 +40,11 @@ const THEME_CARD_ASSETS: Record<string, ImageSourcePropType> = {
   samarkand_turquoise: require('../../../assets/themes/cards/samarkand_turquoise.jpg'),
   celestial_caravan: require('../../../assets/themes/cards/celestial_caravan.jpg'),
   maghrib_lantern: require('../../../assets/themes/cards/maghrib_lantern.jpg'),
-  al_aqsa_sunset: require('../../../assets/themes/cards/al_aqsa_sunset.jpg'),
 };
 
 const THEME_CATEGORY_MAP: Record<string, ThemeCategory> = {
   rawdah_emerald: 'sacred',
   sacred_tawaf: 'sacred',
-  al_aqsa_sunset: 'sacred',
   fajr_awakening: 'celestial',
   tahajjud_noor: 'celestial',
   celestial_caravan: 'celestial',

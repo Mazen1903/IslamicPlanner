@@ -50,14 +50,14 @@ describe('UpcomingSection (M14 §5)', () => {
     expect(getByTestId('upcoming-item-occ-up-2')).toBeTruthy();
   });
 
-  it('renders empty state when there are no upcoming tasks', async () => {
+  it('renders empty state when there are no upcoming tasks or occasions', async () => {
     const { getByText, queryByTestId } = await render(
       <ThemeProvider>
-        <UpcomingSection upcomingTasks={[]} hasMoreUpcoming={false} />
+        <UpcomingSection upcomingTasks={[]} upcomingOccasions={[]} hasMoreUpcoming={false} />
       </ThemeProvider>
     );
 
-    expect(getByText('No upcoming tasks for the remainder of this month')).toBeTruthy();
+    expect(getByText('No upcoming tasks or occasions for the remainder of this month')).toBeTruthy();
     expect(queryByTestId('upcoming-item-occ-up-1')).toBeNull();
   });
 
@@ -70,5 +70,33 @@ describe('UpcomingSection (M14 §5)', () => {
 
     expect(getByTestId('upcoming-more-items-indicator')).toBeTruthy();
     expect(getByText('More items this month...')).toBeTruthy();
+  });
+
+  it('interleaves upcoming Islamic occasions chronologically alongside tasks', async () => {
+    const sampleOccasions = [
+      {
+        id: 'mawlid',
+        name: 'Mawlid al-Nabi',
+        date: '2026-09-19',
+        hijriFormatted: '12 Rabi al-Awwal',
+        tint: 'green' as const,
+        suggestedTaskTitle: 'Send Salawat upon the Prophet',
+        description: 'Birth of Prophet Muhammad ﷺ',
+      },
+    ];
+
+    const { getByText, getByTestId } = await render(
+      <ThemeProvider>
+        <UpcomingSection
+          upcomingTasks={sampleItems}
+          upcomingOccasions={sampleOccasions}
+          hasMoreUpcoming={false}
+        />
+      </ThemeProvider>
+    );
+
+    expect(getByText('Mawlid al-Nabi')).toBeTruthy();
+    expect(getByText('12 Rabi al-Awwal')).toBeTruthy();
+    expect(getByTestId('upcoming-occasion-mawlid')).toBeTruthy();
   });
 });

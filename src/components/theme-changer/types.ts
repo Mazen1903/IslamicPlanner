@@ -41,6 +41,6 @@ export const DEFAULT_THEME_ITEM: ThemeGalleryItem = {
     primary: '#0F8A52',
     background: '#F9F7F2',
     surface: '#FFFFFF',
-    accent: '#D4A017',
+    accent: '#10B981',
   },
 };

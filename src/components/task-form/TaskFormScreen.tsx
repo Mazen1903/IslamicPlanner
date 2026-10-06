@@ -50,6 +50,7 @@ export interface TaskFormScreenProps {
   initialPlanningDayDate?: string;
   initialPrayerTab?: 'FAJR' | 'DHUHR' | 'ASR' | 'MAGHRIB' | 'ISHA';
   initialScope?: EditScope;
+  initialTitle?: string;
   inputProvider?: TodayTemporalInputProvider;
   orchestrator?: TaskFormOrchestrator;
   onSuccess: () => void;
@@ -66,6 +67,7 @@ export function TaskFormScreen({
   initialPlanningDayDate,
   initialPrayerTab,
   initialScope,
+  initialTitle,
   inputProvider = defaultInputProvider,
   orchestrator = taskFormOrchestrator,
   onSuccess,
@@ -128,6 +130,7 @@ export function TaskFormScreen({
       initialOccurrence,
       editScope: initialScope ?? (isRecurringSeries ? 'ALL_OCCURRENCES' : undefined),
       defaultReminderMinutes,
+      initialTitle,
     },
     createInitialFormState
   );

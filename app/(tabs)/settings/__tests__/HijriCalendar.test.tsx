@@ -50,6 +50,7 @@ describe('HijriCalendarScreen', () => {
       setHijriGlobalAdjustment: mockSetGlobalAdjustment,
       upsertHijriMonthOverride: mockUpsertOverride,
       deleteHijriMonthOverride: mockDeleteOverride,
+      setCalendarShowOccasions: jest.fn(),
       applySettingsChange: jest.fn(),
     });
 
@@ -90,6 +91,7 @@ describe('HijriCalendarScreen', () => {
         lastKnownTimezone: 'America/New_York',
         lastAutoLatitude: 40.7128,
         lastAutoLongitude: -74.006,
+        calendarShowOccasions: true,
         createdAt: '2026-09-18T00:00:00.000Z',
         updatedAt: '2026-09-18T00:00:00.000Z',
       },

@@ -112,7 +112,7 @@ export function ReschedulePrayerModal({
     >
     <View style={styles.modalRoot}>
       <Pressable
-        style={[styles.overlay, { backgroundColor: colors.overlay }]}
+        style={[styles.overlay, { backgroundColor: 'transparent' }]}
         onPress={onCancel}
         accessibilityRole="button"
         accessibilityLabel="Dismiss reschedule backdrop"

@@ -82,6 +82,7 @@ describe('OnboardingScreen Integration (F, L, C, P series tests)', () => {
     themeMode: 'SYSTEM',
     isPremium: false,
     onboardingCompleted: false,
+    calendarShowOccasions: true,
     createdAt: '2026-09-18T00:00:00.000Z',
     updatedAt: '2026-09-18T00:00:00.000Z',
     ...overrides,

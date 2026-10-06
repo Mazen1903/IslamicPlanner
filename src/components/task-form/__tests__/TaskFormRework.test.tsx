@@ -31,7 +31,7 @@ describe('Task Form Rework (All 5 Approved Phases)', () => {
   };
 
   describe('Phase 3: Reminder on MAIN view', () => {
-    it('surfaces reminder presets directly via ReminderSheet modal', async () => {
+    it('surfaces custom reminder builder via ReminderSheet modal', async () => {
       const { getByTestId, findByTestId } = await render(
         <ThemeProvider>
           <TaskFormScreen
@@ -49,15 +49,11 @@ describe('Task Form Rework (All 5 Approved Phases)', () => {
 
       // Reminder sheet should be displayed
       expect(await findByTestId('reminder-sheet')).toBeTruthy();
-      expect(getByTestId('preset-btn-0')).toBeTruthy();
-      expect(getByTestId('preset-btn--5')).toBeTruthy();
-      expect(getByTestId('preset-btn--10')).toBeTruthy();
-      expect(getByTestId('preset-btn--15')).toBeTruthy();
-      expect(getByTestId('preset-btn--30')).toBeTruthy();
-      expect(getByTestId('preset-btn--60')).toBeTruthy();
+      expect(getByTestId('custom-reminder-input')).toBeTruthy();
+      expect(getByTestId('add-custom-reminder-btn')).toBeTruthy();
 
-      // Tap 15m preset
-      await fireEvent.press(getByTestId('preset-btn--15'));
+      // Tap 15m add button (default is 15 minutes)
+      await fireEvent.press(getByTestId('add-custom-reminder-btn'));
       expect(getByTestId('reminder-chip--15')).toBeTruthy();
     });
 

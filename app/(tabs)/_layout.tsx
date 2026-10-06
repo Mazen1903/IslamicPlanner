@@ -16,6 +16,8 @@ export default function TabLayout() {
   const isOpen = useAddTaskModalStore(s => s.isOpen);
   const origin = useAddTaskModalStore(s => s.origin);
   const initialPrayer = useAddTaskModalStore(s => s.initialPrayer);
+  const initialDate = useAddTaskModalStore(s => s.initialDate);
+  const initialTitle = useAddTaskModalStore(s => s.initialTitle);
   const closeModal = useAddTaskModalStore(s => s.closeModal);
   const insets = useSafeAreaInsets();
   const coordinatorRef = useRef(new PlannerRefreshCoordinator());
@@ -133,6 +135,8 @@ export default function TabLayout() {
         visible={isOpen}
         origin={adjustedOrigin ?? defaultOrigin}
         initialPrayerTab={initialPrayer ?? undefined}
+        initialDate={initialDate}
+        initialTitle={initialTitle}
         onClose={closeModal}
         onSuccess={handleSuccess}
       />

@@ -93,7 +93,13 @@ export function CustomRecurrenceModal({
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
+      <View style={[styles.modalOverlay, { backgroundColor: 'transparent' }]}>
+        <Pressable
+          style={styles.backdrop}
+          onPress={onClose}
+          accessible={false}
+          testID="custom-recurrence-backdrop"
+        />
         <View
           accessibilityViewIsModal={true}
           style={[
@@ -431,9 +437,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   modalContent: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+    zIndex: 1,
   },
   headerRow: {
     flexDirection: 'row',

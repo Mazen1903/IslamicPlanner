@@ -34,6 +34,10 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: jest.fn(),
 }));
 
+jest.mock('expo', () => ({
+  isRunningInExpoGo: jest.fn().mockReturnValue(false),
+}));
+
 jest.mock('expo-notifications', () => ({
   cancelAllScheduledNotificationsAsync: jest.fn().mockResolvedValue(undefined),
 }));

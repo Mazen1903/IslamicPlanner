@@ -19,6 +19,12 @@ import {
   type HijriAdjustmentConfig,
   type HijriMonthNumber,
 } from '@/domain/calendar/types';
+import {
+  getOccasionsFor,
+  getMajorOccasionForGrid,
+  type Occasion,
+  type OccasionTint,
+} from '@/domain/calendar/IslamicOccasions';
 import { PlanningDayEngine } from '@/domain/planning-day/PlanningDayEngine';
 import { buildPrayerTimeline } from '@/domain/prayer/PrayerTimeline';
 import {
@@ -57,6 +63,16 @@ export interface UpcomingTaskItem {
   createdAt: string;
 }
 
+export interface UpcomingOccasionItem {
+  id: string;
+  name: string;
+  date: string; // YYYY-MM-DD
+  hijriFormatted: string;
+  tint: OccasionTint;
+  suggestedTaskTitle?: string;
+  description?: string;
+}
+
 export interface SelectedDayPrayerSection {
   prayer: Prayer;
   name: string;
@@ -71,6 +87,7 @@ export interface SelectedDayDetailModel {
   prayerSections: SelectedDayPrayerSection[]; // exactly 5 in PRAYER_ORDER
   anytimeTasks: TaskCardViewModel[]; // secondary unscheduled area
   totalTasksCount: number;
+  occasions: Occasion[];
 }
 
 export interface CalendarMonthState {
@@ -83,6 +100,7 @@ export interface CalendarMonthState {
   grid: CalendarMonthGridModel;
   selectedDayDetail: SelectedDayDetailModel | null;
   upcomingTasks: UpcomingTaskItem[];
+  upcomingOccasions: UpcomingOccasionItem[];
   hasMoreUpcoming: boolean;
   error?: string;
 }
@@ -163,7 +181,8 @@ export class CalendarMonthOrchestrator {
     year: number,
     month: number,
     selectedDateOverride?: string,
-    hijriAdjustment?: HijriAdjustmentConfig
+    hijriAdjustment?: HijriAdjustmentConfig,
+    showOccasions: boolean = true
   ): Promise<CalendarMonthState> {
     const monthStartDt = DateTime.utc(year, month, 1);
     const daysInMonth = monthStartDt.daysInMonth!;
@@ -188,7 +207,9 @@ export class CalendarMonthOrchestrator {
         civilToday,
         selectedDate,
         this.hijriService,
-        hijriAdjustment
+        hijriAdjustment,
+        undefined,
+        showOccasions
       );
 
       return {
@@ -201,6 +222,7 @@ export class CalendarMonthOrchestrator {
         grid,
         selectedDayDetail: null,
         upcomingTasks: [],
+        upcomingOccasions: [],
         hasMoreUpcoming: false,
       };
     }
@@ -292,7 +314,8 @@ export class CalendarMonthOrchestrator {
       selectedDate,
       this.hijriService,
       hijriAdjustment,
-      tasksByPlanningDay
+      tasksByPlanningDay,
+      showOccasions
     );
 
     // 6. Compute Upcoming This Month (M14 §5)
@@ -353,11 +376,40 @@ export class CalendarMonthOrchestrator {
     const hasMoreUpcoming = deduplicatedUpcomingItems.length > 50;
     const upcomingTasks = deduplicatedUpcomingItems.slice(0, 50);
 
+    // Compute upcoming Islamic occasions in visible month after currentPlanningDayKey
+    const upcomingOccasions: UpcomingOccasionItem[] = [];
+    if (showOccasions) {
+      const nextDayAfterToday = DateTime.fromISO(currentPlanningDayKey, { zone: 'utc' }).plus({ days: 1 });
+      const searchStart = nextDayAfterToday > monthStartDt ? nextDayAfterToday : monthStartDt;
+      let curr = searchStart;
+      while (curr <= monthEndDt) {
+        const dateStr = curr.toISODate()!;
+        if (dateStr > currentPlanningDayKey) {
+          const hijri = this.hijriService.toEffectiveHijri(dateStr, hijriAdjustment);
+          const major = getMajorOccasionForGrid(hijri, dateStr);
+          if (major) {
+            const hMonthName = HIJRI_MONTH_NAMES[hijri.month as HijriMonthNumber];
+            upcomingOccasions.push({
+              id: `${major.id}-${dateStr}`,
+              name: major.name,
+              date: dateStr,
+              hijriFormatted: `${hijri.day} ${hMonthName}`,
+              tint: major.tint,
+              suggestedTaskTitle: major.suggestedTaskTitle,
+              description: major.description,
+            });
+          }
+        }
+        curr = curr.plus({ days: 1 });
+      }
+    }
+
     // 7. Project Selected-Day Detail (M14 §1, §2, §3, §18)
     const selectedDayDetail = await this.projectSelectedDay(
       selectedDate,
       temporalInputs,
-      hijriAdjustment
+      hijriAdjustment,
+      showOccasions
     );
 
     return {
@@ -370,6 +422,7 @@ export class CalendarMonthOrchestrator {
       grid,
       selectedDayDetail,
       upcomingTasks,
+      upcomingOccasions,
       hasMoreUpcoming,
     };
   }
@@ -380,7 +433,8 @@ export class CalendarMonthOrchestrator {
   private async projectSelectedDay(
     selectedDate: string,
     temporalInputs: TodayTemporalInputs,
-    hijriAdjustment?: HijriAdjustmentConfig
+    hijriAdjustment?: HijriAdjustmentConfig,
+    showOccasions: boolean = true
   ): Promise<SelectedDayDetailModel> {
     const timezone = temporalInputs.params.timezone;
 
@@ -503,6 +557,10 @@ export class CalendarMonthOrchestrator {
     const hijriMonthName = HIJRI_MONTH_NAMES[hijriDate.month as HijriMonthNumber];
     const hijriFormatted = `${hijriDate.day} ${hijriMonthName} ${hijriDate.year} AH`;
 
+    const occasions = showOccasions
+      ? getOccasionsFor(hijriDate, selectedDate)
+      : [];
+
     return {
       civilDate: selectedDate,
       planningDayKey: planningDay.key,
@@ -510,6 +568,7 @@ export class CalendarMonthOrchestrator {
       prayerSections,
       anytimeTasks,
       totalTasksCount: occurrences.length,
+      occasions,
     };
   }
 }

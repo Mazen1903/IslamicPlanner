@@ -75,6 +75,7 @@ export class UserSettingsRepository {
         themeMode: patch.themeMode ?? 'SYSTEM',
         isPremium: patch.isPremium ?? false,
         onboardingCompleted: patch.onboardingCompleted ?? false,
+        calendarShowOccasions: patch.calendarShowOccasions ?? true,
         createdAt: now,
         updatedAt: now,
       });

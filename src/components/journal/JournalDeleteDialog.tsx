@@ -35,7 +35,7 @@ export function JournalDeleteDialog({
       onRequestClose={onCancel}
       testID={testID}
     >
-      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+      <View style={[styles.overlay, { backgroundColor: 'transparent' }]}>
         <Pressable style={styles.backdrop} onPress={onCancel} accessible={false} />
 
         <View

@@ -8,6 +8,7 @@ import {
 } from '@/services/CalendarMonthOrchestrator';
 import type { CalendarDayCellModel } from '@/domain/calendar/calendarGrid';
 import { useAppForeground } from './useAppForeground';
+import { useUserSettings } from './useUserSettings';
 
 export interface UseCalendarOptions {
   orchestrator?: CalendarMonthOrchestrator;
@@ -19,6 +20,9 @@ export interface UseCalendarOptions {
 export function useCalendar(options: UseCalendarOptions = {}) {
   const orchestrator = options.orchestrator ?? defaultOrchestrator;
   const orchRef = useRef(orchestrator);
+
+  const { settings } = useUserSettings();
+  const showOccasions = settings?.calendarShowOccasions ?? true;
 
   // Initial state derived from local civil date (M14 §7)
   const now = DateTime.now();
@@ -48,7 +52,13 @@ export function useCalendar(options: UseCalendarOptions = {}) {
     async (year: number, month: number, targetDate?: string) => {
       setLoading(true);
       try {
-        const result = await orchRef.current.loadMonth(year, month, targetDate);
+        const result = await orchRef.current.loadMonth(
+          year,
+          month,
+          targetDate,
+          undefined,
+          showOccasions
+        );
         setState(result);
         setVisibleMonth({ year: result.year, month: result.month });
         setSelectedDate(result.selectedDate);
@@ -67,14 +77,14 @@ export function useCalendar(options: UseCalendarOptions = {}) {
         setLoading(false);
       }
     },
-    []
+    [showOccasions]
   );
 
   // Initial mount data load
   useEffect(() => {
     let isMounted = true;
     orchRef.current
-      .loadMonth(initYear, initMonth, initDate)
+      .loadMonth(initYear, initMonth, initDate, undefined, showOccasions)
       .then(result => {
         if (isMounted) {
           setState(result);
@@ -136,6 +146,13 @@ export function useCalendar(options: UseCalendarOptions = {}) {
     loadData(today.year, today.month, today.toISODate()!);
   }, [loadData]);
 
+  const goToMonthYear = useCallback(
+    (year: number, month: number, targetDate?: string) => {
+      loadData(year, month, targetDate);
+    },
+    [loadData]
+  );
+
   const selectDate = useCallback(
     (date: string) => {
       setSelectedDate(date);
@@ -173,6 +190,7 @@ export function useCalendar(options: UseCalendarOptions = {}) {
     goToPreviousMonth,
     goToNextMonth,
     goToToday,
+    goToMonthYear,
     selectDate,
     onCellTap,
     refresh,

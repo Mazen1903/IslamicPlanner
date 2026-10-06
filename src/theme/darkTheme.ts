@@ -47,7 +47,7 @@ export const darkColors: ThemeColors = {
   shadowElevated: 'rgba(0, 0, 0, 0.5)',
 
   // Controls & Overlays
-  overlay: 'rgba(0, 0, 0, 0.6)',
+  overlay: 'transparent',
   tabInactive: '#7E90A2', // WCAG AA 5.15:1 on surface (M21)
   tabActive: '#4CAF75',
   checkboxUnchecked: '#3A3F48',

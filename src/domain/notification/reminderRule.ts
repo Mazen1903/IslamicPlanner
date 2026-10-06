@@ -37,7 +37,6 @@ export function normalizeReminderRule(
 
   // Deduplicate and sort chronologically (e.g. -60 before -15 before 0)
   const uniqueOffsets = Array.from(new Set(rawOffsets)).sort((a, b) => a - b);
-  const cappedOffsets = uniqueOffsets.slice(0, MAX_REMINDERS_PER_TASK);
 
   // Validate timeOfDay (HH:mm 24-hour format)
   let validTimeOfDay: string | undefined = undefined;
@@ -48,12 +47,12 @@ export function normalizeReminderRule(
     }
   }
 
-  if (cappedOffsets.length === 0 && !validTimeOfDay) {
+  if (uniqueOffsets.length === 0 && !validTimeOfDay) {
     return null;
   }
 
   return {
-    offsetsMinutes: cappedOffsets,
+    offsetsMinutes: uniqueOffsets,
     ...(validTimeOfDay ? { timeOfDay: validTimeOfDay } : {}),
   };
 }

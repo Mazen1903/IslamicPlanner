@@ -49,7 +49,13 @@ export function EditScopeSheet({
       transparent={true}
       onRequestClose={onCancel}
     >
-      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+      <View style={[styles.overlay, { backgroundColor: 'transparent' }]}>
+        <Pressable
+          style={styles.backdrop}
+          onPress={onCancel}
+          accessible={false}
+          testID="edit-scope-sheet-backdrop"
+        />
         <View
           accessibilityViewIsModal={true}
           style={[
@@ -129,9 +135,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   sheetContainer: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+    zIndex: 1,
   },
   headerRow: {
     flexDirection: 'row',

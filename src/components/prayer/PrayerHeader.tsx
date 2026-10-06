@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '@/theme';
 import { PRAYER_NAMES, type Prayer } from '@/constants/prayers';
 import { Icon } from '@/components/common/Icon';
@@ -39,39 +39,6 @@ export function PrayerHeader({
         <AppHeroHeader
           title="Planner"
           subtitle={effectiveDateSubtitle}
-          rightElement={
-            <Pressable
-              onPress={onPressLocation}
-              accessibilityRole="button"
-              accessibilityLabel={`Current location: ${locationName}`}
-              style={({ pressed }) => [
-                styles.locationPill,
-                {
-                  backgroundColor: pressed ? colors.surfaceSecondary : colors.surface,
-                  borderColor: colors.border,
-                  borderRadius: radii.pill,
-                },
-              ]}
-            >
-              <Icon
-                name="location"
-                size={16}
-                color={colors.primary}
-                style={{ marginEnd: spacing.xs }}
-                decorative
-              />
-              <Text style={[typography.labelMedium, styles.locationText, { color: colors.primary }]}>
-                {locationName}
-              </Text>
-              <Icon
-                name="chevron-down"
-                size={14}
-                color={colors.primary}
-                style={styles.locationChevron}
-                decorative
-              />
-            </Pressable>
-          }
           bottomElement={
             nextPrayerName && countdownDisplay ? (
               <View style={styles.countdownRow} testID="prayer-countdown">
@@ -111,21 +78,6 @@ export function PrayerHeader({
 const styles = StyleSheet.create({
   container: {
     position: 'relative',
-  },
-  locationPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  locationText: {
-    fontWeight: '700',
-    fontSize: 13,
-    marginEnd: 4,
-  },
-  locationChevron: {
-    marginTop: 1,
   },
   countdownRow: {
     flexDirection: 'row',

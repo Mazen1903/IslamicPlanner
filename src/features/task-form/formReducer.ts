@@ -15,7 +15,7 @@ import type {
 import { generateUuid } from '@/utils/uuid';
 import { parseRecurrenceRule } from '@/domain/recurrence/rruleAdapter';
 import { isoWeekday } from '@/domain/recurrence/dateUtils';
-import { getIconIdFromTags, setIconInTags } from '@/constants/taskIcons';
+import { getIconIdFromTags, setIconInTags, detectTaskIcon } from '@/constants/taskIcons';
 import { normalizeReminderRule, DEFAULT_ANYTIME_REMINDER_TIME } from '@/domain/notification/reminderRule';
 
 export interface CreateFormInitialParams {
@@ -27,6 +27,7 @@ export interface CreateFormInitialParams {
   editScope?: EditScope;
   initialStreakEnabled?: boolean;
   defaultReminderMinutes?: number | null;
+  initialTitle?: string;
 }
 
 export const DEFAULT_EXACT_DRAFT: ExactTimeDraft = {
@@ -284,7 +285,7 @@ export function createInitialFormState(params: CreateFormInitialParams): FormSta
     initialOccurrence: null,
     civilSeedDate,
     planningDayDate,
-    title: '',
+    title: params.initialTitle ?? '',
     scheduleMode,
     exactDraft,
     relativeDraft,
@@ -300,7 +301,7 @@ export function createInitialFormState(params: CreateFormInitialParams): FormSta
     notes: '',
     subtasks: [],
     tags: [],
-    icon: null,
+    icon: params.initialTitle ? detectTaskIcon(params.initialTitle) : null,
     reminders:
       params.defaultReminderMinutes !== undefined && params.defaultReminderMinutes !== null
         ? [params.defaultReminderMinutes]
@@ -311,7 +312,7 @@ export function createInitialFormState(params: CreateFormInitialParams): FormSta
         ? params.defaultReminderMinutes
         : null,
     existingReminderRule: null,
-    isDirty: false,
+    isDirty: Boolean(params.initialTitle),
     validationErrors: {},
     savePhase: 'IDLE',
   };
@@ -497,7 +498,7 @@ export function formReducer(state: FormState, action: FormAction): FormState {
       };
 
     case 'SET_REMINDERS': {
-      const reminders = action.payload.slice(0, 3).sort((a, b) => a - b);
+      const reminders = [...action.payload].sort((a, b) => a - b);
       return {
         ...state,
         reminders,
@@ -507,7 +508,7 @@ export function formReducer(state: FormState, action: FormAction): FormState {
     }
 
     case 'ADD_REMINDER': {
-      if (state.reminders.length >= 3 || state.reminders.includes(action.payload)) {
+      if (state.reminders.includes(action.payload)) {
         return state;
       }
       const updated = [...state.reminders, action.payload].sort((a, b) => a - b);

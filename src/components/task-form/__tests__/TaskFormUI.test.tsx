@@ -168,7 +168,7 @@ describe('Task Form UI Components & Accessibility (M10 §6, §11, §14, §16, §
   });
 
   describe('ReminderSheet', () => {
-    it('renders presets, active reminders, allows adding and removing offsets', async () => {
+    it('renders custom reminder builder and active reminders, allows adding and removing offsets', async () => {
       const onAdd = jest.fn();
       const onRemove = jest.fn();
       const onClose = jest.fn();
@@ -182,7 +182,7 @@ describe('Task Form UI Components & Accessibility (M10 §6, §11, §14, §16, §
         getAllScheduledNotifications: jest.fn().mockResolvedValue([]),
       };
 
-      const { getByTestId } = await render(
+      const { getByTestId, queryByTestId } = await render(
         <ThemeProvider>
           <ReminderSheet
             visible={true}
@@ -201,8 +201,14 @@ describe('Task Form UI Components & Accessibility (M10 §6, §11, §14, §16, §
       expect(getByTestId('reminder-sheet')).toBeTruthy();
       expect(getByTestId('reminder-chip--10')).toBeTruthy();
 
-      // Add preset
-      await fireEvent.press(getByTestId('preset-btn--30'));
+      // No permission banner or presets
+      expect(queryByTestId('reminder-permission-banner')).toBeNull();
+      expect(queryByTestId('preset-btn--30')).toBeNull();
+
+      // Custom reminder builder: change value and add
+      const input = getByTestId('custom-reminder-input');
+      await fireEvent.changeText(input, '30');
+      await fireEvent.press(getByTestId('add-custom-reminder-btn'));
       expect(onAdd).toHaveBeenCalledWith(-30);
 
       // Remove active reminder

@@ -53,6 +53,7 @@ describe('DayDetailTaskList (M14)', () => {
     ],
     anytimeTasks: [sampleAnytimeTask],
     totalTasksCount: 2,
+    occasions: [],
   };
 
   it('renders exactly five prayer sections in fixed canonical order (M14 §1)', async () => {

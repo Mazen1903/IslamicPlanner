@@ -52,7 +52,7 @@ describe('AppearanceScreen', () => {
     expect(mockOnModeChange).toHaveBeenCalledWith('SYSTEM');
   });
 
-  it('renders the Islamic Themes card and all 10 Islamic themes', async () => {
+  it('renders the Islamic Themes card and all 9 Islamic themes', async () => {
     const { getByTestId, getByText } = await render(
       <ThemeProvider>
         <AppearanceScreen />
@@ -72,7 +72,6 @@ describe('AppearanceScreen', () => {
       'samarkand_turquoise',
       'celestial_caravan',
       'maghrib_lantern',
-      'al_aqsa_sunset',
     ];
 
     expectedThemeIds.forEach((id) => {

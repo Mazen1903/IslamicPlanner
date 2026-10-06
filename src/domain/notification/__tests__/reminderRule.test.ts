@@ -24,10 +24,10 @@ describe('reminderRule', () => {
       expect(res).toEqual({ offsetsMinutes: [-60, -15, 0] });
     });
 
-    it(`caps offsets at MAX_REMINDERS_PER_TASK (${MAX_REMINDERS_PER_TASK})`, () => {
+    it('does not cap offsets, allowing unlimited unique reminders', () => {
       const res = normalizeReminderRule({ offsetsMinutes: [-120, -60, -30, -15, 0] });
-      expect(res?.offsetsMinutes).toHaveLength(MAX_REMINDERS_PER_TASK);
-      expect(res?.offsetsMinutes).toEqual([-120, -60, -30]);
+      expect(res?.offsetsMinutes).toHaveLength(5);
+      expect(res?.offsetsMinutes).toEqual([-120, -60, -30, -15, 0]);
     });
 
     it('parses valid timeOfDay for ANYTIME_TODAY', () => {

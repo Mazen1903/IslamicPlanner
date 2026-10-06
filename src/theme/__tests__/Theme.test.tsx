@@ -333,11 +333,10 @@ describe('Islamic Themes Registry & Provider Integration', () => {
     'samarkand_turquoise',
     'celestial_caravan',
     'maghrib_lantern',
-    'al_aqsa_sunset',
   ];
 
-  it('contains exactly 10 Islamic themes with valid metadata', () => {
-    expect(ISLAMIC_THEMES).toHaveLength(10);
+  it('contains exactly 9 Islamic themes with valid metadata', () => {
+    expect(ISLAMIC_THEMES).toHaveLength(9);
     const ids = ISLAMIC_THEMES.map(t => t.id);
     expect(ids).toEqual(expectedThemeIds);
 
@@ -359,7 +358,7 @@ describe('Islamic Themes Registry & Provider Integration', () => {
     });
   });
 
-  it('satisfies WCAG AA contrast for textPrimary on background for all 10 Islamic themes', () => {
+  it('satisfies WCAG AA contrast for textPrimary on background for all 9 Islamic themes', () => {
     ISLAMIC_THEMES.forEach(theme => {
       const ratio = getContrastRatio(theme.colors.textPrimary, theme.colors.background);
       expect(ratio).toBeGreaterThanOrEqual(4.5);

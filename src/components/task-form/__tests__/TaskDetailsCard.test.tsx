@@ -125,21 +125,40 @@ describe('TaskDetailsCard', () => {
     });
   });
 
-  it('toggles Priority between Normal and Important', async () => {
+  it('opens PrioritySheet bottom modal and updates priority to Important', async () => {
     const state = createInitialFormState({ civilSeedDate: civilToday, planningDayDate: planningDayKey });
     const dispatch = jest.fn();
 
-    const { getByTestId } = await render(
+    const { getByTestId, queryByTestId } = await render(
       <ThemeProvider>
         <TaskDetailsCard state={state} dispatch={dispatch} />
       </ThemeProvider>
     );
 
+    expect(queryByTestId('priority-sheet')).toBeNull();
     await fireEvent.press(getByTestId('priority-normal'));
+    expect(getByTestId('priority-sheet')).toBeTruthy();
+
+    await fireEvent.press(getByTestId('priority-option-important'));
     expect(dispatch).toHaveBeenCalledWith({
       type: 'SET_PRIORITY',
       payload: 'IMPORTANT',
     });
+  });
+
+  it('opens TrackStreakSheet bottom modal when Track Streak row is tapped', async () => {
+    const state = createInitialFormState({ civilSeedDate: civilToday, planningDayDate: planningDayKey });
+    const dispatch = jest.fn();
+
+    const { getByTestId, queryByTestId } = await render(
+      <ThemeProvider>
+        <TaskDetailsCard state={state} dispatch={dispatch} />
+      </ThemeProvider>
+    );
+
+    expect(queryByTestId('track-streak-sheet')).toBeNull();
+    await fireEvent.press(getByTestId('streak-option-row'));
+    expect(getByTestId('track-streak-sheet')).toBeTruthy();
   });
 
   it('handles Track Streak with Alert confirmation when repeat is NONE', async () => {
@@ -181,17 +200,20 @@ describe('TaskDetailsCard', () => {
     });
   });
 
-  it('expands Notes row and updates text', async () => {
+  it('opens NotesSheet bottom modal and updates text', async () => {
     const state = createInitialFormState({ civilSeedDate: civilToday, planningDayDate: planningDayKey });
     const dispatch = jest.fn();
 
-    const { getByTestId } = await render(
+    const { getByTestId, queryByTestId } = await render(
       <ThemeProvider>
         <TaskDetailsCard state={state} dispatch={dispatch} />
       </ThemeProvider>
     );
 
+    expect(queryByTestId('notes-sheet')).toBeNull();
     await fireEvent.press(getByTestId('details-row-notes'));
+    expect(getByTestId('notes-sheet')).toBeTruthy();
+
     const input = getByTestId('task-notes-input');
     await fireEvent.changeText(input, 'Remember to bring books');
 
@@ -200,6 +222,7 @@ describe('TaskDetailsCard', () => {
       payload: 'Remember to bring books',
     });
   });
+
 
   it('renders signature LottiePriorityBadge and LottieFlameIcon assets', async () => {
     let state = createInitialFormState({ civilSeedDate: civilToday, planningDayDate: planningDayKey });

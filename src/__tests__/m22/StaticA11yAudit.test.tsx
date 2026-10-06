@@ -64,14 +64,19 @@ describe('Group M: Targeted Static Accessibility Audits', () => {
       'src/components/task-form/CustomRecurrenceModal.tsx',
       'src/components/task-form/EditScopeSheet.tsx',
       'src/components/task-form/ExpandingAddTaskModal.tsx',
+      'src/components/task-form/NotesSheet.tsx',
+      'src/components/task-form/PrioritySheet.tsx',
       'src/components/task-form/ReminderSheet.tsx',
+      'src/components/task-form/RepeatSheet.tsx',
+      'src/components/task-form/TrackStreakSheet.tsx',
       'src/components/theme-changer/ThemePreviewModal.tsx',
       'src/components/premium/PremiumLockedInfo.tsx',
       'src/components/task/ReschedulePrayerModal.tsx',
       'app/(tabs)/settings/hijri-calendar.tsx',
+      'src/components/calendar/MonthYearPickerSheet.tsx',
     ];
 
-    expect(modalFiles.length).toBe(11);
+    expect(modalFiles.length).toBe(16);
     for (const expected of expectedModalFiles) {
       expect(modalFiles).toContain(expected);
     }
@@ -84,10 +89,15 @@ describe('Group M: Targeted Static Accessibility Audits', () => {
       'src/components/journal/JournalPrivacySheet.tsx',
       'src/components/task-form/CustomRecurrenceModal.tsx',
       'src/components/task-form/EditScopeSheet.tsx',
+      'src/components/task-form/NotesSheet.tsx',
+      'src/components/task-form/PrioritySheet.tsx',
       'src/components/task-form/ReminderSheet.tsx',
+      'src/components/task-form/RepeatSheet.tsx',
+      'src/components/task-form/TrackStreakSheet.tsx',
       'src/components/premium/PremiumLockedInfo.tsx',
       'src/components/task/ReschedulePrayerModal.tsx',
       'app/(tabs)/settings/hijri-calendar.tsx',
+      'src/components/calendar/MonthYearPickerSheet.tsx',
     ];
 
     for (const file of modalFiles) {
@@ -103,9 +113,14 @@ describe('Group M: Targeted Static Accessibility Audits', () => {
       'src/components/journal/JournalPrivacySheet.tsx',
       'src/components/task-form/CustomRecurrenceModal.tsx',
       'src/components/task-form/EditScopeSheet.tsx',
+      'src/components/task-form/NotesSheet.tsx',
+      'src/components/task-form/PrioritySheet.tsx',
       'src/components/task-form/ReminderSheet.tsx',
+      'src/components/task-form/RepeatSheet.tsx',
+      'src/components/task-form/TrackStreakSheet.tsx',
       'src/components/premium/PremiumLockedInfo.tsx',
       'app/(tabs)/settings/hijri-calendar.tsx',
+      'src/components/calendar/MonthYearPickerSheet.tsx',
     ];
 
     for (const file of modalFiles) {

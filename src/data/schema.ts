@@ -151,6 +151,9 @@ export const userSettings = sqliteTable('user_settings', {
   onboardingCompleted: integer('onboarding_completed', { mode: 'boolean' })
     .notNull()
     .default(false),
+  calendarShowOccasions: integer('calendar_show_occasions', { mode: 'boolean' })
+    .notNull()
+    .default(true),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });

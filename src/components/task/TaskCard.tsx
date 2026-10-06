@@ -510,191 +510,261 @@ export function TaskCard({
                 ? 'rgba(38, 48, 60, 0.95)'
                 : 'rgba(249, 250, 251, 0.98)'
               : isDark
-              ? 'rgba(28, 35, 43, 0.95)'
-              : 'rgba(255, 255, 255, 0.98)',
+              ? 'rgba(28, 35, 43, 0.98)'
+              : colors.surface,
             borderRadius: radii.card,
             paddingVertical: 12,
             paddingHorizontal: 14,
-            marginBottom: 0,
-            borderColor: isUnlocked ? '#10B981' : colors.border,
-            borderWidth: isUnlocked ? 2 : 1,
+            borderColor: isUnlocked
+              ? '#10B981'
+              : task.priority === 'IMPORTANT' && !isCompleted
+              ? isDark
+                ? 'rgba(239, 68, 68, 0.4)'
+                : 'rgba(239, 68, 68, 0.25)'
+              : colors.border,
+            borderWidth: isUnlocked ? 2 : task.priority === 'IMPORTANT' && !isCompleted ? 1.5 : 1,
             shadowColor: isUnlocked ? '#10B981' : '#000',
             shadowOpacity: isUnlocked ? 0.35 : 0.04,
             shadowRadius: isUnlocked ? 10 : 3,
             elevation: isUnlocked ? 10 : 2,
+            opacity: isCompleted ? 0.72 : 1,
           },
         ]}
         testID={`task-card-${task.occurrenceId}`}
       >
-      <View style={styles.mainRow}>
-        {/* Left: Checkbox */}
-        <TaskCheckbox
-          checked={isCompleted}
-          disabled={isMissed}
-          onToggle={() => {
-            if (isCompleted && onUndo) {
-              onUndo(task.occurrenceId);
-            } else if (isPending && onComplete) {
-              onComplete(task.occurrenceId);
+        <View style={styles.mainRow}>
+          {/* Left: Checkbox */}
+          <TaskCheckbox
+            checked={isCompleted}
+            disabled={isMissed}
+            onToggle={() => {
+              if (isCompleted && onUndo) {
+                onUndo(task.occurrenceId);
+              } else if (isPending && onComplete) {
+                onComplete(task.occurrenceId);
+              }
+            }}
+            accessibilityLabel={
+              isCompleted
+                ? `Undo completion for task: ${task.title}`
+                : `Complete task: ${task.title}`
             }
-          }}
-          accessibilityLabel={
-            isCompleted
-              ? `Undo completion for task: ${task.title}`
-              : `Complete task: ${task.title}`
-          }
-          testID={`checkbox-${task.occurrenceId}`}
-        />
+            testID={`checkbox-${task.occurrenceId}`}
+          />
 
-        {/* Title, Subtasks, and metadata block */}
-        <View
-          style={styles.contentContainer}
-          accessible={true}
-          accessibilityLabel={compositeLabel}
-        >
-          {/* Main content row with Icon and title/date column */}
-          <View style={styles.taskRowWithIcon}>
-            <View
+          {/* Pastel Squircle Category / Task Icon */}
+          <View
+            style={[
+              styles.taskIconBadge,
+              {
+                backgroundColor: hasCustomTaskIcon(task.icon) ? 'transparent' : category.bg,
+                borderRadius: 12,
+                marginEnd: spacing.sm,
+                opacity: isCompleted ? 0.6 : 1,
+              },
+            ]}
+            testID={`task-icon-badge-${task.occurrenceId}`}
+          >
+            <TaskCategoryIcon
+              iconId={task.icon}
+              size={hasCustomTaskIcon(task.icon) ? 36 : 20}
+              color={category.color}
+            />
+          </View>
+
+          {/* Title, Subtasks, and metadata block */}
+          <View
+            style={styles.contentContainer}
+            accessible={true}
+            accessibilityLabel={compositeLabel}
+          >
+            {/* Task Title */}
+            <Text
               style={[
-                styles.taskIconBadge,
-                { backgroundColor: hasCustomTaskIcon(task.icon) ? 'transparent' : category.bg },
+                typography.bodyLarge,
+                styles.titleText,
+                {
+                  color: isCompleted ? colors.textMuted : colors.textPrimary,
+                  textDecorationLine: isCompleted ? 'line-through' : 'none',
+                  fontSize: 15,
+                  fontWeight: '600',
+                },
               ]}
-              testID={`task-icon-badge-${task.occurrenceId}`}
+              numberOfLines={1}
             >
-              <TaskCategoryIcon
-                iconId={task.icon}
-                size={hasCustomTaskIcon(task.icon) ? 28 : 20}
-                color={category.color}
-              />
-            </View>
+              {task.title}
+            </Text>
 
-            <View style={styles.titleAndDateColumn}>
-              <Text
-                style={[
-                  typography.bodyLarge,
-                  styles.titleText,
-                  {
-                    color: isCompleted ? colors.textMuted : colors.textPrimary,
-                    textDecorationLine: isCompleted ? 'line-through' : 'none',
-                  },
-                ]}
-                numberOfLines={1}
-              >
-                {task.title}
-              </Text>
-
+            {/* Metadata Pills Row */}
+            <View style={styles.metadataRow}>
+              {/* Schedule / Prayer Pill */}
               {scheduleDisplay ? (
-                <View style={styles.scheduleRow}>
+                <View
+                  style={[
+                    styles.metaPill,
+                    {
+                      backgroundColor: isCompleted
+                        ? colors.surface
+                        : isDark
+                        ? '#14382B'
+                        : '#E8F8F0',
+                    },
+                  ]}
+                >
+                  <Icon
+                    name="clock"
+                    size={11}
+                    color={isCompleted ? colors.textMuted : isDark ? '#34D399' : '#059669'}
+                    style={{ marginEnd: 4 }}
+                    decorative
+                  />
                   <Text
                     style={[
                       typography.caption,
-                      styles.dateSubtitleText,
+                      styles.metaPillText,
                       {
-                        color: isCompleted
-                          ? colors.textMuted
-                          : isDark
-                          ? '#34D399'
-                          : '#059669',
+                        color: isCompleted ? colors.textMuted : isDark ? '#34D399' : '#059669',
                       },
                     ]}
                     numberOfLines={1}
                   >
                     {scheduleDisplay}
                   </Text>
-                  {task.isRecurring && (
-                    <View
-                      style={[
-                        styles.recurringBadge,
-                        {
-                          backgroundColor: isDark ? 'rgba(16, 185, 129, 0.18)' : '#ECFDF5',
-                          borderColor: isDark ? 'rgba(52, 211, 153, 0.35)' : '#A7F3D0',
-                        },
-                      ]}
-                      testID={`task-recurring-badge-${task.occurrenceId}`}
-                    >
-                      <Icon
-                        name="refresh"
-                        size={10}
-                        color={isDark ? '#34D399' : '#047857'}
-                        decorative
-                        style={{ marginRight: 3 }}
-                      />
-                      <Text
-                        style={[
-                          typography.caption,
-                          {
-                            color: isDark ? '#34D399' : '#047857',
-                            fontSize: 10,
-                          },
-                        ]}
-                      >
-                        Daily
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              ) : task.isRecurring ? (
-                <View style={styles.scheduleRow}>
-                  <View
-                    style={[
-                      styles.recurringBadge,
-                      {
-                        backgroundColor: isDark ? 'rgba(16, 185, 129, 0.18)' : '#ECFDF5',
-                        borderColor: isDark ? 'rgba(52, 211, 153, 0.35)' : '#A7F3D0',
-                      },
-                    ]}
-                    testID={`task-recurring-badge-${task.occurrenceId}`}
-                  >
-                    <Icon
-                      name="refresh"
-                      size={10}
-                      color={isDark ? '#34D399' : '#047857'}
-                      decorative
-                      style={{ marginRight: 3 }}
-                    />
-                    <Text
-                      style={[
-                        typography.caption,
-                        {
-                          color: isDark ? '#34D399' : '#047857',
-                          fontSize: 10,
-                        },
-                      ]}
-                    >
-                      Daily
-                    </Text>
-                  </View>
                 </View>
               ) : null}
-            </View>
-          </View>
 
-          {(task.estimatedMinutes || (isPending && overdueState.isOverdue)) ? (
-            <View style={styles.metaRow}>
+              {/* Recurring Badge Pill */}
+              {task.isRecurring && (
+                <View
+                  style={[
+                    styles.metaPill,
+                    {
+                      backgroundColor: isDark ? 'rgba(16, 185, 129, 0.18)' : '#ECFDF5',
+                      borderColor: isDark ? 'rgba(52, 211, 153, 0.35)' : '#A7F3D0',
+                    },
+                  ]}
+                  testID={`task-recurring-badge-${task.occurrenceId}`}
+                >
+                  <Icon
+                    name="refresh"
+                    size={10}
+                    color={isDark ? '#34D399' : '#047857'}
+                    style={{ marginEnd: 3 }}
+                    decorative
+                  />
+                  <Text
+                    style={[
+                      typography.caption,
+                      styles.metaPillText,
+                      {
+                        color: isDark ? '#34D399' : '#047857',
+                      },
+                    ]}
+                  >
+                    Daily
+                  </Text>
+                </View>
+              )}
+
+              {/* Subtasks Progress Pill */}
+              {task.subtasks && task.subtasks.length > 0 && (
+                <View
+                  style={[
+                    styles.metaPill,
+                    {
+                      backgroundColor: isCompleted ? colors.surface : colors.surfaceSecondary,
+                    },
+                  ]}
+                  testID={`subtasks-progress-${task.occurrenceId}`}
+                >
+                  <Icon
+                    name="checkbox"
+                    size={11}
+                    color={colors.textSecondary}
+                    style={{ marginEnd: 3 }}
+                    decorative
+                  />
+                  <Text
+                    style={[
+                      typography.caption,
+                      styles.metaPillText,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {task.subtasks.filter(s => s.isCompleted).length}/{task.subtasks.length}
+                  </Text>
+                </View>
+              )}
+
+              {/* Notes Indicator Pill */}
+              {task.notes && task.notes.trim().length > 0 && (
+                <View
+                  style={[
+                    styles.metaPill,
+                    {
+                      backgroundColor: isCompleted ? colors.surface : colors.surfaceSecondary,
+                    },
+                  ]}
+                  testID={`notes-indicator-${task.occurrenceId}`}
+                >
+                  <Icon
+                    name="document"
+                    size={11}
+                    color={colors.textSecondary}
+                    decorative
+                  />
+                </View>
+              )}
+
+              {/* Duration Pill */}
               {task.estimatedMinutes ? (
-                <View style={styles.metaItem}>
-                  <Text style={[typography.caption, { color: colors.textTertiary }]}>
+                <View
+                  style={[
+                    styles.metaPill,
+                    {
+                      backgroundColor: isCompleted ? colors.surface : colors.surfaceSecondary,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      typography.caption,
+                      styles.metaPillText,
+                      { color: colors.textTertiary },
+                    ]}
+                  >
                     {task.estimatedMinutes}m
                   </Text>
                 </View>
               ) : null}
 
+              {/* Overdue Alert Pill */}
               {isPending && overdueState.isOverdue && (
                 <View
                   style={[
-                    styles.badge,
+                    styles.metaPill,
+                    styles.overduePill,
                     {
-                      backgroundColor: colors.warning + '1A',
-                      borderColor: colors.warning,
-                      borderRadius: radii.pill,
-                      borderWidth: 1,
-                      paddingHorizontal: spacing.xs,
-                      marginLeft: 'auto',
+                      backgroundColor: colors.warning + '1E',
+                      borderColor: colors.warning + '60',
                     },
                   ]}
                   testID={`overdue-badge-${task.occurrenceId}`}
                 >
-                  <Text style={[typography.caption, { color: colors.warning, fontWeight: '700' }]}>
+                  <Icon
+                    name="alert"
+                    size={11}
+                    color={colors.warning}
+                    style={{ marginEnd: 3 }}
+                    decorative
+                  />
+                  <Text
+                    style={[
+                      typography.caption,
+                      styles.metaPillText,
+                      { color: colors.warning, fontWeight: '700' },
+                    ]}
+                  >
                     {overdueState.overdueMinutes >= 1
                       ? `${overdueState.overdueMinutes} min overdue`
                       : 'Overdue'}
@@ -702,35 +772,25 @@ export function TaskCard({
                 </View>
               )}
             </View>
-          ) : null}
+          </View>
+
+          {/* Right side indicators: Streak Flame and Priority Badge */}
+          <View style={styles.rightActions}>
+            {task.streakCount !== null && task.streakCount !== undefined && task.streakCount >= 0 && (
+              <StreakFlameBadge count={task.streakCount} size={36} testID={`streak-badge-${task.occurrenceId}`} />
+            )}
+
+            {task.priority === 'IMPORTANT' && (
+              <LottiePriorityBadge
+                size={32}
+                testID={`important-badge-${task.occurrenceId}`}
+                accessibilityLabel="Important task"
+              />
+            )}
+          </View>
         </View>
-
-        {/* Right side indicators: Streak Flame, Priority Circle & Chevron */}
-        <View style={styles.rightActions}>
-          {task.streakCount !== null && task.streakCount !== undefined && task.streakCount >= 0 && (
-            <StreakFlameBadge count={task.streakCount} size={36} testID={`streak-badge-${task.occurrenceId}`} />
-          )}
-
-          {task.priority === 'IMPORTANT' && (
-            <LottiePriorityBadge
-              size={32}
-              testID={`important-badge-${task.occurrenceId}`}
-              accessibilityLabel="Important task"
-            />
-          )}
-
-          <Icon
-            name="chevron-right"
-            size={18}
-            color={colors.textTertiary}
-            directional
-            decorative
-            style={{ marginStart: 4 }}
-          />
-        </View>
-      </View>
-    </Pressable>
-  </Animated.View>
+      </Pressable>
+    </Animated.View>
     </View>
   );
 }
@@ -774,97 +834,56 @@ const styles = StyleSheet.create({
   },
   card: {
     marginHorizontal: 16,
-    marginBottom: 0,
+    overflow: 'hidden',
   },
   mainRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  categoryCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  taskIconBadge: {
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: 6,
+    overflow: 'hidden',
   },
   contentContainer: {
     flex: 1,
-    marginStart: 4,
     justifyContent: 'center',
-  },
-  taskRowWithIcon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  taskIconBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  titleAndDateColumn: {
-    flex: 1,
-    justifyContent: 'center',
+    marginStart: 8,
+    minHeight: 44,
   },
   titleText: {
-    fontWeight: '600',
+    lineHeight: 20,
   },
-  scheduleRow: {
+  metadataRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: 6,
-    marginTop: 2,
+    marginTop: 4,
   },
-  recurringBadge: {
+  metaPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'transparent',
+  },
+  metaPillText: {
+    fontSize: 11,
+    fontWeight: '600',
+    lineHeight: 14,
+  },
+  overduePill: {
     borderWidth: 1,
-  },
-  dateSubtitleText: {
-    fontWeight: '500',
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  badge: {
-    alignSelf: 'flex-start',
-    paddingVertical: 1,
   },
   rightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginStart: 8,
-  },
-  priorityCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginEnd: 4,
-  },
-  priorityExclamation: {
-    fontSize: 13,
-    fontWeight: '900',
-    lineHeight: 16,
-  },
-  srOnly: {
-    position: 'absolute',
-    width: 0,
-    height: 0,
-    opacity: 0,
+    marginStart: 10,
+    gap: 6,
   },
 });

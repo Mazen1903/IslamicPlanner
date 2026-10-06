@@ -20,6 +20,7 @@ export interface UseSettingsMutationResult {
     days: number
   ) => Promise<SettingsMutationResult>;
   deleteHijriMonthOverride: (year: number, month: number) => Promise<SettingsMutationResult>;
+  setCalendarShowOccasions: (enabled: boolean) => Promise<SettingsMutationResult>;
   applySettingsChange: (
     patch: UserSettingsPatch,
     category: MutationCategory
@@ -115,6 +116,13 @@ export function useSettingsMutation(
     [coordinator, handleResult]
   );
 
+  const setCalendarShowOccasions = useCallback(
+    async (enabled: boolean) => {
+      return applyPresentationSettings({ calendarShowOccasions: enabled });
+    },
+    [applyPresentationSettings]
+  );
+
   const applySettingsChange = useCallback(
     async (patch: UserSettingsPatch, category: MutationCategory) => {
       setIsSaving(true);
@@ -138,6 +146,7 @@ export function useSettingsMutation(
     setHijriGlobalAdjustment,
     upsertHijriMonthOverride,
     deleteHijriMonthOverride,
+    setCalendarShowOccasions,
     applySettingsChange,
   };
 }

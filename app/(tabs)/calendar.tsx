@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   ScrollView,
   View,
   ActivityIndicator,
+  type GestureResponderEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
@@ -12,6 +13,7 @@ import { CalendarHeader } from '@/components/calendar/CalendarHeader';
 import { CalendarMonthGrid } from '@/components/calendar/CalendarMonthGrid';
 import { DayDetailTaskList } from '@/components/calendar/DayDetailTaskList';
 import { UpcomingSection } from '@/components/calendar/UpcomingSection';
+import { MonthYearPickerSheet } from '@/components/calendar/MonthYearPickerSheet';
 import { SetupRequiredState } from '@/components/today/SetupRequiredState';
 
 export default function CalendarScreen() {
@@ -22,8 +24,39 @@ export default function CalendarScreen() {
     goToPreviousMonth,
     goToNextMonth,
     goToToday,
+    goToMonthYear,
     onCellTap,
   } = useCalendar();
+
+  const [showMonthYearPicker, setShowMonthYearPicker] = useState(false);
+
+  // Horizontal swipe gesture tracking on calendar grid
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const handleTouchStart = (e: GestureResponderEvent) => {
+    touchStartX.current = e.nativeEvent.pageX;
+    touchStartY.current = e.nativeEvent.pageY;
+  };
+
+  const handleTouchEnd = (e: GestureResponderEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const dx = e.nativeEvent.pageX - touchStartX.current;
+    const dy = e.nativeEvent.pageY - touchStartY.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+
+    // Minimum swipe threshold 50px, predominantly horizontal
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx < 0) {
+        // Swipe left -> next month
+        goToNextMonth();
+      } else {
+        // Swipe right -> previous month
+        goToPreviousMonth();
+      }
+    }
+  };
 
   if (loading && !state) {
     return (
@@ -59,13 +92,16 @@ export default function CalendarScreen() {
           onPreviousMonth={goToPreviousMonth}
           onNextMonth={goToNextMonth}
           onTodayPress={goToToday}
+          onTitlePress={() => setShowMonthYearPicker(true)}
         />
 
-        {/* 4/5/6 Row Sunday-First Grid */}
-        <CalendarMonthGrid
-          grid={state.grid}
-          onCellTap={onCellTap}
-        />
+        {/* 4/5/6 Row Sunday-First Grid with Swipe Gestures */}
+        <View onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} testID="calendar-grid-swipe-wrapper">
+          <CalendarMonthGrid
+            grid={state.grid}
+            onCellTap={onCellTap}
+          />
+        </View>
 
         {/* Conditional Content: SETUP_REQUIRED vs. Task Detail */}
         {state.status === 'SETUP_REQUIRED' ? (
@@ -79,14 +115,24 @@ export default function CalendarScreen() {
               selectedDayDetail={state.selectedDayDetail}
             />
 
-            {/* Upcoming This Month Section */}
+            {/* Upcoming This Month Section with Interleaved Occasions */}
             <UpcomingSection
               upcomingTasks={state.upcomingTasks}
+              upcomingOccasions={state.upcomingOccasions}
               hasMoreUpcoming={state.hasMoreUpcoming}
             />
           </>
         )}
       </ScrollView>
+
+      {/* Month/Year Quick Jump Sheet */}
+      <MonthYearPickerSheet
+        visible={showMonthYearPicker}
+        currentYear={state.year}
+        currentMonth={state.month}
+        onSelect={(y, m) => goToMonthYear(y, m)}
+        onClose={() => setShowMonthYearPicker(false)}
+      />
     </SafeAreaView>
   );
 }

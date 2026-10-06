@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, cleanup } from '@testing-library/react-native';
 import { ThemeProvider } from '@/theme';
 import { CalendarHeader } from '../CalendarHeader';
 
@@ -11,6 +11,11 @@ describe('CalendarHeader (M14)', () => {
     onNextMonth: jest.fn(),
     onTodayPress: jest.fn(),
   };
+
+  afterEach(() => {
+    cleanup();
+    jest.clearAllMocks();
+  });
 
   it('renders Gregorian title and Hijri header span correctly', async () => {
     const { getByText, getByRole } = await render(
@@ -40,13 +45,30 @@ describe('CalendarHeader (M14)', () => {
       </ThemeProvider>
     );
 
-    fireEvent.press(getByTestId('calendar-prev-month-button'));
+    await fireEvent.press(getByTestId('calendar-prev-month-button'));
     expect(onPreviousMonth).toHaveBeenCalledTimes(1);
 
-    fireEvent.press(getByTestId('calendar-next-month-button'));
+    await fireEvent.press(getByTestId('calendar-next-month-button'));
     expect(onNextMonth).toHaveBeenCalledTimes(1);
 
-    fireEvent.press(getByTestId('calendar-today-button'));
+    await fireEvent.press(getByTestId('calendar-today-button'));
     expect(onTodayPress).toHaveBeenCalledTimes(1);
   });
+
+  it('triggers onTitlePress when header title is tapped', async () => {
+    const onTitlePress = jest.fn();
+
+    const { getByTestId } = await render(
+      <ThemeProvider>
+        <CalendarHeader
+          {...defaultProps}
+          onTitlePress={onTitlePress}
+        />
+      </ThemeProvider>
+    );
+
+    await fireEvent.press(getByTestId('calendar-month-picker-trigger'));
+    expect(onTitlePress).toHaveBeenCalledTimes(1);
+  });
 });
+

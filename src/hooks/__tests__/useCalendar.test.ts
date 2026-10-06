@@ -45,14 +45,23 @@ describe('useCalendar Hook (M14)', () => {
       ],
       anytimeTasks: [],
       totalTasksCount: 0,
+      occasions: [],
     },
     upcomingTasks: [],
+    upcomingOccasions: [],
     hasMoreUpcoming: false,
   };
 
   beforeEach(() => {
     mockOrchestrator = {
-      loadMonth: jest.fn().mockResolvedValue(mockState),
+      loadMonth: jest.fn().mockImplementation((year, month, selectedDate) =>
+        Promise.resolve({
+          ...mockState,
+          year,
+          month,
+          selectedDate: selectedDate ?? `${year}-${String(month).padStart(2, '0')}-01`,
+        })
+      ),
     } as any;
   });
 
@@ -72,7 +81,7 @@ describe('useCalendar Hook (M14)', () => {
     // Wait for initial load to resolve
     await act(async () => {});
 
-    expect(mockOrchestrator.loadMonth).toHaveBeenCalledWith(2026, 9, '2026-09-15');
+    expect(mockOrchestrator.loadMonth).toHaveBeenCalledWith(2026, 9, '2026-09-15', undefined, true);
     expect(result.current.state).toEqual(mockState);
     expect(result.current.loading).toBe(false);
   });
@@ -93,13 +102,13 @@ describe('useCalendar Hook (M14)', () => {
     await act(async () => {
       result.current.goToPreviousMonth();
     });
-    expect(mockOrchestrator.loadMonth).toHaveBeenCalledWith(2026, 8, undefined);
+    expect(mockOrchestrator.loadMonth).toHaveBeenCalledWith(2026, 8, undefined, undefined, true);
 
-    // Next month (October 2026 from August 2026)
+    // Next month (September 2026 from August 2026)
     await act(async () => {
       result.current.goToNextMonth();
     });
-    expect(mockOrchestrator.loadMonth).toHaveBeenCalledWith(2026, 10, undefined);
+    expect(mockOrchestrator.loadMonth).toHaveBeenCalledWith(2026, 9, undefined, undefined, true);
   });
 
   it('cell tap on in-month date selects date without changing month (M14 §8)', async () => {
@@ -130,7 +139,7 @@ describe('useCalendar Hook (M14)', () => {
       result.current.onCellTap(inMonthCell);
     });
 
-    expect(mockOrchestrator.loadMonth).toHaveBeenCalledWith(2026, 9, '2026-09-22');
+    expect(mockOrchestrator.loadMonth).toHaveBeenCalledWith(2026, 9, '2026-09-22', undefined, true);
   });
 
   it('filler cell tap navigates visibleMonth to target month and selects date (M14 §8)', async () => {
@@ -163,6 +172,25 @@ describe('useCalendar Hook (M14)', () => {
     });
 
     // Invariant (M14 §8): must navigate visibleMonth to August 2026, select 2026-08-30, and load August
-    expect(mockOrchestrator.loadMonth).toHaveBeenCalledWith(2026, 8, '2026-08-30');
+    expect(mockOrchestrator.loadMonth).toHaveBeenCalledWith(2026, 8, '2026-08-30', undefined, true);
+  });
+
+  it('navigates directly to arbitrary year and month via goToMonthYear', async () => {
+    const { result } = await renderHook(() =>
+      useCalendar({
+        orchestrator: mockOrchestrator,
+        initialYear: 2026,
+        initialMonth: 9,
+        initialSelectedDate: '2026-09-15',
+      })
+    );
+    await act(async () => {});
+
+    await act(async () => {
+      result.current.goToMonthYear(2027, 4);
+    });
+
+    expect(result.current.visibleMonth).toEqual({ year: 2027, month: 4 });
+    expect(mockOrchestrator.loadMonth).toHaveBeenCalledWith(2027, 4, undefined, undefined, true);
   });
 });

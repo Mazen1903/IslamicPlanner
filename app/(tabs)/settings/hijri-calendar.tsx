@@ -25,6 +25,7 @@ import {
   SettingsRow,
   SettingsStepper,
   SettingsInfoCard,
+  SettingsToggle,
 } from '@/components/settings';
 import { Button } from '@/components/common/Button';
 import { Icon } from '@/components/common/Icon';
@@ -47,6 +48,7 @@ export default function HijriCalendarScreen() {
     setHijriGlobalAdjustment,
     upsertHijriMonthOverride,
     deleteHijriMonthOverride,
+    setCalendarShowOccasions,
   } = useSettingsMutation();
 
   const [overrides, setOverrides] = useState<HijriMonthOverrideRow[]>([]);
@@ -132,6 +134,17 @@ export default function HijriCalendarScreen() {
       return 'Calculation unavailable';
     }
   }, [todayCivil, globalAdj, overrides]);
+
+  const calendarShowOccasions = settings?.calendarShowOccasions ?? true;
+
+  const handleToggleOccasions = async (newVal: boolean) => {
+    const res = await setCalendarShowOccasions(newVal);
+    if (res.status === 'SUCCESS' || res.status === 'PERSISTED_REFRESH_FAILED') {
+      await reloadSettings();
+    } else {
+      Alert.alert('Save Failed', res.error, [{ text: 'OK' }]);
+    }
+  };
 
   const handleGlobalAdjustmentChange = async (newVal: number) => {
     const res = await setHijriGlobalAdjustment(newVal);
@@ -257,7 +270,20 @@ export default function HijriCalendarScreen() {
           />
         </View>
 
-        {/* 2. GLOBAL DAY ADJUSTMENT */}
+        {/* 2. ISLAMIC OCCASIONS */}
+        <SettingsSectionHeader title="Occasions & Observances" />
+        <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <SettingsToggle
+            label="Show Islamic Occasions"
+            description="Highlight major occasions and Sunnah fasting days on the calendar"
+            value={calendarShowOccasions}
+            onValueChange={handleToggleOccasions}
+            icon="calendar-star"
+            testID="calendar-show-occasions-toggle"
+          />
+        </View>
+
+        {/* 3. GLOBAL DAY ADJUSTMENT */}
         <SettingsSectionHeader title="Global Adjustment" />
         <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <SettingsStepper
@@ -350,6 +376,12 @@ export default function HijriCalendarScreen() {
           onRequestClose={() => setModalVisible(false)}
         >
           <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
+            <Pressable
+              style={styles.backdrop}
+              onPress={() => setModalVisible(false)}
+              accessible={false}
+              testID="add-override-backdrop"
+            />
             <View
               accessibilityViewIsModal={true}
               style={[
@@ -360,6 +392,7 @@ export default function HijriCalendarScreen() {
                   shadowColor: colors.shadowElevated,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
+                  zIndex: 1,
                 },
               ]}
               testID="add-override-modal"
@@ -457,6 +490,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   modalContent: {
     width: '100%',
