@@ -12,7 +12,8 @@ import { Icon } from '@/components/common/Icon';
 export interface ReflectionCardProps {
   fieldKey: string;
   label: string;
-  emoji: string;
+  emoji?: string;
+  iconComponent?: React.ReactNode;
   subtitle: string;
   placeholder: string;
   value: string;
@@ -28,6 +29,7 @@ export function ReflectionCard({
   fieldKey,
   label,
   emoji,
+  iconComponent,
   subtitle,
   placeholder,
   value,
@@ -88,18 +90,22 @@ export function ReflectionCard({
           },
         ]}
       >
-        {/* Soft Circle Icon */}
-        <View
-          style={[
-            styles.iconBadge,
-            {
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : bgLight,
-              borderRadius: radii.pill,
-            },
-          ]}
-        >
-          <Text style={styles.badgeEmoji}>{emoji}</Text>
-        </View>
+        {/* Leading Icon Badge */}
+        {iconComponent ? (
+          iconComponent
+        ) : (
+          <View
+            style={[
+              styles.iconBadge,
+              {
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : bgLight,
+                borderRadius: radii.pill,
+              },
+            ]}
+          >
+            <Text style={styles.badgeEmoji}>{emoji}</Text>
+          </View>
+        )}
 
         {/* Title and Subtitle / Preview */}
         <View style={styles.titleColumn}>

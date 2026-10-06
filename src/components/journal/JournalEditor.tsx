@@ -3,6 +3,7 @@ import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import { JournalCard } from './JournalCard';
+import { JournalEntryHeaderBadgeIcon } from './JournalIcons';
 import { JournalSaveStatus } from './JournalSaveStatus';
 import { JournalWriteModal } from './JournalWriteModal';
 import type { SaveState } from '@/services/journal/JournalAutosaveController';
@@ -50,19 +51,7 @@ export const JournalEditor = forwardRef<JournalEditorRef, JournalEditorProps>(
 
     return (
       <JournalCard
-        icon={
-          <View
-            style={[
-              styles.iconCircle,
-              {
-                backgroundColor: isDark ? 'rgba(15, 159, 74, 0.2)' : 'rgba(15, 159, 74, 0.1)',
-                borderRadius: radii.pill,
-              },
-            ]}
-          >
-            <Text style={styles.iconCircleEmoji}>📋</Text>
-          </View>
-        }
+        icon={<JournalEntryHeaderBadgeIcon size={26} />}
         title="Today's Entry"
         testID="journal-editor-card"
         headerRight={
@@ -195,15 +184,6 @@ export const JournalEditor = forwardRef<JournalEditorRef, JournalEditorProps>(
 );
 
 const styles = StyleSheet.create({
-  iconCircle: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconCircleEmoji: {
-    fontSize: 14,
-  },
   focusModeButton: {
     flexDirection: 'row',
     alignItems: 'center',

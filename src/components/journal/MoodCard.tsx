@@ -3,6 +3,7 @@ import { Text, Pressable, StyleSheet } from 'react-native';
 import { useTheme } from '@/theme';
 import { JournalCard } from './JournalCard';
 import { MoodPicker } from './MoodPicker';
+import { JournalMoodHeaderBadgeIcon } from './JournalIcons';
 import type { MoodKey } from '@/domain/journal/types';
 
 export interface MoodCardProps {
@@ -20,7 +21,7 @@ export function MoodCard({
 
   return (
     <JournalCard
-      icon="✨"
+      icon={<JournalMoodHeaderBadgeIcon size={26} />}
       title="How is your heart today?"
       headerRight={
         selectedMood ? (

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
+import { JournalHistoryBadgeIcon } from './JournalIcons';
 import type { JournalEntryMetadata } from '@/domain/journal/types';
 
 export interface JournalHistoryRowProps {
@@ -65,18 +66,10 @@ export function JournalHistoryRow({
 
       <View style={styles.content}>
         {/* Left icon badge */}
-        <View
-          style={[
-            styles.iconBadge,
-            {
-              backgroundColor: isDark ? 'rgba(15, 159, 74, 0.2)' : 'rgba(15, 159, 74, 0.1)',
-              borderRadius: radii.pill,
-              marginEnd: spacing.md,
-            },
-          ]}
-        >
-          <Text style={styles.badgeEmoji}>📖</Text>
-        </View>
+        <JournalHistoryBadgeIcon
+          size={34}
+          style={{ marginEnd: spacing.md }}
+        />
 
         {/* Date texts */}
         <View style={styles.textContainer}>
@@ -136,15 +129,6 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  iconBadge: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeEmoji: {
-    fontSize: 18,
   },
   textContainer: {
     flex: 1,

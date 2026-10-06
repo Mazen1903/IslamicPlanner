@@ -4,7 +4,7 @@ import { MoodPicker, MOOD_OPTIONS } from '../MoodPicker';
 import { ThemeProvider } from '@/theme';
 
 describe('MoodPicker', () => {
-  it('renders all 5 mood options with labels and emojis', async () => {
+  it('renders all 5 mood options with labels and vector badges', async () => {
     await render(
       <ThemeProvider>
         <MoodPicker onSelectMood={jest.fn()} />
@@ -14,7 +14,7 @@ describe('MoodPicker', () => {
     expect(screen.getByText('How is your heart today?')).toBeTruthy();
     for (const opt of MOOD_OPTIONS) {
       expect(screen.getByText(opt.label)).toBeTruthy();
-      expect(screen.getByText(opt.emoji)).toBeTruthy();
+      expect(screen.getByTestId(`mood-badge-icon-${opt.key}`)).toBeTruthy();
     }
   });
 

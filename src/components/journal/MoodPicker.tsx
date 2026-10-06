@@ -8,6 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTheme } from '@/theme';
 import type { MoodKey, MoodOption } from '@/domain/journal/types';
+import { MoodBadgeIcon } from './JournalIcons';
 
 export const MOOD_OPTIONS: (MoodOption & { accentColor: string; bgLight: string })[] = [
   { key: 'hard', emoji: '😔', label: 'Hard', accentColor: '#E11D48', bgLight: 'rgba(225, 29, 72, 0.12)' },
@@ -87,14 +88,18 @@ function MoodItem({ item, isSelected, onPress }: MoodItemProps) {
         ]}
         testID={`mood-option-${item.key}`}
       >
-        <Text style={[styles.emoji, isSelected && styles.emojiSelected]}>{item.emoji}</Text>
+        <MoodBadgeIcon
+          moodKey={item.key}
+          size={30}
+          testID={`mood-badge-icon-${item.key}`}
+        />
         <Text
           style={[
             typography.caption,
             {
               color: isSelected ? item.accentColor : colors.textSecondary,
               fontWeight: isSelected ? '700' : '600',
-              marginTop: spacing.xxs + 1,
+              marginTop: spacing.xxs + 2,
               fontSize: 11,
               letterSpacing: 0.1,
             },
@@ -189,11 +194,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
     paddingHorizontal: 2,
-  },
-  emoji: {
-    fontSize: 24,
-  },
-  emojiSelected: {
-    transform: [{ scale: 1.05 }],
   },
 });

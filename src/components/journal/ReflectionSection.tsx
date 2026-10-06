@@ -3,6 +3,13 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '@/theme';
 import { JournalCard, SoftCircleButton } from './JournalCard';
 import { ReflectionCard } from './ReflectionCard';
+import {
+  JournalMuhasabaHeaderBadgeIcon,
+  ReflectionGratitudeBadgeIcon,
+  ReflectionWentWellBadgeIcon,
+  ReflectionTomorrowBadgeIcon,
+  ReflectionDuaBadgeIcon,
+} from './JournalIcons';
 import type { JournalReflections } from '@/domain/journal/types';
 
 export interface ReflectionSectionProps {
@@ -33,7 +40,7 @@ export function ReflectionSection({
 
   return (
     <JournalCard
-      icon="☀️"
+      icon={<JournalMuhasabaHeaderBadgeIcon size={26} />}
       title="Daily Muhasaba"
       testID={testID}
       headerRight={
@@ -85,6 +92,7 @@ export function ReflectionSection({
             fieldKey="gratitude"
             label="Gratitude"
             emoji="🤲"
+            iconComponent={<ReflectionGratitudeBadgeIcon size={34} />}
             subtitle="What are you grateful for today?"
             placeholder="What are you grateful for today?"
             value={reflections.gratitude}
@@ -99,6 +107,7 @@ export function ReflectionSection({
             fieldKey="wentWell"
             label="What Went Well"
             emoji="✅"
+            iconComponent={<ReflectionWentWellBadgeIcon size={34} />}
             subtitle="What went well today?"
             placeholder="What went well today?"
             value={reflections.wentWell}
@@ -113,6 +122,7 @@ export function ReflectionSection({
             fieldKey="improvement"
             label="For Tomorrow"
             emoji="📈"
+            iconComponent={<ReflectionTomorrowBadgeIcon size={34} />}
             subtitle="What could be better tomorrow?"
             placeholder="What could be better tomorrow?"
             value={reflections.improvement}
@@ -127,6 +137,7 @@ export function ReflectionSection({
             fieldKey="dua"
             label="Heartfelt Dua"
             emoji="🌙"
+            iconComponent={<ReflectionDuaBadgeIcon size={34} />}
             subtitle="Any prayers or duas on your heart today?"
             placeholder="Any prayers or duas on your heart today?"
             value={reflections.dua}

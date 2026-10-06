@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import { JournalCard, SoftCircleButton } from './JournalCard';
+import { JournalPromptHeaderBadgeIcon } from './JournalIcons';
 import { getDailyPrompts } from '@/constants/journalPrompts';
 
 export interface PromptDeckProps {
@@ -87,7 +88,7 @@ export function PromptDeck({
 
   return (
     <JournalCard
-      icon="✨"
+      icon={<JournalPromptHeaderBadgeIcon size={26} />}
       title="Daily Reflection Prompt"
       titleColor={colors.primaryDark}
       testID={testID}
