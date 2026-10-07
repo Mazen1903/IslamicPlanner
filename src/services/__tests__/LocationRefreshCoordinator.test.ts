@@ -43,6 +43,8 @@ describe('LocationRefreshCoordinator', () => {
       isPremium: false,
       onboardingCompleted: false,
       calendarShowOccasions: true,
+      plannerUiState: null,
+      reminderDefaults: null,
       createdAt: '2026-09-15T00:00:00.000Z',
       updatedAt: '2026-09-15T00:00:00.000Z',
     };

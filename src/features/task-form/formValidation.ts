@@ -35,7 +35,10 @@ export function validateForm(state: FormState): ValidationResult {
   }
 
   // 3. Schedule mode validation
-  switch (state.scheduleMode) {
+  if (!state.scheduleMode) {
+    errors.scheduleMode = 'Choose when this task happens';
+  } else {
+    switch (state.scheduleMode) {
     case 'EXACT_TIME': {
       const time = state.exactDraft.localTime?.trim();
       if (!time) {
@@ -77,6 +80,7 @@ export function validateForm(state: FormState): ValidationResult {
     case 'ANYTIME_TODAY':
       // No fixed schedule fields to validate
       break;
+    }
   }
 
   // 4. Recurrence validation

@@ -80,7 +80,7 @@ export class NotificationReconciliationService {
 
   /**
    * Targeted cancellation of an occurrence reminder upon task completion.
-   * Cancels all possible slots: default, r0, r1, r2, and snooze.
+   * Cancels all scheduled notifications matching occurrenceId in data or identifier.
    * Best-effort and idempotent. Never throws or fails callers.
    */
   async cancelOccurrenceReminder(occurrenceId: string): Promise<void> {
@@ -92,6 +92,19 @@ export class NotificationReconciliationService {
       } catch {
         // Best-effort; next reconcile will sweep if any residual exists
       }
+    }
+
+    try {
+      const scheduled = await this.adapter.getAllScheduledNotifications();
+      for (const item of scheduled) {
+        if (item.data?.occurrenceId === occurrenceId || item.identifier.includes(occurrenceId)) {
+          if (!slots.some(slot => buildNotificationId(occurrenceId, slot) === item.identifier)) {
+            await this.adapter.cancelScheduledNotification(item.identifier);
+          }
+        }
+      }
+    } catch {
+      // Best-effort
     }
   }
 

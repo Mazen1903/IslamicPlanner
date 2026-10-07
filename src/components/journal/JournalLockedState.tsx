@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-nati
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
+import { JournalLockBadgeIcon } from './JournalIcons';
 
 export interface JournalLockedStateProps {
   onUnlockPress: () => void;
@@ -33,17 +34,11 @@ export function JournalLockedState({
           },
         ]}
       >
-        <View
-          style={[
-            styles.iconCircle,
-            {
-              backgroundColor: isDark ? 'rgba(15, 159, 74, 0.2)' : 'rgba(15, 159, 74, 0.1)',
-              borderRadius: radii.pill,
-            },
-          ]}
-        >
-          <Icon name="lock" size={32} color={colors.primary} />
-        </View>
+        <JournalLockBadgeIcon
+          size={56}
+          style={{ marginBottom: spacing.sm }}
+          testID="journal-locked-icon"
+        />
 
         <Text
           style={[

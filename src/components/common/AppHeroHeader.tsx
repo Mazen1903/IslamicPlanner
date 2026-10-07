@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme';
+import { MinimalistMosqueSilhouette } from '@/components/hero/MinimalistMosqueSilhouette';
 
 export interface AppHeroHeaderProps {
   title: string | React.ReactNode;
@@ -78,7 +79,7 @@ export function AppHeroHeader({
           style={StyleSheet.absoluteFill}
         />
 
-        {/* Transparent Mosque / Custom Skyline Artwork */}
+        {/* Transparent Mosque / Custom Skyline Artwork (Option A: Minimalist Mosque Silhouette) */}
         <View
           style={[
             styles.mosqueArtWrapper,
@@ -87,19 +88,26 @@ export function AppHeroHeader({
           importantForAccessibility="no"
           accessibilityElementsHidden={true}
         >
-          <Image
-            source={artworkSource ?? require('../../../assets/illustrations/mosque_header_transparent.png')}
-            style={[
-              styles.mosqueArtImage,
-              artworkSize ? { width: artworkSize.width, height: artworkSize.height } : null,
-              {
-                opacity: isDark ? 0.72 : 0.88,
-              },
-            ]}
-            resizeMode="contain"
-            accessibilityRole="image"
-            accessibilityLabel="Islamic mosque illustration"
-          />
+          {artworkSource ? (
+            <Image
+              source={artworkSource}
+              style={[
+                styles.mosqueArtImage,
+                artworkSize ? { width: artworkSize.width, height: artworkSize.height } : null,
+                {
+                  opacity: isDark ? 0.72 : 0.88,
+                },
+              ]}
+              resizeMode="contain"
+              accessibilityRole="image"
+              accessibilityLabel="Islamic mosque illustration"
+            />
+          ) : (
+            <MinimalistMosqueSilhouette
+              width={artworkSize?.width ?? 220}
+              height={artworkSize?.height ?? 88}
+            />
+          )}
         </View>
 
         {/* Top Content Row: Title/Dates (Left) and Actions (Right) */}

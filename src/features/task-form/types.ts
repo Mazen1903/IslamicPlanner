@@ -1,5 +1,5 @@
 import type { Prayer } from '@/constants/prayers';
-import type { TaskPriority, TaskDefinition, TaskOccurrence, ReminderRule } from '@/domain/task/types';
+import type { TaskPriority, TaskDefinition, TaskOccurrence, ReminderRule, ReminderPrayerAnchor } from '@/domain/task/types';
 import type { ISOWeekday } from '@/domain/recurrence/types';
 
 export type ScheduleMode = 'EXACT_TIME' | 'PRAYER_RELATIVE' | 'PRAYER_WINDOW' | 'ANYTIME_TODAY';
@@ -71,7 +71,7 @@ export interface FormState {
 
   // Core fields
   title: string;
-  scheduleMode: ScheduleMode;
+  scheduleMode: ScheduleMode | null;
 
   // Preserved mode-specific drafts
   exactDraft: ExactTimeDraft;
@@ -98,6 +98,18 @@ export interface FormState {
   /** @deprecated Read-compatibility alias for the primary reminder */
   reminderMinutes: number | null;
   existingReminderRule: ReminderRule | null;
+
+  // Reminders 2.0 configuration
+  reminderEnabled: boolean;
+  reminderSoundId: string;
+  reminderCustomSoundUri: string | null;
+  reminderType: 'STANDARD' | 'ENHANCED';
+  reminderEnhancedMode: 'FULL_SCREEN' | 'PERSISTENT';
+  reminderPlaybackCount: 1 | 3 | 'LOOP';
+  reminderBackgroundId: string;
+  reminderPrayerAnchors: ReminderPrayerAnchor[];
+  reminderTimeSensitive: boolean;
+  reminderNag: boolean;
 
   // Form meta
   isDirty: boolean;
@@ -134,6 +146,17 @@ export type FormAction =
   | { type: 'SET_REMINDER_TIME_OF_DAY'; payload: string | null }
   | { type: 'SET_REMINDER_MINUTES'; payload: number | null }
   | { type: 'PREFILL_DEFAULT_REMINDER'; payload: number }
+  | { type: 'SET_REMINDER_ENABLED'; payload: boolean }
+  | { type: 'SET_REMINDER_SOUND'; payload: { soundId: string; customSoundUri?: string | null } }
+  | { type: 'SET_REMINDER_TYPE'; payload: 'STANDARD' | 'ENHANCED' }
+  | { type: 'SET_ENHANCED_MODE'; payload: 'FULL_SCREEN' | 'PERSISTENT' }
+  | { type: 'SET_REMINDER_PLAYBACK_COUNT'; payload: 1 | 3 | 'LOOP' }
+  | { type: 'SET_REMINDER_BACKGROUND'; payload: string }
+  | { type: 'SET_REMINDER_PRAYER_ANCHORS'; payload: ReminderPrayerAnchor[] }
+  | { type: 'ADD_REMINDER_PRAYER_ANCHOR'; payload: ReminderPrayerAnchor }
+  | { type: 'REMOVE_REMINDER_PRAYER_ANCHOR'; payload: { prayer: string; offsetMinutes: number } }
+  | { type: 'SET_REMINDER_TIME_SENSITIVE'; payload: boolean }
+  | { type: 'SET_REMINDER_NAG'; payload: boolean }
   | { type: 'SET_VALIDATION_ERRORS'; payload: Record<string, string> }
   | { type: 'SET_SAVE_PHASE'; payload: SavePhase }
   | { type: 'SET_EDIT_SCOPE'; payload: EditScope };

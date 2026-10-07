@@ -24,6 +24,7 @@ import {
   JournalLockedState,
   JournalPrivacySheet,
   JournalDeleteDialog,
+  UnreadableEntryCard,
 } from '@/components/journal';
 import { Icon } from '@/components/common/Icon';
 
@@ -65,6 +66,7 @@ export default function JournalScreen() {
     onPrivacySheetClose,
     onToggleLock,
     onRetryLoad,
+    onResetCorruptedEntry,
   } = useJournal();
 
   // Prompt CTA handler: appends quoted prompt to body without overwriting and opens Focus Mode
@@ -177,6 +179,19 @@ export default function JournalScreen() {
           <Text style={[typography.labelLarge, { color: colors.textOnPrimary }]}>Retry</Text>
         </Pressable>
       </SafeAreaView>
+    );
+  }
+
+  // 4b. Unreadable Entry (corrupted or lost key for a specific entry)
+  if (mode === 'UNREADABLE_ENTRY') {
+    return (
+      <UnreadableEntryCard
+        dayKey={activePlanningDayKey ?? pinnedPlanningDayKey ?? ''}
+        errorMessage={loadError}
+        onResetEntry={onResetCorruptedEntry}
+        onOpenHistory={onHistoryOpen}
+        onRetry={onRetryLoad}
+      />
     );
   }
 

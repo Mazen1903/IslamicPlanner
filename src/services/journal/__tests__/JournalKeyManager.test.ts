@@ -114,4 +114,22 @@ describe('JournalKeyManager', () => {
       expect(err.message).not.toMatch(/[0-9a-f]{64}/i);
     }
   });
+
+  it('JK-08: Near-concurrent getOrCreateKey invocations deduplicate to single in-flight generation', async () => {
+    const [k1, k2] = await Promise.all([
+      manager.getOrCreateKey(),
+      manager.getOrCreateKey(),
+    ]);
+
+    expect(k1).toBe(k2);
+    expect(storage.setItemCalls).toBe(1);
+  });
+
+  it('JK-09: Throws JournalKeyLostError when storage is empty but encrypted entries exist', async () => {
+    const guardedManager = new JournalKeyManager(storage, async () => true);
+
+    await expect(guardedManager.getOrCreateKey()).rejects.toThrow();
+    // Verify it did not silently generate a new key and overwrite
+    expect(storage.setItemCalls).toBe(0);
+  });
 });

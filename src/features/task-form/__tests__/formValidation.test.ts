@@ -105,9 +105,22 @@ describe('formValidation (M10)', () => {
     expect(res.isValid).toBe(true);
   });
 
+  it('rejects unselected schedule mode', () => {
+    let state = createInitialFormState({ civilSeedDate: civilDate, planningDayDate: planningDayKey });
+    state = formReducer(state, { type: 'SET_TITLE', payload: 'Valid Title' });
+    let res = validateForm(state);
+    expect(res.isValid).toBe(false);
+    expect(res.errors.scheduleMode).toBe('Choose when this task happens');
+
+    state = formReducer(state, { type: 'SET_SCHEDULE_MODE', payload: 'EXACT_TIME' });
+    res = validateForm(state);
+    expect(res.isValid).toBe(true);
+  });
+
   it('validates Custom Recurrence interval and days', () => {
     let state = createInitialFormState({ civilSeedDate: civilDate, planningDayDate: planningDayKey });
     state = formReducer(state, { type: 'SET_TITLE', payload: 'Recur Task' });
+    state = formReducer(state, { type: 'SET_SCHEDULE_MODE', payload: 'EXACT_TIME' });
     state = formReducer(state, { type: 'SET_RECURRENCE_PRESET', payload: 'CUSTOM' });
     state = formReducer(state, { type: 'SET_RECURRENCE_CALENDAR', payload: 'GREGORIAN' });
 

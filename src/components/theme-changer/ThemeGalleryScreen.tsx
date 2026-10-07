@@ -13,6 +13,11 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme, type ThemeMode } from '@/theme';
 import { Icon } from '@/components/common/Icon';
+import { AppBackButton } from '@/components/common/AppBackButton';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { isFreeTheme } from '@/domain/entitlement/freeTier';
+import { usePremiumGate } from '@/hooks/usePremiumGate';
+import { PaywallSheet } from '@/components/premium/PaywallSheet';
 import {
   DEFAULT_THEME_ITEM,
   THEME_CATEGORIES,
@@ -73,6 +78,7 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
 
   const [selectedCategory, setSelectedCategory] = useState<ThemeCategory>('all');
   const [gridWidth, setGridWidth] = useState<number>(INITIAL_GRID_WIDTH);
+  const { gate, paywallVisible, closePaywall, onPurchaseSuccess, isPremium } = usePremiumGate();
   const cardWidth = Math.floor((gridWidth - GRID_GAP) / 2);
   const cardHeight = Math.round(cardWidth / CARD_ASPECT);
   const cardSize = { width: cardWidth, height: cardHeight };
@@ -124,7 +130,11 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
       if (islamicThemeId === item.id) {
         setIslamicThemeId(null);
       } else {
-        setIslamicThemeId(item.id);
+        if (isFreeTheme(item.id)) {
+          setIslamicThemeId(item.id);
+        } else {
+          gate('ISLAMIC_THEMES_EXTENDED', () => setIslamicThemeId(item.id));
+        }
       }
     }
   };
@@ -159,28 +169,12 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
       <View style={styles.headerContainer} testID="section-header-appearance">
         <View style={styles.headerTopRow}>
           {/* Squircle Back Button */}
-          <Pressable
+          <AppBackButton
             onPress={handleBack}
-            accessibilityRole="button"
             accessibilityLabel="Back"
-            hitSlop={12}
-            style={[
-              styles.backButton,
-              {
-                backgroundColor: isDark
-                  ? 'rgba(255, 255, 255, 0.08)'
-                  : '#EEF2F6',
-              },
-            ]}
             testID="theme-back-button"
-          >
-            <Icon
-              name="chevron-left"
-              size={20}
-              color={colors.textPrimary}
-              decorative
-            />
-          </Pressable>
+            size={38}
+          />
 
           {/* Mosque Line-Art Illustration */}
           <Image
@@ -487,6 +481,13 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
                         </View>
                       )}
 
+                      {/* Locked Crown Badge for Extended Themes */}
+                      {!isSelected && item.id !== 'default' && !isFreeTheme(item.id) && !isPremium && (
+                        <View style={[styles.gridCrownBadge, { backgroundColor: colors.surface }]}>
+                          <MaterialCommunityIcons name="crown" size={12} color={colors.primary} />
+                        </View>
+                      )}
+
                       {/* Hidden accessibility & test assertions */}
                       <Text style={styles.hiddenTestText}>{item.name}</Text>
                     </Pressable>
@@ -506,6 +507,14 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
           )}
         </View>
       </ScrollView>
+
+      {/* Interactive Paywall Sheet */}
+      <PaywallSheet
+        visible={paywallVisible}
+        onClose={closePaywall}
+        onSuccess={onPurchaseSuccess}
+        gatedFeature="ISLAMIC_THEMES_EXTENDED"
+      />
     </SafeAreaView>
   );
 }
@@ -702,6 +711,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    zIndex: 2,
+  },
+  gridCrownBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
     borderColor: '#FFFFFF',
     zIndex: 2,
   },

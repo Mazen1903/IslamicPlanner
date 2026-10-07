@@ -254,6 +254,37 @@ export class JournalRepository {
       updatedAt: r.updatedAt,
     }));
   }
+
+  /**
+   * Returns count of existing journal entries.
+   */
+  async count(tx?: any): Promise<number> {
+    const db = this.getDb(tx);
+    const rows = db.select({ id: journalEntries.id }).from(journalEntries).all();
+    return rows ? rows.length : 0;
+  }
+
+  /**
+   * Deletes a journal entry row by its planningDayKey.
+   * Returns true if deleted, false if not found.
+   */
+  async deleteByPlanningDayKey(planningDayKey: string, tx?: any): Promise<boolean> {
+    return runInTransaction(async (activeTx) => {
+      const existing = activeTx
+        .select({ id: journalEntries.id })
+        .from(journalEntries)
+        .where(eq(journalEntries.planningDayKey, planningDayKey))
+        .limit(1)
+        .all();
+
+      if (!existing || existing.length === 0) {
+        return false;
+      }
+
+      activeTx.delete(journalEntries).where(eq(journalEntries.planningDayKey, planningDayKey)).run();
+      return true;
+    }, tx);
+  }
 }
 
 export const journalRepository = new JournalRepository();

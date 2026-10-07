@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
+import { AppBackButton } from '@/components/common/AppBackButton';
 
 interface TaskHeaderBannerProps {
   title: string;
@@ -33,18 +34,24 @@ export function TaskHeaderBanner({
       <View style={styles.contentRow}>
         {/* Left: Back button, Title & Subtitle */}
         <View style={styles.leftColumn}>
-          <Pressable
+          <AppBackButton
             onPress={onBack}
-            accessibilityRole="button"
             accessibilityLabel="Go back"
+            directional
             testID={backTestID}
             style={styles.backButton}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Icon name="arrow-left" size={24} color={colors.primary} directional />
-          </Pressable>
+          />
 
-          <Text style={[typography.headlineLarge, styles.title, { color: colors.textPrimary }]}>
+          <Text
+            numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+            style={[
+              typography.headlineLarge,
+              styles.title,
+              { color: colors.textPrimary, lineHeight: 40, paddingBottom: 2 },
+            ]}
+          >
             {title}
           </Text>
 

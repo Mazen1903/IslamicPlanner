@@ -58,6 +58,8 @@ export function SettingsGridTile({
           { color: colors.textPrimary },
         ]}
         numberOfLines={2}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
       >
         {label}
       </Text>

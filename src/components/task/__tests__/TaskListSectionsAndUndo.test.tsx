@@ -9,8 +9,12 @@ import { taskOccurrenceRepository } from '@/data/repositories/TaskOccurrenceRepo
 import { StreakRepository } from '@/data/repositories/StreakRepository';
 import { createTestDatabase, cleanupTestDatabase } from '@/data/__tests__/testDbHelper';
 import type { PrayerTabViewModel, TaskCardViewModel } from '@/services/types';
+import { usePlannerUiStore } from '@/stores/usePlannerUiStore';
 
 describe('TaskList Sections and Undo Functionality', () => {
+  beforeEach(() => {
+    usePlannerUiStore.getState().resetToDefaults();
+  });
   describe('Backend / Domain: uncompleteTask & Streak Revert', () => {
     let engine: TaskEngine;
     let streakRepo: StreakRepository;
@@ -378,11 +382,29 @@ describe('TaskList Sections and Undo Functionality', () => {
         anytimeTasks: [],
       };
 
+      const upcomingTomorrowTask: TaskCardViewModel = {
+        occurrenceId: 'occ-quran-tomorrow',
+        taskDefinitionId: 'def-quran-tomorrow',
+        title: 'Tomorrow Quran',
+        scheduleType: 'PRAYER_RELATIVE',
+        scheduleLabel: 'Tomorrow Fajr',
+        priority: 'NORMAL',
+        status: 'PENDING',
+        estimatedMinutes: 20,
+        sortInstant: '2026-09-16T05:30:00.000Z',
+        createdAt: '2026-09-15T08:00:00.000Z',
+        completedAt: null,
+        missedAt: null,
+        dueAt: null,
+        expiresAt: null,
+      };
+
       await render(
         <ThemeProvider>
           <TaskList
             tab={activeTab}
             allTabs={[activeTab, asrTab, maghribTab]}
+            upcomingDaysTasks={[upcomingTomorrowTask]}
             selectedPrayer="DHUHR"
             currentPrayer="DHUHR"
             nextPrayer="ASR"
@@ -392,12 +414,10 @@ describe('TaskList Sections and Undo Functionality', () => {
         </ThemeProvider>
       );
 
-      // Today should have 1 task (Recite Tasbeeh)
-      expect(screen.getByText('Today (1)')).toBeTruthy();
+      // Today should contain all 4 tasks scheduled for today across all prayer tabs
+      expect(screen.getByText('Today (4)')).toBeTruthy();
 
-      // Upcoming should have only 1 task (Review Quran from Asr), NOT 3 tasks:
-      // - "Recite Tasbeeh" is excluded because it's already active in Today
-      // - "Review Quran" is deduplicated across Asr & Maghrib to only show the next upcoming one
+      // Upcoming should contain tasks from upcoming future days (1 task)
       expect(screen.getByText('Upcoming (1)')).toBeTruthy();
     });
 

@@ -192,6 +192,7 @@ describe('TaskFormOrchestrator & Two-Phase Save Contract (M10)', () => {
         planningDayDate: '2026-09-15',
       });
       state = formReducer(state, { type: 'SET_TITLE', payload: 'Double Tap Task' });
+      state = formReducer(state, { type: 'SET_SCHEDULE_MODE', payload: 'EXACT_TIME' });
 
       // Start first save
       const p1 = orchestrator.submit(state);

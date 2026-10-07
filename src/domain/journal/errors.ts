@@ -42,3 +42,18 @@ export class JournalKeyError extends JournalError {
     this.name = 'JournalKeyError';
   }
 }
+
+/**
+ * Thrown when the stored encryption key is lost or missing while encrypted journal entries exist in the database.
+ * Prevents silently generating a new key that would orphan/corrupt existing entries.
+ */
+export class JournalKeyLostError extends JournalError {
+  constructor(
+    message = 'Journal encryption key is missing or invalid while encrypted entries exist',
+    options?: { cause?: unknown }
+  ) {
+    super(message, options);
+    this.name = 'JournalKeyLostError';
+  }
+}
+

@@ -15,6 +15,18 @@ jest.mock('expo-router', () => ({
   })),
 }));
 
+let mockIsPremium = false;
+jest.mock('@/hooks/useEntitlement', () => ({
+  useEntitlement: () => ({
+    isLoading: false,
+    isPremium: mockIsPremium,
+    tier: mockIsPremium ? 'PREMIUM' : 'FREE',
+    hasFeature: () => mockIsPremium,
+    error: null,
+    reload: jest.fn().mockResolvedValue(undefined),
+  }),
+}));
+
 describe('ThemeGalleryScreen', () => {
   it('renders Appearance header, Mode card with options, and Islamic Themes 2-column grid without pure color', async () => {
     await render(
@@ -69,7 +81,8 @@ describe('ThemeGalleryScreen', () => {
     });
   });
 
-  it('directly applies Islamic theme when a theme card is tapped', async () => {
+  it('directly applies Islamic theme when a theme card is tapped (premium)', async () => {
+    mockIsPremium = true;
     await render(
       <ThemeProvider>
         <ThemeGalleryScreen />
@@ -82,6 +95,23 @@ describe('ThemeGalleryScreen', () => {
 
     expect(screen.getByTestId('active-theme-banner')).toBeTruthy();
     expect(screen.getByText(`Active: ${ISLAMIC_THEMES[0].name}`)).toBeTruthy();
+    expect(screen.queryByTestId('paywall-sheet')).toBeNull();
+  });
+
+  it('opens the paywall instead of applying an Islamic theme for free users', async () => {
+    mockIsPremium = false;
+    await render(
+      <ThemeProvider>
+        <ThemeGalleryScreen />
+      </ThemeProvider>
+    );
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId(`islamic-theme-${ISLAMIC_THEMES[0].id}`));
+    });
+
+    expect(screen.getByTestId('paywall-sheet')).toBeTruthy();
+    expect(screen.queryByText(`Active: ${ISLAMIC_THEMES[0].name}`)).toBeNull();
   });
 
   it('renders Appearance header, mode section, and islamic themes section', async () => {

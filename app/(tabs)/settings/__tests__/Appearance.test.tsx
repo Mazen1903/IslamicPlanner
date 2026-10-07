@@ -10,6 +10,18 @@ jest.mock('expo-router', () => ({
   })),
 }));
 
+let mockIsPremium = false;
+jest.mock('@/hooks/useEntitlement', () => ({
+  useEntitlement: () => ({
+    isLoading: false,
+    isPremium: mockIsPremium,
+    tier: mockIsPremium ? 'PREMIUM' : 'FREE',
+    hasFeature: () => mockIsPremium,
+    error: null,
+    reload: jest.fn().mockResolvedValue(undefined),
+  }),
+}));
+
 describe('AppearanceScreen', () => {
   it('renders SYSTEM, LIGHT, and DARK options', async () => {
     await render(
@@ -84,7 +96,8 @@ describe('AppearanceScreen', () => {
     expect(getByText('Andalusian Oasis')).toBeTruthy();
   });
 
-  it('allows selecting an Islamic theme and displays its tagline banner', async () => {
+  it('allows selecting an Islamic theme and displays its tagline banner (premium)', async () => {
+    mockIsPremium = true;
     const mockOnIslamicChange = jest.fn();
 
     const { getByTestId, findByText } = await render(
@@ -109,6 +122,24 @@ describe('AppearanceScreen', () => {
       fireEvent.press(getByTestId('islamic-theme-fajr_awakening'));
     });
     expect(mockOnIslamicChange).toHaveBeenCalledWith(null);
+  });
+
+  it('opens the paywall instead of applying an Islamic theme for free users', async () => {
+    mockIsPremium = false;
+    const mockOnIslamicChange = jest.fn();
+
+    const { getByTestId } = await render(
+      <ThemeProvider onIslamicThemeChange={mockOnIslamicChange}>
+        <AppearanceScreen />
+      </ThemeProvider>
+    );
+
+    await act(async () => {
+      fireEvent.press(getByTestId('islamic-theme-fajr_awakening'));
+    });
+
+    expect(mockOnIslamicChange).not.toHaveBeenCalled();
+    expect(getByTestId('paywall-sheet')).toBeTruthy();
   });
 });
 

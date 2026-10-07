@@ -67,15 +67,45 @@ export interface HijriRecurrenceData {
   description?: string;
 }
 
+export interface ReminderPrayerAnchor {
+  prayer: 'FAJR' | 'DHUHR' | 'ASR' | 'MAGHRIB' | 'ISHA';
+  offsetMinutes: number; // e.g. 0 = at Adhan, 15 = 15m after Adhan, -10 = 10m before
+}
+
+export interface ReminderRuleV2 {
+  version: 2;
+  enabled: boolean;
+  offsetsMinutes: number[]; // negative = before, positive = after, 0 = at time
+  prayerAnchors?: ReminderPrayerAnchor[]; // "at Adhan" etc.
+  timeOfDay?: string; // anytime tasks
+  type: 'STANDARD' | 'ENHANCED';
+  enhancedMode?: 'FULL_SCREEN' | 'PERSISTENT';
+  soundId: string; // 'default' | bundled id | 'custom:<uri>'
+  playbackCount?: 1 | 3 | 'LOOP';
+  backgroundId?: string;
+  timeSensitive?: boolean; // iOS
+  nag?: { everyMinutes: number; maxTimes: number };
+}
+
 export interface ReminderRule {
+  version?: 1 | 2;
+  enabled?: boolean;
   /**
-   * Minutes relative to anchor: negative = before anchor, 0 = at time, positive = after. Max 3.
+   * Minutes relative to anchor: negative = before anchor, 0 = at time, positive = after.
    */
   offsetsMinutes?: number[];
+  prayerAnchors?: ReminderPrayerAnchor[];
   /**
    * 'HH:mm' 24h format (e.g. '09:00') — used when scheduleType is ANYTIME_TODAY.
    */
   timeOfDay?: string;
+  type?: 'STANDARD' | 'ENHANCED';
+  enhancedMode?: 'FULL_SCREEN' | 'PERSISTENT';
+  soundId?: string;
+  playbackCount?: 1 | 3 | 'LOOP';
+  backgroundId?: string;
+  timeSensitive?: boolean;
+  nag?: { everyMinutes: number; maxTimes: number };
   /**
    * @deprecated Legacy single offset in minutes. Preserved for backwards compatibility with existing rows.
    */

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, Dimensions, Animated } from 'react-n
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { Icon, type IconName } from '@/components/common/Icon';
-import { NavHomeIcon, NavPlannerIcon, NavCalendarIcon, NavLibraryIcon, NavMoreIcon } from '@/components/settings/SettingsIcons';
+import { PlannerNavIcon, CalendarNavIcon, JournalNavIcon, MoreNavIcon } from './navIcons';
 import { useAddTaskModalStore, type FabOrigin } from '@/stores/useAddTaskModalStore';
 
 export interface BottomNavBarRoute {
@@ -76,7 +76,22 @@ export function BottomNavBar(props: BottomNavBarProps) {
   const indicatorWidth = useRef(new Animated.Value(0)).current;
   const indicatorHeight = useRef(new Animated.Value(0)).current;
   const indicatorOpacity = useRef(new Animated.Value(0)).current;
+  const iconScale = useRef(new Animated.Value(1)).current;
   const isInitializedRef = useRef(false);
+  const prevIndexRef = useRef(activeIndex);
+
+  useEffect(() => {
+    if (prevIndexRef.current !== activeIndex) {
+      prevIndexRef.current = activeIndex;
+      iconScale.setValue(0.86);
+      Animated.spring(iconScale, {
+        toValue: 1,
+        friction: 4,
+        tension: 180,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [activeIndex, iconScale]);
 
   const handlePressableLayout = useCallback(
     (name: string, layout: { x: number; y: number; width: number; height: number }) => {
@@ -313,7 +328,7 @@ export function BottomNavBar(props: BottomNavBarProps) {
             ]}
             testID={`bottom-nav-${route.name}`}
           >
-            <View
+            <Animated.View
               onLayout={e => handleIconLayout(route.name, e.nativeEvent.layout)}
               style={[
                 styles.iconContainer,
@@ -324,26 +339,27 @@ export function BottomNavBar(props: BottomNavBarProps) {
                     borderRadius: radii.pill,
                   },
                 ],
+                { transform: [{ scale: isFocused ? iconScale : 1 }] },
               ]}
               testID={`bottom-nav-icon-${route.name}`}
             >
               {route.name === 'planner' || route.name === 'today' ? (
-                <NavPlannerIcon size={22} color={isFocused ? activeColor : inactiveColor} />
+                <PlannerNavIcon size={24} color={isFocused ? activeColor : inactiveColor} active={isFocused} decorative />
               ) : route.name === 'calendar' ? (
-                <NavCalendarIcon size={22} color={isFocused ? activeColor : inactiveColor} />
+                <CalendarNavIcon size={24} color={isFocused ? activeColor : inactiveColor} active={isFocused} decorative />
               ) : route.name === 'journal' ? (
-                <NavLibraryIcon size={22} color={isFocused ? activeColor : inactiveColor} />
+                <JournalNavIcon size={24} color={isFocused ? activeColor : inactiveColor} active={isFocused} decorative />
               ) : route.name === 'settings' ? (
-                <NavMoreIcon size={22} color={isFocused ? activeColor : inactiveColor} />
+                <MoreNavIcon size={24} color={isFocused ? activeColor : inactiveColor} active={isFocused} decorative />
               ) : (
                 <Icon
                   name={config.icon}
-                  size={22}
+                  size={24}
                   color={isFocused ? activeColor : inactiveColor}
                   decorative
                 />
               )}
-            </View>
+            </Animated.View>
             <Text
               style={[
                 typography.caption,

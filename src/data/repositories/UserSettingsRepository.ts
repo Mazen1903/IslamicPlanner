@@ -76,6 +76,8 @@ export class UserSettingsRepository {
         isPremium: patch.isPremium ?? false,
         onboardingCompleted: patch.onboardingCompleted ?? false,
         calendarShowOccasions: patch.calendarShowOccasions ?? true,
+        plannerUiState: patch.plannerUiState ?? null,
+        reminderDefaults: patch.reminderDefaults ?? null,
         createdAt: now,
         updatedAt: now,
       });

@@ -12,17 +12,26 @@ import { Icon } from '@/components/common/Icon';
 import { LottiePriorityBadge } from '@/components/task/LottiePriorityBadge';
 import { LottieFlameIcon } from '@/components/streak';
 import type { FormState, FormAction } from '@/features/task-form/types';
-import { ReminderSheet } from './ReminderSheet';
-import { RepeatSheet } from './RepeatSheet';
-import { PrioritySheet } from './PrioritySheet';
-import { TrackStreakSheet } from './TrackStreakSheet';
-import { NotesSheet } from './NotesSheet';
+import type { TaskPriority } from '@/domain/task/types';
 import { formatReminderSummary } from '@/domain/notification/reminderRule';
+import {
+  ReminderInlinePanel,
+  RepeatInlinePanel,
+  PriorityInlinePanel,
+  TrackStreakInlinePanel,
+  NotesInlinePanel,
+} from './details';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { usePremiumGate } from '@/hooks/usePremiumGate';
+import { PaywallSheet } from '@/components/premium/PaywallSheet';
 
 export interface TaskDetailsCardProps {
   state: FormState;
   dispatch: React.Dispatch<FormAction>;
+  onOpenReminderSettings?: () => void;
 }
+
+export type OpenRowKey = 'REMINDER' | 'REPEAT' | 'PRIORITY' | 'STREAK' | 'NOTES';
 
 export function getRecurrenceLabel(preset: string, specificDaysCount: number, calendar: string): string {
   switch (preset) {
@@ -65,18 +74,59 @@ export function getNotesSummary(notes: string): string {
   return firstLine.length > 22 ? `${firstLine.slice(0, 20)}...` : firstLine;
 }
 
-export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
+export function TaskDetailsCard({ state, dispatch, onOpenReminderSettings }: TaskDetailsCardProps) {
   const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
+  const { gate, paywallVisible, closePaywall, onPurchaseSuccess, isPremium, gatedFeature } = usePremiumGate();
 
-  const [showNotesSheet, setShowNotesSheet] = useState(false);
-  const [showReminderSheet, setShowReminderSheet] = useState(false);
-  const [showRepeatSheet, setShowRepeatSheet] = useState(false);
-  const [showPrioritySheet, setShowPrioritySheet] = useState(false);
-  const [showStreakSheet, setShowStreakSheet] = useState(false);
+  const [openRow, setOpenRow] = useState<OpenRowKey | null>(null);
+
+  const toggleRow = (row: OpenRowKey) => {
+    setOpenRow(prev => (prev === row ? null : row));
+  };
+
+  const handleSelectPriority = (p: TaskPriority) => {
+    if (p === 'IMPORTANT') {
+      // Applied only when entitled, or after a successful purchase.
+      gate('PRIORITY', () => dispatch({ type: 'SET_PRIORITY', payload: 'IMPORTANT' }));
+      return;
+    }
+    // Downgrading is always allowed so existing tasks never get stuck.
+    dispatch({ type: 'SET_PRIORITY', payload: p });
+  };
+
+  const enableStreak = () => {
+    if (state.recurrencePreset === 'NONE') {
+      Alert.alert(
+        'Enable Daily Repeat?',
+        'Streak tracking requires a repeating schedule. This will set the task to repeat daily.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Enable Daily',
+            onPress: () => {
+              dispatch({ type: 'SET_RECURRENCE_PRESET', payload: 'DAILY' });
+              dispatch({ type: 'SET_STREAK_ENABLED', payload: true });
+            },
+          },
+        ]
+      );
+      return;
+    }
+    dispatch({ type: 'SET_STREAK_ENABLED', payload: true });
+  };
+
+  const handleToggleStreak = (val: boolean) => {
+    if (!val) {
+      dispatch({ type: 'SET_STREAK_ENABLED', payload: false });
+      return;
+    }
+    gate('TRACK_STREAK', enableStreak);
+  };
 
   const activeReminders = state.reminders && state.reminders.length > 0
     ? state.reminders
     : (state.reminderMinutes !== null ? [state.reminderMinutes < 0 ? state.reminderMinutes : -state.reminderMinutes] : []);
+
   const reminderSummaryText = getReminderSummary(
     activeReminders,
     state.scheduleMode === 'ANYTIME_TODAY',
@@ -105,7 +155,7 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
     >
       {/* 1. Reminder Row */}
       <Pressable
-        onPress={() => setShowReminderSheet(true)}
+        onPress={() => toggleRow('REMINDER')}
         accessibilityRole="button"
         accessibilityLabel={`Reminder: ${reminderSummaryText}`}
         testID="details-row-reminder"
@@ -115,6 +165,7 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
             minHeight: Math.max(touchTargets.min, 56),
             paddingHorizontal: spacing.md,
             paddingVertical: 12,
+            backgroundColor: openRow === 'REMINDER' ? colors.primaryLight + '30' : 'transparent',
             opacity: pressed ? 0.75 : 1,
           },
         ]}
@@ -157,21 +208,49 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
             {reminderSummaryText}
           </Text>
           <Icon
-            name="chevron-right"
+            name={openRow === 'REMINDER' ? 'chevron-down' : 'chevron-right'}
             size={14}
-            color={colors.textTertiary}
-            directional
+            color={openRow === 'REMINDER' ? colors.primary : colors.textTertiary}
+            directional={openRow !== 'REMINDER'}
             decorative
           />
         </View>
       </Pressable>
+
+      {/* Reminder Inline Panel */}
+      {openRow === 'REMINDER' && (
+        <View
+          style={[
+            styles.inlinePanelContainer,
+            {
+              backgroundColor: colors.surfaceSecondary,
+              borderColor: colors.border,
+              borderRadius: radii.md,
+              padding: spacing.md,
+              marginHorizontal: spacing.md,
+              marginBottom: spacing.md,
+            },
+          ]}
+          testID="reminder-sheet"
+        >
+          <ReminderInlinePanel
+            reminders={activeReminders}
+            onAddReminder={offset => dispatch({ type: 'ADD_REMINDER', payload: offset })}
+            onRemoveReminder={offset => dispatch({ type: 'REMOVE_REMINDER', payload: offset })}
+            scheduleMode={state.scheduleMode}
+            reminderTimeOfDay={state.reminderTimeOfDay}
+            onSetReminderTimeOfDay={timeStr => dispatch({ type: 'SET_REMINDER_TIME_OF_DAY', payload: timeStr })}
+            onOpenReminderSettings={onOpenReminderSettings ?? (() => {})}
+          />
+        </View>
+      )}
 
       {/* Inset Divider */}
       <View style={[styles.insetDivider, { backgroundColor: colors.border }]} />
 
       {/* 2. Repeat Row */}
       <Pressable
-        onPress={() => setShowRepeatSheet(true)}
+        onPress={() => toggleRow('REPEAT')}
         accessibilityRole="button"
         accessibilityLabel={`Repeat: ${repeatSummary}`}
         testID="details-row-repeat"
@@ -181,6 +260,7 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
             minHeight: Math.max(touchTargets.min, 56),
             paddingHorizontal: spacing.md,
             paddingVertical: 12,
+            backgroundColor: openRow === 'REPEAT' ? colors.primaryLight + '30' : 'transparent',
             opacity: pressed ? 0.75 : 1,
           },
         ]}
@@ -226,21 +306,41 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
             {repeatSummary}
           </Text>
           <Icon
-            name="chevron-right"
+            name={openRow === 'REPEAT' ? 'chevron-down' : 'chevron-right'}
             size={14}
-            color={colors.textTertiary}
-            directional
+            color={openRow === 'REPEAT' ? colors.primary : colors.textTertiary}
+            directional={openRow !== 'REPEAT'}
             decorative
           />
         </View>
       </Pressable>
+
+      {/* Repeat Inline Panel */}
+      {openRow === 'REPEAT' && (
+        <View
+          style={[
+            styles.inlinePanelContainer,
+            {
+              backgroundColor: colors.surfaceSecondary,
+              borderColor: colors.border,
+              borderRadius: radii.md,
+              padding: spacing.md,
+              marginHorizontal: spacing.md,
+              marginBottom: spacing.md,
+            },
+          ]}
+          testID="repeat-sheet"
+        >
+          <RepeatInlinePanel state={state} dispatch={dispatch} />
+        </View>
+      )}
 
       {/* Inset Divider */}
       <View style={[styles.insetDivider, { backgroundColor: colors.border }]} />
 
       {/* 3. Priority Row */}
       <Pressable
-        onPress={() => setShowPrioritySheet(true)}
+        onPress={() => toggleRow('PRIORITY')}
         accessibilityRole="button"
         accessibilityLabel={`Priority: ${state.priority === 'IMPORTANT' ? 'Important' : 'Normal'}`}
         testID="details-row-priority"
@@ -250,6 +350,7 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
             minHeight: Math.max(touchTargets.min, 56),
             paddingHorizontal: spacing.md,
             paddingVertical: 12,
+            backgroundColor: openRow === 'PRIORITY' ? colors.primaryLight + '30' : 'transparent',
             opacity: pressed ? 0.75 : 1,
           },
         ]}
@@ -277,14 +378,21 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
         </View>
 
         <View style={styles.rowTitleContainer}>
-          <Text style={[typography.headlineMedium, { color: colors.textPrimary, fontSize: 16 }]}>
-            Priority
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={[typography.headlineMedium, { color: colors.textPrimary, fontSize: 16 }]}>
+              Priority
+            </Text>
+            {!isPremium && (
+              <View style={{ marginStart: 6 }}>
+                <MaterialCommunityIcons name="crown" size={13} color={colors.warning} />
+              </View>
+            )}
+          </View>
         </View>
 
         <View style={styles.rowRightControl}>
           <Pressable
-            onPress={() => setShowPrioritySheet(true)}
+            onPress={() => toggleRow('PRIORITY')}
             accessibilityRole="button"
             accessibilityLabel={`Priority: ${state.priority === 'IMPORTANT' ? 'Important' : 'Normal'}`}
             testID={state.priority === 'IMPORTANT' ? 'priority-important' : 'priority-normal'}
@@ -322,21 +430,45 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
             </Text>
           </Pressable>
           <Icon
-            name="chevron-right"
+            name={openRow === 'PRIORITY' ? 'chevron-down' : 'chevron-right'}
             size={14}
-            color={colors.textTertiary}
-            directional
+            color={openRow === 'PRIORITY' ? colors.primary : colors.textTertiary}
+            directional={openRow !== 'PRIORITY'}
             decorative
           />
         </View>
       </Pressable>
+
+      {/* Priority Inline Panel */}
+      {openRow === 'PRIORITY' && (
+        <View
+          style={[
+            styles.inlinePanelContainer,
+            {
+              backgroundColor: colors.surfaceSecondary,
+              borderColor: colors.border,
+              borderRadius: radii.md,
+              padding: spacing.md,
+              marginHorizontal: spacing.md,
+              marginBottom: spacing.md,
+            },
+          ]}
+          testID="priority-sheet"
+        >
+          <PriorityInlinePanel
+            priority={state.priority}
+            onSelectPriority={handleSelectPriority}
+            isPremium={isPremium}
+          />
+        </View>
+      )}
 
       {/* Inset Divider */}
       <View style={[styles.insetDivider, { backgroundColor: colors.border }]} />
 
       {/* 4. Track Streak Row */}
       <Pressable
-        onPress={() => setShowStreakSheet(true)}
+        onPress={() => toggleRow('STREAK')}
         accessibilityRole="button"
         accessibilityLabel={`Track Streak: ${state.streakEnabled ? 'Enabled' : 'Disabled'}`}
         testID="streak-option-row"
@@ -346,6 +478,7 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
             minHeight: Math.max(touchTargets.min, 56),
             paddingHorizontal: spacing.md,
             paddingVertical: 12,
+            backgroundColor: openRow === 'STREAK' ? colors.primaryLight + '30' : 'transparent',
             opacity: pressed ? 0.85 : 1,
           },
         ]}
@@ -370,9 +503,16 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
         </View>
 
         <View style={styles.rowTitleContainer}>
-          <Text style={[typography.headlineMedium, { color: colors.textPrimary, fontSize: 16 }]}>
-            Track Streak
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={[typography.headlineMedium, { color: colors.textPrimary, fontSize: 16 }]}>
+              Track Streak
+            </Text>
+            {!isPremium && (
+              <View style={{ marginStart: 6 }}>
+                <MaterialCommunityIcons name="crown" size={13} color={colors.warning} />
+              </View>
+            )}
+          </View>
           <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 1 }]}>
             {state.recurrencePreset !== 'NONE'
               ? 'Build consecutive daily completion streaks'
@@ -382,26 +522,7 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
 
         <Switch
           value={state.streakEnabled}
-          onValueChange={val => {
-            if (val && state.recurrencePreset === 'NONE') {
-              Alert.alert(
-                'Enable Daily Repeat?',
-                'Streak tracking requires a repeating schedule. This will set the task to repeat daily.',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Enable Daily',
-                    onPress: () => {
-                      dispatch({ type: 'SET_RECURRENCE_PRESET', payload: 'DAILY' });
-                      dispatch({ type: 'SET_STREAK_ENABLED', payload: true });
-                    },
-                  },
-                ]
-              );
-              return;
-            }
-            dispatch({ type: 'SET_STREAK_ENABLED', payload: val });
-          }}
+          onValueChange={handleToggleStreak}
           trackColor={{ true: colors.primary, false: colors.border }}
           thumbColor={colors.surface}
           accessibilityLabel="Track streak toggle"
@@ -409,12 +530,37 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
         />
       </Pressable>
 
+      {/* Track Streak Inline Panel */}
+      {openRow === 'STREAK' && (
+        <View
+          style={[
+            styles.inlinePanelContainer,
+            {
+              backgroundColor: colors.surfaceSecondary,
+              borderColor: colors.border,
+              borderRadius: radii.md,
+              padding: spacing.md,
+              marginHorizontal: spacing.md,
+              marginBottom: spacing.md,
+            },
+          ]}
+          testID="track-streak-sheet"
+        >
+          <TrackStreakInlinePanel
+            streakEnabled={state.streakEnabled}
+            onToggleStreak={handleToggleStreak}
+            recurrencePreset={state.recurrencePreset}
+            isPremium={isPremium}
+          />
+        </View>
+      )}
+
       {/* Inset Divider */}
       <View style={[styles.insetDivider, { backgroundColor: colors.border }]} />
 
       {/* 5. Notes Row */}
       <Pressable
-        onPress={() => setShowNotesSheet(true)}
+        onPress={() => toggleRow('NOTES')}
         accessibilityRole="button"
         accessibilityLabel={`Notes: ${getNotesSummary(state.notes)}`}
         testID="details-row-notes"
@@ -424,6 +570,7 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
             minHeight: Math.max(touchTargets.min, 56),
             paddingHorizontal: spacing.md,
             paddingVertical: 12,
+            backgroundColor: openRow === 'NOTES' ? colors.primaryLight + '30' : 'transparent',
             opacity: pressed ? 0.75 : 1,
           },
         ]}
@@ -470,61 +617,45 @@ export function TaskDetailsCard({ state, dispatch }: TaskDetailsCardProps) {
             {getNotesSummary(state.notes)}
           </Text>
           <Icon
-            name="chevron-right"
+            name={openRow === 'NOTES' ? 'chevron-down' : 'chevron-right'}
             size={14}
-            color={colors.textTertiary}
-            directional
+            color={openRow === 'NOTES' ? colors.primary : colors.textTertiary}
+            directional={openRow !== 'NOTES'}
             decorative
           />
         </View>
       </Pressable>
 
-      {/* Repeat Sheet Modal */}
-      <RepeatSheet
-        visible={showRepeatSheet}
-        onClose={() => setShowRepeatSheet(false)}
-        state={state}
-        dispatch={dispatch}
-      />
+      {/* Notes Inline Panel */}
+      {openRow === 'NOTES' && (
+        <View
+          style={[
+            styles.inlinePanelContainer,
+            {
+              backgroundColor: colors.surfaceSecondary,
+              borderColor: colors.border,
+              borderRadius: radii.md,
+              padding: spacing.md,
+              marginHorizontal: spacing.md,
+              marginBottom: spacing.md,
+            },
+          ]}
+          testID="notes-sheet"
+        >
+          <NotesInlinePanel
+            notes={state.notes}
+            onChangeNotes={text => dispatch({ type: 'SET_NOTES', payload: text })}
+          />
+        </View>
+      )}
 
-      {/* Priority Sheet Modal */}
-      <PrioritySheet
-        visible={showPrioritySheet}
-        onClose={() => setShowPrioritySheet(false)}
-        priority={state.priority}
-        onSelectPriority={p => dispatch({ type: 'SET_PRIORITY', payload: p })}
+      {/* Paywall Modal */}
+      <PaywallSheet
+        visible={paywallVisible}
+        onClose={closePaywall}
+        onSuccess={onPurchaseSuccess}
+        gatedFeature={gatedFeature}
       />
-
-      {/* Track Streak Sheet Modal */}
-      <TrackStreakSheet
-        visible={showStreakSheet}
-        onClose={() => setShowStreakSheet(false)}
-        streakEnabled={state.streakEnabled}
-        onToggleStreak={val => dispatch({ type: 'SET_STREAK_ENABLED', payload: val })}
-        recurrencePreset={state.recurrencePreset}
-        onSetRecurrencePreset={preset => dispatch({ type: 'SET_RECURRENCE_PRESET', payload: preset })}
-      />
-
-      {/* Notes Sheet Modal */}
-      <NotesSheet
-        visible={showNotesSheet}
-        onClose={() => setShowNotesSheet(false)}
-        notes={state.notes}
-        onChangeNotes={text => dispatch({ type: 'SET_NOTES', payload: text })}
-      />
-
-      {/* Reminder Sheet Modal */}
-      <ReminderSheet
-        visible={showReminderSheet}
-        onClose={() => setShowReminderSheet(false)}
-        reminders={activeReminders}
-        onAddReminder={(offset) => dispatch({ type: 'ADD_REMINDER', payload: offset })}
-        onRemoveReminder={(offset) => dispatch({ type: 'REMOVE_REMINDER', payload: offset })}
-        scheduleMode={state.scheduleMode}
-        reminderTimeOfDay={state.reminderTimeOfDay}
-        onSetReminderTimeOfDay={(timeStr) => dispatch({ type: 'SET_REMINDER_TIME_OF_DAY', payload: timeStr })}
-      />
-
     </View>
   );
 }
@@ -566,6 +697,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  inlinePanelContainer: {
+    borderWidth: 1,
+  },
 });
-
-

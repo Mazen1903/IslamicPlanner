@@ -85,6 +85,7 @@ describe('Add Task to Planner Flow Test', () => {
       launchPrayer: 'DHUHR',
     });
     state = formReducer(state, { type: 'SET_TITLE', payload: 'Dhuhr Prayer Task' });
+    state = formReducer(state, { type: 'SET_SCHEDULE_MODE', payload: 'PRAYER_WINDOW' });
 
     const submitResult = await taskFormOrchestrator.submit(state);
     expect(submitResult.status).toBe('SAVED_AND_SYNCED');
@@ -116,6 +117,7 @@ describe('Add Task to Planner Flow Test', () => {
       launchPrayer: 'ASR',
     });
     asrState = formReducer(asrState, { type: 'SET_TITLE', payload: 'Asr Afternoon Task' });
+    asrState = formReducer(asrState, { type: 'SET_SCHEDULE_MODE', payload: 'PRAYER_WINDOW' });
     const asrSubmit = await taskFormOrchestrator.submit(asrState);
     expect(asrSubmit.status).toBe('SAVED_AND_SYNCED');
 

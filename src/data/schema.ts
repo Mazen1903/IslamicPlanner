@@ -154,6 +154,8 @@ export const userSettings = sqliteTable('user_settings', {
   calendarShowOccasions: integer('calendar_show_occasions', { mode: 'boolean' })
     .notNull()
     .default(true),
+  plannerUiState: text('planner_ui_state'),
+  reminderDefaults: text('reminder_defaults'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });

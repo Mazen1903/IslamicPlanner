@@ -5,6 +5,18 @@ import { ThemeProvider } from '@/theme';
 import { IconPickerModal } from '../IconPickerModal';
 import { searchTaskIcons, detectTaskIcon, getIconIdFromTags, setIconInTags } from '@/constants/taskIcons';
 
+let mockIsPremium = false;
+jest.mock('@/hooks/useEntitlement', () => ({
+  useEntitlement: () => ({
+    isLoading: false,
+    isPremium: mockIsPremium,
+    tier: mockIsPremium ? 'PREMIUM' : 'FREE',
+    hasFeature: () => mockIsPremium,
+    error: null,
+    reload: jest.fn().mockResolvedValue(undefined),
+  }),
+}));
+
 describe('IconPickerModal & taskIcons catalog', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -55,11 +67,12 @@ describe('IconPickerModal & taskIcons catalog', () => {
     expect(cleared).toEqual(['urgent', 'deen']);
   });
 
-  it('renders expanding IconPickerModal with placeholder Search icons and selects an icon', async () => {
+  it('renders expanding IconPickerModal with placeholder Search icons and selects an icon (premium)', async () => {
+    mockIsPremium = true;
     const onSelect = jest.fn();
     const onClose = jest.fn();
 
-    const { getByTestId, getByText, getByPlaceholderText } = await render(
+    const { getByTestId, getByText, getByPlaceholderText, queryByTestId } = await render(
       <ThemeProvider>
         <IconPickerModal
           visible={true}
@@ -83,6 +96,29 @@ describe('IconPickerModal & taskIcons catalog', () => {
     // Press icon item
     await fireEvent.press(getByTestId('icon-item-water-hydration'));
     expect(onSelect).toHaveBeenCalledWith('water-hydration');
+    expect(queryByTestId('paywall-sheet')).toBeNull();
+  });
+
+  it('blocks icon selection and opens the paywall for free users', async () => {
+    mockIsPremium = false;
+    const onSelect = jest.fn();
+
+    const { getByTestId } = await render(
+      <ThemeProvider>
+        <IconPickerModal
+          visible={true}
+          selectedIconId={null}
+          onSelectIcon={onSelect}
+          onClose={jest.fn()}
+        />
+      </ThemeProvider>
+    );
+
+    await fireEvent.changeText(getByTestId('icon-search-input'), 'quran');
+    await fireEvent.press(getByTestId('icon-item-quran'));
+
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(getByTestId('paywall-sheet')).toBeTruthy();
   });
 
   it('invokes onClose when close button is pressed', async () => {

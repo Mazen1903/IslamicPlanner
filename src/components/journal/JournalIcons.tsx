@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import type { MoodKey, JournalReflections } from '@/domain/journal/types';
 
@@ -21,8 +22,13 @@ interface BaseJournalBadgeProps extends JournalBadgeIconProps {
   lightBg: string;
   darkBg: string;
   borderTint: string;
+  iconFamily?: 'MaterialCommunityIcons' | 'Ionicons';
 }
 
+/**
+ * Base squircle badge matching the exact visual language of Settings and Task squircle icons.
+ * Features a soft pastel tinted container, rounded squircle corners, subtle border, and high-contrast glyph.
+ */
 function BaseJournalBadge({
   iconName,
   size = 28,
@@ -33,6 +39,7 @@ function BaseJournalBadge({
   lightBg,
   darkBg,
   borderTint,
+  iconFamily = 'MaterialCommunityIcons',
   style,
   testID,
   accessibilityLabel,
@@ -41,9 +48,9 @@ function BaseJournalBadge({
   const { isDark } = useTheme();
   const iconColor = color ?? defaultAccent;
   const bg = backgroundColor ?? (isDark ? darkBg : lightBg);
-  const border = borderColor ?? (isDark ? `${borderTint}` : borderTint);
+  const border = borderColor ?? borderTint;
   const borderRadius = Math.max(6, Math.round(size * 0.28));
-  const iconSize = Math.max(12, Math.round(size * 0.54));
+  const iconSize = Math.max(12, Math.round(size * 0.52));
 
   return (
     <View
@@ -59,15 +66,21 @@ function BaseJournalBadge({
           borderRadius,
           backgroundColor: bg,
           borderColor: border,
+          borderWidth: 1.2,
+          shadowColor: defaultAccent,
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: isDark ? 0.3 : 0.12,
+          shadowRadius: 3,
+          elevation: 1.5,
         },
         style,
       ]}
     >
-      <MaterialCommunityIcons
-        name={iconName}
-        size={iconSize}
-        color={iconColor}
-      />
+      {iconFamily === 'Ionicons' ? (
+        <Ionicons name={iconName as any} size={iconSize} color={iconColor} />
+      ) : (
+        <MaterialCommunityIcons name={iconName} size={iconSize} color={iconColor} />
+      )}
     </View>
   );
 }
@@ -83,8 +96,8 @@ export function JournalMoodHeaderBadgeIcon(props: JournalBadgeIconProps) {
       iconName="heart-pulse"
       defaultAccent="#E11D48"
       lightBg="rgba(225, 29, 72, 0.12)"
-      darkBg="rgba(225, 29, 72, 0.22)"
-      borderTint="rgba(225, 29, 72, 0.25)"
+      darkBg="rgba(225, 29, 72, 0.24)"
+      borderTint="rgba(225, 29, 72, 0.28)"
       testID={props.testID ?? 'journal-mood-header-badge'}
       accessibilityLabel={props.accessibilityLabel ?? 'Mood section'}
     />
@@ -98,8 +111,8 @@ export function JournalPromptHeaderBadgeIcon(props: JournalBadgeIconProps) {
       iconName="lightbulb-on-outline"
       defaultAccent="#D97706"
       lightBg="rgba(217, 119, 6, 0.12)"
-      darkBg="rgba(217, 119, 6, 0.22)"
-      borderTint="rgba(217, 119, 6, 0.25)"
+      darkBg="rgba(217, 119, 6, 0.24)"
+      borderTint="rgba(217, 119, 6, 0.28)"
       testID={props.testID ?? 'journal-prompt-header-badge'}
       accessibilityLabel={props.accessibilityLabel ?? 'Daily prompt section'}
     />
@@ -114,8 +127,8 @@ export function JournalEntryHeaderBadgeIcon(props: JournalBadgeIconProps) {
       iconName="book-open-page-variant"
       defaultAccent={colors.primary}
       lightBg={colors.primaryLight}
-      darkBg={isDark ? 'rgba(15, 159, 74, 0.22)' : 'rgba(15, 159, 74, 0.12)'}
-      borderTint={isDark ? 'rgba(15, 159, 74, 0.35)' : 'rgba(15, 159, 74, 0.25)'}
+      darkBg={isDark ? 'rgba(15, 159, 74, 0.24)' : 'rgba(15, 159, 74, 0.12)'}
+      borderTint={isDark ? 'rgba(15, 159, 74, 0.38)' : 'rgba(15, 159, 74, 0.28)'}
       testID={props.testID ?? 'journal-entry-header-badge'}
       accessibilityLabel={props.accessibilityLabel ?? 'Journal entry section'}
     />
@@ -129,8 +142,8 @@ export function JournalMuhasabaHeaderBadgeIcon(props: JournalBadgeIconProps) {
       iconName="scale-balance"
       defaultAccent="#8B5CF6"
       lightBg="rgba(139, 92, 246, 0.12)"
-      darkBg="rgba(139, 92, 246, 0.22)"
-      borderTint="rgba(139, 92, 246, 0.25)"
+      darkBg="rgba(139, 92, 246, 0.24)"
+      borderTint="rgba(139, 92, 246, 0.28)"
       testID={props.testID ?? 'journal-muhasaba-header-badge'}
       accessibilityLabel={props.accessibilityLabel ?? 'Daily Muhasaba section'}
     />
@@ -146,8 +159,8 @@ export function JournalHistoryBadgeIcon(props: JournalBadgeIconProps) {
       iconName="book-open-outline"
       defaultAccent={colors.primary}
       lightBg={colors.primaryLight}
-      darkBg={isDark ? 'rgba(15, 159, 74, 0.22)' : 'rgba(15, 159, 74, 0.12)'}
-      borderTint={isDark ? 'rgba(15, 159, 74, 0.35)' : 'rgba(15, 159, 74, 0.25)'}
+      darkBg={isDark ? 'rgba(15, 159, 74, 0.24)' : 'rgba(15, 159, 74, 0.12)'}
+      borderTint={isDark ? 'rgba(15, 159, 74, 0.38)' : 'rgba(15, 159, 74, 0.28)'}
       testID={props.testID ?? 'journal-history-badge'}
       accessibilityLabel={props.accessibilityLabel ?? 'Historical journal entry'}
     />
@@ -165,9 +178,9 @@ export function MoodHardBadgeIcon(props: JournalBadgeIconProps) {
       {...props}
       iconName="weather-rainy"
       defaultAccent="#E11D48"
-      lightBg="rgba(225, 29, 72, 0.12)"
-      darkBg="rgba(225, 29, 72, 0.22)"
-      borderTint="rgba(225, 29, 72, 0.24)"
+      lightBg="rgba(225, 29, 72, 0.14)"
+      darkBg="rgba(225, 29, 72, 0.24)"
+      borderTint="rgba(225, 29, 72, 0.28)"
       testID={props.testID ?? 'mood-badge-hard'}
       accessibilityLabel={props.accessibilityLabel ?? 'Hard mood'}
     />
@@ -181,9 +194,9 @@ export function MoodOkayBadgeIcon(props: JournalBadgeIconProps) {
       {...props}
       iconName="leaf"
       defaultAccent="#64748B"
-      lightBg="rgba(100, 116, 139, 0.12)"
-      darkBg="rgba(100, 116, 139, 0.22)"
-      borderTint="rgba(100, 116, 139, 0.24)"
+      lightBg="rgba(100, 116, 139, 0.14)"
+      darkBg="rgba(100, 116, 139, 0.24)"
+      borderTint="rgba(100, 116, 139, 0.28)"
       testID={props.testID ?? 'mood-badge-okay'}
       accessibilityLabel={props.accessibilityLabel ?? 'Okay mood'}
     />
@@ -197,9 +210,9 @@ export function MoodGoodBadgeIcon(props: JournalBadgeIconProps) {
       {...props}
       iconName="white-balance-sunny"
       defaultAccent="#0284C7"
-      lightBg="rgba(2, 132, 199, 0.12)"
-      darkBg="rgba(2, 132, 199, 0.22)"
-      borderTint="rgba(2, 132, 199, 0.24)"
+      lightBg="rgba(2, 132, 199, 0.14)"
+      darkBg="rgba(2, 132, 199, 0.24)"
+      borderTint="rgba(2, 132, 199, 0.28)"
       testID={props.testID ?? 'mood-badge-good'}
       accessibilityLabel={props.accessibilityLabel ?? 'Good mood'}
     />
@@ -213,9 +226,9 @@ export function MoodGreatBadgeIcon(props: JournalBadgeIconProps) {
       {...props}
       iconName="flower"
       defaultAccent="#059669"
-      lightBg="rgba(5, 150, 105, 0.12)"
-      darkBg="rgba(5, 150, 105, 0.22)"
-      borderTint="rgba(5, 150, 105, 0.24)"
+      lightBg="rgba(5, 150, 105, 0.14)"
+      darkBg="rgba(5, 150, 105, 0.24)"
+      borderTint="rgba(5, 150, 105, 0.28)"
       testID={props.testID ?? 'mood-badge-great'}
       accessibilityLabel={props.accessibilityLabel ?? 'Great mood'}
     />
@@ -229,9 +242,9 @@ export function MoodGratefulBadgeIcon(props: JournalBadgeIconProps) {
       {...props}
       iconName="hands-pray"
       defaultAccent="#D97706"
-      lightBg="rgba(217, 119, 6, 0.14)"
-      darkBg="rgba(217, 119, 6, 0.24)"
-      borderTint="rgba(217, 119, 6, 0.26)"
+      lightBg="rgba(217, 119, 6, 0.16)"
+      darkBg="rgba(217, 119, 6, 0.26)"
+      borderTint="rgba(217, 119, 6, 0.3)"
       testID={props.testID ?? 'mood-badge-grateful'}
       accessibilityLabel={props.accessibilityLabel ?? 'Grateful mood'}
     />
@@ -269,9 +282,9 @@ export function ReflectionGratitudeBadgeIcon(props: JournalBadgeIconProps) {
       {...props}
       iconName="hands-pray"
       defaultAccent="#F59E0B"
-      lightBg="rgba(245, 158, 11, 0.12)"
-      darkBg="rgba(245, 158, 11, 0.22)"
-      borderTint="rgba(245, 158, 11, 0.25)"
+      lightBg="rgba(245, 158, 11, 0.14)"
+      darkBg="rgba(245, 158, 11, 0.24)"
+      borderTint="rgba(245, 158, 11, 0.28)"
       testID={props.testID ?? 'reflection-badge-gratitude'}
       accessibilityLabel={props.accessibilityLabel ?? 'Gratitude reflection'}
     />
@@ -285,9 +298,9 @@ export function ReflectionWentWellBadgeIcon(props: JournalBadgeIconProps) {
       {...props}
       iconName="star-four-points"
       defaultAccent="#10B981"
-      lightBg="rgba(16, 185, 129, 0.12)"
-      darkBg="rgba(16, 185, 129, 0.22)"
-      borderTint="rgba(16, 185, 129, 0.25)"
+      lightBg="rgba(16, 185, 129, 0.14)"
+      darkBg="rgba(16, 185, 129, 0.24)"
+      borderTint="rgba(16, 185, 129, 0.28)"
       testID={props.testID ?? 'reflection-badge-wentWell'}
       accessibilityLabel={props.accessibilityLabel ?? 'What went well reflection'}
     />
@@ -301,9 +314,9 @@ export function ReflectionTomorrowBadgeIcon(props: JournalBadgeIconProps) {
       {...props}
       iconName="sprout"
       defaultAccent="#06B6D4"
-      lightBg="rgba(6, 182, 212, 0.12)"
-      darkBg="rgba(6, 182, 212, 0.22)"
-      borderTint="rgba(6, 182, 212, 0.25)"
+      lightBg="rgba(6, 182, 212, 0.14)"
+      darkBg="rgba(6, 182, 212, 0.24)"
+      borderTint="rgba(6, 182, 212, 0.28)"
       testID={props.testID ?? 'reflection-badge-improvement'}
       accessibilityLabel={props.accessibilityLabel ?? 'For tomorrow reflection'}
     />
@@ -317,9 +330,9 @@ export function ReflectionDuaBadgeIcon(props: JournalBadgeIconProps) {
       {...props}
       iconName="hand-heart"
       defaultAccent="#8B5CF6"
-      lightBg="rgba(139, 92, 246, 0.12)"
-      darkBg="rgba(139, 92, 246, 0.22)"
-      borderTint="rgba(139, 92, 246, 0.25)"
+      lightBg="rgba(139, 92, 246, 0.14)"
+      darkBg="rgba(139, 92, 246, 0.24)"
+      borderTint="rgba(139, 92, 246, 0.28)"
       testID={props.testID ?? 'reflection-badge-dua'}
       accessibilityLabel={props.accessibilityLabel ?? 'Heartfelt dua reflection'}
     />
@@ -344,10 +357,63 @@ export function ReflectionBadgeIcon({
   }
 }
 
+// ==========================================
+// 4. Utility & Security Badges
+// ==========================================
+
+export function JournalLockBadgeIcon(props: JournalBadgeIconProps) {
+  const { colors, isDark } = useTheme();
+  return (
+    <BaseJournalBadge
+      size={props.size ?? 36}
+      {...props}
+      iconName="lock-outline"
+      defaultAccent={colors.primary}
+      lightBg={colors.primaryLight}
+      darkBg={isDark ? 'rgba(15, 159, 74, 0.24)' : 'rgba(15, 159, 74, 0.12)'}
+      borderTint={isDark ? 'rgba(15, 159, 74, 0.38)' : 'rgba(15, 159, 74, 0.28)'}
+      testID={props.testID ?? 'journal-lock-badge'}
+      accessibilityLabel={props.accessibilityLabel ?? 'Journal locked'}
+    />
+  );
+}
+
+export function JournalUnlockBadgeIcon(props: JournalBadgeIconProps) {
+  const { colors, isDark } = useTheme();
+  return (
+    <BaseJournalBadge
+      size={props.size ?? 36}
+      {...props}
+      iconName="lock-open-outline"
+      defaultAccent={colors.primary}
+      lightBg={colors.primaryLight}
+      darkBg={isDark ? 'rgba(15, 159, 74, 0.24)' : 'rgba(15, 159, 74, 0.12)'}
+      borderTint={isDark ? 'rgba(15, 159, 74, 0.38)' : 'rgba(15, 159, 74, 0.28)'}
+      testID={props.testID ?? 'journal-unlock-badge'}
+      accessibilityLabel={props.accessibilityLabel ?? 'Journal unlocked'}
+    />
+  );
+}
+
+export function JournalShieldSecurityBadgeIcon(props: JournalBadgeIconProps) {
+  return (
+    <BaseJournalBadge
+      size={props.size ?? 36}
+      {...props}
+      iconName="shield-check-outline"
+      defaultAccent="#0284C7"
+      lightBg="rgba(2, 132, 199, 0.14)"
+      darkBg="rgba(2, 132, 199, 0.24)"
+      borderTint="rgba(2, 132, 199, 0.28)"
+      testID={props.testID ?? 'journal-security-badge'}
+      accessibilityLabel={props.accessibilityLabel ?? 'Encrypted and secure'}
+    />
+  );
+}
+
 const styles = StyleSheet.create({
   base: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
   },
 });

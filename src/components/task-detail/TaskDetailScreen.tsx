@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DateTime } from 'luxon';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
+import { AppBackButton } from '@/components/common/AppBackButton';
 import { TaskCategoryIcon } from '@/components/task/TaskCategoryIcon';
 import { TactileActionButton } from './TactileActionButton';
 import { getIconIdFromTags, detectTaskIcon } from '@/constants/taskIcons';
@@ -198,21 +199,12 @@ export function TaskDetailScreen({
     >
       {/* ── 1. Top Navigation Bar ── */}
       <View style={[styles.headerBar, { borderBottomColor: colors.border }]}>
-        <Pressable
+        <AppBackButton
           onPress={onBack}
-          accessibilityRole="button"
           accessibilityLabel="Go back"
           testID="task-detail-back-button"
-          style={({ pressed }) => [
-            styles.headerButton,
-            {
-              backgroundColor: pressed ? colors.surfaceSecondary : 'transparent',
-              borderRadius: radii.pill,
-            },
-          ]}
-        >
-          <Icon name="arrow-left" size={24} color={colors.textPrimary} decorative />
-        </Pressable>
+          size={38}
+        />
 
         <Text style={[typography.headlineLarge, styles.headerTitle, { color: colors.textPrimary }]}>
           Task Details

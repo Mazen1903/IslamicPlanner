@@ -74,9 +74,10 @@ describe('Group M: Targeted Static Accessibility Audits', () => {
       'src/components/task/ReschedulePrayerModal.tsx',
       'app/(tabs)/settings/hijri-calendar.tsx',
       'src/components/calendar/MonthYearPickerSheet.tsx',
+      'src/components/premium/PaywallSheet.tsx',
     ];
 
-    expect(modalFiles.length).toBe(16);
+    expect(modalFiles.length).toBe(17);
     for (const expected of expectedModalFiles) {
       expect(modalFiles).toContain(expected);
     }
@@ -98,6 +99,7 @@ describe('Group M: Targeted Static Accessibility Audits', () => {
       'src/components/task/ReschedulePrayerModal.tsx',
       'app/(tabs)/settings/hijri-calendar.tsx',
       'src/components/calendar/MonthYearPickerSheet.tsx',
+      'src/components/premium/PaywallSheet.tsx',
     ];
 
     for (const file of modalFiles) {
@@ -121,6 +123,7 @@ describe('Group M: Targeted Static Accessibility Audits', () => {
       'src/components/premium/PremiumLockedInfo.tsx',
       'app/(tabs)/settings/hijri-calendar.tsx',
       'src/components/calendar/MonthYearPickerSheet.tsx',
+      'src/components/premium/PaywallSheet.tsx',
     ];
 
     for (const file of modalFiles) {

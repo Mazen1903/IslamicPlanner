@@ -41,11 +41,18 @@ describe('formReducer & Dual-Date Model (M10)', () => {
       planningDayDate: planningDayKey,
     });
 
-    // Default is EXACT_TIME: update exact draft
+    expect(state.scheduleMode).toBeNull();
+
+    // Switch to EXACT_TIME and update exact draft
+    state = formReducer(state, {
+      type: 'SET_SCHEDULE_MODE',
+      payload: 'EXACT_TIME',
+    });
     state = formReducer(state, {
       type: 'UPDATE_EXACT_DRAFT',
       payload: { localTime: '14:30' },
     });
+    expect(state.scheduleMode).toBe('EXACT_TIME');
     expect(state.exactDraft.localTime).toBe('14:30');
 
     // Switch to PRAYER_RELATIVE and customize

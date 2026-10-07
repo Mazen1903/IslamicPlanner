@@ -114,14 +114,13 @@ export function createInitialFormState(params: CreateFormInitialParams): FormSta
     editScope,
   } = params;
 
-  let scheduleMode: ScheduleMode = 'EXACT_TIME';
+  let scheduleMode: ScheduleMode | null = null;
   let exactDraft: ExactTimeDraft = { ...DEFAULT_EXACT_DRAFT };
   let relativeDraft: PrayerRelativeDraft = { ...DEFAULT_RELATIVE_DRAFT };
   let windowDraft: PrayerWindowDraft = { ...DEFAULT_WINDOW_DRAFT };
 
   if (launchPrayer) {
     const defaults = getPrayerLaunchDefaults(launchPrayer);
-    scheduleMode = defaults.mode;
     relativeDraft = defaults.relativeDraft;
     windowDraft = defaults.windowDraft;
   }
@@ -271,6 +270,23 @@ export function createInitialFormState(params: CreateFormInitialParams): FormSta
       reminderTimeOfDay,
       reminderMinutes: reminders.length > 0 ? reminders[0] : null,
       existingReminderRule: initialDefinition.reminderRule ?? null,
+
+      // Reminders 2.0
+      reminderEnabled:
+        normRule?.enabled ??
+        (reminders.length > 0 ||
+          (normRule?.prayerAnchors && normRule.prayerAnchors.length > 0) ||
+          Boolean(reminderTimeOfDay)),
+      reminderSoundId: normRule?.soundId ?? 'default',
+      reminderCustomSoundUri: null,
+      reminderType: normRule?.type ?? 'STANDARD',
+      reminderEnhancedMode: normRule?.enhancedMode ?? 'FULL_SCREEN',
+      reminderPlaybackCount: normRule?.playbackCount ?? 1,
+      reminderBackgroundId: normRule?.backgroundId ?? 'night_mosque',
+      reminderPrayerAnchors: normRule?.prayerAnchors ? [...normRule.prayerAnchors] : [],
+      reminderTimeSensitive: normRule?.timeSensitive ?? false,
+      reminderNag: Boolean(normRule?.nag),
+
       isDirty: false,
       validationErrors: {},
       savePhase: 'IDLE',
@@ -278,6 +294,11 @@ export function createInitialFormState(params: CreateFormInitialParams): FormSta
   }
 
   // Create Mode
+  const defaultReminders =
+    params.defaultReminderMinutes !== undefined && params.defaultReminderMinutes !== null
+      ? [params.defaultReminderMinutes]
+      : [];
+
   return {
     mode: 'CREATE',
     editScope: null,
@@ -302,16 +323,23 @@ export function createInitialFormState(params: CreateFormInitialParams): FormSta
     subtasks: [],
     tags: [],
     icon: params.initialTitle ? detectTaskIcon(params.initialTitle) : null,
-    reminders:
-      params.defaultReminderMinutes !== undefined && params.defaultReminderMinutes !== null
-        ? [params.defaultReminderMinutes]
-        : [],
+    reminders: defaultReminders,
     reminderTimeOfDay: null,
-    reminderMinutes:
-      params.defaultReminderMinutes !== undefined && params.defaultReminderMinutes !== null
-        ? params.defaultReminderMinutes
-        : null,
+    reminderMinutes: defaultReminders.length > 0 ? defaultReminders[0] : null,
     existingReminderRule: null,
+
+    // Reminders 2.0
+    reminderEnabled: true,
+    reminderSoundId: 'default',
+    reminderCustomSoundUri: null,
+    reminderType: 'STANDARD',
+    reminderEnhancedMode: 'FULL_SCREEN',
+    reminderPlaybackCount: 1,
+    reminderBackgroundId: 'night_mosque',
+    reminderPrayerAnchors: [],
+    reminderTimeSensitive: false,
+    reminderNag: false,
+
     isDirty: Boolean(params.initialTitle),
     validationErrors: {},
     savePhase: 'IDLE',
@@ -554,10 +582,96 @@ export function formReducer(state: FormState, action: FormAction): FormState {
           ...state,
           reminders: [action.payload],
           reminderMinutes: action.payload,
+          reminderEnabled: true,
         };
       }
       return state;
     }
+
+    case 'SET_REMINDER_ENABLED':
+      return {
+        ...state,
+        reminderEnabled: action.payload,
+        isDirty: true,
+      };
+
+    case 'SET_REMINDER_SOUND':
+      return {
+        ...state,
+        reminderSoundId: action.payload.soundId,
+        reminderCustomSoundUri: action.payload.customSoundUri ?? null,
+        isDirty: true,
+      };
+
+    case 'SET_REMINDER_TYPE':
+      return {
+        ...state,
+        reminderType: action.payload,
+        isDirty: true,
+      };
+
+    case 'SET_ENHANCED_MODE':
+      return {
+        ...state,
+        reminderEnhancedMode: action.payload,
+        isDirty: true,
+      };
+
+    case 'SET_REMINDER_PLAYBACK_COUNT':
+      return {
+        ...state,
+        reminderPlaybackCount: action.payload,
+        isDirty: true,
+      };
+
+    case 'SET_REMINDER_BACKGROUND':
+      return {
+        ...state,
+        reminderBackgroundId: action.payload,
+        isDirty: true,
+      };
+
+    case 'SET_REMINDER_PRAYER_ANCHORS':
+      return {
+        ...state,
+        reminderPrayerAnchors: action.payload,
+        isDirty: true,
+      };
+
+    case 'ADD_REMINDER_PRAYER_ANCHOR': {
+      const exists = state.reminderPrayerAnchors.some(
+        a => a.prayer === action.payload.prayer && a.offsetMinutes === action.payload.offsetMinutes
+      );
+      if (exists) return state;
+      return {
+        ...state,
+        reminderPrayerAnchors: [...state.reminderPrayerAnchors, action.payload],
+        isDirty: true,
+      };
+    }
+
+    case 'REMOVE_REMINDER_PRAYER_ANCHOR':
+      return {
+        ...state,
+        reminderPrayerAnchors: state.reminderPrayerAnchors.filter(
+          a => !(a.prayer === action.payload.prayer && a.offsetMinutes === action.payload.offsetMinutes)
+        ),
+        isDirty: true,
+      };
+
+    case 'SET_REMINDER_TIME_SENSITIVE':
+      return {
+        ...state,
+        reminderTimeSensitive: action.payload,
+        isDirty: true,
+      };
+
+    case 'SET_REMINDER_NAG':
+      return {
+        ...state,
+        reminderNag: action.payload,
+        isDirty: true,
+      };
 
     case 'SET_VALIDATION_ERRORS':
       return {

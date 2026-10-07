@@ -36,7 +36,7 @@ export interface ReminderSheetProps {
   reminders: number[];
   onAddReminder: (offsetMinutes: number) => void;
   onRemoveReminder: (offsetMinutes: number) => void;
-  scheduleMode: string;
+  scheduleMode?: string | null;
   reminderTimeOfDay: string | null;
   onSetReminderTimeOfDay: (timeStr: string | null) => void;
   adapter?: typeof notificationSchedulerAdapter;

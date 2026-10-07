@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { ThemeProvider } from '@/theme';
@@ -19,6 +19,10 @@ jest.mock('expo-secure-store', () => ({
 }));
 
 describe('PremiumScreen', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(Alert, 'alert').mockImplementation(() => {});
@@ -27,41 +31,41 @@ describe('PremiumScreen', () => {
   it('renders header, hero card, and honest feature comparison', async () => {
     (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
 
-    render(
+    const { getByTestId, getByText } = await render(
       <ThemeProvider>
         <PremiumScreen />
       </ThemeProvider>
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('section-header-premium')).toBeTruthy();
+      expect(getByTestId('section-header-premium')).toBeTruthy();
     });
 
-    expect(screen.getByText('Islamic Planner Premium')).toBeTruthy();
-    expect(screen.getByText('Custom day start time (e.g. 4:00 AM)')).toBeTruthy();
-    expect(screen.getByText('Midnight day boundary (12:00 AM)')).toBeTruthy();
-    expect(screen.getByText('Compare Plans')).toBeTruthy();
-    expect(screen.getByText('Support Our Mission')).toBeTruthy();
+    expect(getByText('Islamic Planner Premium')).toBeTruthy();
+    expect(getByText('Custom day start time (e.g. 4:00 AM)')).toBeTruthy();
+    expect(getByText('Midnight day boundary (12:00 AM)')).toBeTruthy();
+    expect(getByText('Compare Plans')).toBeTruthy();
+    expect(getByText('Support Our Mission')).toBeTruthy();
   });
 
   it('allows opting in to notifications and stores key in SecureStore', async () => {
     (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
 
-    render(
+    const { getByTestId, getByText } = await render(
       <ThemeProvider>
         <PremiumScreen />
       </ThemeProvider>
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Notify Me When Available')).toBeTruthy();
+      expect(getByText('Notify Me When Available')).toBeTruthy();
     });
 
-    fireEvent.press(screen.getByTestId('premium-upgrade-button'));
+    fireEvent.press(getByTestId('premium-upgrade-button'));
 
     await waitFor(() => {
       expect(SecureStore.setItemAsync).toHaveBeenCalledWith(PREMIUM_NOTIFY_KEY, 'true');
-      expect(screen.getByText("You're on the list ✓")).toBeTruthy();
+      expect(getByText("You're on the list ✓")).toBeTruthy();
     });
 
     expect(Alert.alert).toHaveBeenCalledWith(
@@ -81,17 +85,17 @@ describe('PremiumScreen', () => {
       }
     });
 
-    render(
+    const { getByTestId, getByText } = await render(
       <ThemeProvider>
         <PremiumScreen />
       </ThemeProvider>
     );
 
     await waitFor(() => {
-      expect(screen.getByText("You're on the list ✓")).toBeTruthy();
+      expect(getByText("You're on the list ✓")).toBeTruthy();
     });
 
-    fireEvent.press(screen.getByTestId('premium-upgrade-button'));
+    fireEvent.press(getByTestId('premium-upgrade-button'));
 
     expect(Alert.alert).toHaveBeenCalledWith(
       'Notification Preference',
@@ -104,7 +108,7 @@ describe('PremiumScreen', () => {
 
     expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith(PREMIUM_NOTIFY_KEY);
     await waitFor(() => {
-      expect(screen.getByText('Notify Me When Available')).toBeTruthy();
+      expect(getByText('Notify Me When Available')).toBeTruthy();
     });
   });
 });

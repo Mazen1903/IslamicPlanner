@@ -1,2 +1,3 @@
-export { PremiumBadge, type PremiumBadgeProps } from './PremiumBadge';
-export { PremiumLockedInfo, type PremiumLockedInfoProps } from './PremiumLockedInfo';
+export * from './PaywallSheet';
+export * from './PremiumBadge';
+export * from './PremiumLockedInfo';

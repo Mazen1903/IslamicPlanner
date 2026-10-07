@@ -60,6 +60,7 @@ describe('JournalScreen (M16 Screen)', () => {
     onPrivacySheetClose: jest.fn(),
     onToggleLock: jest.fn().mockResolvedValue(undefined),
     onRetryLoad: jest.fn().mockResolvedValue(undefined),
+    onResetCorruptedEntry: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(() => {

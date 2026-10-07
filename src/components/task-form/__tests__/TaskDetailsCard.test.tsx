@@ -5,7 +5,22 @@ import { ThemeProvider } from '@/theme';
 import { TaskDetailsCard } from '../TaskDetailsCard';
 import { createInitialFormState, formReducer } from '@/features/task-form/formReducer';
 
+let mockIsPremium = false;
+jest.mock('@/hooks/useEntitlement', () => ({
+  useEntitlement: () => ({
+    isLoading: false,
+    isPremium: mockIsPremium,
+    tier: mockIsPremium ? 'PREMIUM' : 'FREE',
+    hasFeature: () => mockIsPremium,
+    error: null,
+    reload: jest.fn().mockResolvedValue(undefined),
+  }),
+}));
+
 describe('TaskDetailsCard', () => {
+  beforeEach(() => {
+    mockIsPremium = false;
+  });
   const civilToday = '2026-09-24';
   const planningDayKey = '2026-09-24';
 
@@ -125,7 +140,8 @@ describe('TaskDetailsCard', () => {
     });
   });
 
-  it('opens PrioritySheet bottom modal and updates priority to Important', async () => {
+  it('opens PrioritySheet bottom modal and updates priority to Important (premium)', async () => {
+    mockIsPremium = true;
     const state = createInitialFormState({ civilSeedDate: civilToday, planningDayDate: planningDayKey });
     const dispatch = jest.fn();
 
@@ -161,7 +177,8 @@ describe('TaskDetailsCard', () => {
     expect(getByTestId('track-streak-sheet')).toBeTruthy();
   });
 
-  it('handles Track Streak with Alert confirmation when repeat is NONE', async () => {
+  it('handles Track Streak with Alert confirmation when repeat is NONE (premium)', async () => {
+    mockIsPremium = true;
     const alertSpy = jest.spyOn(Alert, 'alert');
     const state = createInitialFormState({ civilSeedDate: civilToday, planningDayDate: planningDayKey });
     const dispatch = jest.fn();
@@ -182,7 +199,8 @@ describe('TaskDetailsCard', () => {
     alertSpy.mockRestore();
   });
 
-  it('toggles Track Streak directly when repeat is set', async () => {
+  it('toggles Track Streak directly when repeat is set (premium)', async () => {
+    mockIsPremium = true;
     let state = createInitialFormState({ civilSeedDate: civilToday, planningDayDate: planningDayKey });
     state = formReducer(state, { type: 'SET_RECURRENCE_PRESET', payload: 'DAILY' });
     const dispatch = jest.fn();
@@ -238,6 +256,65 @@ describe('TaskDetailsCard', () => {
 
     expect(getByTestId('priority-lottie-badge')).toBeTruthy();
     expect(getByTestId('streak-flame-icon')).toBeTruthy();
+  });
+
+  it('triggers paywall sheet when selecting Important priority without premium', async () => {
+    const state = createInitialFormState({ civilSeedDate: civilToday, planningDayDate: planningDayKey });
+    const dispatch = jest.fn();
+
+    const { getByTestId, queryByTestId } = await render(
+      <ThemeProvider>
+        <TaskDetailsCard state={state} dispatch={dispatch} />
+      </ThemeProvider>
+    );
+
+    await fireEvent.press(getByTestId('priority-normal'));
+    expect(getByTestId('priority-sheet')).toBeTruthy();
+
+    await fireEvent.press(getByTestId('priority-option-important'));
+    // Free user: value is NOT applied until purchase; paywall opens instead
+    expect(dispatch).not.toHaveBeenCalledWith({
+      type: 'SET_PRIORITY',
+      payload: 'IMPORTANT',
+    });
+    expect(getByTestId('paywall-sheet')).toBeTruthy();
+  });
+
+  it('triggers paywall sheet when enabling streak without premium', async () => {
+    let state = createInitialFormState({ civilSeedDate: civilToday, planningDayDate: planningDayKey });
+    state = formReducer(state, { type: 'SET_RECURRENCE_PRESET', payload: 'DAILY' });
+    const dispatch = jest.fn();
+
+    const { getByTestId } = await render(
+      <ThemeProvider>
+        <TaskDetailsCard state={state} dispatch={dispatch} />
+      </ThemeProvider>
+    );
+
+    await fireEvent(getByTestId('track-streak-switch'), 'valueChange', true);
+    // Free user: streak is NOT enabled until purchase; paywall opens instead
+    expect(dispatch).not.toHaveBeenCalledWith({
+      type: 'SET_STREAK_ENABLED',
+      payload: true,
+    });
+    expect(getByTestId('paywall-sheet')).toBeTruthy();
+  });
+
+  it('allows downgrading priority to Normal without premium', async () => {
+    let state = createInitialFormState({ civilSeedDate: civilToday, planningDayDate: planningDayKey });
+    state = formReducer(state, { type: 'SET_PRIORITY', payload: 'IMPORTANT' });
+    const dispatch = jest.fn();
+
+    const { getByTestId, queryByTestId } = await render(
+      <ThemeProvider>
+        <TaskDetailsCard state={state} dispatch={dispatch} />
+      </ThemeProvider>
+    );
+
+    await fireEvent.press(getByTestId('priority-important'));
+    await fireEvent.press(getByTestId('priority-option-normal'));
+    expect(dispatch).toHaveBeenCalledWith({ type: 'SET_PRIORITY', payload: 'NORMAL' });
+    expect(queryByTestId('paywall-sheet')).toBeNull();
   });
 });
 

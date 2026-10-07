@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import React, { useMemo, useRef, useCallback, useEffect } from 'react';
 import { StyleSheet, ScrollView, View, Text, Pressable, useWindowDimensions, Vibration, type PanResponderGestureState } from 'react-native';
 import { DateTime } from 'luxon';
 import { useTheme } from '@/theme';
@@ -8,6 +8,7 @@ import { TaskCard } from './TaskCard';
 import { AllDoneState } from './AllDoneState';
 import { Icon } from '@/components/common/Icon';
 import { useTodayStore } from '@/stores/useTodayStore';
+import { usePlannerUiStore } from '@/stores/usePlannerUiStore';
 import { deriveOverdueState } from '@/services/TodayViewModelProjection';
 
 export interface TaskListProps {
@@ -32,6 +33,7 @@ export interface TaskListProps {
   overdueTasksMode?: 'KEEP' | 'MOVE' | 'HIDE';
   onDeleteTask?: (task: TaskCardViewModel) => void | boolean | Promise<void | boolean>;
 }
+const PRAYERS: Prayer[] = ['FAJR', 'DHUHR', 'ASR', 'MAGHRIB', 'ISHA'];
 
 interface SectionHeaderProps {
   title: string;
@@ -104,16 +106,26 @@ export function TaskList({
   overdueTasksMode = 'KEEP',
   onDeleteTask,
 }: TaskListProps) {
-  const { colors, spacing, typography } = useTheme();
+  const { colors, typography } = useTheme();
 
-  // Collapsible section states
-  const [previousExpanded, setPreviousExpanded] = useState(false);
-  const [previousUserToggled, setPreviousUserToggled] = useState(false);
-  const [todayExpanded, setTodayExpanded] = useState(true);
-  const [upcomingExpanded, setUpcomingExpanded] = useState(true);
-  const [upcomingUserToggled, setUpcomingUserToggled] = useState(false);
-  // Fix #3: Derive from prop so it stays in sync when switching prayer tabs
-  const completedExpanded = !completedCollapsed;
+  // Collapsible section states persisted across app restarts
+  const {
+    previousExpanded,
+    todayExpanded,
+    upcomingExpanded,
+    completedExpanded: storedCompletedExpanded,
+    togglePrevious,
+    toggleToday,
+    toggleUpcoming,
+    toggleCompleted,
+    hydrate: hydratePlannerUi,
+  } = usePlannerUiStore();
+
+  useEffect(() => {
+    hydratePlannerUi();
+  }, [hydratePlannerUi]);
+
+  const completedExpanded = onToggleCompletedCollapsed ? !completedCollapsed : storedCompletedExpanded;
 
   const nowMs = useTodayStore(s => s.nowMs);
   const now = useMemo(() => DateTime.fromMillis(nowMs), [nowMs]);
@@ -121,7 +133,6 @@ export function TaskList({
 
   // Fix #1: Use hook instead of stale Dimensions.get snapshot
   const { width: screenWidth } = useWindowDimensions();
-  const PRAYERS: Prayer[] = ['FAJR', 'DHUHR', 'ASR', 'MAGHRIB', 'ISHA'];
 
   // Edge pagination tuning constants
   const EDGE_ZONE_WIDTH = 36; // Narrow edge zone near screen bezel (px)
@@ -345,6 +356,15 @@ export function TaskList({
         }
       }
 
+      today.sort((a, b) => {
+        if (a.sortInstant && b.sortInstant) {
+          return a.sortInstant.localeCompare(b.sortInstant);
+        }
+        if (a.sortInstant) return -1;
+        if (b.sortInstant) return 1;
+        return 0;
+      });
+
       return {
         previousTasks: previous,
         todayTasks: today,
@@ -402,28 +422,7 @@ export function TaskList({
       }
     }
 
-    // 3. Collect upcoming tasks (future prayer tab tasks, future sortInstant in current tab, and upcoming days)
-    for (const t of tabsToProcess) {
-      if (t.temporalState === 'FUTURE') {
-        for (const task of t.scheduledTasks) {
-          if (!seenIds.has(task.occurrenceId)) {
-            seenIds.add(task.occurrenceId);
-            upcoming.push(task);
-          }
-        }
-      } else if (t.temporalState === 'CURRENT') {
-        for (const task of t.scheduledTasks) {
-          if (!seenIds.has(task.occurrenceId)) {
-            if (task.sortInstant && task.sortInstant > nowIso) {
-              seenIds.add(task.occurrenceId);
-              upcoming.push(task);
-            }
-          }
-        }
-      }
-    }
-
-    // Plus upcoming tasks from upcoming days
+    // 3. Collect upcoming tasks (tasks from upcoming future days only)
     for (const task of upcomingDaysTasks) {
       if (!seenIds.has(task.occurrenceId)) {
         seenIds.add(task.occurrenceId);
@@ -431,7 +430,7 @@ export function TaskList({
       }
     }
 
-    // 4. Collect today tasks (remaining scheduled tasks + anytime tasks)
+    // 4. Collect today tasks (all pending scheduled tasks for today across all prayer tabs + anytime tasks)
     for (const t of tabsToProcess) {
       for (const task of t.scheduledTasks) {
         if (!seenIds.has(task.occurrenceId)) {
@@ -455,6 +454,16 @@ export function TaskList({
         }
       }
     }
+
+    // Sort today tasks chronologically by sortInstant
+    today.sort((a, b) => {
+      if (a.sortInstant && b.sortInstant) {
+        return a.sortInstant.localeCompare(b.sortInstant);
+      }
+      if (a.sortInstant) return -1;
+      if (b.sortInstant) return 1;
+      return 0;
+    });
 
     // Deduplicate repetitive occurrences in upcoming:
     // Avoid repeating an occurrence already in today or previous
@@ -485,22 +494,18 @@ export function TaskList({
       upcomingTasks: deduplicatedUpcoming,
       completedTasks: completed,
     };
-  }, [tab, allTabs, upcomingDaysTasks, selectedPrayer, currentPrayer, completedTasksMode, overdueTasksMode, now, nowIso]);
+  }, [tab, allTabs, upcomingDaysTasks, selectedPrayer, currentPrayer, completedTasksMode, overdueTasksMode, now]);
 
   const totalActionableTasks = previousTasks.length + todayTasks.length + upcomingTasks.length;
   const totalTasks = totalActionableTasks + completedTasks.length;
 
   const handleToggleCompleted = () => {
     onToggleCompletedCollapsed?.();
+    toggleCompleted();
   };
 
-  const isPreviousOpen = previousUserToggled
-    ? previousExpanded
-    : previousExpanded || (todayTasks.length === 0 && previousTasks.length > 0);
-
-  const isUpcomingOpen = upcomingUserToggled
-    ? upcomingExpanded
-    : upcomingTasks.length > 0;
+  const isPreviousOpen = previousExpanded || (todayTasks.length === 0 && previousTasks.length > 0);
+  const isUpcomingOpen = upcomingExpanded;
 
   return (
     <ScrollView
@@ -516,10 +521,7 @@ export function TaskList({
             title="Previous"
             count={previousTasks.length}
             isExpanded={isPreviousOpen}
-            onToggle={() => {
-              setPreviousUserToggled(true);
-              setPreviousExpanded(!isPreviousOpen);
-            }}
+            onToggle={togglePrevious}
             testID="section-header-previous"
           />
           {isPreviousOpen && (
@@ -549,7 +551,7 @@ export function TaskList({
           title="Today"
           count={todayTasks.length}
           isExpanded={todayExpanded}
-          onToggle={() => setTodayExpanded(p => !p)}
+          onToggle={toggleToday}
           testID="section-header-today"
         />
         {todayExpanded && (
@@ -582,10 +584,7 @@ export function TaskList({
           title="Upcoming"
           count={upcomingTasks.length}
           isExpanded={isUpcomingOpen}
-          onToggle={() => {
-            setUpcomingUserToggled(true);
-            setUpcomingExpanded(!isUpcomingOpen);
-          }}
+          onToggle={toggleUpcoming}
           testID="section-header-upcoming"
         />
         {isUpcomingOpen && (

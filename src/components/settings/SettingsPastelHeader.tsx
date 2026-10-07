@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import { useTheme } from '@/theme';
 import { SettingsBackButtonIcon } from './SettingsIcons';
+import { AppBackButton } from '@/components/common/AppBackButton';
 
 export interface SettingsPastelHeaderProps {
   title: string;
@@ -28,25 +29,20 @@ export function SettingsPastelHeader({
     <View style={[styles.container, { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm }]} testID={testID}>
       <View style={[styles.leftCol, { borderBottomColor: colors.divider }]}>
         {showBack && (
-          <Pressable
+          <AppBackButton
             onPress={onBack}
-            accessibilityRole="button"
             accessibilityLabel="Back"
             testID={backTestID ?? 'settings-header-back-button'}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            style={[
-              styles.backButton,
-              {
-                minWidth: touchTargets.min,
-                minHeight: touchTargets.min,
-                marginBottom: spacing.xs,
-              },
-            ]}
-          >
-            <SettingsBackButtonIcon size={32} />
-          </Pressable>
+            size={36}
+            style={{ marginBottom: spacing.xs }}
+          />
         )}
-        <Text style={[typography.displayLarge, { color: colors.textPrimary }]} numberOfLines={1}>
+        <Text
+          style={[typography.displayLarge, { color: colors.textPrimary, flexShrink: 1 }]}
+          numberOfLines={2}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
+        >
           {title}
         </Text>
         <Text style={[typography.bodyMedium, { color: colors.textSecondary, fontStyle: 'italic', marginTop: 4 }]} numberOfLines={2}>
@@ -86,13 +82,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   imageCol: {
-    width: 135,
-    height: 100,
+    width: 110,
+    height: 85,
     alignItems: 'flex-end',
     justifyContent: 'center',
   },
   headerArt: {
-    width: 135,
-    height: 100,
+    width: 110,
+    height: 85,
   },
 });

@@ -88,6 +88,7 @@ describe('Calendar and Planner Task Parity Tests', () => {
       launchPrayer: 'DHUHR',
     });
     state = formReducer(state, { type: 'SET_TITLE', payload: 'Tomorrow Doctor Appointment' });
+    state = formReducer(state, { type: 'SET_SCHEDULE_MODE', payload: 'PRAYER_WINDOW' });
     const submitResult = await taskFormOrchestrator.submit(state);
     expect(submitResult.status).toBe('SAVED_AND_SYNCED');
 
@@ -150,6 +151,7 @@ describe('Calendar and Planner Task Parity Tests', () => {
       launchPrayer: 'FAJR',
     });
     state = formReducer(state, { type: 'SET_TITLE', payload: 'Morning Exercise' });
+    state = formReducer(state, { type: 'SET_SCHEDULE_MODE', payload: 'PRAYER_WINDOW' });
     await taskFormOrchestrator.submit(state);
 
     const refreshResult = await coordinator.fullRefresh(now);
@@ -190,6 +192,7 @@ describe('Calendar and Planner Task Parity Tests', () => {
       launchPrayer: 'DHUHR',
     });
     state = formReducer(state, { type: 'SET_TITLE', payload: 'Future Project Review' });
+    state = formReducer(state, { type: 'SET_SCHEDULE_MODE', payload: 'PRAYER_WINDOW' });
     await taskFormOrchestrator.submit(state);
 
     const refreshResult = await coordinator.fullRefresh(now);

@@ -21,8 +21,12 @@ import {
   searchTaskIcons,
   type TaskIconDef,
 } from '@/constants/taskIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { TaskCategoryIcon } from '@/components/task/TaskCategoryIcon';
 import { useTheme } from '@/theme';
+import { isFreeTaskIcon } from '@/domain/entitlement/freeTier';
+import { usePremiumGate } from '@/hooks/usePremiumGate';
+import { PaywallSheet } from '@/components/premium/PaywallSheet';
 
 export interface IconPickerOrigin {
   x: number;
@@ -47,6 +51,7 @@ export function IconPickerModal({
   onClose,
 }: IconPickerModalProps) {
   const { colors, spacing, typography, radii, isDark } = useTheme();
+  const { gate, paywallVisible, closePaywall, onPurchaseSuccess, isPremium } = usePremiumGate();
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -312,11 +317,8 @@ export function IconPickerModal({
   // ─── Icon list ───────────────────────────────────────────────────────────────
   const filteredIcons = useMemo(() => searchTaskIcons(searchQuery), [searchQuery]);
 
-  const handleSelect = useCallback(
+  const doSelect = useCallback(
     (iconId: string) => {
-      // Close the modal with its animation first, then notify the parent.
-      // This prevents the parent's SET_ICON dispatch (which triggers async preview
-      // re-computation) from competing with the shrink animation and causing a freeze.
       pendingSelectRef.current = iconId;
       handleClose(() => {
         const pending = pendingSelectRef.current;
@@ -329,14 +331,28 @@ export function IconPickerModal({
     [handleClose, onSelectIcon]
   );
 
+  const handleSelect = useCallback(
+    (iconId: string) => {
+      if (isFreeTaskIcon(iconId)) {
+        doSelect(iconId);
+      } else {
+        gate('TASK_ICONS_EXTENDED', () => doSelect(iconId));
+      }
+    },
+    [doSelect, gate]
+  );
+
   const renderIconItem = useCallback(
     ({ item }: { item: TaskIconDef }) => {
       const isSelected = item.id === selectedIconId;
+      const isFree = isFreeTaskIcon(item.id);
+      const isLocked = !isFree && !isPremium;
+
       return (
         <Pressable
           onPress={() => handleSelect(item.id)}
           accessibilityRole="button"
-          accessibilityLabel={`Select icon: ${item.label}`}
+          accessibilityLabel={`Select icon: ${item.label}${isLocked ? ' (Premium)' : ''}`}
           accessibilityState={{ selected: isSelected }}
           style={({ pressed }) => [
             styles.iconTile,
@@ -360,10 +376,23 @@ export function IconPickerModal({
             size={48}
             color={isSelected ? colors.primary : colors.textPrimary}
           />
+          {isLocked && (
+            <View
+              style={[
+                styles.lockedBadge,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.primary,
+                },
+              ]}
+            >
+              <MaterialCommunityIcons name="crown" size={10} color={colors.primary} />
+            </View>
+          )}
         </Pressable>
       );
     },
-    [selectedIconId, isDark, radii.md, colors.primary, colors.textPrimary, handleSelect]
+    [selectedIconId, isPremium, isDark, radii.md, colors.primary, colors.textPrimary, colors.surface, handleSelect]
   );
 
   const shouldRender = visible || isClosing;
@@ -508,6 +537,13 @@ export function IconPickerModal({
           </SafeAreaView>
         </Animated.View>
       </Animated.View>
+
+      <PaywallSheet
+        visible={paywallVisible}
+        onClose={closePaywall}
+        onSuccess={onPurchaseSuccess}
+        gatedFeature="TASK_ICONS_EXTENDED"
+      />
     </View>
   );
 }
@@ -597,6 +633,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 2,
     maxWidth: '20%',
+  },
+  lockedBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyContainer: {
     alignItems: 'center',

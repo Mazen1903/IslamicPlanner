@@ -10,6 +10,10 @@ import {
   SettingsPremGiftMissionIcon,
   SettingsCheckCircleIcon,
 } from '@/components/settings';
+import { Switch } from 'react-native';
+import { useEntitlement } from '@/hooks/useEntitlement';
+import { PaywallSheet } from '@/components/premium/PaywallSheet';
+import { devPurchaseService } from '@/services/purchase/DevPurchaseService';
 
 export const PREMIUM_NOTIFY_KEY = 'premium_notify_me_v1';
 
@@ -38,9 +42,20 @@ const PREMIUM_PLAN_FEATURES = [
 export default function PremiumScreen() {
   const { colors, spacing, radii, typography, shadows, touchTargets } = useTheme();
   const router = useRouter();
+  const { isPremium, reload } = useEntitlement();
 
   const [isNotified, setIsNotified] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+
+  const handleToggleDevPremium = async (val: boolean) => {
+    try {
+      await devPurchaseService.setDevPremiumOverride(val);
+      await reload();
+    } catch (err) {
+      console.warn('[PremiumScreen] Failed to toggle dev premium override:', err);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -193,6 +208,30 @@ export default function PremiumScreen() {
               {isNotified ? "You're on the list ✓" : 'Notify Me When Available'}
             </Text>
           </Pressable>
+
+          {/* View Plans Button */}
+          <Pressable
+            onPress={() => setPaywallOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="View plans and start trial"
+            testID="view-plans-button"
+            style={({ pressed }) => [
+              {
+                backgroundColor: pressed ? colors.primaryLight : colors.surfaceSecondary,
+                borderColor: colors.primary,
+                borderWidth: 1,
+                borderRadius: radii.pill,
+                minHeight: touchTargets.comfortable,
+                marginTop: spacing.sm,
+                alignItems: 'center',
+                justifyContent: 'center',
+              },
+            ]}
+          >
+            <Text style={[typography.labelLarge, { color: colors.primary, fontWeight: '700' }]}>
+              ✨ View Plans & 7-Day Free Trial
+            </Text>
+          </Pressable>
         </View>
 
         {/* SECTION 2: COMPARE PLANS */}
@@ -265,7 +304,47 @@ export default function PremiumScreen() {
           </View>
         </View>
 
-        {/* CARD 3: SUPPORT OUR MISSION */}
+        {/* CARD 3: DEVELOPER UNLOCK (Dev / Testing builds only) */}
+        {__DEV__ && (
+        <View
+          style={[
+            styles.missionCard,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderRadius: radii.card,
+              padding: spacing.md,
+              marginTop: spacing.md,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            },
+            shadows.card,
+          ]}
+          testID="dev-unlock-card"
+        >
+          <View style={{ flex: 1, marginEnd: spacing.md }}>
+            <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
+              Developer: Unlock Premium
+            </Text>
+            <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+              {isPremium
+                ? 'Premium status is currently ACTIVE.'
+                : 'Toggle premium entitlement locally for offline testing and review.'}
+            </Text>
+          </View>
+          <Switch
+            value={isPremium}
+            onValueChange={handleToggleDevPremium}
+            trackColor={{ true: colors.primary, false: colors.border }}
+            thumbColor={colors.surface}
+            accessibilityLabel="Developer premium toggle"
+            testID="dev-premium-switch"
+          />
+        </View>
+        )}
+
+        {/* CARD 4: SUPPORT OUR MISSION */}
         <View
           style={[
             styles.missionCard,
@@ -295,6 +374,13 @@ export default function PremiumScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Interactive Paywall Sheet */}
+      <PaywallSheet
+        visible={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        onSuccess={() => reload()}
+      />
     </SafeAreaView>
   );
 }

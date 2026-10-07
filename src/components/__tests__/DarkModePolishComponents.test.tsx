@@ -80,6 +80,8 @@ describe('M21 Component Semantic Token Compliance', () => {
         lastAutoLatitude: 40.7128,
         lastAutoLongitude: -74.006,
         calendarShowOccasions: true,
+        plannerUiState: null,
+        reminderDefaults: null,
         createdAt: '2026-09-18T00:00:00.000Z',
         updatedAt: '2026-09-18T00:00:00.000Z',
       },

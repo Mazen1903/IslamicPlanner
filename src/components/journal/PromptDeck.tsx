@@ -4,16 +4,11 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  PanResponder,
   Image,
+  FlatList,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
 } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-  runOnJS,
-} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
@@ -32,57 +27,34 @@ export function PromptDeck({
   onSelectPrompt,
   testID = 'prompt-deck',
 }: PromptDeckProps) {
-  const { colors, spacing, radii, typography, touchTargets, isDark } = useTheme();
+  const { colors, radii, typography, touchTargets, isDark } = useTheme();
   const prompts = React.useMemo(() => getDailyPrompts(dayKey, 5), [dayKey]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const flatListRef = useRef<FlatList<string>>(null);
 
+  const cardWidth = containerWidth > 0 ? containerWidth : 320;
   const activePrompt = prompts[currentIndex % prompts.length];
 
-  // Keep a ref of currentIndex to avoid stale closures in PanResponder
-  const currentIndexRef = useRef(currentIndex);
-  currentIndexRef.current = currentIndex;
-
-  // Reanimated values for card slide animation
-  const translateX = useSharedValue(0);
-  const opacity = useSharedValue(1);
-
   const handleNext = () => {
-    opacity.value = withTiming(0, { duration: 120 }, () => {
-      runOnJS(setCurrentIndex)((currentIndexRef.current + 1) % prompts.length);
-      translateX.value = 30;
-      translateX.value = withSpring(0, { damping: 14 });
-      opacity.value = withTiming(1, { duration: 160 });
-    });
+    const nextIdx = (currentIndex + 1) % prompts.length;
+    setCurrentIndex(nextIdx);
+    flatListRef.current?.scrollToIndex({ index: nextIdx, animated: true });
   };
 
   const handlePrev = () => {
-    opacity.value = withTiming(0, { duration: 120 }, () => {
-      runOnJS(setCurrentIndex)((currentIndexRef.current - 1 + prompts.length) % prompts.length);
-      translateX.value = -30;
-      translateX.value = withSpring(0, { damping: 14 });
-      opacity.value = withTiming(1, { duration: 160 });
-    });
+    const prevIdx = (currentIndex - 1 + prompts.length) % prompts.length;
+    setCurrentIndex(prevIdx);
+    flatListRef.current?.scrollToIndex({ index: prevIdx, animated: true });
   };
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 15 && Math.abs(gestureState.dy) < 30;
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dx < -40) {
-          handleNext();
-        } else if (gestureState.dx > 40) {
-          handlePrev();
-        }
-      },
-    })
-  ).current;
-
-  const cardAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-    opacity: opacity.value,
-  }));
+  const handleMomentumScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetX = e.nativeEvent.contentOffset.x;
+    const newIndex = Math.round(offsetX / (cardWidth || 1));
+    if (newIndex >= 0 && newIndex < prompts.length && newIndex !== currentIndex) {
+      setCurrentIndex(newIndex);
+    }
+  };
 
   const activeDotIndex = currentIndex % prompts.length;
 
@@ -136,50 +108,83 @@ export function PromptDeck({
         </View>
       }
     >
-      <View {...panResponder.panHandlers}>
-        {/* Inner Mint Box */}
-        <View
-          style={[
-            styles.innerBox,
-            {
-              backgroundColor: isDark ? 'rgba(15, 159, 74, 0.12)' : 'rgba(15, 159, 74, 0.07)',
-              borderColor: isDark ? 'rgba(15, 159, 74, 0.25)' : 'rgba(15, 159, 74, 0.15)',
-              borderRadius: radii.lg ?? 16,
-            },
-          ]}
-        >
-          {/* Decorative Lantern on right bottom */}
-          <View
-            style={styles.lanternWrapper}
-            importantForAccessibility="no"
-            accessibilityElementsHidden={true}
-          >
-            <Image
-              source={require('../../../assets/illustrations/journal_prompt_lantern.png')}
+      <View
+        onLayout={(e) => {
+          const w = e.nativeEvent.layout.width;
+          if (w > 0 && Math.abs(w - containerWidth) > 1) {
+            setContainerWidth(w);
+          }
+        }}
+      >
+        <FlatList
+          ref={flatListRef}
+          data={prompts}
+          keyExtractor={(_, index) => index.toString()}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          nestedScrollEnabled
+          decelerationRate="fast"
+          snapToInterval={cardWidth}
+          snapToAlignment="start"
+          onMomentumScrollEnd={handleMomentumScrollEnd}
+          getItemLayout={(_, index) => ({
+            length: cardWidth,
+            offset: cardWidth * index,
+            index,
+          })}
+          onScrollToIndexFailed={(info) => {
+            flatListRef.current?.scrollToOffset({
+              offset: info.index * cardWidth,
+              animated: true,
+            });
+          }}
+          renderItem={({ item, index }) => (
+            <View
               style={[
-                styles.lanternImage,
-                { opacity: isDark ? 0.65 : 0.88 },
+                styles.innerBox,
+                {
+                  width: cardWidth,
+                  backgroundColor: isDark ? 'rgba(15, 159, 74, 0.12)' : 'rgba(15, 159, 74, 0.07)',
+                  borderColor: isDark ? 'rgba(15, 159, 74, 0.25)' : 'rgba(15, 159, 74, 0.15)',
+                  borderRadius: radii.lg ?? 16,
+                },
               ]}
-              resizeMode="contain"
-            />
-          </View>
-
-          <Animated.View style={[styles.cardContent, cardAnimatedStyle]}>
-            <View style={styles.quoteRow}>
-              <Text style={[styles.quoteMark, { color: colors.primary }]}>“</Text>
-              <Text
-                style={[
-                  typography.bodyLarge,
-                  styles.promptText,
-                  { color: colors.textPrimary },
-                ]}
-                testID="prompt-deck-text"
+            >
+              {/* Decorative Lantern on right bottom */}
+              <View
+                style={styles.lanternWrapper}
+                importantForAccessibility="no"
+                accessibilityElementsHidden={true}
               >
-                "{activePrompt}"
-              </Text>
+                <Image
+                  source={require('../../../assets/illustrations/journal_prompt_lantern.png')}
+                  style={[
+                    styles.lanternImage,
+                    { opacity: isDark ? 0.65 : 0.88 },
+                  ]}
+                  resizeMode="contain"
+                />
+              </View>
+
+              <View style={styles.cardContent}>
+                <View style={styles.quoteRow}>
+                  <Text style={[styles.quoteMark, { color: colors.primary }]}>“</Text>
+                  <Text
+                    style={[
+                      typography.bodyLarge,
+                      styles.promptText,
+                      { color: colors.textPrimary },
+                    ]}
+                    testID={index === currentIndex ? 'prompt-deck-text' : undefined}
+                  >
+                    "{item}"
+                  </Text>
+                </View>
+              </View>
             </View>
-          </Animated.View>
-        </View>
+          )}
+        />
 
         {/* Footer Row: Gradient Pill CTA + Swipe hint */}
         <View style={styles.footerRow}>

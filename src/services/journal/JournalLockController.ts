@@ -71,6 +71,7 @@ export class JournalLockController {
   private _sessionUnlocked: boolean = false;
   private _lockEnabled: boolean = false;
   private _errorMessage: string | null = null;
+  private _authInProgress: boolean = false;
 
   constructor(
     private readonly lockPref: JournalLockPreference = journalLockPreference,
@@ -88,6 +89,10 @@ export class JournalLockController {
 
   get isSessionUnlocked(): boolean {
     return this._sessionUnlocked;
+  }
+
+  get isAuthInProgress(): boolean {
+    return this._authInProgress;
   }
 
   get errorMessage(): string | null {
@@ -155,6 +160,7 @@ export class JournalLockController {
 
     this._state = 'unlocking';
     this._errorMessage = null;
+    this._authInProgress = true;
 
     try {
       const options = this.getAuthOptions('Unlock Journal');
@@ -178,6 +184,8 @@ export class JournalLockController {
       this._state = 'locked';
       this._errorMessage = 'Authentication failed. Please try again.';
       return 'locked';
+    } finally {
+      this._authInProgress = false;
     }
   }
 
@@ -201,6 +209,7 @@ export class JournalLockController {
    * 5. Only on success, persists preference and unlocks session
    */
   async enableLock(): Promise<EnableLockResult> {
+    this._authInProgress = true;
     try {
       const hasHardware = await this.localAuth.hasHardwareAsync();
       if (!hasHardware) {
@@ -256,6 +265,8 @@ export class JournalLockController {
         success: false,
         error: 'Failed to enable Journal lock. Please try again.',
       };
+    } finally {
+      this._authInProgress = false;
     }
   }
 
@@ -264,6 +275,7 @@ export class JournalLockController {
    * Requires successful biometric authentication before turning lock off.
    */
   async disableLock(): Promise<DisableLockResult> {
+    this._authInProgress = true;
     try {
       if (this._lockEnabled) {
         const options = this.getAuthOptions('Unlock Journal');
@@ -292,6 +304,8 @@ export class JournalLockController {
         success: false,
         error: 'Failed to disable Journal lock. Please try again.',
       };
+    } finally {
+      this._authInProgress = false;
     }
   }
 
@@ -300,6 +314,9 @@ export class JournalLockController {
    * Locks session and wipes memory key cache.
    */
   onBackground(): void {
+    if (this._authInProgress) {
+      return;
+    }
     if (this._lockEnabled) {
       this._sessionUnlocked = false;
       this._state = 'locked';

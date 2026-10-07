@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { useTheme } from '@/theme';
-import { StreakFlameBadge } from '@/components/streak';
 import {
   SettingsPastelHeader,
   SettingsSectionHeader,
@@ -141,54 +140,6 @@ export default function AboutScreen() {
           testID="about-hadith-card"
         />
 
-        {/* Live Flame Tiers Preview */}
-        <View
-          style={[
-            styles.tierPreviewCard,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderRadius: radii.lg,
-              padding: spacing.md,
-              marginHorizontal: 16,
-              marginTop: 12,
-            },
-          ]}
-        >
-          <Text style={[typography.labelMedium, { color: colors.textSecondary, marginBottom: spacing.sm }]}>
-            Flame Tiers Preview (Custom Palettes)
-          </Text>
-          <View style={styles.tierRow}>
-            <View style={styles.tierItem}>
-              <StreakFlameBadge count={3} size={36} testID="flame-preview-warm" />
-              <Text style={[typography.caption, { color: colors.textPrimary, marginTop: 4, fontWeight: '600' }]}>
-                Warm
-              </Text>
-              <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 10 }]}>1-7</Text>
-            </View>
-            <View style={styles.tierItem}>
-              <StreakFlameBadge count={14} size={36} testID="flame-preview-bright" />
-              <Text style={[typography.caption, { color: colors.textPrimary, marginTop: 4, fontWeight: '600' }]}>
-                Bright
-              </Text>
-              <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 10 }]}>8-30</Text>
-            </View>
-            <View style={styles.tierItem}>
-              <StreakFlameBadge count={45} size={36} testID="flame-preview-hot" />
-              <Text style={[typography.caption, { color: colors.textPrimary, marginTop: 4, fontWeight: '600' }]}>
-                Hot
-              </Text>
-              <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 10 }]}>31-99</Text>
-            </View>
-            <View style={styles.tierItem}>
-              <StreakFlameBadge count={120} size={36} testID="flame-preview-electric" />
-              <Text style={[typography.caption, { color: colors.textPrimary, marginTop: 4, fontWeight: '600' }]}>
-                Electric
-              </Text>
-              <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 10 }]}>100+</Text>
-            </View>
-          </View>
-        </View>
 
         {/* Footer with App Version */}
         <View style={[styles.footerContainer, { marginVertical: spacing.md, alignItems: 'center' }]}>
@@ -257,18 +208,5 @@ const styles = StyleSheet.create({
   group: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  tierPreviewCard: {
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
-  },
-  tierRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    paddingVertical: 4,
-  },
-  tierItem: {
-    alignItems: 'center',
   },
 });

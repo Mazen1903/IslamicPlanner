@@ -37,7 +37,8 @@ export type JournalScreenMode =
   | 'LOADING_ENTRY'
   | 'READY'
   | 'HISTORY'
-  | 'LOAD_ERROR';
+  | 'LOAD_ERROR'
+  | 'UNREADABLE_ENTRY';
 
 export interface UseJournalOptions {
   service?: JournalService;
@@ -80,6 +81,7 @@ export interface UseJournalReturn {
   onPrivacySheetClose: () => void;
   onToggleLock: () => Promise<void>;
   onRetryLoad: () => Promise<void>;
+  onResetCorruptedEntry: () => Promise<void>;
 }
 
 export function useJournal(options: UseJournalOptions = {}): UseJournalReturn {
@@ -145,11 +147,40 @@ export function useJournal(options: UseJournalOptions = {}): UseJournalReturn {
         setMode('READY');
       } catch (err: any) {
         setLoadError(err?.message ?? 'Failed to load journal entry');
-        setMode('LOAD_ERROR');
+        if (
+          err?.name === 'JournalEncryptionError' ||
+          err?.name === 'JournalKeyLostError' ||
+          err?.message?.includes('decrypt') ||
+          err?.message?.includes('encryption') ||
+          err?.message?.includes('key')
+        ) {
+          setActivePlanningDayKey(dayKey);
+          setIsHistorical(asHistorical);
+          setMode('UNREADABLE_ENTRY');
+        } else {
+          setMode('LOAD_ERROR');
+        }
       }
     },
     [service, controller]
   );
+
+  // Reset corrupted/unreadable entry
+  const onResetCorruptedEntry = useCallback(async () => {
+    if (!activePlanningDayKey) return;
+    try {
+      const { journalRepository } = await import('@/data/repositories/JournalRepository');
+      await journalRepository.deleteByPlanningDayKey(activePlanningDayKey);
+      const defaultPayload = createDefaultJournalPayload();
+      setDraftPayload(defaultPayload);
+      controller.beginSession(activePlanningDayKey, null);
+      setLoadError(null);
+      setMode('READY');
+      service.listHistory().then(setHistoryEntries).catch(() => {});
+    } catch (err: any) {
+      setLoadError(err?.message ?? 'Failed to reset corrupted entry');
+    }
+  }, [activePlanningDayKey, controller, service]);
 
   // Bootstrap session on focus or initialization
   const bootstrapSession = useCallback(async () => {
@@ -214,11 +245,22 @@ export function useJournal(options: UseJournalOptions = {}): UseJournalReturn {
     const subscription = AppState.addEventListener(
       'change',
       async (nextState: AppStateStatus) => {
+        // Biometric dialog causes inactive/background - ignore while auth in progress!
+        if (lockController.isAuthInProgress) {
+          lastState = nextState;
+          return;
+        }
+
         // App moving to background or inactive
         if (
-          (lastState === 'active') &&
+          lastState === 'active' &&
           (nextState === 'background' || nextState === 'inactive')
         ) {
+          if (lockController.isAuthInProgress) {
+            lastState = nextState;
+            return;
+          }
+
           // 1. Flush draft first
           await controller.flush();
 
@@ -234,6 +276,11 @@ export function useJournal(options: UseJournalOptions = {}): UseJournalReturn {
           (lastState === 'background' || lastState === 'inactive') &&
           nextState === 'active'
         ) {
+          if (lockController.isAuthInProgress) {
+            lastState = nextState;
+            return;
+          }
+
           // Returning to foreground
           const lState = await lockController.checkOnFocus();
           setLockEnabled(lockController.isEnabled);
@@ -364,7 +411,7 @@ export function useJournal(options: UseJournalOptions = {}): UseJournalReturn {
     } finally {
       setIsDeleting(false);
     }
-  }, [controller, isHistorical, pinnedPlanningDayKey, loadDayEntry]);
+  }, [controller, isHistorical, pinnedPlanningDayKey, loadDayEntry, service]);
 
   const onDeleteCancel = useCallback(() => {
     setShowDeleteDialog(false);
@@ -474,5 +521,6 @@ export function useJournal(options: UseJournalOptions = {}): UseJournalReturn {
     onPrivacySheetClose,
     onToggleLock,
     onRetryLoad,
+    onResetCorruptedEntry,
   };
 }

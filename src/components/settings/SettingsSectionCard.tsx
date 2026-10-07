@@ -75,7 +75,12 @@ export function SettingsSectionCard({
         ) : null}
 
         <View style={styles.textContainer}>
-          <Text style={[typography.labelLarge, { color: colors.textPrimary }]} numberOfLines={1}>
+          <Text
+            style={[typography.labelLarge, { color: colors.textPrimary }]}
+            numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+          >
             {title}
           </Text>
           {subtitle ? (

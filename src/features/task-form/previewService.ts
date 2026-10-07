@@ -52,11 +52,20 @@ export function computeSchedulePreview(
   state: FormState,
   temporalInputs: TodayTemporalInputs | null
 ): SchedulePreviewResult {
-  // 1. Anytime Today
+  // 0. No schedule mode selected
+  if (!state.scheduleMode) {
+    return {
+      status: 'CONTEXT_UNAVAILABLE',
+      primaryLabel: 'No time set yet',
+      secondaryLabel: 'Choose when this task happens below',
+    };
+  }
+
+  // 1. Anytime
   if (state.scheduleMode === 'ANYTIME_TODAY') {
     return {
       status: 'READY',
-      primaryLabel: 'Anytime Today',
+      primaryLabel: 'Anytime',
       secondaryLabel: 'Flexible placement in active prayer',
     };
   }

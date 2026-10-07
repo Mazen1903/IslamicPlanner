@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
+import { AppBackButton } from '@/components/common/AppBackButton';
 
 export interface SettingsScreenHeaderProps {
   title: string;
@@ -31,22 +32,18 @@ export function SettingsScreenHeader({
         },
       ]}
     >
-      <Pressable
+      <AppBackButton
         onPress={handleBack}
-        style={[
-          styles.backButton,
-          { width: touchTargets.min, height: touchTargets.min },
-        ]}
-        accessibilityRole="button"
         accessibilityLabel="Go back"
+        directional
         testID={backTestID}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-        <Icon name="chevron-left" size={24} color={colors.textPrimary} decorative directional />
-      </Pressable>
+        size={36}
+      />
       <Text
         style={[styles.title, typography.headlineMedium, { color: colors.textPrimary }]}
-        numberOfLines={1}
+        numberOfLines={2}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
       >
         {title}
       </Text>

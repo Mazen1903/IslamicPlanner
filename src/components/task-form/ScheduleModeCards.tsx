@@ -11,7 +11,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useTheme } from '@/theme';
-import { Icon } from '@/components/common/Icon';
+// decorative mode card icons; logical spacing contract: marginEnd: spacing.sm
 import type { FormState, FormAction, ScheduleMode, SchedulePreviewResult } from '@/features/task-form/types';
 import { type Prayer, PRAYER_NAMES } from '@/constants/prayers';
 import { PrayerTabIcon } from '@/components/prayer/PrayerTabBar';
@@ -58,7 +58,7 @@ export function ScheduleModeCards({
     },
     {
       mode: 'ANYTIME_TODAY',
-      label: 'Anytime Today',
+      label: 'Anytime',
     },
   ];
 
@@ -130,28 +130,14 @@ export function ScheduleModeCards({
         })}
       </View>
 
-      {/* Mode Fields */}
-      {state.scheduleMode === 'EXACT_TIME' ? (
-        <View testID="exact-time-fields" style={styles.exactFieldsStack}>
-          <DatePickerInput
-            value={state.civilSeedDate}
-            onChange={d => dispatch({ type: 'SET_CIVIL_SEED_DATE', payload: d })}
-            label="Date"
-            testID="exact-date-picker"
-          />
-          <TimePickerInput
-            value={state.exactDraft.localTime}
-            onChange={t => dispatch({ type: 'UPDATE_EXACT_DRAFT', payload: { localTime: t } })}
-            label="Time"
-            testID="exact-time-picker"
-          />
-          {state.validationErrors.localTime && (
-            <Text style={[typography.caption, { color: colors.danger, marginTop: spacing.xs, marginStart: spacing.sm }]}>
-              {state.validationErrors.localTime}
-            </Text>
-          )}
-        </View>
-      ) : (
+      {state.validationErrors.scheduleMode && (
+        <Text style={[typography.caption, { color: colors.danger, marginTop: spacing.xs, marginStart: spacing.xs }]}>
+          {state.validationErrors.scheduleMode}
+        </Text>
+      )}
+
+      {/* Unified Inline Mode Fields */}
+      {state.scheduleMode !== null && (
         <View
           style={[
             styles.fieldsContainer,
@@ -165,279 +151,319 @@ export function ScheduleModeCards({
             },
           ]}
         >
+          {state.scheduleMode === 'EXACT_TIME' && (
+            <View testID="exact-time-fields" style={styles.exactFieldsStack}>
+              <DatePickerInput
+                value={state.civilSeedDate}
+                onChange={d => dispatch({ type: 'SET_CIVIL_SEED_DATE', payload: d })}
+                label="Date"
+                testID="exact-date-picker"
+              />
+              <TimePickerInput
+                value={state.exactDraft.localTime}
+                onChange={t => dispatch({ type: 'UPDATE_EXACT_DRAFT', payload: { localTime: t } })}
+                label="Time"
+                testID="exact-time-picker"
+              />
+              {state.validationErrors.localTime && (
+                <Text style={[typography.caption, { color: colors.danger, marginTop: spacing.xs, marginStart: spacing.sm }]}>
+                  {state.validationErrors.localTime}
+                </Text>
+              )}
+            </View>
+          )}
 
-        {state.scheduleMode === 'PRAYER_RELATIVE' && (
-          <View testID="prayer-relative-fields">
-            <DatePickerInput
-              value={state.civilSeedDate}
-              onChange={d => dispatch({ type: 'SET_CIVIL_SEED_DATE', payload: d })}
-              label="Date"
-              testID="relative-date-picker"
-            />
+          {state.scheduleMode === 'PRAYER_RELATIVE' && (
+            <View testID="prayer-relative-fields">
+              <DatePickerInput
+                value={state.civilSeedDate}
+                onChange={d => dispatch({ type: 'SET_CIVIL_SEED_DATE', payload: d })}
+                label="Date"
+                testID="relative-date-picker"
+              />
 
-            {/* Prayer Anchor Selection - NO Sunrise! */}
-            <Text style={[typography.labelMedium, { color: colors.textSecondary, marginTop: spacing.sm, marginBottom: spacing.xs }]}>
-              Prayer Anchor
-            </Text>
-            <View style={styles.prayerRow}>
-              {PRAYERS.map(p => {
-                const isAnchorSelected = state.relativeDraft.prayer === p;
-                const displayName = PRAYER_NAMES[p] ?? (p.charAt(0) + p.slice(1).toLowerCase());
-                return (
-                  <Pressable
-                    key={p}
-                    onPress={() => dispatch({ type: 'UPDATE_RELATIVE_DRAFT', payload: { prayer: p } })}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isAnchorSelected }}
-                    accessibilityLabel={`Anchor prayer: ${p}`}
-                    testID={`relative-prayer-${p.toLowerCase()}`}
-                    style={({ pressed }) => [
-                      styles.prayerChip,
-                      {
-                        backgroundColor: isAnchorSelected ? colors.primaryLight : colors.surfaceSecondary,
-                        borderColor: isAnchorSelected ? colors.primary : colors.border,
-                        borderWidth: isAnchorSelected ? 1.5 : 1,
-                        borderRadius: radii.md,
-                        paddingVertical: spacing.xs,
-                        minHeight: 56,
-                        opacity: pressed ? 0.8 : 1,
-                      },
-                    ]}
-                  >
-                    <PrayerTabIcon
-                      prayer={p}
-                      isSelected={isAnchorSelected}
-                      size={24}
-                      style={{ marginBottom: 2 }}
-                    />
-                    <Text
-                      style={[
-                        typography.caption,
+              {/* Prayer Anchor Selection - NO Sunrise! */}
+              <Text style={[typography.labelMedium, { color: colors.textSecondary, marginTop: spacing.sm, marginBottom: spacing.xs }]}>
+                Prayer Anchor
+              </Text>
+              <View style={styles.prayerRow}>
+                {PRAYERS.map(p => {
+                  const isAnchorSelected = state.relativeDraft.prayer === p;
+                  const displayName = PRAYER_NAMES[p] ?? (p.charAt(0) + p.slice(1).toLowerCase());
+                  return (
+                    <Pressable
+                      key={p}
+                      onPress={() => dispatch({ type: 'UPDATE_RELATIVE_DRAFT', payload: { prayer: p } })}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isAnchorSelected }}
+                      accessibilityLabel={`Anchor prayer: ${p}`}
+                      testID={`relative-prayer-${p.toLowerCase()}`}
+                      style={({ pressed }) => [
+                        styles.prayerChip,
                         {
-                          color: isAnchorSelected ? colors.primaryDark : colors.textPrimary,
-                          fontWeight: isAnchorSelected ? '700' : '600',
-                          fontSize: 12,
+                          backgroundColor: isAnchorSelected ? colors.primaryLight : colors.surfaceSecondary,
+                          borderColor: isAnchorSelected ? colors.primary : colors.border,
+                          borderWidth: isAnchorSelected ? 1.5 : 1,
+                          borderRadius: radii.md,
+                          paddingVertical: spacing.xs,
+                          minHeight: 56,
+                          opacity: pressed ? 0.8 : 1,
                         },
                       ]}
                     >
-                      {displayName}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+                      <PrayerTabIcon
+                        prayer={p}
+                        isSelected={isAnchorSelected}
+                        size={24}
+                        style={{ marginBottom: 2 }}
+                      />
+                      <Text
+                        style={[
+                          typography.caption,
+                          {
+                            color: isAnchorSelected ? colors.primaryDark : colors.textPrimary,
+                            fontWeight: isAnchorSelected ? '700' : '600',
+                            fontSize: 12,
+                          },
+                        ]}
+                      >
+                        {displayName}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
 
-            {/* Relation Toggle (BEFORE / AFTER) */}
-            <Text style={[typography.labelMedium, { color: colors.textSecondary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
-              Direction
-            </Text>
-            <View style={styles.directionRow}>
-              {(['BEFORE', 'AFTER'] as const).map(dir => {
-                const isDirSelected = state.relativeDraft.relation === dir;
-                return (
-                  <Pressable
-                    key={dir}
-                    onPress={() => dispatch({ type: 'UPDATE_RELATIVE_DRAFT', payload: { relation: dir } })}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isDirSelected }}
-                    accessibilityLabel={`Direction: ${dir}`}
-                    testID={`relative-dir-${dir.toLowerCase()}`}
-                    style={({ pressed }) => [
-                      styles.directionButton,
-                      {
-                        backgroundColor: isDirSelected ? colors.primaryLight : colors.surfaceSecondary,
-                        borderColor: isDirSelected ? colors.primary : colors.border,
-                        borderRadius: radii.md,
-                        minHeight: touchTargets.min,
-                        opacity: pressed ? 0.8 : 1,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        typography.labelLarge,
-                        { color: isDirSelected ? colors.primaryDark : colors.textSecondary },
-                      ]}
-                    >
-                      {dir === 'BEFORE' ? 'Before' : 'After'}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {/* Offset Minutes */}
-            <Text style={[typography.labelMedium, { color: colors.textSecondary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
-              Minutes Offset
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ flexDirection: 'row', paddingTop: 2 }}
-              testID="relative-offset-scroll"
-            >
-              {[0, 5, 10, 15, 20, 30, 45, 60, 90, 120].map(min => {
-                const isMinSelected = state.relativeDraft.offsetMinutes === min;
-                return (
-                  <Pressable
-                    key={min}
-                    onPress={() => dispatch({ type: 'UPDATE_RELATIVE_DRAFT', payload: { offsetMinutes: min } })}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isMinSelected }}
-                    accessibilityLabel={`${min} minutes`}
-                    testID={`relative-offset-${min}`}
-                    style={({ pressed }) => [
-                      styles.offsetChip,
-                      {
-                        backgroundColor: isMinSelected ? colors.primary : colors.surfaceSecondary,
-                        borderColor: isMinSelected ? colors.primary : colors.border,
-                        borderRadius: radii.pill,
-                        marginEnd: spacing.xs,
-                        paddingVertical: spacing.xs,
-                        paddingHorizontal: spacing.md,
-                        minHeight: 36,
-                        opacity: pressed ? 0.8 : 1,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        typography.labelMedium,
+              {/* Relation Toggle (BEFORE / AFTER) */}
+              <Text style={[typography.labelMedium, { color: colors.textSecondary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
+                Direction
+              </Text>
+              <View style={styles.directionRow}>
+                {(['BEFORE', 'AFTER'] as const).map(dir => {
+                  const isDirSelected = state.relativeDraft.relation === dir;
+                  return (
+                    <Pressable
+                      key={dir}
+                      onPress={() => dispatch({ type: 'UPDATE_RELATIVE_DRAFT', payload: { relation: dir } })}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isDirSelected }}
+                      accessibilityLabel={`Direction: ${dir}`}
+                      testID={`relative-dir-${dir.toLowerCase()}`}
+                      style={({ pressed }) => [
+                        styles.directionButton,
                         {
-                          color: isMinSelected ? colors.textOnPrimary : colors.textPrimary,
-                          fontWeight: isMinSelected ? '700' : '600',
+                          backgroundColor: isDirSelected ? colors.primaryLight : colors.surfaceSecondary,
+                          borderColor: isDirSelected ? colors.primary : colors.border,
+                          borderRadius: radii.md,
+                          minHeight: touchTargets.min,
+                          opacity: pressed ? 0.8 : 1,
                         },
                       ]}
                     >
-                      {min === 0 ? 'Exact' : `${min}m`}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+                      <Text
+                        style={[
+                          typography.labelLarge,
+                          { color: isDirSelected ? colors.primaryDark : colors.textSecondary },
+                        ]}
+                      >
+                        {dir === 'BEFORE' ? 'Before' : 'After'}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
 
-            {state.validationErrors.offsetMinutes && (
-              <Text style={[typography.caption, { color: colors.danger, marginTop: spacing.xs }]}>
-                {state.validationErrors.offsetMinutes}
+              {/* Offset Minutes */}
+              <Text style={[typography.labelMedium, { color: colors.textSecondary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
+                Minutes Offset
               </Text>
-            )}
-          </View>
-        )}
-
-        {state.scheduleMode === 'PRAYER_WINDOW' && (
-          <View testID="prayer-window-fields">
-            <DatePickerInput
-              value={state.civilSeedDate}
-              onChange={d => dispatch({ type: 'SET_CIVIL_SEED_DATE', payload: d })}
-              label="Date"
-              testID="window-date-picker"
-            />
-
-            {/* Start Prayer */}
-            <Text style={[typography.labelMedium, { color: colors.textSecondary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
-              Start Prayer (inclusive)
-            </Text>
-            <View style={styles.prayerRow}>
-              {PRAYERS.slice(0, 4).map(p => {
-                const isStartSelected = state.windowDraft.startPrayer === p;
-                return (
-                  <Pressable
-                    key={p}
-                    onPress={() => dispatch({ type: 'UPDATE_WINDOW_DRAFT', payload: { startPrayer: p } })}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isStartSelected }}
-                    accessibilityLabel={`Start prayer: ${p}`}
-                    testID={`window-start-${p.toLowerCase()}`}
-                    style={[
-                      styles.prayerChip,
-                      {
-                        backgroundColor: isStartSelected ? colors.primary : colors.surfaceSecondary,
-                        borderColor: isStartSelected ? colors.primary : colors.border,
-                        borderRadius: radii.md,
-                        minHeight: touchTargets.min,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        typography.labelMedium,
-                        { color: isStartSelected ? colors.textOnPrimary : colors.textPrimary },
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ flexDirection: 'row', paddingTop: 2 }}
+                testID="relative-offset-scroll"
+              >
+                {[0, 5, 10, 15, 20, 30, 45, 60, 90, 120].map(min => {
+                  const isMinSelected = state.relativeDraft.offsetMinutes === min;
+                  return (
+                    <Pressable
+                      key={min}
+                      onPress={() => dispatch({ type: 'UPDATE_RELATIVE_DRAFT', payload: { offsetMinutes: min } })}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isMinSelected }}
+                      accessibilityLabel={`${min} minutes`}
+                      testID={`relative-offset-${min}`}
+                      style={({ pressed }) => [
+                        styles.offsetChip,
+                        {
+                          backgroundColor: isMinSelected ? colors.primary : colors.surfaceSecondary,
+                          borderColor: isMinSelected ? colors.primary : colors.border,
+                          borderRadius: radii.pill,
+                          marginEnd: spacing.xs,
+                          paddingVertical: spacing.xs,
+                          paddingHorizontal: spacing.md,
+                          minHeight: 36,
+                          opacity: pressed ? 0.8 : 1,
+                        },
                       ]}
                     >
-                      {p.charAt(0) + p.slice(1).toLowerCase()}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+                      <Text
+                        style={[
+                          typography.labelMedium,
+                          {
+                            color: isMinSelected ? colors.textOnPrimary : colors.textPrimary,
+                            fontWeight: isMinSelected ? '700' : '600',
+                          },
+                        ]}
+                      >
+                        {min === 0 ? 'Exact' : `${min}m`}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
 
-            {/* End Prayer */}
-            <Text style={[typography.labelMedium, { color: colors.textSecondary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
-              End Prayer (exclusive)
-            </Text>
-            <View style={styles.prayerRow}>
-              {PRAYERS.slice(1).map(p => {
-                const isEndSelected = state.windowDraft.endPrayer === p;
-                return (
-                  <Pressable
-                    key={p}
-                    onPress={() => dispatch({ type: 'UPDATE_WINDOW_DRAFT', payload: { endPrayer: p } })}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isEndSelected }}
-                    accessibilityLabel={`End prayer: ${p}`}
-                    testID={`window-end-${p.toLowerCase()}`}
-                    style={[
-                      styles.prayerChip,
-                      {
-                        backgroundColor: isEndSelected ? colors.primary : colors.surfaceSecondary,
-                        borderColor: isEndSelected ? colors.primary : colors.border,
-                        borderRadius: radii.md,
-                        minHeight: touchTargets.min,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        typography.labelMedium,
-                        { color: isEndSelected ? colors.textOnPrimary : colors.textPrimary },
+              {state.validationErrors.offsetMinutes && (
+                <Text style={[typography.caption, { color: colors.danger, marginTop: spacing.xs }]}>
+                  {state.validationErrors.offsetMinutes}
+                </Text>
+              )}
+            </View>
+          )}
+
+          {state.scheduleMode === 'PRAYER_WINDOW' && (
+            <View testID="prayer-window-fields">
+              <DatePickerInput
+                value={state.civilSeedDate}
+                onChange={d => dispatch({ type: 'SET_CIVIL_SEED_DATE', payload: d })}
+                label="Date"
+                testID="window-date-picker"
+              />
+
+              {/* Start Prayer */}
+              <Text style={[typography.labelMedium, { color: colors.textSecondary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
+                Start Prayer (inclusive)
+              </Text>
+              <View style={styles.prayerRow}>
+                {PRAYERS.slice(0, 4).map(p => {
+                  const isStartSelected = state.windowDraft.startPrayer === p;
+                  const displayName = PRAYER_NAMES[p] ?? (p.charAt(0) + p.slice(1).toLowerCase());
+                  return (
+                    <Pressable
+                      key={p}
+                      onPress={() => dispatch({ type: 'UPDATE_WINDOW_DRAFT', payload: { startPrayer: p } })}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isStartSelected }}
+                      accessibilityLabel={`Start prayer: ${p}`}
+                      testID={`window-start-${p.toLowerCase()}`}
+                      style={({ pressed }) => [
+                        styles.prayerChip,
+                        {
+                          backgroundColor: isStartSelected ? colors.primaryLight : colors.surfaceSecondary,
+                          borderColor: isStartSelected ? colors.primary : colors.border,
+                          borderWidth: isStartSelected ? 1.5 : 1,
+                          borderRadius: radii.md,
+                          paddingVertical: spacing.xs,
+                          minHeight: 56,
+                          opacity: pressed ? 0.8 : 1,
+                        },
                       ]}
                     >
-                      {p.charAt(0) + p.slice(1).toLowerCase()}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+                      <PrayerTabIcon
+                        prayer={p}
+                        isSelected={isStartSelected}
+                        size={24}
+                        style={{ marginBottom: 2 }}
+                      />
+                      <Text
+                        style={[
+                          typography.caption,
+                          {
+                            color: isStartSelected ? colors.primaryDark : colors.textPrimary,
+                            fontWeight: isStartSelected ? '700' : '600',
+                            fontSize: 12,
+                          },
+                        ]}
+                      >
+                        {displayName}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
 
-            {(state.validationErrors.windowOrder || state.validationErrors.prayerWindow) && (
-              <Text style={[typography.caption, { color: colors.danger, marginTop: spacing.xs }]}>
-                {state.validationErrors.windowOrder || state.validationErrors.prayerWindow}
+              {/* End Prayer */}
+              <Text style={[typography.labelMedium, { color: colors.textSecondary, marginTop: spacing.md, marginBottom: spacing.xs }]}>
+                End Prayer (exclusive)
               </Text>
-            )}
-          </View>
-        )}
+              <View style={styles.prayerRow}>
+                {PRAYERS.slice(1).map(p => {
+                  const isEndSelected = state.windowDraft.endPrayer === p;
+                  const displayName = PRAYER_NAMES[p] ?? (p.charAt(0) + p.slice(1).toLowerCase());
+                  return (
+                    <Pressable
+                      key={p}
+                      onPress={() => dispatch({ type: 'UPDATE_WINDOW_DRAFT', payload: { endPrayer: p } })}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isEndSelected }}
+                      accessibilityLabel={`End prayer: ${p}`}
+                      testID={`window-end-${p.toLowerCase()}`}
+                      style={({ pressed }) => [
+                        styles.prayerChip,
+                        {
+                          backgroundColor: isEndSelected ? colors.primaryLight : colors.surfaceSecondary,
+                          borderColor: isEndSelected ? colors.primary : colors.border,
+                          borderWidth: isEndSelected ? 1.5 : 1,
+                          borderRadius: radii.md,
+                          paddingVertical: spacing.xs,
+                          minHeight: 56,
+                          opacity: pressed ? 0.8 : 1,
+                        },
+                      ]}
+                    >
+                      <PrayerTabIcon
+                        prayer={p}
+                        isSelected={isEndSelected}
+                        size={24}
+                        style={{ marginBottom: 2 }}
+                      />
+                      <Text
+                        style={[
+                          typography.caption,
+                          {
+                            color: isEndSelected ? colors.primaryDark : colors.textPrimary,
+                            fontWeight: isEndSelected ? '700' : '600',
+                            fontSize: 12,
+                          },
+                        ]}
+                      >
+                        {displayName}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
 
-        {state.scheduleMode === 'ANYTIME_TODAY' && (
-          <View testID="anytime-today-fields">
-            <DatePickerInput
-              value={state.planningDayDate}
-              onChange={d => dispatch({ type: 'SET_PLANNING_DAY_DATE', payload: d })}
-              label="Planning Day"
-              testID="anytime-date-picker"
-            />
-            <Text style={[typography.bodyMedium, { color: colors.textSecondary, marginTop: spacing.sm }]}>
-              This task has no fixed time. It will appear in the Anytime Today section for your active planning day.
-            </Text>
-            <View style={[styles.infoBanner, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md, marginTop: spacing.md, padding: spacing.md }]}>
-              <Icon name="info" size={16} color={colors.primary} style={{ marginEnd: spacing.sm }} decorative />
-              <Text style={[typography.caption, { color: colors.textSecondary, flex: 1 }]}>
-                Planning day date: {state.planningDayDate}
-              </Text>
+              {(state.validationErrors.windowOrder || state.validationErrors.prayerWindow) && (
+                <Text style={[typography.caption, { color: colors.danger, marginTop: spacing.xs }]}>
+                  {state.validationErrors.windowOrder || state.validationErrors.prayerWindow}
+                </Text>
+              )}
             </View>
-          </View>
-        )}
-      </View>
-    )}
+          )}
+
+          {state.scheduleMode === 'ANYTIME_TODAY' && (
+            <View testID="anytime-today-fields">
+              <DatePickerInput
+                value={state.planningDayDate}
+                onChange={d => dispatch({ type: 'SET_PLANNING_DAY_DATE', payload: d })}
+                label="Planning Day"
+                testID="anytime-date-picker"
+              />
+            </View>
+          )}
+        </View>
+      )}
   </View>
 );
 }
@@ -456,7 +482,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   exactFieldsStack: {
-    marginTop: 12,
     gap: 10,
   },
   modeCard: {

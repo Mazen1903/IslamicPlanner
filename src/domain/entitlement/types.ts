@@ -2,7 +2,20 @@ export type EntitlementTier = 'FREE' | 'PREMIUM';
 
 export type PremiumFeature =
   | 'PLANNING_DAY_MIDNIGHT'
-  | 'PLANNING_DAY_CUSTOM';
+  | 'PLANNING_DAY_CUSTOM'
+  | 'TASK_ICONS_EXTENDED'
+  | 'ISLAMIC_THEMES_EXTENDED'
+  | 'PRIORITY'
+  | 'TRACK_STREAK'
+  | 'REMINDER_SOUNDS_EXTENDED'
+  | 'REMINDER_ENHANCED'
+  | 'REMINDER_CUSTOM_SOUND'
+  | 'WIDGET_THEMES'
+  | 'JOURNAL_PHOTOS'
+  | 'JOURNAL_MOOD_TRENDS'
+  | 'JOURNAL_EXPORT'
+  | 'TEMPLATES_UNLIMITED'
+  | 'CUSTOM_CATEGORIES';
 
 export type EntitlementSnapshot =
   | { status: 'READY'; tier: EntitlementTier; isPremium: boolean; source: 'LOCAL_DB' }

@@ -78,7 +78,7 @@ export function SettingsRow({
               fontWeight: '500',
             },
           ]}
-          numberOfLines={1}
+          numberOfLines={2}
         >
           {label}
         </Text>

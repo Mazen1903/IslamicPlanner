@@ -1,4 +1,4 @@
-import type { ReminderRule } from '@/domain/task/types';
+import type { ReminderRule, ReminderRuleV2, ReminderPrayerAnchor } from '@/domain/task/types';
 
 export const MAX_REMINDERS_PER_TASK = 3;
 export const DEFAULT_ANYTIME_REMINDER_TIME = '09:00';
@@ -6,15 +6,24 @@ export const DEFAULT_ANYTIME_REMINDER_TIME = '09:00';
 export interface NormalizedReminderRule {
   offsetsMinutes: number[];
   timeOfDay?: string;
+  version?: 2;
+  enabled?: boolean;
+  prayerAnchors?: ReminderPrayerAnchor[];
+  type?: 'STANDARD' | 'ENHANCED';
+  enhancedMode?: 'FULL_SCREEN' | 'PERSISTENT';
+  soundId?: string;
+  playbackCount?: 1 | 3 | 'LOOP';
+  backgroundId?: string;
+  timeSensitive?: boolean;
+  nag?: { everyMinutes: number; maxTimes: number };
 }
 
 /**
  * Normalizes any ReminderRule (including legacy single-offset shapes) into a canonical shape.
  * - Extracts offsets from `offsetsMinutes` array or legacy `offsetMinutes`.
  * - Validates integer numbers, deduplicates, and sorts chronologically (most negative first).
- * - Caps at MAX_REMINDERS_PER_TASK (3).
  * - Validates HH:mm timeOfDay if present.
- * - Returns null if no valid offsets and no valid timeOfDay exist.
+ * - Returns null if no valid offsets, no prayer anchors, and no valid timeOfDay exist.
  */
 export function normalizeReminderRule(
   rule: ReminderRule | null | undefined
@@ -47,14 +56,57 @@ export function normalizeReminderRule(
     }
   }
 
-  if (uniqueOffsets.length === 0 && !validTimeOfDay) {
+  const hasPrayerAnchors = Array.isArray(rule.prayerAnchors) && rule.prayerAnchors.length > 0;
+
+  if (uniqueOffsets.length === 0 && !validTimeOfDay && !hasPrayerAnchors) {
     return null;
   }
 
-  return {
+  const res: NormalizedReminderRule = {
     offsetsMinutes: uniqueOffsets,
     ...(validTimeOfDay ? { timeOfDay: validTimeOfDay } : {}),
   };
+
+  if (hasPrayerAnchors) res.prayerAnchors = rule.prayerAnchors;
+  if (rule.type) res.type = rule.type;
+  if (rule.soundId) res.soundId = rule.soundId;
+  if (rule.enhancedMode) res.enhancedMode = rule.enhancedMode;
+  if (rule.playbackCount) res.playbackCount = rule.playbackCount;
+  if (rule.backgroundId) res.backgroundId = rule.backgroundId;
+  if (rule.timeSensitive !== undefined) res.timeSensitive = rule.timeSensitive;
+  if (rule.nag) res.nag = rule.nag;
+  if (rule.enabled !== undefined) res.enabled = rule.enabled;
+
+  return res;
+}
+
+export function toReminderRuleV2(rule: ReminderRule | null | undefined): ReminderRuleV2 {
+  const normalized = normalizeReminderRule(rule);
+  return {
+    version: 2,
+    enabled: rule?.enabled ?? (normalized !== null),
+    offsetsMinutes: normalized?.offsetsMinutes ?? [],
+    prayerAnchors: rule?.prayerAnchors ?? [],
+    timeOfDay: normalized?.timeOfDay,
+    type: rule?.type === 'ENHANCED' ? 'ENHANCED' : 'STANDARD',
+    enhancedMode: rule?.enhancedMode ?? 'FULL_SCREEN',
+    soundId: rule?.soundId ?? 'default',
+    playbackCount: rule?.playbackCount ?? 1,
+    backgroundId: rule?.backgroundId ?? 'night_mosque',
+    timeSensitive: rule?.timeSensitive ?? false,
+    nag: rule?.nag,
+  };
+}
+
+export function formatPrayerAnchor(prayer: string, offsetMinutes: number): string {
+  const prayerName = prayer.charAt(0).toUpperCase() + prayer.slice(1).toLowerCase();
+  if (offsetMinutes === 0) {
+    return `At ${prayerName} Adhan`;
+  }
+  if (offsetMinutes < 0) {
+    return `${Math.abs(offsetMinutes)}m before ${prayerName} Adhan`;
+  }
+  return `${offsetMinutes}m after ${prayerName} Adhan`;
 }
 
 /**
@@ -106,13 +158,19 @@ export function formatReminderSummary(
     return `At ${displayHour}:${displayMinute} ${period}`;
   }
 
-  if (normalized.offsetsMinutes.length === 0) {
+  const totalItems = (normalized.offsetsMinutes?.length ?? 0) + (normalized.prayerAnchors?.length ?? 0);
+  if (totalItems === 0) {
     return 'None';
   }
 
-  const firstLabel = formatReminderOffset(normalized.offsetsMinutes[0]);
-  const extraCount = normalized.offsetsMinutes.length - 1;
+  let firstLabel = '';
+  if (normalized.offsetsMinutes.length > 0) {
+    firstLabel = formatReminderOffset(normalized.offsetsMinutes[0]);
+  } else if (normalized.prayerAnchors && normalized.prayerAnchors.length > 0) {
+    firstLabel = formatPrayerAnchor(normalized.prayerAnchors[0].prayer, normalized.prayerAnchors[0].offsetMinutes);
+  }
 
+  const extraCount = totalItems - 1;
   if (extraCount > 0) {
     return `${firstLabel} +${extraCount}`;
   }

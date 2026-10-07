@@ -296,7 +296,16 @@ export default function OnboardingScreen({
       <SafeArea testID="screen-salah-intro" edges={['top', 'bottom', 'left', 'right']} style={styles.container}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.headerContainer}>
-            <Text style={[theme.typography.headlineLarge, { color: theme.colors.textPrimary, textAlign: 'center' }]}>
+            <View style={styles.bismillahContainer}>
+              <Text style={[styles.bismillahText, { color: theme.colors.primary }]}>
+                Bismillah Ar-Rahman Ar-Rahim
+              </Text>
+              <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginTop: 4, letterSpacing: 1.2, textTransform: 'uppercase', fontSize: 10 }]}>
+                In the Name of Allah, Most Compassionate, Most Merciful
+              </Text>
+            </View>
+
+            <Text style={[theme.typography.headlineLarge, { color: theme.colors.textPrimary, textAlign: 'center', marginTop: theme.spacing.sm }]}>
               Your day, centered around Salah
             </Text>
             <Text style={[theme.typography.bodyLarge, { color: theme.colors.textSecondary, textAlign: 'center', marginTop: theme.spacing.sm }]}>
@@ -798,6 +807,16 @@ const styles = StyleSheet.create({
   headerContainer: {
     marginBottom: 24,
     alignItems: 'center',
+  },
+  bismillahContainer: {
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingVertical: 4,
+  },
+  bismillahText: {
+    fontSize: 22,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   prayersList: {
     marginBottom: 24,

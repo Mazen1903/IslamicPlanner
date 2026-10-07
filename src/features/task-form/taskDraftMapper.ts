@@ -77,6 +77,9 @@ export function deriveScheduleDataFromState(
         scheduleData: data as ScheduleDataFor<'ANYTIME_TODAY'>,
       };
     }
+
+    default:
+      throw new Error(`Cannot derive schedule data for unselected scheduleMode: ${state.scheduleMode}`);
   }
 }
 
@@ -131,13 +134,20 @@ export function deriveRecurrenceFromState(state: FormState): {
  * Derives reminder rule preserving existing unknown metadata fields on edit.
  */
 export function deriveReminderRuleFromState(state: FormState): ReminderRule | null {
+  if (state.reminderEnabled === false) {
+    return null;
+  }
+
   const base: Record<string, unknown> = state.existingReminderRule ? { ...state.existingReminderRule } : {};
   const offsets = state.reminders && state.reminders.length > 0
     ? state.reminders
     : (typeof state.reminderMinutes === 'number' ? [state.reminderMinutes] : []);
+  const prayerAnchors = state.reminderPrayerAnchors && state.reminderPrayerAnchors.length > 0
+    ? state.reminderPrayerAnchors
+    : undefined;
 
   if (state.scheduleMode === 'ANYTIME_TODAY') {
-    if (offsets.length === 0 && !state.reminderTimeOfDay) {
+    if (offsets.length === 0 && !state.reminderTimeOfDay && !prayerAnchors) {
       return null;
     }
     if (offsets.length > 0) {
@@ -145,18 +155,41 @@ export function deriveReminderRuleFromState(state: FormState): ReminderRule | nu
       base.offsetMinutes = offsets[0];
     }
     base.timeOfDay = state.reminderTimeOfDay || '09:00';
-    return base as ReminderRule;
+  } else {
+    if (offsets.length === 0 && !prayerAnchors) {
+      return null;
+    }
+    if (state.reminders && state.reminders.length > 0) {
+      base.offsetsMinutes = offsets;
+    }
+    base.offsetMinutes = offsets[0];
+    delete base.timeOfDay;
   }
 
-  if (offsets.length === 0) {
-    return null;
+  if (prayerAnchors) {
+    base.prayerAnchors = prayerAnchors;
   }
 
-  if (state.reminders && state.reminders.length > 0) {
-    base.offsetsMinutes = offsets;
+  // Attach v2 metadata if customized
+  if (state.reminderSoundId && state.reminderSoundId !== 'default') {
+    base.soundId = state.reminderSoundId;
   }
-  base.offsetMinutes = offsets[0];
-  delete base.timeOfDay;
+  if (state.reminderCustomSoundUri) {
+    base.customSoundUri = state.reminderCustomSoundUri;
+  }
+  if (state.reminderType === 'ENHANCED') {
+    base.type = 'ENHANCED';
+    base.enhancedMode = state.reminderEnhancedMode;
+    base.playbackCount = state.reminderPlaybackCount;
+    base.backgroundId = state.reminderBackgroundId;
+  }
+  if (state.reminderTimeSensitive) {
+    base.timeSensitive = true;
+  }
+  if (state.reminderNag) {
+    base.nag = { everyMinutes: 5, maxTimes: 3 };
+  }
+
   return base as ReminderRule;
 }
 

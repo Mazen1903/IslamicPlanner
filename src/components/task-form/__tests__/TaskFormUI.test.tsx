@@ -118,7 +118,7 @@ describe('Task Form UI Components & Accessibility (M10 §6, §11, §14, §16, §
       expect(getByText('Exact Time')).toBeTruthy();
       expect(getByText('Relative to Prayer')).toBeTruthy();
       expect(getByText('Prayer Window')).toBeTruthy();
-      expect(getByText('Anytime Today')).toBeTruthy();
+      expect(getByText('Anytime')).toBeTruthy();
 
       // Verify descriptions are removed
       expect(queryByText('Set a specific time')).toBeNull();
@@ -319,8 +319,8 @@ describe('Task Form UI Components & Accessibility (M10 §6, §11, §14, §16, §
   });
 
   describe('TaskFormScreen Integration & Defaults', () => {
-    it('applies prayer-tab launch defaults for Fajr (Prayer Window Fajr->Dhuhr)', async () => {
-      const { getByTestId } = await render(
+    it('does not auto-select mode on launch, but preserves prayer-tab launch drafts when selected', async () => {
+      const { getByTestId, queryByTestId } = await render(
         <ThemeProvider>
           <TaskFormScreen
             initialCivilSeedDate={civilToday}
@@ -333,11 +333,16 @@ describe('Task Form UI Components & Accessibility (M10 §6, §11, §14, §16, §
         </ThemeProvider>
       );
 
+      // Nothing auto-selected on launch
+      expect(queryByTestId('prayer-window-fields')).toBeNull();
+
+      // When user selects Prayer Window, the prefilled draft is shown
+      await fireEvent.press(getByTestId('schedule-mode-prayer_window'));
       expect(getByTestId('prayer-window-fields')).toBeTruthy();
     });
 
-    it('applies prayer-tab launch defaults for Isha (Relative to Isha, After 0m)', async () => {
-      const { getByTestId } = await render(
+    it('does not auto-select mode on launch, and preserves Isha draft when Relative is selected', async () => {
+      const { getByTestId, queryByTestId } = await render(
         <ThemeProvider>
           <TaskFormScreen
             initialCivilSeedDate={civilToday}
@@ -350,6 +355,11 @@ describe('Task Form UI Components & Accessibility (M10 §6, §11, §14, §16, §
         </ThemeProvider>
       );
 
+      // Nothing auto-selected on launch
+      expect(queryByTestId('prayer-relative-fields')).toBeNull();
+
+      // When user selects Relative, the prefilled draft is shown
+      await fireEvent.press(getByTestId('schedule-mode-prayer_relative'));
       expect(getByTestId('prayer-relative-fields')).toBeTruthy();
     });
 

@@ -19,3 +19,4 @@ export * from './JournalStatsStrip';
 export * from './JournalCalendar';
 export * from './JournalCard';
 export * from './JournalIcons';
+export * from './UnreadableEntryCard';

@@ -71,6 +71,13 @@
       "when": 1791246000000,
       "tag": "0009_calendar_occasions",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1791247000000,
+      "tag": "0010_planner_ui_and_reminder_defaults",
+      "breakpoints": true
     }
   ]
 }

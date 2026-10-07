@@ -40,8 +40,9 @@ import { IconPickerModal, type IconPickerOrigin } from './IconPickerModal';
 import { TaskCategoryIcon } from '@/components/task/TaskCategoryIcon';
 import { detectTaskIcon } from '@/constants/taskIcons';
 import { useUserSettings } from '@/hooks/useUserSettings';
+import { ReminderSubView, ReminderStyleSubView } from './reminder';
 
-export type FormView = 'MAIN' | 'RELATIVE_PRAYER';
+export type FormView = 'MAIN' | 'RELATIVE_PRAYER' | 'REMINDER' | 'REMINDER_STYLE';
 
 export interface TaskFormScreenProps {
   initialDefinition?: TaskDefinition;
@@ -273,7 +274,7 @@ export function TaskFormScreen({
     return (
       <SuccessScreen
         title={state.title}
-        scheduleSummary={previewResult?.primaryLabel ?? state.scheduleMode}
+        scheduleSummary={previewResult?.primaryLabel ?? (state.scheduleMode ?? '')}
         repeatSummary={state.recurrencePreset !== 'NONE' ? state.recurrencePreset : null}
         onDone={onSuccess}
         isEdit={isEdit}
@@ -313,6 +314,76 @@ export function TaskFormScreen({
           previewResult={previewResult}
           onBack={() => setCurrentView('MAIN')}
           onNext={() => setCurrentView('MAIN')}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  // Sub-view 3: Reminder settings screen (media_1791325705295.png)
+  if (currentView === 'REMINDER') {
+    return (
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['top', 'left', 'right']}
+        testID="task-form-screen"
+      >
+        <ReminderSubView
+          taskTitle={state.title}
+          scheduleMode={state.scheduleMode}
+          reminderEnabled={state.reminderEnabled}
+          reminders={state.reminders}
+          prayerAnchors={state.reminderPrayerAnchors}
+          reminderTimeOfDay={state.reminderTimeOfDay}
+          reminderType={state.reminderType}
+          enhancedMode={state.reminderEnhancedMode}
+          soundId={state.reminderSoundId}
+          customSoundUri={state.reminderCustomSoundUri}
+          playbackCount={state.reminderPlaybackCount}
+          backgroundId={state.reminderBackgroundId}
+          timeSensitive={state.reminderTimeSensitive}
+          nag={state.reminderNag}
+          onToggleEnabled={val => dispatch({ type: 'SET_REMINDER_ENABLED', payload: val })}
+          onAddReminder={offset => dispatch({ type: 'ADD_REMINDER', payload: offset })}
+          onRemoveReminder={offset => dispatch({ type: 'REMOVE_REMINDER', payload: offset })}
+          onAddPrayerAnchor={anchor => dispatch({ type: 'ADD_REMINDER_PRAYER_ANCHOR', payload: anchor })}
+          onRemovePrayerAnchor={anchor => dispatch({ type: 'REMOVE_REMINDER_PRAYER_ANCHOR', payload: anchor })}
+          onSetTimeOfDay={timeStr => dispatch({ type: 'SET_REMINDER_TIME_OF_DAY', payload: timeStr })}
+          onSetReminderType={type => dispatch({ type: 'SET_REMINDER_TYPE', payload: type })}
+          onSetEnhancedMode={mode => dispatch({ type: 'SET_ENHANCED_MODE', payload: mode })}
+          onSetSoundId={(soundId, customUri) =>
+            dispatch({ type: 'SET_REMINDER_SOUND', payload: { soundId, customSoundUri: customUri } })
+          }
+          onSetTimeSensitive={val => dispatch({ type: 'SET_REMINDER_TIME_SENSITIVE', payload: val })}
+          onSetNag={val => dispatch({ type: 'SET_REMINDER_NAG', payload: val })}
+          onOpenAlarmStyle={() => setCurrentView('REMINDER_STYLE')}
+          onBack={() => setCurrentView('MAIN')}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  // Sub-view 4: Reminder alarm style customization screen (media_1791325706165.png)
+  if (currentView === 'REMINDER_STYLE') {
+    return (
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['top', 'left', 'right']}
+        testID="task-form-screen"
+      >
+        <ReminderStyleSubView
+          taskTitle={state.title}
+          backgroundId={state.reminderBackgroundId}
+          soundId={state.reminderSoundId}
+          playbackCount={state.reminderPlaybackCount}
+          onUpdateBackgroundId={bgId => dispatch({ type: 'SET_REMINDER_BACKGROUND', payload: bgId })}
+          onUpdateSoundId={soundId =>
+            dispatch({
+              type: 'SET_REMINDER_SOUND',
+              payload: { soundId, customSoundUri: state.reminderCustomSoundUri },
+            })
+          }
+          onUpdatePlaybackCount={count => dispatch({ type: 'SET_REMINDER_PLAYBACK_COUNT', payload: count })}
+          onBack={() => setCurrentView('REMINDER')}
         />
       </SafeAreaView>
     );
@@ -487,6 +558,7 @@ export function TaskFormScreen({
             <TaskDetailsCard
               state={state}
               dispatch={dispatch}
+              onOpenReminderSettings={() => setCurrentView('REMINDER')}
             />
 
             {/* Full-width Save Task Button */}
