@@ -8,10 +8,18 @@ const APK_PATH = path.resolve(__dirname, '../android/app/build/outputs/apk/relea
 
 function getLocalIP() {
   const nets = os.networkInterfaces();
+  // First pass: look for typical 192.168.x.x LAN IPs
   for (const name of Object.keys(nets)) {
     for (const net of nets[name]) {
-      // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
-      if (net.family === 'IPv4' && !net.internal && !net.address.startsWith('10.')) {
+      if (net.family === 'IPv4' && !net.internal && net.address.startsWith('192.168.')) {
+        return net.address;
+      }
+    }
+  }
+  // Second pass: any valid non-link-local, non-VPN IP
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal && !net.address.startsWith('10.') && !net.address.startsWith('169.254.')) {
         return net.address;
       }
     }
@@ -19,7 +27,7 @@ function getLocalIP() {
   // Fallback if none found
   for (const name of Object.keys(nets)) {
     for (const net of nets[name]) {
-      if (net.family === 'IPv4' && !net.internal) {
+      if (net.family === 'IPv4' && !net.internal && !net.address.startsWith('169.254.')) {
         return net.address;
       }
     }
@@ -58,6 +66,9 @@ const server = http.createServer((req, res) => {
   const ip = getLocalIP();
   const downloadUrl = `http://${ip}:${PORT}/IslamicPlanner.apk`;
   const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(downloadUrl)}`;
+
+  const apkExists = fs.existsSync(APK_PATH);
+  const sizeMb = apkExists ? (fs.statSync(APK_PATH).size / (1024 * 1024)).toFixed(1) : 'Unknown';
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -159,7 +170,7 @@ const server = http.createServer((req, res) => {
   <div class="card">
     <div class="badge">APK Ready to Install</div>
     <h1>Islamic Planner</h1>
-    <p class="sub">Release Build (187.6 MB) &bull; Hermes Engine</p>
+    <p class="sub">Release Build (${sizeMb} MB) &bull; Hermes Engine &bull; Offline</p>
     
     <div class="qr-container">
       <img src="${qrApiUrl}" alt="Scan QR Code to Download" />
