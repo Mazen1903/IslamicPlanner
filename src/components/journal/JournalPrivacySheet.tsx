@@ -7,11 +7,13 @@ import {
   Pressable,
   Switch,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
+import { JOURNAL_ACTION_ASSETS } from '@/constants/journalIconAssets';
 
 export interface JournalPrivacySheetProps {
   visible: boolean;
@@ -89,7 +91,11 @@ export function JournalPrivacySheet({
                 },
               ]}
             >
-              <Icon name="lock" size={22} color={colors.primary} />
+              <Image
+                source={JOURNAL_ACTION_ASSETS.headerLock}
+                style={{ width: 22, height: 22 }}
+                resizeMode="contain"
+              />
             </View>
             <View style={[styles.titleContainer, { marginStart: spacing.md }]}>
               <Text
@@ -128,7 +134,7 @@ export function JournalPrivacySheet({
             ]}
           >
             <View style={styles.toggleLabelContainer}>
-              <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>
+              <Text style={[typography.labelLarge, { color: colors.textPrimary }]}>
                 Biometric Lock
               </Text>
               <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
@@ -176,7 +182,7 @@ export function JournalPrivacySheet({
             ]}
             testID="journal-privacy-more-settings-btn"
           >
-            <Text style={[typography.labelMedium, { color: colors.primary, fontWeight: '600' }]}>
+            <Text style={[typography.labelMedium, { color: colors.primary }]}>
               Advanced privacy settings →
             </Text>
           </Pressable>
@@ -204,7 +210,7 @@ export function JournalPrivacySheet({
                 },
               ]}
             >
-              <Text style={[typography.labelLarge, { color: colors.textOnPrimary, fontWeight: '700' }]}>
+              <Text style={[typography.labelLarge, { color: colors.textOnPrimary }]}>
                 Done
               </Text>
             </LinearGradient>
@@ -251,7 +257,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   titleText: {
-    fontWeight: '700',
     letterSpacing: -0.3,
   },
   toggleCard: {

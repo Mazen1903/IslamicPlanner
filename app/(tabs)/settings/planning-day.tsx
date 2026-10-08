@@ -20,12 +20,14 @@ import {
 import { PremiumBadge, PremiumLockedInfo } from '@/components/premium';
 import { TimePickerInput } from '@/components/task-form/DateTimePickerInput';
 import { Icon } from '@/components/common/Icon';
+import { usePaywallTestStore } from '@/stores/usePaywallTestStore';
 
 export default function PlanningDayScreen() {
   const { colors, spacing, typography, touchTargets, radii, shadows } = useTheme();
   const router = useRouter();
   const { settings, reload } = useUserSettings();
   const { isPremium } = useEntitlement();
+  const bypassPaywall = usePaywallTestStore(s => s.bypassPaywall);
   const { isSaving, setPlanningDayStart } = usePlanningDayMutation();
 
   const [showLockedInfo, setShowLockedInfo] = useState(false);
@@ -97,7 +99,7 @@ export default function PlanningDayScreen() {
   const handleSelectMidnight = async () => {
     if (isMidnight) return;
 
-    if (!isPremium) {
+    if (!isPremium && !bypassPaywall) {
       setShowLockedInfo(true);
       return;
     }
@@ -125,7 +127,7 @@ export default function PlanningDayScreen() {
   const handleSelectCustom = async () => {
     if (isCustom) return;
 
-    if (!isPremium) {
+    if (!isPremium && !bypassPaywall) {
       setShowLockedInfo(true);
       return;
     }
@@ -152,7 +154,7 @@ export default function PlanningDayScreen() {
   };
 
   const handleCustomTimeChange = async (newTime: string) => {
-    if (!isPremium) {
+    if (!isPremium && !bypassPaywall) {
       setShowLockedInfo(true);
       return;
     }
@@ -268,8 +270,8 @@ export default function PlanningDayScreen() {
             {!isPremium && <SettingsBadgeGoldLock testID="premium-badge-custom" />}
           </Pressable>
 
-          {/* Time Picker if Custom & Premium */}
-          {isCustom && isPremium && (
+          {/* Time Picker if Custom & Premium (or bypass for testing) */}
+          {isCustom && (isPremium || bypassPaywall) && (
             <View style={{ marginTop: spacing.xs, paddingTop: spacing.xs, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }} testID="planning-day-time-picker">
               <TimePickerInput
                 value={customTime}

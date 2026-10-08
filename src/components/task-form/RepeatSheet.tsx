@@ -16,12 +16,14 @@ import {
   RepeatHeaderBadgeIcon,
   RepeatNoneBadgeIcon,
   RepeatDailyBadgeIcon,
+  RepeatEveryOtherDayBadgeIcon,
   RepeatWeekdaysBadgeIcon,
   RepeatWeeklyBadgeIcon,
   RepeatMonthlyBadgeIcon,
   RepeatSpecificDaysBadgeIcon,
   RepeatCustomBadgeIcon,
 } from './RepeatIcons';
+import { getEveryOtherDayPreview } from './details/RepeatInlinePanel';
 
 export interface RepeatSheetProps {
   visible: boolean;
@@ -59,6 +61,12 @@ const REPEAT_OPTIONS: RepeatOptionItem[] = [
     title: 'Daily',
     subtitle: 'Repeats every day',
     renderIcon: (p) => <RepeatDailyBadgeIcon {...p} />,
+  },
+  {
+    preset: 'EVERY_OTHER_DAY',
+    title: 'Every other day',
+    subtitle: 'Every 2 days • Day on, day off',
+    renderIcon: (p) => <RepeatEveryOtherDayBadgeIcon {...p} />,
   },
   {
     preset: 'WEEKDAYS',
@@ -258,6 +266,55 @@ export function RepeatSheet({
                       />
                     )}
                   </Pressable>
+
+                  {/* Inline Every Other Day Schedule Preview */}
+                  {item.preset === 'EVERY_OTHER_DAY' && isSelected && (
+                    <View
+                      style={[
+                        styles.specificDaysContainer,
+                        {
+                          backgroundColor: colors.surfaceSecondary,
+                          borderRadius: radii.md,
+                          borderColor: colors.border,
+                          padding: spacing.md,
+                          marginTop: spacing.xs,
+                          marginBottom: spacing.xs,
+                        },
+                      ]}
+                      testID="every-other-day-preview-sheet"
+                    >
+                      <Text style={[typography.caption, { color: colors.textSecondary, marginBottom: spacing.xs, fontWeight: '600' }]}>
+                        Upcoming active days (every 2 days):
+                      </Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                        {getEveryOtherDayPreview(state.civilSeedDate).map((dayStr, idx) => (
+                          <View
+                            key={idx}
+                            style={{
+                              backgroundColor: idx === 0 ? colors.primaryLight : colors.surface,
+                              borderColor: idx === 0 ? colors.primary : colors.border,
+                              borderWidth: 1,
+                              borderRadius: radii.pill,
+                              paddingHorizontal: spacing.sm,
+                              paddingVertical: 4,
+                            }}
+                          >
+                            <Text
+                              style={[
+                                typography.caption,
+                                {
+                                  color: idx === 0 ? colors.primaryDark : colors.textPrimary,
+                                  fontWeight: idx === 0 ? '700' : '600',
+                                },
+                              ]}
+                            >
+                              {dayStr}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
 
                   {/* Inline Specific Days Controls */}
                   {item.preset === 'SPECIFIC_DAYS' && isSelected && (

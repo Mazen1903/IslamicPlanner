@@ -84,6 +84,9 @@ export function serializePresetToRRule(
     case 'DAILY':
       return 'FREQ=DAILY';
 
+    case 'EVERY_OTHER_DAY':
+      return 'FREQ=DAILY;INTERVAL=2';
+
     case 'WEEKDAYS':
       return 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR';
 

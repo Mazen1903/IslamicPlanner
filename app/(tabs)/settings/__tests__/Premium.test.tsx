@@ -111,4 +111,49 @@ describe('PremiumScreen', () => {
       expect(getByText('Notify Me When Available')).toBeTruthy();
     });
   });
+
+  it('renders Testing & Preview card, toggles bypass switch, and previews modals', async () => {
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
+
+    const { getByTestId, queryByTestId } = await render(
+      <ThemeProvider>
+        <PremiumScreen />
+      </ThemeProvider>
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('testing-preview-card')).toBeTruthy();
+    });
+
+    const bypassSwitch = getByTestId('paywall-bypass-switch');
+    expect(bypassSwitch).toBeTruthy();
+
+    // Toggle bypass switch
+    fireEvent(bypassSwitch, 'valueChange', true);
+
+    // Press Preview Paywall
+    const previewPaywallBtn = getByTestId('preview-paywall-sheet-button');
+    fireEvent.press(previewPaywallBtn);
+
+    await waitFor(() => {
+      expect(getByTestId('paywall-sheet-modal')).toBeTruthy();
+    });
+
+    // Close paywall sheet
+    const closeBtn = getByTestId('paywall-close-button');
+    fireEvent.press(closeBtn);
+
+    // Press Preview Locked Info
+    const previewLockedBtn = getByTestId('preview-locked-info-button');
+    fireEvent.press(previewLockedBtn);
+
+    await waitFor(() => {
+      expect(getByTestId('premium-locked-info')).toBeTruthy();
+    });
+
+    // Close locked info
+    const okBtn = getByTestId('premium-locked-info-ok');
+    fireEvent.press(okBtn);
+  });
 });
+

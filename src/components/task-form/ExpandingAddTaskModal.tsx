@@ -81,11 +81,12 @@ export function ExpandingAddTaskModal({
       animationType="slide"
       presentationStyle="fullScreen"
       onRequestClose={handleClose}
-      statusBarTranslucent={false}
+      statusBarTranslucent={true}
     >
       <StatusBar
         barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor={colors.background}
+        backgroundColor="transparent"
+        translucent
       />
       <View
         testID="expanding-add-task-container"

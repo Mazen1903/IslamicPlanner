@@ -183,7 +183,7 @@ export function JournalCalendar({
               ]}
               testID="journal-calendar-jump-today"
             >
-              <Text style={[typography.labelSmall, { color: colors.primaryDark, fontWeight: '700' }]}>
+              <Text style={[typography.labelSmall, { color: colors.primaryDark }]}>
                 Today
               </Text>
             </Pressable>
@@ -219,7 +219,6 @@ export function JournalCalendar({
                 typography.caption,
                 {
                   color: idx === 5 ? colors.primary : colors.textTertiary,
-                  fontWeight: '700',
                   fontSize: 11,
                 },
               ]}
@@ -285,7 +284,6 @@ export function JournalCalendar({
                       : isToday
                       ? colors.primary
                       : colors.textPrimary,
-                    fontWeight: isSelected || isToday ? '700' : '500',
                     fontSize: 13,
                   },
                 ]}
@@ -334,7 +332,6 @@ const styles = StyleSheet.create({
   },
   monthTitle: {
     fontSize: 16,
-    fontWeight: '700',
     letterSpacing: -0.3,
   },
   navButton: {

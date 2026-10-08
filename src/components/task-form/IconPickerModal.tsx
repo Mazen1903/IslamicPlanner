@@ -17,16 +17,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
   searchTaskIcons,
   type TaskIconDef,
 } from '@/constants/taskIcons';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { TaskCategoryIcon } from '@/components/task/TaskCategoryIcon';
 import { useTheme } from '@/theme';
 import { isFreeTaskIcon } from '@/domain/entitlement/freeTier';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { PaywallSheet } from '@/components/premium/PaywallSheet';
+import { AppBackButton } from '@/components/common/AppBackButton';
 
 export interface IconPickerOrigin {
   x: number;
@@ -43,10 +44,82 @@ export interface IconPickerModalProps {
   onClose: () => void;
 }
 
+interface IconTileProps {
+  item: TaskIconDef;
+  isSelected: boolean;
+  isLocked: boolean;
+  onSelect: (id: string) => void;
+  primaryColor: string;
+  textPrimaryColor: string;
+  surfaceColor: string;
+  isDark: boolean;
+  borderRadius: number;
+  tileSize: number;
+}
+
+const IconTile = React.memo(function IconTile({
+  item,
+  isSelected,
+  isLocked,
+  onSelect,
+  primaryColor,
+  textPrimaryColor,
+  surfaceColor,
+  isDark,
+  borderRadius,
+  tileSize,
+}: IconTileProps) {
+  return (
+    <Pressable
+      onPress={() => onSelect(item.id)}
+      accessibilityRole="button"
+      accessibilityLabel={`Select icon: ${item.label}${isLocked ? ' (Premium)' : ''}`}
+      accessibilityState={{ selected: isSelected }}
+      style={({ pressed }) => [
+        styles.iconTile,
+        {
+          width: tileSize,
+          height: tileSize,
+          backgroundColor: isSelected
+            ? isDark
+              ? 'rgba(56, 189, 248, 0.22)'
+              : 'rgba(2, 132, 199, 0.15)'
+            : pressed
+            ? isDark
+              ? 'rgba(255, 255, 255, 0.08)'
+              : 'rgba(0, 0, 0, 0.04)'
+            : 'transparent',
+          borderRadius,
+        },
+      ]}
+      testID={`icon-item-${item.id}`}
+    >
+      <TaskCategoryIcon
+        iconId={item.id}
+        size={44}
+        color={isSelected ? primaryColor : textPrimaryColor}
+      />
+      {isLocked && (
+        <View
+          style={[
+            styles.lockedBadge,
+            {
+              backgroundColor: surfaceColor,
+              borderColor: primaryColor,
+            },
+          ]}
+        >
+          <MaterialCommunityIcons name="crown" size={10} color={primaryColor} />
+        </View>
+      )}
+    </Pressable>
+  );
+});
+
 export function IconPickerModal({
   visible,
   selectedIconId,
-  origin,
+  origin: _origin,
   onSelectIcon,
   onClose,
 }: IconPickerModalProps) {
@@ -70,103 +143,25 @@ export function IconPickerModal({
 
   const [isClosing, setIsClosing] = useState(false);
   const isClosingRef = useRef(false);
-  // Tracks icon selected mid-animation so we call onSelectIcon only after close finishes
   const pendingSelectRef = useRef<string | null>(null);
 
-  const defaultOrigin = useMemo(
-    () => ({
-      x: backdropSize.width / 2 - 25,
-      y: backdropSize.height / 4,
-      width: 50,
-      height: 50,
-    }),
-    [backdropSize.width, backdropSize.height]
-  );
-
-  // Cache origin when becoming visible
-  const activeOriginRef = useRef<IconPickerOrigin>(origin ?? defaultOrigin);
-  useEffect(() => {
-    if (visible && !isClosingRef.current) {
-      activeOriginRef.current = origin ?? defaultOrigin;
-    }
-  }, [visible, origin, defaultOrigin]);
-
-  // Animated values matching ExpandingAddTaskModal
-  const morphAnim = useRef(new Animated.Value(0)).current;
-  const dragAnim = useRef(new Animated.Value(0)).current;
-
-  const activeOrigin = visible || isClosing ? activeOriginRef.current : (origin ?? defaultOrigin);
   const screenW = backdropSize.width;
   const screenH = backdropSize.height;
 
-  // Center math
-  const panelCenterX = screenW / 2;
-  const panelCenterY = screenH / 2;
+  // Snappy slide animation: starts offscreen on the LEFT (-screenW) and slides to 0
+  const slideAnim = useRef(new Animated.Value(-screenDimensions.width)).current;
 
-  const btnX = activeOrigin.x + activeOrigin.width / 2;
-  const btnY = activeOrigin.y + activeOrigin.height / 2;
-
-  const startOffsetX = btnX - panelCenterX;
-  const startOffsetY = btnY - panelCenterY;
-
-  const initialScaleX = Math.max(activeOrigin.width / screenW, 0.08);
-  const initialScaleY = Math.max(activeOrigin.height / screenH, 0.04);
-
-  // Composite morph fraction = morphAnim * (1 - dragFrac)
-  // Non-linear drag fraction with cushion at gesture onset
-  const dragFrac = dragAnim.interpolate({
-    inputRange: [0, 84, 252, 420],
-    outputRange: [0, 0.10, 0.50, 1],
-    extrapolate: 'clamp',
-  });
-  // morphFraction = morphAnim - morphAnim * dragFrac
-  const morphFraction = Animated.subtract(
-    morphAnim,
-    Animated.multiply(morphAnim, dragFrac)
-  );
-
-  // ─── Dismiss handler ─────────────────────────────────────────────────────────
+  // ─── Dismiss handler (slides back out to the LEFT: 0 -> -screenW) ──────────
   const handleClose = useCallback((afterClose?: () => void) => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
     setIsClosing(true);
 
-    // Read current values and calculate precise in-flight progress
-    const morphVal = (morphAnim as any)._value as number ?? 1;
-    const dragVal = (dragAnim as any)._value as number ?? 0;
-    const rawDrag = Math.min(Math.max(dragVal / 420, 0), 1);
-
-    let computedDragFrac = 0;
-    if (rawDrag <= 0.20) {
-      computedDragFrac = (rawDrag / 0.20) * 0.10;
-    } else if (rawDrag <= 0.60) {
-      computedDragFrac = 0.10 + ((rawDrag - 0.20) / 0.40) * 0.40;
-    } else {
-      computedDragFrac = 0.50 + ((rawDrag - 0.60) / 0.40) * 0.50;
-    }
-    const currentProgress = Math.min(Math.max(morphVal * (1 - computedDragFrac), 0), 1);
-
-    dragAnim.setValue(0);
-    morphAnim.setValue(currentProgress);
-
-    if (currentProgress <= 0.04) {
-      setIsClosing(false);
-      morphAnim.setValue(0);
-      isClosingRef.current = false;
-      onClose();
-      afterClose?.();
-      return;
-    }
-
-    // Shrink back to origin.
-    // Easing.bezier(0.2, 0.85, 0.32, 1) starts closing immediately and decelerates softly into the button.
-    const closeDuration = Math.max(Math.round(750 * currentProgress), 350);
-
-    Animated.timing(morphAnim, {
-      toValue: 0,
-      duration: closeDuration,
-      easing: Easing.bezier(0.2, 0.85, 0.32, 1),
-      useNativeDriver: false,
+    Animated.timing(slideAnim, {
+      toValue: -screenW,
+      duration: 150,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
     }).start(({ finished }) => {
       if (finished) {
         setIsClosing(false);
@@ -175,36 +170,33 @@ export function IconPickerModal({
         afterClose?.();
       }
     });
-  }, [morphAnim, dragAnim, onClose]);
+  }, [slideAnim, screenW, onClose]);
 
-  // ─── Expand on open ───────────────────────────────────────────────────────────
+  // ─── Slide in on open (slides from LEFT to right: -screenW -> 0) ───────────
   const prevVisibleRef = useRef(false);
   useEffect(() => {
     const wasVisible = prevVisibleRef.current;
     prevVisibleRef.current = visible;
 
     if (visible && !wasVisible) {
-      activeOriginRef.current = origin ?? defaultOrigin;
       isClosingRef.current = false;
       setIsClosing(false);
-      dragAnim.setValue(0);
-      morphAnim.setValue(0);
+      slideAnim.setValue(-screenW);
 
-      // Fluid deceleration curve: launches swiftly and glides effortlessly into full screen
-      Animated.timing(morphAnim, {
-        toValue: 1,
-        duration: 480,
-        easing: Easing.bezier(0.16, 1, 0.3, 1),
-        useNativeDriver: false,
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 160,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
       }).start();
     } else if (!visible && wasVisible) {
       if (!isClosingRef.current) {
         handleClose();
       }
     }
-  }, [visible, origin, defaultOrigin, morphAnim, dragAnim, handleClose]);
+  }, [visible, screenW, slideAnim, handleClose]);
 
-  // ─── Android hardware back ────────────────────────────────────────────────────
+  // ─── Android hardware back ───────────────────────────────────────────────────
   useEffect(() => {
     if (!visible && !isClosing) return;
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -214,107 +206,45 @@ export function IconPickerModal({
     return () => backHandler.remove();
   }, [visible, isClosing, handleClose]);
 
-  // ─── Drag-to-dismiss ──────────────────────────────────────────────────────────
-  const dragPanResponder = useMemo(
+  // ─── Swipe-to-dismiss gesture (swiping leftwards back off to the left) ───────
+  const panResponder = useMemo(
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => false,
-        onMoveShouldSetPanResponder: (_, g) => g.dy > 12 && Math.abs(g.dx) < 20,
+        onMoveShouldSetPanResponder: (_, g) => {
+          // Require clear horizontal swipe to avoid stealing vertical scrolling from FlatList
+          return g.dx < -18 && Math.abs(g.dx) > Math.abs(g.dy) * 2.5;
+        },
         onPanResponderMove: (_, g) => {
-          if (g.dy > 0) {
-            dragAnim.setValue(g.dy);
-            if (g.dy >= 420) handleClose();
+          if (g.dx < 0) {
+            slideAnim.setValue(g.dx);
           }
         },
         onPanResponderRelease: (_, g) => {
-          if (g.dy > 90 || g.vy > 0.35) {
+          if (g.dx < -70 || g.vx < -0.3) {
             handleClose();
           } else {
-            Animated.spring(dragAnim, {
+            Animated.spring(slideAnim, {
               toValue: 0,
-              damping: 26,
-              stiffness: 160,
-              mass: 1,
-              useNativeDriver: false,
+              damping: 24,
+              stiffness: 220,
+              mass: 0.7,
+              useNativeDriver: true,
             }).start();
           }
         },
       }),
-    [dragAnim, handleClose]
+    [slideAnim, handleClose]
   );
 
-  // ─── Derived animated styles ──────────────────────────────────────────────────
-  const backdropOpacity = morphFraction.interpolate({
-    inputRange: [0, 1],
+  // Derived backdrop fade: 1 when at 0, 0 when slid to -screenW
+  const backdropOpacity = slideAnim.interpolate({
+    inputRange: [-screenW, 0],
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
 
-  const cardScaleX = morphFraction.interpolate({
-    inputRange: [0, 1],
-    outputRange: [initialScaleX, 1],
-    extrapolate: 'clamp',
-  });
-  const cardScaleY = morphFraction.interpolate({
-    inputRange: [0, 1],
-    outputRange: [initialScaleY, 1],
-    extrapolate: 'clamp',
-  });
-  const cardTranslateX = morphFraction.interpolate({
-    inputRange: [0, 1],
-    outputRange: [startOffsetX, 0],
-    extrapolate: 'clamp',
-  });
-  const cardTranslateYBase = morphFraction.interpolate({
-    inputRange: [0, 1],
-    outputRange: [startOffsetY, 0],
-    extrapolate: 'clamp',
-  });
-  // Natural drag follow with cushion (up to 40px)
-  const dragFollowY = dragAnim.interpolate({
-    inputRange: [0, 126, 294, 420],
-    outputRange: [0, 40, 16, 0],
-    extrapolate: 'clamp',
-  });
-  const cardTranslateY = Animated.add(cardTranslateYBase, dragFollowY);
-
-  // Dissolve into origin button at the very end
-  const cardOpacity = morphFraction.interpolate({
-    inputRange: [0, 0.06, 1],
-    outputRange: [0, 1, 1],
-    extrapolate: 'clamp',
-  });
-
-  // Corner radius: capsule pill (180) until 0.35, then smoothly shapes into full screen
-  const cardBorderTL = morphFraction.interpolate({
-    inputRange: [0, 0.35, 0.70, 1],
-    outputRange: [180, 60, 24, 0],
-    extrapolate: 'clamp',
-  });
-  const cardBorderTR = morphFraction.interpolate({
-    inputRange: [0, 0.35, 0.70, 1],
-    outputRange: [180, 60, 24, 0],
-    extrapolate: 'clamp',
-  });
-  const cardBorderBL = morphFraction.interpolate({
-    inputRange: [0, 0.30, 0.70, 1],
-    outputRange: [180, 40, 12, 0],
-    extrapolate: 'clamp',
-  });
-  const cardBorderBR = morphFraction.interpolate({
-    inputRange: [0, 0.30, 0.70, 1],
-    outputRange: [180, 40, 12, 0],
-    extrapolate: 'clamp',
-  });
-
-  // Content Cross-Fade: cleanly emerges as card expands, reaching full opacity by 0.55
-  const contentOpacity = morphFraction.interpolate({
-    inputRange: [0.20, 0.55, 1],
-    outputRange: [0, 0.85, 1],
-    extrapolate: 'clamp',
-  });
-
-  // ─── Icon list ───────────────────────────────────────────────────────────────
+  // ─── Icon list & selection ───────────────────────────────────────────────────
   const filteredIcons = useMemo(() => searchTaskIcons(searchQuery), [searchQuery]);
 
   const doSelect = useCallback(
@@ -342,6 +272,11 @@ export function IconPickerModal({
     [doSelect, gate]
   );
 
+  // Fixed 5-column geometry for tiles
+  const totalHorizontalPadding = spacing.sm * 2; // 16px
+  const columnWidth = Math.floor((screenW - totalHorizontalPadding) / 5);
+  const tileInnerSize = columnWidth - 6;
+
   const renderIconItem = useCallback(
     ({ item }: { item: TaskIconDef }) => {
       const isSelected = item.id === selectedIconId;
@@ -349,193 +284,163 @@ export function IconPickerModal({
       const isLocked = !isFree && !isPremium;
 
       return (
-        <Pressable
-          onPress={() => handleSelect(item.id)}
-          accessibilityRole="button"
-          accessibilityLabel={`Select icon: ${item.label}${isLocked ? ' (Premium)' : ''}`}
-          accessibilityState={{ selected: isSelected }}
-          style={({ pressed }) => [
-            styles.iconTile,
-            {
-              backgroundColor: isSelected
-                ? isDark
-                  ? 'rgba(56, 189, 248, 0.22)'
-                  : 'rgba(2, 132, 199, 0.15)'
-                : pressed
-                ? isDark
-                  ? 'rgba(255, 255, 255, 0.08)'
-                  : 'rgba(0, 0, 0, 0.04)'
-                : 'transparent',
-              borderRadius: radii.md,
-            },
-          ]}
-          testID={`icon-item-${item.id}`}
-        >
-          <TaskCategoryIcon
-            iconId={item.id}
-            size={48}
-            color={isSelected ? colors.primary : colors.textPrimary}
-          />
-          {isLocked && (
-            <View
-              style={[
-                styles.lockedBadge,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.primary,
-                },
-              ]}
-            >
-              <MaterialCommunityIcons name="crown" size={10} color={colors.primary} />
-            </View>
-          )}
-        </Pressable>
+        <IconTile
+          item={item}
+          isSelected={isSelected}
+          isLocked={isLocked}
+          onSelect={handleSelect}
+          primaryColor={colors.primary}
+          textPrimaryColor={colors.textPrimary}
+          surfaceColor={colors.surface}
+          isDark={isDark}
+          borderRadius={radii.md}
+          tileSize={tileInnerSize}
+        />
       );
     },
-    [selectedIconId, isPremium, isDark, radii.md, colors.primary, colors.textPrimary, colors.surface, handleSelect]
+    [
+      selectedIconId,
+      isPremium,
+      isDark,
+      radii.md,
+      colors.primary,
+      colors.textPrimary,
+      colors.surface,
+      tileInnerSize,
+      handleSelect,
+    ]
   );
 
-  const shouldRender = visible || isClosing;
-
-  if (!shouldRender) {
-    return null;
-  }
+  const isShown = visible || isClosing;
 
   return (
     <View
-      style={styles.modalBackdrop}
+      style={[
+        styles.modalBackdrop,
+        {
+          opacity: isShown ? 1 : 0,
+        },
+      ]}
       testID="icon-picker-modal"
-      accessibilityViewIsModal={true}
-      pointerEvents={isClosing ? 'none' : 'auto'}
+      accessibilityViewIsModal={isShown}
+      pointerEvents={isShown && !isClosing ? 'auto' : 'none'}
       onLayout={onBackdropLayout}
-      {...dragPanResponder.panHandlers}
+      {...panResponder.panHandlers}
     >
       {/* 1. Backdrop */}
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropOpacity }]}>
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'transparent' }]} />
-        <Pressable style={StyleSheet.absoluteFill} onPress={() => handleClose()} />
+        <Pressable
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.55)' : 'rgba(0, 0, 0, 0.35)' },
+          ]}
+          onPress={() => handleClose()}
+        />
       </Animated.View>
 
-      {/* 2. Morphing Card */}
+      {/* 2. Snappy Horizontal Slide Panel (from LEFT: -screenW -> 0) */}
       <Animated.View
         testID="icon-picker-container"
         style={[
-          styles.morphCard,
+          styles.slidePanel,
           {
-            top: 0,
-            left: 0,
             width: screenW,
             height: screenH,
-            shadowColor: colors.shadowElevated,
             backgroundColor: colors.background,
-            opacity: cardOpacity,
-            borderTopLeftRadius: cardBorderTL,
-            borderTopRightRadius: cardBorderTR,
-            borderBottomLeftRadius: cardBorderBL,
-            borderBottomRightRadius: cardBorderBR,
-            transform: [
-              { translateX: cardTranslateX },
-              { translateY: cardTranslateY },
-              { scaleX: cardScaleX },
-              { scaleY: cardScaleY },
-            ],
+            transform: [{ translateX: slideAnim }],
           },
         ]}
       >
-        <Animated.View style={[styles.contentContainer, { opacity: contentOpacity }]}>
-          <SafeAreaView
-            style={[styles.container, { backgroundColor: colors.background }]}
-            edges={['top', 'bottom']}
-            testID="icon-picker-safe-area"
+        <SafeAreaView
+          style={[styles.container, { backgroundColor: colors.background }]}
+          edges={['top', 'bottom']}
+          testID="icon-picker-safe-area"
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.keyboardAvoid}
           >
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-              style={styles.keyboardAvoid}
-            >
-              {/* Drag handle */}
-              <View style={styles.dragHandleWrapper}>
-                <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
-              </View>
-
-              {/* Header */}
-              <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <Text style={[typography.headlineMedium, styles.title, { color: colors.textPrimary }]}>
-                  Choose Task Icon
-                </Text>
-                <Pressable
-                  onPress={() => handleClose()}
-                  accessibilityRole="button"
-                  accessibilityLabel="Close icon picker"
-                  style={({ pressed }) => [
-                    styles.closeButton,
-                    {
-                      backgroundColor: pressed ? colors.surfaceSecondary : 'transparent',
-                      borderRadius: radii.pill,
-                    },
-                  ]}
-                  testID="close-icon-picker"
-                >
-                  <Ionicons name="close" size={24} color={colors.textSecondary} />
-                </Pressable>
-              </View>
-
-              {/* Search bar */}
-              <View style={[styles.searchContainer, { paddingHorizontal: spacing.lg }]}>
-                <View
-                  style={[
-                    styles.searchBar,
-                    {
-                      backgroundColor: isDark
-                        ? 'rgba(30, 41, 59, 0.8)'
-                        : colors.surfaceSecondary,
-                      borderColor: colors.border,
-                      borderRadius: radii.pill,
-                    },
-                  ]}
-                >
-                  <Ionicons name="search" size={18} color={colors.textTertiary} style={styles.searchIcon} />
-                  <TextInput
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    placeholder="Search icons"
-                    placeholderTextColor={colors.textTertiary}
-                    style={[typography.bodyMedium, styles.searchInput, { color: colors.textPrimary }]}
-                    clearButtonMode="while-editing"
-                    testID="icon-search-input"
-                  />
-                  {searchQuery.length > 0 && Platform.OS !== 'ios' && (
-                    <Pressable
-                      onPress={() => setSearchQuery('')}
-                      style={styles.clearButton}
-                      accessibilityLabel="Clear search"
-                    >
-                      <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
-                    </Pressable>
-                  )}
-                </View>
-              </View>
-
-              {/* Icons grid */}
-              <FlatList
-                data={filteredIcons}
-                keyExtractor={item => item.id}
-                renderItem={renderIconItem}
-                numColumns={5}
-                contentContainerStyle={[styles.gridContainer, { paddingHorizontal: spacing.sm }]}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                ListEmptyComponent={
-                  <View style={styles.emptyContainer}>
-                    <Ionicons name="search" size={40} color={colors.textTertiary} />
-                    <Text style={[typography.bodyMedium, styles.emptyText, { color: colors.textSecondary }]}>
-                      No icons found matching &quot;{searchQuery}&quot;
-                    </Text>
-                  </View>
-                }
+            {/* Header: AppBackButton on left, title beside it */}
+            <View style={[styles.header, { borderBottomColor: colors.border }]}>
+              <AppBackButton
+                onPress={() => handleClose()}
+                accessibilityLabel="Go back"
+                testID="close-icon-picker"
+                size={38}
+                iconSize={22}
               />
-            </KeyboardAvoidingView>
-          </SafeAreaView>
-        </Animated.View>
+              <Text
+                style={[
+                  typography.headlineMedium,
+                  styles.title,
+                  { color: colors.textPrimary, marginLeft: spacing.md },
+                ]}
+                numberOfLines={1}
+              >
+                Choose Task Icon
+              </Text>
+            </View>
+
+            {/* Search bar */}
+            <View style={[styles.searchContainer, { paddingHorizontal: spacing.lg }]}>
+              <View
+                style={[
+                  styles.searchBar,
+                  {
+                    backgroundColor: isDark
+                      ? 'rgba(30, 41, 59, 0.8)'
+                      : colors.surfaceSecondary,
+                    borderColor: colors.border,
+                    borderRadius: radii.pill,
+                  },
+                ]}
+              >
+                <Ionicons name="search" size={18} color={colors.textTertiary} style={styles.searchIcon} />
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder="Search icons"
+                  placeholderTextColor={colors.textTertiary}
+                  style={[typography.bodyMedium, styles.searchInput, { color: colors.textPrimary }]}
+                  clearButtonMode="while-editing"
+                  testID="icon-search-input"
+                />
+                {searchQuery.length > 0 && Platform.OS !== 'ios' && (
+                  <Pressable
+                    onPress={() => setSearchQuery('')}
+                    style={styles.clearButton}
+                    accessibilityLabel="Clear search"
+                  >
+                    <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
+                  </Pressable>
+                )}
+              </View>
+            </View>
+
+            {/* High-Performance Virtualized Icons Grid */}
+            <FlatList
+              data={filteredIcons}
+              keyExtractor={item => item.id}
+              renderItem={renderIconItem}
+              numColumns={5}
+              initialNumToRender={20}
+              windowSize={7}
+              maxToRenderPerBatch={20}
+              removeClippedSubviews={false}
+              contentContainerStyle={[styles.gridContainer, { paddingHorizontal: spacing.sm }]}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="search" size={40} color={colors.textTertiary} />
+                  <Text style={[typography.bodyMedium, styles.emptyText, { color: colors.textSecondary }]}>
+                    No icons found matching &quot;{searchQuery}&quot;
+                  </Text>
+                </View>
+              }
+            />
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </Animated.View>
 
       <PaywallSheet
@@ -558,16 +463,14 @@ const styles = StyleSheet.create({
     zIndex: 9999,
     elevation: 9999,
   },
-  morphCard: {
+  slidePanel: {
     position: 'absolute',
-    overflow: 'hidden',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
+    top: 0,
+    left: 0,
+    shadowOffset: { width: 4, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
     elevation: 16,
-  },
-  contentContainer: {
-    flex: 1,
   },
   container: {
     flex: 1,
@@ -575,29 +478,17 @@ const styles = StyleSheet.create({
   keyboardAvoid: {
     flex: 1,
   },
-  dragHandleWrapper: {
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  dragHandle: {
-    width: 38,
-    height: 4,
-    borderRadius: 2,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
-  },
-  closeButton: {
-    padding: 6,
+    flex: 1,
   },
   searchContainer: {
     marginTop: 10,
@@ -626,13 +517,10 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   iconTile: {
-    flex: 1,
     margin: 3,
-    aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 2,
-    maxWidth: '20%',
   },
   lockedBadge: {
     position: 'absolute',

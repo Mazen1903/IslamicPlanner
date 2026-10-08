@@ -1,11 +1,11 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable, Image } from 'react-native';
 import { useTheme } from '@/theme';
-import { Icon } from '@/components/common/Icon';
 import { JournalCard } from './JournalCard';
 import { JournalEntryHeaderBadgeIcon } from './JournalIcons';
 import { JournalSaveStatus } from './JournalSaveStatus';
 import { JournalWriteModal } from './JournalWriteModal';
+import { JOURNAL_ACTION_ASSETS } from '@/constants/journalIconAssets';
 import type { SaveState } from '@/services/journal/JournalAutosaveController';
 
 export interface JournalEditorRef {
@@ -72,11 +72,15 @@ export const JournalEditor = forwardRef<JournalEditorRef, JournalEditorProps>(
             ]}
             testID="journal-fullscreen-btn"
           >
-            <Icon name="edit" size={13} color={colors.primary} decorative />
+            <Image
+              source={JOURNAL_ACTION_ASSETS.focusPencilGreen}
+              style={{ width: 14, height: 14 }}
+              resizeMode="contain"
+            />
             <Text
               style={[
                 typography.labelSmall,
-                { color: colors.primaryDark, fontWeight: '700', marginStart: 4 },
+                { color: colors.primaryDark, marginStart: 4 },
               ]}
             >
               Focus Mode
@@ -155,16 +159,24 @@ export const JournalEditor = forwardRef<JournalEditorRef, JournalEditorProps>(
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Expand editor"
-            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+            style={({ pressed }) => [
+              styles.expandButton,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
           >
             <Text
               style={[
                 typography.caption,
-                { color: colors.primary, fontWeight: '700', fontSize: 12 },
+                { color: colors.primary, fontSize: 12 },
               ]}
             >
-              Expand ↗
+              Expand
             </Text>
+            <Image
+              source={JOURNAL_ACTION_ASSETS.expandArrowGreen}
+              style={{ width: 12, height: 12, marginStart: 3 }}
+              resizeMode="contain"
+            />
           </Pressable>
         </View>
 
@@ -218,5 +230,9 @@ const styles = StyleSheet.create({
   },
   saveStatusWrapper: {
     marginStart: 4,
+  },
+  expandButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });

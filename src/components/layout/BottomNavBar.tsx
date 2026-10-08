@@ -1,10 +1,11 @@
 import React, { useContext, useRef, useCallback, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Dimensions, Animated, Image } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { Icon, type IconName } from '@/components/common/Icon';
 import { PlannerNavIcon, CalendarNavIcon, JournalNavIcon, MoreNavIcon } from './navIcons';
 import { useAddTaskModalStore, type FabOrigin } from '@/stores/useAddTaskModalStore';
+import { JOURNAL_NAV_ASSETS } from '@/constants/journalIconAssets';
 
 export interface BottomNavBarRoute {
   key: string;
@@ -301,7 +302,11 @@ export function BottomNavBar(props: BottomNavBarProps) {
                   ]}
                   testID="bottom-nav-add"
                 >
-                  <Icon name="plus" size={24} color={colors.textOnPrimary} decorative />
+                  <Image
+                    source={JOURNAL_NAV_ASSETS.plusButton}
+                    style={{ width: 28, height: 28 }}
+                    resizeMode="contain"
+                  />
                 </Pressable>
               </View>
             </View>
@@ -365,7 +370,6 @@ export function BottomNavBar(props: BottomNavBarProps) {
                 typography.caption,
                 {
                   color: isFocused ? activeColor : inactiveColor,
-                  fontWeight: isFocused ? '600' : '500',
                   marginTop: spacing.xxs,
                 },
               ]}

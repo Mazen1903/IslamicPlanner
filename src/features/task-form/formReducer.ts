@@ -191,6 +191,8 @@ export function createInitialFormState(params: CreateFormInitialParams): FormSta
         const parsed = parseRecurrenceRule(ruleStr);
         if (parsed.frequency === 'DAILY' && parsed.interval === 1) {
           recurrencePreset = 'DAILY';
+        } else if (parsed.frequency === 'DAILY' && parsed.interval === 2) {
+          recurrencePreset = 'EVERY_OTHER_DAY';
         } else if (
           parsed.frequency === 'WEEKLY' &&
           parsed.interval === 1 &&
@@ -414,9 +416,13 @@ export function formReducer(state: FormState, action: FormAction): FormState {
 
     case 'SET_RECURRENCE_PRESET': {
       const isNone = action.payload === 'NONE';
+      const isEveryOtherDay = action.payload === 'EVERY_OTHER_DAY';
       return {
         ...state,
         recurrencePreset: action.payload,
+        customGregorianDraft: isEveryOtherDay
+          ? { ...state.customGregorianDraft, frequency: 'DAILY', interval: 2 }
+          : state.customGregorianDraft,
         streakEnabled: isNone ? false : state.streakEnabled,
         isDirty: true,
       };

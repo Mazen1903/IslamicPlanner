@@ -1,9 +1,15 @@
 import React from 'react';
-import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { View, StyleSheet, Image, type StyleProp, type ViewStyle, type ImageSourcePropType } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import type { MoodKey, JournalReflections } from '@/domain/journal/types';
+import {
+  JOURNAL_MOOD_ASSETS,
+  JOURNAL_REFLECTION_ASSETS,
+  JOURNAL_HEADER_BADGE_ASSETS,
+  JOURNAL_ACTION_ASSETS,
+} from '@/constants/journalIconAssets';
 
 export interface JournalBadgeIconProps {
   size?: number;
@@ -18,6 +24,7 @@ export interface JournalBadgeIconProps {
 
 interface BaseJournalBadgeProps extends JournalBadgeIconProps {
   iconName: keyof typeof MaterialCommunityIcons.glyphMap;
+  imageSource?: ImageSourcePropType;
   defaultAccent: string;
   lightBg: string;
   darkBg: string;
@@ -27,10 +34,11 @@ interface BaseJournalBadgeProps extends JournalBadgeIconProps {
 
 /**
  * Base squircle badge matching the exact visual language of Settings and Task squircle icons.
- * Features a soft pastel tinted container, rounded squircle corners, subtle border, and high-contrast glyph.
+ * Features a soft pastel tinted container, rounded squircle corners, subtle border, and high-fidelity glyph or illustration.
  */
 function BaseJournalBadge({
   iconName,
+  imageSource,
   size = 28,
   color,
   backgroundColor,
@@ -50,7 +58,9 @@ function BaseJournalBadge({
   const bg = backgroundColor ?? (isDark ? darkBg : lightBg);
   const border = borderColor ?? borderTint;
   const borderRadius = Math.max(6, Math.round(size * 0.28));
-  const iconSize = Math.max(12, Math.round(size * 0.52));
+  const iconSize = imageSource
+    ? Math.max(16, Math.round(size * 0.68))
+    : Math.max(12, Math.round(size * 0.52));
 
   return (
     <View
@@ -76,7 +86,13 @@ function BaseJournalBadge({
         style,
       ]}
     >
-      {iconFamily === 'Ionicons' ? (
+      {imageSource ? (
+        <Image
+          source={imageSource}
+          style={{ width: iconSize, height: iconSize }}
+          resizeMode="contain"
+        />
+      ) : iconFamily === 'Ionicons' ? (
         <Ionicons name={iconName as any} size={iconSize} color={iconColor} />
       ) : (
         <MaterialCommunityIcons name={iconName} size={iconSize} color={iconColor} />
@@ -93,6 +109,7 @@ export function JournalMoodHeaderBadgeIcon(props: JournalBadgeIconProps) {
   return (
     <BaseJournalBadge
       {...props}
+      imageSource={JOURNAL_HEADER_BADGE_ASSETS.mood}
       iconName="heart-pulse"
       defaultAccent="#E11D48"
       lightBg="rgba(225, 29, 72, 0.12)"
@@ -108,6 +125,7 @@ export function JournalPromptHeaderBadgeIcon(props: JournalBadgeIconProps) {
   return (
     <BaseJournalBadge
       {...props}
+      imageSource={JOURNAL_HEADER_BADGE_ASSETS.prompt}
       iconName="lightbulb-on-outline"
       defaultAccent="#D97706"
       lightBg="rgba(217, 119, 6, 0.12)"
@@ -124,6 +142,7 @@ export function JournalEntryHeaderBadgeIcon(props: JournalBadgeIconProps) {
   return (
     <BaseJournalBadge
       {...props}
+      imageSource={JOURNAL_HEADER_BADGE_ASSETS.entry}
       iconName="book-open-page-variant"
       defaultAccent={colors.primary}
       lightBg={colors.primaryLight}
@@ -139,6 +158,7 @@ export function JournalMuhasabaHeaderBadgeIcon(props: JournalBadgeIconProps) {
   return (
     <BaseJournalBadge
       {...props}
+      imageSource={JOURNAL_HEADER_BADGE_ASSETS.muhasaba}
       iconName="scale-balance"
       defaultAccent="#8B5CF6"
       lightBg="rgba(139, 92, 246, 0.12)"
@@ -156,6 +176,7 @@ export function JournalHistoryBadgeIcon(props: JournalBadgeIconProps) {
     <BaseJournalBadge
       size={props.size ?? 34}
       {...props}
+      imageSource={JOURNAL_HEADER_BADGE_ASSETS.history}
       iconName="book-open-outline"
       defaultAccent={colors.primary}
       lightBg={colors.primaryLight}
@@ -176,6 +197,7 @@ export function MoodHardBadgeIcon(props: JournalBadgeIconProps) {
     <BaseJournalBadge
       size={props.size ?? 32}
       {...props}
+      imageSource={JOURNAL_MOOD_ASSETS.hard}
       iconName="weather-rainy"
       defaultAccent="#E11D48"
       lightBg="rgba(225, 29, 72, 0.14)"
@@ -192,6 +214,7 @@ export function MoodOkayBadgeIcon(props: JournalBadgeIconProps) {
     <BaseJournalBadge
       size={props.size ?? 32}
       {...props}
+      imageSource={JOURNAL_MOOD_ASSETS.okay}
       iconName="leaf"
       defaultAccent="#64748B"
       lightBg="rgba(100, 116, 139, 0.14)"
@@ -208,6 +231,7 @@ export function MoodGoodBadgeIcon(props: JournalBadgeIconProps) {
     <BaseJournalBadge
       size={props.size ?? 32}
       {...props}
+      imageSource={JOURNAL_MOOD_ASSETS.good}
       iconName="white-balance-sunny"
       defaultAccent="#0284C7"
       lightBg="rgba(2, 132, 199, 0.14)"
@@ -224,6 +248,7 @@ export function MoodGreatBadgeIcon(props: JournalBadgeIconProps) {
     <BaseJournalBadge
       size={props.size ?? 32}
       {...props}
+      imageSource={JOURNAL_MOOD_ASSETS.great}
       iconName="flower"
       defaultAccent="#059669"
       lightBg="rgba(5, 150, 105, 0.14)"
@@ -240,6 +265,7 @@ export function MoodGratefulBadgeIcon(props: JournalBadgeIconProps) {
     <BaseJournalBadge
       size={props.size ?? 32}
       {...props}
+      imageSource={JOURNAL_MOOD_ASSETS.grateful}
       iconName="hands-pray"
       defaultAccent="#D97706"
       lightBg="rgba(217, 119, 6, 0.16)"
@@ -280,6 +306,7 @@ export function ReflectionGratitudeBadgeIcon(props: JournalBadgeIconProps) {
     <BaseJournalBadge
       size={props.size ?? 34}
       {...props}
+      imageSource={JOURNAL_REFLECTION_ASSETS.gratitude}
       iconName="hands-pray"
       defaultAccent="#F59E0B"
       lightBg="rgba(245, 158, 11, 0.14)"
@@ -296,6 +323,7 @@ export function ReflectionWentWellBadgeIcon(props: JournalBadgeIconProps) {
     <BaseJournalBadge
       size={props.size ?? 34}
       {...props}
+      imageSource={JOURNAL_REFLECTION_ASSETS.wentWell}
       iconName="star-four-points"
       defaultAccent="#10B981"
       lightBg="rgba(16, 185, 129, 0.14)"
@@ -312,6 +340,7 @@ export function ReflectionTomorrowBadgeIcon(props: JournalBadgeIconProps) {
     <BaseJournalBadge
       size={props.size ?? 34}
       {...props}
+      imageSource={JOURNAL_REFLECTION_ASSETS.improvement}
       iconName="sprout"
       defaultAccent="#06B6D4"
       lightBg="rgba(6, 182, 212, 0.14)"
@@ -328,6 +357,7 @@ export function ReflectionDuaBadgeIcon(props: JournalBadgeIconProps) {
     <BaseJournalBadge
       size={props.size ?? 34}
       {...props}
+      imageSource={JOURNAL_REFLECTION_ASSETS.dua}
       iconName="hand-heart"
       defaultAccent="#8B5CF6"
       lightBg="rgba(139, 92, 246, 0.14)"
@@ -367,6 +397,7 @@ export function JournalLockBadgeIcon(props: JournalBadgeIconProps) {
     <BaseJournalBadge
       size={props.size ?? 36}
       {...props}
+      imageSource={JOURNAL_ACTION_ASSETS.headerLock}
       iconName="lock-outline"
       defaultAccent={colors.primary}
       lightBg={colors.primaryLight}
@@ -384,6 +415,7 @@ export function JournalUnlockBadgeIcon(props: JournalBadgeIconProps) {
     <BaseJournalBadge
       size={props.size ?? 36}
       {...props}
+      imageSource={JOURNAL_ACTION_ASSETS.headerLock}
       iconName="lock-open-outline"
       defaultAccent={colors.primary}
       lightBg={colors.primaryLight}

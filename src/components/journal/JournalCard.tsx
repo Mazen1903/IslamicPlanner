@@ -170,7 +170,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   titleText: {
-    fontWeight: '700',
     letterSpacing: -0.3,
   },
   headerRight: {

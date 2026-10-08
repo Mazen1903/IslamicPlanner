@@ -22,6 +22,7 @@ export interface PrayerWindowDraft {
 export type RecurrencePreset =
   | 'NONE'
   | 'DAILY'
+  | 'EVERY_OTHER_DAY'
   | 'WEEKDAYS'
   | 'WEEKLY'
   | 'MONTHLY'

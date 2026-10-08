@@ -10,8 +10,8 @@ import {
 import { TASK_ICON_ASSETS } from '../taskIconAssets';
 
 describe('taskIcons full catalog & expansion', () => {
-  it('contains exactly 125 icons in total catalog', () => {
-    expect(ALL_TASK_ICONS.length).toBe(125);
+  it('contains exactly 149 icons in total catalog', () => {
+    expect(ALL_TASK_ICONS.length).toBe(149);
   });
 
   it('every icon has unique id, valid label, category, family, and keywords', () => {
@@ -59,18 +59,21 @@ describe('taskIcons full catalog & expansion', () => {
 
     it('filters travel icons correctly', () => {
       const travelIcons = searchTaskIcons('', 'travel');
-      expect(travelIcons.length).toBe(5);
+      expect(travelIcons.length).toBe(8);
       const ids = travelIcons.map(i => i.id);
       expect(ids).toContain('luggage');
       expect(ids).toContain('bus');
       expect(ids).toContain('train');
       expect(ids).toContain('passport');
       expect(ids).toContain('gas-station');
+      expect(ids).toContain('beach');
+      expect(ids).toContain('camping');
+      expect(ids).toContain('hotel');
     });
 
     it('filters deen expansion icons correctly', () => {
       const deenIcons = searchTaskIcons('', 'deen');
-      expect(deenIcons.length).toBe(23); // 15 original + 8 new
+      expect(deenIcons.length).toBe(25); // 23 original + 2 new
       const ids = deenIcons.map(i => i.id);
       expect(ids).toContain('prayer-mat');
       expect(ids).toContain('tahajjud');
@@ -80,6 +83,8 @@ describe('taskIcons full catalog & expansion', () => {
       expect(ids).toContain('dates-fruit');
       expect(ids).toContain('janazah');
       expect(ids).toContain('miswak');
+      expect(ids).toContain('shifa-honey');
+      expect(ids).toContain('bookmark');
     });
   });
 

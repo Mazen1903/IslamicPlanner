@@ -7,12 +7,14 @@ import { CustomRecurrenceModal } from '../CustomRecurrenceModal';
 import {
   RepeatNoneBadgeIcon,
   RepeatDailyBadgeIcon,
+  RepeatEveryOtherDayBadgeIcon,
   RepeatWeekdaysBadgeIcon,
   RepeatWeeklyBadgeIcon,
   RepeatMonthlyBadgeIcon,
   RepeatSpecificDaysBadgeIcon,
   RepeatCustomBadgeIcon,
 } from '../RepeatIcons';
+import { addCivilDays, isoWeekday } from '@/domain/recurrence/dateUtils';
 
 export interface RepeatInlinePanelProps {
   state: FormState;
@@ -29,6 +31,18 @@ const ALL_WEEKDAYS: { iso: ISOWeekday; label: string }[] = [
   { iso: 7, label: 'S' },
 ];
 
+const SHORT_WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+export function getEveryOtherDayPreview(seedDate?: string): string[] {
+  if (!seedDate) return [];
+  return [0, 2, 4, 6].map(offset => {
+    const d = addCivilDays(seedDate, offset);
+    const dow = isoWeekday(d);
+    const dayNum = parseInt(d.split('-')[2], 10);
+    return `${SHORT_WEEKDAYS[dow - 1]} ${dayNum}`;
+  });
+}
+
 const PRESETS: {
   preset: RecurrencePreset;
   title: string;
@@ -36,6 +50,7 @@ const PRESETS: {
 }[] = [
   { preset: 'NONE', title: "Doesn't repeat", renderIcon: p => <RepeatNoneBadgeIcon {...p} /> },
   { preset: 'DAILY', title: 'Daily', renderIcon: p => <RepeatDailyBadgeIcon {...p} /> },
+  { preset: 'EVERY_OTHER_DAY', title: 'Every other day', renderIcon: p => <RepeatEveryOtherDayBadgeIcon {...p} /> },
   { preset: 'WEEKDAYS', title: 'Weekdays (M-F)', renderIcon: p => <RepeatWeekdaysBadgeIcon {...p} /> },
   { preset: 'WEEKLY', title: 'Weekly', renderIcon: p => <RepeatWeeklyBadgeIcon {...p} /> },
   { preset: 'MONTHLY', title: 'Monthly', renderIcon: p => <RepeatMonthlyBadgeIcon {...p} /> },
@@ -111,6 +126,56 @@ export function RepeatInlinePanel({ state, dispatch }: RepeatInlinePanelProps) {
           );
         })}
       </View>
+
+      {/* Every Other Day Schedule Preview */}
+      {state.recurrencePreset === 'EVERY_OTHER_DAY' && (
+        <View
+          style={[
+            styles.extraBox,
+            {
+              backgroundColor: colors.surfaceSecondary,
+              borderColor: colors.border,
+              borderRadius: radii.md,
+              padding: spacing.sm,
+              marginTop: spacing.sm,
+            },
+          ]}
+          testID="every-other-day-preview"
+        >
+          <Text style={[typography.caption, { color: colors.textSecondary, marginBottom: spacing.xs, fontWeight: '600' }]}>
+            Upcoming active days (every 2 days):
+          </Text>
+          <View style={[styles.daysRow, { justifyContent: 'flex-start', gap: 6 }]}>
+            {getEveryOtherDayPreview(state.civilSeedDate).map((dayStr, idx) => (
+              <View
+                key={idx}
+                style={[
+                  styles.previewPill,
+                  {
+                    backgroundColor: idx === 0 ? colors.primaryLight : colors.surface,
+                    borderColor: idx === 0 ? colors.primary : colors.border,
+                    borderRadius: radii.pill,
+                    paddingHorizontal: spacing.sm,
+                    paddingVertical: 4,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    typography.caption,
+                    {
+                      color: idx === 0 ? colors.primaryDark : colors.textPrimary,
+                      fontWeight: idx === 0 ? '700' : '600',
+                    },
+                  ]}
+                >
+                  {dayStr}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* Specific Days Picker */}
       {state.recurrencePreset === 'SPECIFIC_DAYS' && (
@@ -244,6 +309,11 @@ const styles = StyleSheet.create({
   },
   customButton: {
     borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewPill: {
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },

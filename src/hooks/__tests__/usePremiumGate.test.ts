@@ -1,8 +1,13 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { usePremiumGate } from '../usePremiumGate';
+import { usePaywallTestStore } from '@/stores/usePaywallTestStore';
 import type { EntitlementService } from '@/domain/entitlement/types';
 
 describe('usePremiumGate hook', () => {
+  beforeEach(() => {
+    usePaywallTestStore.getState().resetForTesting();
+  });
+
   const createMockService = (isPremium: boolean): EntitlementService => ({
     getSnapshot: jest.fn().mockResolvedValue({
       status: 'READY',
@@ -38,6 +43,23 @@ describe('usePremiumGate hook', () => {
     expect(onAllowed).not.toHaveBeenCalled();
     expect(result.current.paywallVisible).toBe(true);
     expect(result.current.gatedFeature).toBe('PRIORITY');
+  });
+
+  it('runs onAllowed immediately without opening paywall if bypassPaywall is true', async () => {
+    await act(async () => {
+      await usePaywallTestStore.getState().setBypassPaywall(true);
+    });
+
+    const mockService = createMockService(false);
+    const onAllowed = jest.fn();
+    const { result } = await renderHook(() => usePremiumGate(mockService));
+
+    await act(async () => {
+      result.current.gate('ISLAMIC_THEMES_EXTENDED', onAllowed);
+    });
+
+    expect(onAllowed).toHaveBeenCalledTimes(1);
+    expect(result.current.paywallVisible).toBe(false);
   });
 
   it('closePaywall hides the sheet and clears gatedFeature', async () => {
@@ -89,3 +111,4 @@ describe('usePremiumGate hook', () => {
     expect(onAllowed).toHaveBeenCalledTimes(1);
   });
 });
+

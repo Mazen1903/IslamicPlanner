@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
+import React, { useContext } from 'react';
+import { View, Text, StyleSheet, Image } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
-import { Icon } from '@/components/common/Icon';
 import { AppBackButton } from '@/components/common/AppBackButton';
 
 interface TaskHeaderBannerProps {
@@ -18,6 +18,9 @@ export function TaskHeaderBanner({
   backTestID = 'task-form-back-button',
 }: TaskHeaderBannerProps) {
   const { colors, spacing, typography } = useTheme();
+  const insetsContext = useContext(SafeAreaInsetsContext);
+  const topInset = insetsContext?.top ?? 0;
+  const topPadding = topInset > 0 ? topInset + spacing.xs : spacing.sm;
 
   return (
     <View
@@ -25,12 +28,25 @@ export function TaskHeaderBanner({
         styles.container,
         {
           backgroundColor: colors.background,
+          paddingTop: topPadding,
           paddingHorizontal: spacing.lg,
-          paddingTop: spacing.xs,
-          paddingBottom: spacing.sm,
+          paddingBottom: spacing.xs,
         },
       ]}
     >
+      {/* Right: Mosque skyline illustration extending flush to the top edge */}
+      <View
+        style={styles.artworkContainer}
+        importantForAccessibility="no"
+        accessibilityElementsHidden={true}
+      >
+        <Image
+          source={require('../../../assets/task_header_art.png')}
+          style={styles.headerArt}
+          resizeMode="contain"
+        />
+      </View>
+
       <View style={styles.contentRow}>
         {/* Left: Back button, Title & Subtitle */}
         <View style={styles.leftColumn}>
@@ -59,19 +75,6 @@ export function TaskHeaderBanner({
             {subtitle}
           </Text>
         </View>
-
-        {/* Right: Mosque skyline illustration */}
-        <View
-          style={styles.artworkContainer}
-          importantForAccessibility="no"
-          accessibilityElementsHidden={true}
-        >
-          <Image
-            source={require('../../../assets/task_header_art.png')}
-            style={styles.headerArt}
-            resizeMode="contain"
-          />
-        </View>
       </View>
     </View>
   );
@@ -80,16 +83,19 @@ export function TaskHeaderBanner({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
+    position: 'relative',
+    overflow: 'hidden',
   },
   contentRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    minHeight: 100,
+    minHeight: 88,
+    zIndex: 1,
   },
   leftColumn: {
     flex: 1,
-    paddingRight: 8,
+    paddingEnd: 110,
     justifyContent: 'center',
   },
   backButton: {
@@ -109,14 +115,19 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   artworkContainer: {
-    width: 140,
-    height: 105,
-    overflow: 'hidden',
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 210,
+    height: 145,
     alignItems: 'flex-end',
     justifyContent: 'flex-start',
+    pointerEvents: 'none',
+    zIndex: 0,
   },
   headerArt: {
-    width: 155,
-    height: 110,
+    width: 210,
+    height: 145,
   },
 });
+

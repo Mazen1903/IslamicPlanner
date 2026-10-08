@@ -11,10 +11,10 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme';
-import { Icon } from '@/components/common/Icon';
 import { JournalCard, SoftCircleButton } from './JournalCard';
 import { JournalPromptHeaderBadgeIcon } from './JournalIcons';
 import { getDailyPrompts } from '@/constants/journalPrompts';
+import { JOURNAL_PROMPT_DECK_ASSETS } from '@/constants/journalIconAssets';
 
 export interface PromptDeckProps {
   dayKey: string;
@@ -91,19 +91,27 @@ export function PromptDeck({
             <SoftCircleButton
               onPress={handlePrev}
               size={30}
-              icon="chevron-left"
-              iconSize={15}
               accessibilityLabel="Previous reflection prompt"
               testID="prompt-deck-prev-btn"
-            />
+            >
+              <Image
+                source={JOURNAL_PROMPT_DECK_ASSETS.prevArrow}
+                style={{ width: 14, height: 14 }}
+                resizeMode="contain"
+              />
+            </SoftCircleButton>
             <SoftCircleButton
               onPress={handleNext}
               size={30}
-              icon="chevron-right"
-              iconSize={15}
               accessibilityLabel="Next reflection prompt"
               testID="prompt-deck-next-btn"
-            />
+            >
+              <Image
+                source={JOURNAL_PROMPT_DECK_ASSETS.nextArrow}
+                style={{ width: 14, height: 14 }}
+                resizeMode="contain"
+              />
+            </SoftCircleButton>
           </View>
         </View>
       }
@@ -158,7 +166,7 @@ export function PromptDeck({
                 accessibilityElementsHidden={true}
               >
                 <Image
-                  source={require('../../../assets/illustrations/journal_prompt_lantern.png')}
+                  source={JOURNAL_PROMPT_DECK_ASSETS.lanternArtwork}
                   style={[
                     styles.lanternImage,
                     { opacity: isDark ? 0.65 : 0.88 },
@@ -169,7 +177,11 @@ export function PromptDeck({
 
               <View style={styles.cardContent}>
                 <View style={styles.quoteRow}>
-                  <Text style={[styles.quoteMark, { color: colors.primary }]}>“</Text>
+                  <Image
+                    source={JOURNAL_PROMPT_DECK_ASSETS.quoteMarks}
+                    style={styles.quoteMarkImage}
+                    resizeMode="contain"
+                  />
                   <Text
                     style={[
                       typography.bodyLarge,
@@ -210,7 +222,11 @@ export function PromptDeck({
                 },
               ]}
             >
-              <Icon name="edit" size={14} color={colors.textOnPrimary} decorative />
+              <Image
+                source={JOURNAL_PROMPT_DECK_ASSETS.writePencilWhite}
+                style={{ width: 14, height: 14 }}
+                resizeMode="contain"
+              />
               <Text
                 style={[
                   typography.labelMedium,
@@ -223,9 +239,16 @@ export function PromptDeck({
             </LinearGradient>
           </Pressable>
 
-          <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 11 }]}>
-            Swipe for more →
-          </Text>
+          <View style={styles.swipeHintRow}>
+            <Text style={[typography.caption, { color: colors.textTertiary, fontSize: 11 }]}>
+              Swipe for more
+            </Text>
+            <Image
+              source={JOURNAL_PROMPT_DECK_ASSETS.swipeArrowBlue}
+              style={{ width: 14, height: 14, marginStart: 4 }}
+              resizeMode="contain"
+            />
+          </View>
         </View>
       </View>
     </JournalCard>
@@ -280,18 +303,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
-  quoteMark: {
-    fontSize: 28,
-    lineHeight: 28,
-    fontWeight: '800',
+  quoteMarkImage: {
+    width: 20,
+    height: 20,
     marginEnd: 6,
-    marginTop: -2,
+    marginTop: 2,
   },
   promptText: {
     flex: 1,
     fontStyle: 'italic',
     lineHeight: 22,
-    fontWeight: '500',
   },
   footerRow: {
     flexDirection: 'row',
@@ -310,6 +331,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   useButtonText: {
-    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  swipeHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });

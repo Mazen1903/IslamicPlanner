@@ -138,6 +138,35 @@ export const TASK_ICON_ASSETS: Record<string, any> = {
   'timer': require('../../assets/icons/task_icons/timer.png'),
   'shield': require('../../assets/icons/task_icons/shield.png'),
   'calendar': require('../../assets/icons/task_icons/calendar.png'),
+  // ─── 🌟 Lifestyle, Grooming & Errands Expansion ───
+  'haircut': require('../../assets/icons/task_icons/haircut.png'),
+  'clothing': require('../../assets/icons/task_icons/clothing.png'),
+  'stroller': require('../../assets/icons/task_icons/stroller.png'),
+  'car-wash': require('../../assets/icons/task_icons/car-wash.png'),
+  'restaurant': require('../../assets/icons/task_icons/restaurant.png'),
+  'fast-food': require('../../assets/icons/task_icons/fast-food.png'),
+  // ─── ⚽ Sports & Recreation ───
+  'soccer': require('../../assets/icons/task_icons/soccer.png'),
+  'basketball': require('../../assets/icons/task_icons/basketball.png'),
+  'tennis': require('../../assets/icons/task_icons/tennis.png'),
+  'archery': require('../../assets/icons/task_icons/archery.png'),
+  // ─── 🏖️ Travel, Outdoors & Nature ───
+  'beach': require('../../assets/icons/task_icons/beach.png'),
+  'camping': require('../../assets/icons/task_icons/camping.png'),
+  'hotel': require('../../assets/icons/task_icons/hotel.png'),
+  'shifa-honey': require('../../assets/icons/task_icons/shifa-honey.png'),
+  // ─── 📚 School, Learning & Exams ───
+  'exam': require('../../assets/icons/task_icons/exam.png'),
+  'backpack': require('../../assets/icons/task_icons/backpack.png'),
+  'language': require('../../assets/icons/task_icons/language.png'),
+  // ─── 🔔 To-Do Utility Symbols & Flags ───
+  'bell': require('../../assets/icons/task_icons/bell.png'),
+  'sparkles': require('../../assets/icons/task_icons/sparkles.png'),
+  'lightning': require('../../assets/icons/task_icons/lightning.png'),
+  'battery': require('../../assets/icons/task_icons/battery.png'),
+  'bookmark': require('../../assets/icons/task_icons/bookmark.png'),
+  'hourglass': require('../../assets/icons/task_icons/hourglass.png'),
+  'flag-checkered': require('../../assets/icons/task_icons/flag-checkered.png'),
 };
 
 /**

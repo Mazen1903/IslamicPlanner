@@ -107,6 +107,31 @@ export function RepeatDailyBadgeIcon({
 }
 
 /**
+ * RepeatEveryOtherDayBadgeIcon (Repeats every other day / Day on, day off)
+ */
+export function RepeatEveryOtherDayBadgeIcon({
+  size = 36,
+  color,
+  style,
+  decorative = true,
+}: CustomBadgeIconProps) {
+  const { colors, radii } = useTheme();
+  return (
+    <View
+      accessible={!decorative}
+      accessibilityRole={decorative ? 'none' : 'image'}
+      style={[
+        styles.badgeBase,
+        { width: size, height: size, borderRadius: radii.md, backgroundColor: colors.primaryLight },
+        style,
+      ]}
+    >
+      <MaterialCommunityIcons name="swap-horizontal" size={Math.round(size * 0.58)} color={color ?? colors.primary} />
+    </View>
+  );
+}
+
+/**
  * RepeatWeekdaysBadgeIcon (Monday to Friday)
  */
 export function RepeatWeekdaysBadgeIcon({

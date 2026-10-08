@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { useTheme } from '@/theme';
 import { JournalCard, SoftCircleButton } from './JournalCard';
 import { ReflectionCard } from './ReflectionCard';
+import { JOURNAL_ACTION_ASSETS } from '@/constants/journalIconAssets';
 import {
   JournalMuhasabaHeaderBadgeIcon,
   ReflectionGratitudeBadgeIcon,
@@ -65,7 +66,6 @@ export function ReflectionSection({
                 typography.caption,
                 {
                   color: filledCount > 0 ? colors.primaryDark : colors.textSecondary,
-                  fontWeight: '700',
                   fontSize: 11,
                 },
               ]}
@@ -78,11 +78,19 @@ export function ReflectionSection({
           <SoftCircleButton
             onPress={() => setSectionExpanded((prev) => !prev)}
             size={32}
-            icon={sectionExpanded ? 'chevron-up' : 'chevron-down'}
-            iconSize={16}
             accessibilityLabel={`Daily Muhasaba section. Currently ${sectionExpanded ? 'expanded' : 'collapsed'}. ${filledCount} of 4 answered.`}
             testID="reflection-section-toggle"
-          />
+          >
+            <Image
+              source={JOURNAL_ACTION_ASSETS.collapseChevronUp}
+              style={{
+                width: 14,
+                height: 14,
+                transform: [{ rotate: sectionExpanded ? '0deg' : '180deg' }],
+              }}
+              resizeMode="contain"
+            />
+          </SoftCircleButton>
         </View>
       }
     >

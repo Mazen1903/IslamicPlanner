@@ -6,9 +6,10 @@ import {
   StyleSheet,
   Pressable,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useTheme } from '@/theme';
-import { Icon } from '@/components/common/Icon';
+import { JOURNAL_ACTION_ASSETS } from '@/constants/journalIconAssets';
 
 export interface JournalDeleteDialogProps {
   visible: boolean;
@@ -62,7 +63,11 @@ export function JournalDeleteDialog({
               },
             ]}
           >
-            <Icon name="trash" size={24} color={colors.danger} decorative />
+            <Image
+              source={JOURNAL_ACTION_ASSETS.deleteTrash}
+              style={{ width: 26, height: 26 }}
+              resizeMode="contain"
+            />
           </View>
 
           <Text
@@ -105,7 +110,7 @@ export function JournalDeleteDialog({
               ]}
               testID="journal-delete-cancel-btn"
             >
-              <Text style={[typography.labelMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
+              <Text style={[typography.labelMedium, { color: colors.textPrimary }]}>
                 Cancel
               </Text>
             </Pressable>
@@ -129,7 +134,7 @@ export function JournalDeleteDialog({
               {isDeleting ? (
                 <ActivityIndicator size="small" color={colors.textOnPrimary} />
               ) : (
-                <Text style={[typography.labelMedium, { color: colors.textOnPrimary, fontWeight: '700' }]}>
+                <Text style={[typography.labelMedium, { color: colors.textOnPrimary }]}>
                   Delete
                 </Text>
               )}
@@ -164,7 +169,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontWeight: '700',
     letterSpacing: -0.3,
   },
   actionsRow: {

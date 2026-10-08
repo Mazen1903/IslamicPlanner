@@ -39,6 +39,8 @@ export function getRecurrenceLabel(preset: string, specificDaysCount: number, ca
       return "Doesn't repeat";
     case 'DAILY':
       return 'Daily';
+    case 'EVERY_OTHER_DAY':
+      return 'Every other day';
     case 'WEEKDAYS':
       return 'Weekdays (Mon - Fri)';
     case 'WEEKLY':

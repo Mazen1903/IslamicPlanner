@@ -137,7 +137,7 @@ export function JournalWriteModal({
                     },
                   ]}
                 >
-                  <Text style={[typography.labelMedium, { color: colors.textOnPrimary, fontWeight: '700' }]}>
+                  <Text style={[typography.labelMedium, { color: colors.textOnPrimary }]}>
                     Done
                   </Text>
                 </LinearGradient>
@@ -241,7 +241,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   screenTitle: {
-    fontWeight: '700',
     letterSpacing: -0.3,
   },
   topRightActions: {
@@ -272,7 +271,6 @@ const styles = StyleSheet.create({
   },
   helperPillText: {
     fontSize: 11,
-    fontWeight: '600',
   },
   inputScroll: {
     flex: 1,

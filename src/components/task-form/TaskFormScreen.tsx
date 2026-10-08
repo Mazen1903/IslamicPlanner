@@ -297,9 +297,8 @@ export function TaskFormScreen({
   // Sub-view 2: Relative to Prayer screen (add task2.png)
   if (currentView === 'RELATIVE_PRAYER') {
     return (
-      <SafeAreaView
+      <View
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['top', 'left', 'right']}
         testID="task-form-screen"
       >
         <TaskHeaderBanner
@@ -315,7 +314,7 @@ export function TaskFormScreen({
           onBack={() => setCurrentView('MAIN')}
           onNext={() => setCurrentView('MAIN')}
         />
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -399,10 +398,6 @@ export function TaskFormScreen({
       style={[styles.container, { backgroundColor: colors.background }]}
       testID="task-form-screen"
     >
-      <SafeAreaView
-        style={styles.container}
-        edges={['top', 'left', 'right']}
-      >
       {/* Mosque Skyline Header Banner */}
       <TaskHeaderBanner
         title={isEdit ? 'Edit Task' : 'Add Task'}
@@ -673,7 +668,6 @@ export function TaskFormScreen({
           </View>
         )}
       </ScrollView>
-      </SafeAreaView>
 
       <IconPickerModal
         visible={showIconPicker}

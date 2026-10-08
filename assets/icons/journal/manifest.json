@@ -1,0 +1,51 @@
+{
+  "source": "User-provided Journal tab screenshot",
+  "notes": [
+    "transparent_png contains cleaned raster extractions for use as app assets.",
+    "raw_crops contains the exact screenshot crops before background cleanup.",
+    "illustrations contains the two larger decorative artwork regions.",
+    "The screenshot is raster, so the pack contains PNGs rather than true source SVG vectors.",
+    "chevron_right_blue can be reused for Start your streak and all four Muhasaba row chevrons.",
+    "Status-bar icons are intentionally excluded because iOS/Android render those as system UI."
+  ],
+  "icons": [
+    "header_lock",
+    "header_settings",
+    "sunset_emoji",
+    "streak_sprout",
+    "chevron_right_blue",
+    "heart_prompt_rays",
+    "mood_hard",
+    "mood_okay",
+    "mood_good",
+    "mood_great",
+    "mood_grateful",
+    "reflection_sparkle",
+    "reflection_prev",
+    "reflection_next",
+    "quote_marks",
+    "write_pencil_white",
+    "write_arrow_white",
+    "swipe_arrow_blue",
+    "entry_clipboard",
+    "focus_pencil_green",
+    "lightbulb",
+    "expand_arrow_green",
+    "muhasaba_sun",
+    "collapse_chevron_up",
+    "gratitude_hands",
+    "what_went_well_check",
+    "for_tomorrow_chart",
+    "heartfelt_dua_moon",
+    "delete_trash",
+    "nav_planner",
+    "nav_calendar",
+    "nav_plus_button",
+    "nav_journal",
+    "nav_more"
+  ],
+  "illustrations": [
+    "header_mosque_artwork_raw",
+    "reflection_lantern_artwork_raw"
+  ]
+}

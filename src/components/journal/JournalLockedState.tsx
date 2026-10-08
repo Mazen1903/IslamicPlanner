@@ -100,7 +100,7 @@ export function JournalLockedState({
             {isUnlocking ? (
               <ActivityIndicator size="small" color={colors.textOnPrimary} />
             ) : (
-              <Text style={[typography.labelLarge, { color: colors.textOnPrimary, fontWeight: '700' }]}>
+              <Text style={[typography.labelLarge, { color: colors.textOnPrimary }]}>
                 Unlock Journal
               </Text>
             )}
@@ -130,15 +130,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontWeight: '700',
     letterSpacing: -0.3,
   },
   subtitle: {
     lineHeight: 20,
   },
-  errorText: {
-    fontWeight: '500',
-  },
+  errorText: {},
   unlockButtonWrapper: {
     width: '100%',
     marginTop: 20,

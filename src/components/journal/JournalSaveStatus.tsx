@@ -45,7 +45,5 @@ export function JournalSaveStatus({
 }
 
 const styles = StyleSheet.create({
-  text: {
-    fontWeight: '500',
-  },
+  text: {},
 });

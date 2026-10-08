@@ -55,7 +55,7 @@ export function JournalHistory({
           testID="journal-history-back-btn"
         >
           <Icon name="chevron-left" size={16} color={colors.primary} decorative directional />
-          <Text style={[typography.labelMedium, { color: colors.primary, marginStart: spacing.xs, fontWeight: '700' }]}>
+          <Text style={[typography.labelMedium, { color: colors.primary, marginStart: spacing.xs }]}>
             Back to Today
           </Text>
         </Pressable>
@@ -81,7 +81,7 @@ export function JournalHistory({
           >
             <Text style={styles.emptyEmoji}>📜</Text>
           </View>
-          <Text style={[typography.headlineMedium, { color: colors.textPrimary, marginTop: spacing.md, fontWeight: '700' }]}>
+          <Text style={[typography.headlineMedium, { color: colors.textPrimary, marginTop: spacing.md }]}>
             No reflections yet
           </Text>
           <Text style={[typography.bodyMedium, { color: colors.textSecondary, marginTop: spacing.xs, textAlign: 'center' }]}>
@@ -163,7 +163,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontWeight: '700',
     letterSpacing: -0.3,
   },
   listHeader: {
@@ -174,7 +173,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionTitle: {
-    fontWeight: '700',
     letterSpacing: -0.2,
   },
   emptyContainer: {

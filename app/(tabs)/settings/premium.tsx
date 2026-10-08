@@ -12,7 +12,8 @@ import {
 } from '@/components/settings';
 import { Switch } from 'react-native';
 import { useEntitlement } from '@/hooks/useEntitlement';
-import { PaywallSheet } from '@/components/premium/PaywallSheet';
+import { PaywallSheet, PremiumLockedInfo } from '@/components/premium';
+import { usePaywallTestStore } from '@/stores/usePaywallTestStore';
 import { devPurchaseService } from '@/services/purchase/DevPurchaseService';
 
 export const PREMIUM_NOTIFY_KEY = 'premium_notify_me_v1';
@@ -43,10 +44,16 @@ export default function PremiumScreen() {
   const { colors, spacing, radii, typography, shadows, touchTargets } = useTheme();
   const router = useRouter();
   const { isPremium, reload } = useEntitlement();
+  const { bypassPaywall, setBypassPaywall, loadBypassPreference } = usePaywallTestStore();
 
   const [isNotified, setIsNotified] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [lockedInfoOpen, setLockedInfoOpen] = useState(false);
+
+  useEffect(() => {
+    loadBypassPreference();
+  }, [loadBypassPreference]);
 
   const handleToggleDevPremium = async (val: boolean) => {
     try {
@@ -304,7 +311,115 @@ export default function PremiumScreen() {
           </View>
         </View>
 
-        {/* CARD 3: DEVELOPER UNLOCK (Dev / Testing builds only) */}
+        {/* CARD 3: TESTING & PREVIEW (QA & Testing Controls) */}
+        <View
+          style={[
+            styles.missionCard,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.primary,
+              borderWidth: 1,
+              borderRadius: radii.card,
+              padding: spacing.md,
+              marginTop: spacing.md,
+            },
+            shadows.card,
+          ]}
+          testID="testing-preview-card"
+        >
+          <View style={{ marginBottom: spacing.sm }}>
+            <Text style={[typography.labelLarge, { color: colors.primary, fontWeight: '700' }]}>
+              🛠️ Testing & Preview
+            </Text>
+            <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+              Controls for testing premium workflows and inspecting paywall dialogs.
+            </Text>
+          </View>
+
+          {/* Toggle Bypass */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingVertical: spacing.xs,
+              borderTopWidth: StyleSheet.hairlineWidth,
+              borderTopColor: colors.border,
+            }}
+          >
+            <View style={{ flex: 1, marginEnd: spacing.md }}>
+              <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
+                Bypass Paywall
+              </Text>
+              <Text style={[typography.caption, { color: colors.textSecondary }]}>
+                {bypassPaywall
+                  ? 'Active: All features are freely accessible without popups.'
+                  : 'Inactive: Normal paywall gating and popups are enforced.'}
+              </Text>
+            </View>
+            <Switch
+              value={bypassPaywall}
+              onValueChange={val => setBypassPaywall(val)}
+              trackColor={{ true: colors.primary, false: colors.border }}
+              thumbColor={colors.surface}
+              accessibilityLabel="Bypass paywall toggle"
+              testID="paywall-bypass-switch"
+            />
+          </View>
+
+          {/* Preview Buttons */}
+          <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
+            <Pressable
+              onPress={() => setPaywallOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Preview Paywall Sheet"
+              testID="preview-paywall-sheet-button"
+              style={({ pressed }) => [
+                {
+                  flex: 1,
+                  backgroundColor: pressed ? colors.primaryLight : colors.surfaceSecondary,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                  borderRadius: radii.md,
+                  paddingVertical: spacing.sm,
+                  paddingHorizontal: spacing.xs,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                },
+              ]}
+            >
+              <Text style={[typography.labelSmall, { color: colors.primary, fontWeight: '700', textAlign: 'center' }]}>
+                Preview Paywall
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setLockedInfoOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Preview Locked Feature Info"
+              testID="preview-locked-info-button"
+              style={({ pressed }) => [
+                {
+                  flex: 1,
+                  backgroundColor: pressed ? colors.primaryLight : colors.surfaceSecondary,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                  borderRadius: radii.md,
+                  paddingVertical: spacing.sm,
+                  paddingHorizontal: spacing.xs,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                },
+              ]}
+            >
+              <Text style={[typography.labelSmall, { color: colors.primary, fontWeight: '700', textAlign: 'center' }]}>
+                Preview Locked Info
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* CARD 4: DEVELOPER UNLOCK (Dev / Testing builds only) */}
         {__DEV__ && (
         <View
           style={[
@@ -344,7 +459,7 @@ export default function PremiumScreen() {
         </View>
         )}
 
-        {/* CARD 4: SUPPORT OUR MISSION */}
+        {/* CARD 5: SUPPORT OUR MISSION */}
         <View
           style={[
             styles.missionCard,
@@ -380,6 +495,14 @@ export default function PremiumScreen() {
         visible={paywallOpen}
         onClose={() => setPaywallOpen(false)}
         onSuccess={() => reload()}
+      />
+
+      {/* Locked Feature Info Preview Modal */}
+      <PremiumLockedInfo
+        visible={lockedInfoOpen}
+        onClose={() => setLockedInfoOpen(false)}
+        title="Premium Feature (Preview)"
+        description="This is a test preview of the locked feature dialog shown when paywall bypass is disabled."
       />
     </SafeAreaView>
   );

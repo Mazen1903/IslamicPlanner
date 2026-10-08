@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
+import { JOURNAL_ACTION_ASSETS } from '@/constants/journalIconAssets';
 
 export interface StreakRingProps {
   streak: number;
@@ -56,7 +57,15 @@ export function StreakRing({
           },
         ]}
       >
-        <Text style={styles.badgeEmoji}>{streak > 0 ? '🔥' : '🌱'}</Text>
+        {streak > 0 ? (
+          <Text style={styles.badgeEmoji}>🔥</Text>
+        ) : (
+          <Image
+            source={JOURNAL_ACTION_ASSETS.streakSprout}
+            style={{ width: 22, height: 22 }}
+            resizeMode="contain"
+          />
+        )}
       </View>
 
       {/* Texts */}
@@ -86,7 +95,11 @@ export function StreakRing({
 
       {/* Trailing chevron */}
       <View style={styles.chevronWrapper}>
-        <Icon name="chevron-right" size={16} color={colors.textTertiary} decorative directional />
+        <Image
+          source={JOURNAL_ACTION_ASSETS.chevronRightBlue}
+          style={{ width: 14, height: 14 }}
+          resizeMode="contain"
+        />
       </View>
     </View>
   );
@@ -131,7 +144,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   titleText: {
-    fontWeight: '700',
     letterSpacing: -0.2,
   },
   subtitleText: {

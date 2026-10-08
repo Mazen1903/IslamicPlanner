@@ -71,6 +71,7 @@ describe('ExpandingAddTaskModal', () => {
     expect(modal).toBeTruthy();
     expect(modal.props.animationType).toBe('slide');
     expect(modal.props.presentationStyle).toBe('fullScreen');
+    expect(modal.props.statusBarTranslucent).toBe(true);
     expect(screen.getByTestId('expanding-add-task-container')).toBeTruthy();
     expect(screen.getByTestId('expanding-add-task-content')).toBeTruthy();
   });

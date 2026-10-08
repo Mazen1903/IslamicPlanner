@@ -274,7 +274,7 @@ export default function JournalScreen() {
                   style={styles.rolloverButton}
                   testID="journal-switch-new-day-btn"
                 >
-                  <Text style={[typography.labelSmall, { color: colors.primary, fontWeight: '700' }]}>
+                  <Text style={[typography.labelSmall, { color: colors.primary }]}>
                     Open Today
                   </Text>
                 </Pressable>

@@ -98,7 +98,6 @@ function MoodItem({ item, isSelected, onPress }: MoodItemProps) {
             typography.caption,
             {
               color: isSelected ? item.accentColor : colors.textSecondary,
-              fontWeight: isSelected ? '700' : '600',
               marginTop: spacing.xxs + 2,
               fontSize: 11,
               letterSpacing: 0.1,
@@ -177,7 +176,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    fontWeight: '700',
     letterSpacing: 0.2,
   },
   row: {

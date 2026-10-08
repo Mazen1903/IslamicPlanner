@@ -135,7 +135,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   gregorianDate: {
-    fontWeight: '700',
     letterSpacing: -0.2,
   },
   arrowContainer: {

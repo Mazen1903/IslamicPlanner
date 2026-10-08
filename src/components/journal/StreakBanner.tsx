@@ -45,7 +45,6 @@ export function StreakBanner({
           typography.labelSmall,
           {
             color: streak > 0 ? colors.primaryDark : colors.textSecondary,
-            fontWeight: '700',
             marginStart: spacing.xs,
           },
         ]}

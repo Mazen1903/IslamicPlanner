@@ -16,6 +16,7 @@ import { CustomRecurrenceModal } from './CustomRecurrenceModal';
 const PRESETS: { preset: RecurrencePreset; label: string }[] = [
   { preset: 'NONE', label: "Doesn't repeat" },
   { preset: 'DAILY', label: 'Daily' },
+  { preset: 'EVERY_OTHER_DAY', label: 'Every other day' },
   { preset: 'WEEKDAYS', label: 'Weekdays' },
   { preset: 'WEEKLY', label: 'Weekly' },
   { preset: 'MONTHLY', label: 'Monthly' },

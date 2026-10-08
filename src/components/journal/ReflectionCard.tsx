@@ -252,7 +252,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   labelText: {
-    fontWeight: '700',
     letterSpacing: -0.2,
   },
   checkBadge: {

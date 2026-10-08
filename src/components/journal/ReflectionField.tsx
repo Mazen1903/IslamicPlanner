@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   label: {
-    fontWeight: '600',
+    letterSpacing: -0.1,
   },
   inputWrapper: {
     borderWidth: 1,

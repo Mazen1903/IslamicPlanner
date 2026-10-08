@@ -43,6 +43,14 @@ describe('rruleSerializer (M10)', () => {
       expect(parsed.interval).toBe(1);
     });
 
+    it('serializes EVERY_OTHER_DAY to FREQ=DAILY;INTERVAL=2 and round-trips with M9', () => {
+      const rrule = serializePresetToRRule('EVERY_OTHER_DAY', testDate)!;
+      expect(rrule).toBe('FREQ=DAILY;INTERVAL=2');
+      const parsed = parseRecurrenceRule(rrule);
+      expect(parsed.frequency).toBe('DAILY');
+      expect(parsed.interval).toBe(2);
+    });
+
     it('serializes WEEKDAYS to FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR and round-trips with M9', () => {
       const rrule = serializePresetToRRule('WEEKDAYS', testDate)!;
       expect(rrule).toBe('FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR');

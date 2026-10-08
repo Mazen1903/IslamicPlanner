@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import { StreakRing } from './StreakRing';
 import { SoftCircleButton } from './JournalCard';
 import { AppHeroHeader } from '@/components/common/AppHeroHeader';
+import { JOURNAL_ACTION_ASSETS } from '@/constants/journalIconAssets';
 import type { SaveState } from '@/services/journal/JournalAutosaveController';
 
 export interface JournalHeaderProps {
@@ -51,7 +52,7 @@ export function JournalHeader({
   return (
     <AppHeroHeader
       testID={testID}
-      artworkSource={require('../../../assets/illustrations/journal_hero_mosque.png')}
+      artworkSource={require('../../../assets/icons/journal/illustrations/header_mosque_artwork_raw.png')}
       artworkSize={{ width: 230, height: 130 }}
       artworkPosition={{ right: -8, bottom: -10 }}
       contentMaxWidth="62%"
@@ -77,21 +78,33 @@ export function JournalHeader({
           {onPrivacyPress && (
             <SoftCircleButton
               onPress={onPrivacyPress}
-              icon="lock"
+              icon={undefined}
               active={lockEnabled}
               activeBgColor={isDark ? 'rgba(15, 159, 74, 0.25)' : colors.primaryLight}
               iconColor={lockEnabled ? colors.primary : colors.textSecondary}
               accessibilityLabel={`Journal privacy. Biometric lock is ${lockEnabled ? 'enabled' : 'disabled'}.`}
               testID="journal-privacy-btn"
-            />
+            >
+              <Image
+                source={JOURNAL_ACTION_ASSETS.headerLock}
+                style={{ width: 20, height: 20 }}
+                resizeMode="contain"
+              />
+            </SoftCircleButton>
           )}
 
           <SoftCircleButton
             onPress={handleSettingsPress}
-            icon="settings"
+            icon={undefined}
             accessibilityLabel="Journal settings"
             testID="journal-settings-btn"
-          />
+          >
+            <Image
+              source={JOURNAL_ACTION_ASSETS.headerSettings}
+              style={{ width: 20, height: 20 }}
+              resizeMode="contain"
+            />
+          </SoftCircleButton>
         </View>
       }
       bottomElement={
@@ -145,7 +158,7 @@ export function JournalHeader({
                 <Text
                   style={[
                     typography.labelMedium,
-                    { color: colors.primary, marginStart: spacing.xs, fontWeight: '700' },
+                    { color: colors.primary, marginStart: spacing.xs },
                   ]}
                 >
                   Back to Today
@@ -165,11 +178,9 @@ const styles = StyleSheet.create({
   },
   titleText: {
     letterSpacing: -0.5,
-    fontWeight: '800',
   },
   greetingText: {
     marginTop: 2,
-    fontWeight: '600',
   },
   actionGroup: {
     flexDirection: 'row',
@@ -192,12 +203,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   gregorianDate: {
-    fontWeight: '700',
     letterSpacing: -0.2,
   },
   hijriDate: {
     marginTop: 2,
-    fontWeight: '500',
   },
   historicalBanner: {
     flexDirection: 'row',

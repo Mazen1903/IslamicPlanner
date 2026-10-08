@@ -71,7 +71,7 @@ export function JournalStatsStrip({
         <Text
           style={[
             typography.caption,
-            { color: colors.textSecondary, marginTop: 2, fontSize: 11, fontWeight: '600' },
+            { color: colors.textSecondary, marginTop: 2, fontSize: 11 },
           ]}
         >
           {totalEntries === 1 ? 'Entry' : 'Entries'}
@@ -118,7 +118,7 @@ export function JournalStatsStrip({
         <Text
           style={[
             typography.caption,
-            { color: colors.textSecondary, marginTop: 2, fontSize: 11, fontWeight: '600' },
+            { color: colors.textSecondary, marginTop: 2, fontSize: 11 },
           ]}
         >
           Day Streak
@@ -162,7 +162,7 @@ export function JournalStatsStrip({
         <Text
           style={[
             typography.caption,
-            { color: colors.textSecondary, marginTop: 2, fontSize: 11, fontWeight: '600' },
+            { color: colors.textSecondary, marginTop: 2, fontSize: 11 },
           ]}
         >
           Best Streak
@@ -197,7 +197,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   statNumber: {
-    fontWeight: '800',
     letterSpacing: -0.5,
   },
 });

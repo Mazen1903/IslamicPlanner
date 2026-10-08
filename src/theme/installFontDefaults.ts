@@ -127,14 +127,22 @@ export function resolveAppFontStyle(style?: StyleProp<TextStyle>): StyleProp<Tex
   const isDedicatedBoldAsset = targetFont === COMIC_BOLD || targetFont === COMIC_BOLD_ITALIC;
   const resolvedWeight = Platform.OS === 'android' || isDedicatedBoldAsset ? undefined : (isExplicitBold ? '700' : undefined);
 
-  return [
-    style,
-    {
-      fontFamily: targetFont,
-      fontWeight: resolvedWeight,
-      fontStyle: isItalic ? 'italic' : undefined,
-    },
-  ];
+  // Flatten and strip fontWeight so native font managers never receive an explicit weight
+  // alongside dedicated bold font assets, preventing native fallback to Roboto/San Francisco.
+  const cleaned: TextStyle = { ...flattened };
+  cleaned.fontFamily = targetFont;
+  if (resolvedWeight === undefined) {
+    delete cleaned.fontWeight;
+  } else {
+    cleaned.fontWeight = resolvedWeight;
+  }
+  if (isItalic) {
+    cleaned.fontStyle = 'italic';
+  } else {
+    delete cleaned.fontStyle;
+  }
+
+  return cleaned;
 }
 
 /**

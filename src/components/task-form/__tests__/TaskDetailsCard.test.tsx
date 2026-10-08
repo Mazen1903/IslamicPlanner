@@ -117,6 +117,32 @@ describe('TaskDetailsCard', () => {
       type: 'SET_RECURRENCE_PRESET',
       payload: 'DAILY',
     });
+
+    // Tap Every other day chip
+    await fireEvent.press(getByTestId('repeat-preset-every_other_day'));
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'SET_RECURRENCE_PRESET',
+      payload: 'EVERY_OTHER_DAY',
+    });
+  });
+
+  it('renders Every other day preview when EVERY_OTHER_DAY is selected', async () => {
+    let state = createInitialFormState({ civilSeedDate: civilToday, planningDayDate: planningDayKey });
+    state = formReducer(state, { type: 'SET_RECURRENCE_PRESET', payload: 'EVERY_OTHER_DAY' });
+    const dispatch = jest.fn();
+
+    const { getByTestId, getByText } = await render(
+      <ThemeProvider>
+        <TaskDetailsCard state={state} dispatch={dispatch} />
+      </ThemeProvider>
+    );
+
+    expect(getByText('Every other day')).toBeTruthy();
+
+    // Expand Repeat drawer
+    await fireEvent.press(getByTestId('details-row-repeat'));
+    expect(getByTestId('every-other-day-preview')).toBeTruthy();
+    expect(getByText(/Upcoming active days/i)).toBeTruthy();
   });
 
   it('opens CustomRecurrenceModal when Custom preset is selected', async () => {

@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useEntitlement } from './useEntitlement';
+import { usePaywallTestStore } from '@/stores/usePaywallTestStore';
 import type { EntitlementService, PremiumFeature } from '@/domain/entitlement/types';
 
 export interface UsePremiumGateResult {
@@ -17,6 +18,7 @@ export function usePremiumGate(
   entitlementService?: EntitlementService
 ): UsePremiumGateResult {
   const { isPremium, hasFeature, reload } = useEntitlement(entitlementService);
+  const bypassPaywall = usePaywallTestStore(s => s.bypassPaywall);
 
   const [paywallVisible, setPaywallVisible] = useState(false);
   const [gatedFeature, setGatedFeature] = useState<PremiumFeature | null>(null);
@@ -24,7 +26,7 @@ export function usePremiumGate(
 
   const gate = useCallback(
     (feature: PremiumFeature, onAllowed: () => void) => {
-      if (hasFeature(feature)) {
+      if (bypassPaywall || hasFeature(feature)) {
         onAllowed();
       } else {
         pendingCallbackRef.current = onAllowed;
@@ -32,7 +34,7 @@ export function usePremiumGate(
         setPaywallVisible(true);
       }
     },
-    [hasFeature]
+    [hasFeature, bypassPaywall]
   );
 
   const openPaywall = useCallback((feature?: PremiumFeature) => {
