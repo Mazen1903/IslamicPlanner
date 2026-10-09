@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { ThemeProvider } from '@/theme';
-import { SubtasksSection } from '../SubtasksSection';
+import { SubtasksSection, computeDropIndex } from '../SubtasksSection';
 import type { SubtaskDraft } from '@/features/task-form/types';
 
 describe('SubtasksSection', () => {
@@ -108,5 +108,40 @@ describe('SubtasksSection', () => {
       type: 'REORDER_SUBTASKS',
       payload: { fromIndex: 0, toIndex: 1 },
     });
+  });
+
+  it('renders an accessible drag handle per row and hides it while editing', async () => {
+    const dispatch = jest.fn();
+    const { getByTestId, queryByTestId, getByLabelText } = await render(
+      <ThemeProvider>
+        <SubtasksSection subtasks={initialSubtasks} dispatch={dispatch} />
+      </ThemeProvider>
+    );
+
+    expect(getByTestId('drag-subtask-step-1')).toBeTruthy();
+    expect(getByTestId('drag-subtask-step-2')).toBeTruthy();
+    expect(getByLabelText('Drag to reorder: Buy groceries')).toBeTruthy();
+
+    await fireEvent.press(getByTestId('edit-subtask-step-1'));
+    expect(queryByTestId('drag-subtask-step-1')).toBeNull();
+  });
+});
+
+describe('computeDropIndex', () => {
+  it('shifts by the rounded number of rows dragged', () => {
+    expect(computeDropIndex(1, 48, 48, 5)).toBe(2);
+    expect(computeDropIndex(2, -96, 48, 5)).toBe(0);
+    expect(computeDropIndex(1, 20, 48, 5)).toBe(1);
+    expect(computeDropIndex(1, 30, 48, 5)).toBe(2);
+  });
+
+  it('clamps to the list bounds', () => {
+    expect(computeDropIndex(1, 1000, 48, 3)).toBe(2);
+    expect(computeDropIndex(1, -1000, 48, 3)).toBe(0);
+  });
+
+  it('returns the original index for degenerate inputs', () => {
+    expect(computeDropIndex(1, 100, 48, 0)).toBe(1);
+    expect(computeDropIndex(1, 100, 0, 5)).toBe(1);
   });
 });

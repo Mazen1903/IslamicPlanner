@@ -1,10 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useContext, createContext } from 'react';
 import {
   View,
   Text,
   TextInput,
   Pressable,
   StyleSheet,
+  Animated,
+  PanResponder,
+  type GestureResponderHandlers,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -17,6 +20,108 @@ export interface SubtasksSectionProps {
   dispatch: React.Dispatch<FormAction>;
   style?: StyleProp<ViewStyle>;
   hideDivider?: boolean;
+}
+
+/**
+ * Drag-to-reorder support. Each row owns its translateY and a PanResponder; the
+ * grip handle (rendered anywhere inside the row) reads the handlers from context
+ * so the existing row markup does not need to change.
+ */
+interface DragContextValue {
+  panHandlers: GestureResponderHandlers;
+  dragging: boolean;
+}
+const DragContext = createContext<DragContextValue | null>(null);
+
+export function computeDropIndex(fromIndex: number, dy: number, rowHeight: number, count: number): number {
+  if (count <= 0 || rowHeight <= 0) return fromIndex;
+  const shift = Math.round(dy / rowHeight);
+  return Math.max(0, Math.min(count - 1, fromIndex + shift));
+}
+
+interface DraggableSubtaskRowProps {
+  index: number;
+  count: number;
+  onReorder: (fromIndex: number, toIndex: number) => void;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+  children: React.ReactNode;
+}
+
+function DraggableSubtaskRow({ index, count, onReorder, style, testID, children }: DraggableSubtaskRowProps) {
+  const translateY = useRef(new Animated.Value(0)).current;
+  const { shadows } = useTheme();
+  const [dragging, setDragging] = useState(false);
+  const rowHeightRef = useRef(48);
+  const indexRef = useRef(index);
+  const countRef = useRef(count);
+  const onReorderRef = useRef(onReorder);
+
+  useEffect(() => {
+    indexRef.current = index;
+    countRef.current = count;
+    onReorderRef.current = onReorder;
+  }, [index, count, onReorder]);
+
+  const finish = (dy: number) => {
+    const from = indexRef.current;
+    const to = computeDropIndex(from, dy, rowHeightRef.current, countRef.current);
+    translateY.setValue(0);
+    setDragging(false);
+    if (to !== from) onReorderRef.current(from, to);
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderGrant: () => setDragging(true),
+      onPanResponderMove: (_evt, g) => translateY.setValue(g.dy),
+      onPanResponderRelease: (_evt, g) => finish(g.dy),
+      onPanResponderTerminate: () => finish(0),
+    })
+  ).current;
+
+  return (
+    <DragContext.Provider value={{ panHandlers: panResponder.panHandlers, dragging }}>
+      <Animated.View
+        onLayout={e => {
+          rowHeightRef.current = e.nativeEvent.layout.height || rowHeightRef.current;
+        }}
+        style={[
+          style,
+          dragging && styles.rowDragging,
+          dragging && shadows.elevated,
+          { transform: [{ translateY }], zIndex: dragging ? 10 : 0 },
+        ]}
+        testID={testID}
+      >
+        {children}
+      </Animated.View>
+    </DragContext.Provider>
+  );
+}
+
+function SubtaskDragHandle({ title, testID }: { title: string; testID: string }) {
+  const ctx = useContext(DragContext);
+  const { colors } = useTheme();
+  return (
+    <View
+      {...(ctx?.panHandlers ?? {})}
+      accessible
+      accessibilityRole="adjustable"
+      accessibilityLabel={`Drag to reorder: ${title}`}
+      accessibilityHint="Drag up or down, or use the move up and move down buttons"
+      testID={testID}
+      style={styles.dragHandle}
+      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+    >
+      {[0, 1, 2].map(i => (
+        <View key={i} style={[styles.dragBar, { backgroundColor: colors.textTertiary }]} />
+      ))}
+    </View>
+  );
 }
 
 export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: SubtasksSectionProps) {
@@ -82,6 +187,14 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
     }
   };
 
+  const handleReorder = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    dispatch({
+      type: 'REORDER_SUBTASKS',
+      payload: { fromIndex, toIndex },
+    });
+  };
+
   const handleMoveDown = (index: number) => {
     if (index < subtasks.length - 1) {
       dispatch({
@@ -142,8 +255,11 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
           const isEditing = editingId === subtask.id;
 
           return (
-            <View
+            <DraggableSubtaskRow
               key={subtask.id}
+              index={index}
+              count={subtasks.length}
+              onReorder={handleReorder}
               style={[
                 styles.subtaskRow,
                 {
@@ -246,6 +362,9 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
               {/* Action Buttons (when not editing) */}
               {!isEditing && (
                 <View style={styles.actionsRow}>
+                  {/* Drag handle */}
+                  <SubtaskDragHandle title={subtask.title} testID={`drag-subtask-${subtask.id}`} />
+
                   {/* Edit button */}
                   <Pressable
                     onPress={() => handleStartEdit(subtask)}
@@ -300,7 +419,7 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
                   </Pressable>
                 </View>
               )}
-            </View>
+            </DraggableSubtaskRow>
           );
         })}
 
@@ -388,6 +507,21 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
+  },
+  rowDragging: {
+    opacity: 0.92,
+  },
+  dragHandle: {
+    width: 22,
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+  },
+  dragBar: {
+    width: 14,
+    height: 2,
+    borderRadius: 1,
   },
   subtaskRow: {
     flexDirection: 'row',

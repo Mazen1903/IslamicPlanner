@@ -25,7 +25,7 @@ export interface TaskListProps {
   onToggleAnytimeCollapsed?: () => void;
   onCompleteTask: (occurrenceId: string) => void;
   onUndoTask?: (occurrenceId: string) => void;
-  onToggleSubtask?: (occurrenceId: string, subtaskId: string) => void;
+  onToggleSubtask?: (occurrenceId: string, subtaskId: string) => void | Promise<void>;
   onAddTask?: (prayer: Prayer) => void;
   onSelectPrayer?: (prayer: Prayer) => void;
   onRescheduleTask?: (task: TaskCardViewModel, targetPrayer: Prayer) => void;
@@ -163,6 +163,55 @@ export function TaskList({
       });
     },
     [onDeleteTask]
+  );
+
+  const findTaskById = useCallback(
+    (occurrenceId: string): TaskCardViewModel | undefined => {
+      const tabs = allTabs && allTabs.length > 0 ? allTabs : [tab];
+      for (const t of tabs) {
+        const pools = [t.scheduledTasks, t.missedTasks, t.completedTasks, t.anytimeTasks ?? []];
+        for (const pool of pools) {
+          const hit = pool.find(x => x.occurrenceId === occurrenceId);
+          if (hit) return hit;
+        }
+      }
+      return upcomingDaysTasks.find(x => x.occurrenceId === occurrenceId);
+    },
+    [allTabs, tab, upcomingDaysTasks]
+  );
+
+  // Completing a parent task with unfinished checklist items offers a one-tap
+  // "Mark all done" so the checklist and the task stay consistent.
+  const handleCompleteTask = useCallback(
+    (occurrenceId: string) => {
+      const task = findTaskById(occurrenceId);
+      const incompleteIds = (task?.subtasks ?? []).filter(s => !s.isCompleted).map(s => s.id);
+
+      onCompleteTask(occurrenceId);
+
+      if (incompleteIds.length > 0 && onToggleSubtask) {
+        useToastStore.getState().showToast({
+          message: 'Mark all checklist items done?',
+          durationMs: 5000,
+          action: {
+            label: 'Mark all',
+            onPress: () => {
+              void (async () => {
+                // Sequential: each toggle is a read-modify-write on the occurrence.
+                for (const subtaskId of incompleteIds) {
+                  try {
+                    await onToggleSubtask(occurrenceId, subtaskId);
+                  } catch (err) {
+                    console.warn('[TaskList] Failed to mark checklist item done:', err);
+                  }
+                }
+              })();
+            },
+          },
+        });
+      }
+    },
+    [findTaskById, onCompleteTask, onToggleSubtask]
   );
 
   // Collapsible section states persisted across app restarts
@@ -506,7 +555,7 @@ export function TaskList({
                 <TaskCard
                   key={task.occurrenceId}
                   task={task}
-                  onComplete={onCompleteTask}
+                  onComplete={handleCompleteTask}
                   onUndo={onUndoTask}
                   onToggleSubtask={onToggleSubtask}
                   onDelete={handleDeleteTask}
@@ -541,7 +590,7 @@ export function TaskList({
                   <TaskCard
                     key={task.occurrenceId}
                     task={task}
-                    onComplete={onCompleteTask}
+                    onComplete={handleCompleteTask}
                     onUndo={onUndoTask}
                     onToggleSubtask={onToggleSubtask}
                     onDelete={handleDeleteTask}
@@ -577,7 +626,7 @@ export function TaskList({
                   <TaskCard
                     key={task.occurrenceId}
                     task={task}
-                    onComplete={onCompleteTask}
+                    onComplete={handleCompleteTask}
                     onUndo={onUndoTask}
                     onToggleSubtask={onToggleSubtask}
                     onDelete={handleDeleteTask}
@@ -613,7 +662,7 @@ export function TaskList({
                   <TaskCard
                     key={task.occurrenceId}
                     task={task}
-                    onComplete={onCompleteTask}
+                    onComplete={handleCompleteTask}
                     onUndo={onUndoTask}
                     onToggleSubtask={onToggleSubtask}
                     onDelete={handleDeleteTask}
