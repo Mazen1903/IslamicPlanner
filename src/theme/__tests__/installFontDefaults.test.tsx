@@ -89,5 +89,60 @@ describe('Global Font Defaults & Fallback Prevention', () => {
       expect(flat.fontSize).toBe(14);
     });
   });
+
+  describe('Dynamic Font Switching & Text Scaling', () => {
+    afterEach(() => {
+      // Reset back to defaults after each test
+      const { setActiveFontFamily, setActiveTextScale } = require('../installFontDefaults');
+      setActiveFontFamily('comic');
+      setActiveTextScale(1.0);
+    });
+
+    it('exports AVAILABLE_FONTS and TEXT_SIZE_OPTIONS', () => {
+      const { AVAILABLE_FONTS, TEXT_SIZE_OPTIONS } = require('../installFontDefaults');
+      expect(AVAILABLE_FONTS.length).toBe(5);
+      expect(AVAILABLE_FONTS.map((f: any) => f.id)).toEqual(['comic', 'system', 'mali', 'kalam', 'caveat']);
+      expect(TEXT_SIZE_OPTIONS.length).toBe(4);
+    });
+
+    it('switches to Mali font family and resolves variants', () => {
+      const { setActiveFontFamily, resolveAppFontStyle } = require('../installFontDefaults');
+      setActiveFontFamily('mali');
+
+      const regular = StyleSheet.flatten(resolveAppFontStyle({ fontWeight: '400', fontSize: 16 }));
+      expect(regular.fontFamily).toBe('Mali-Regular');
+
+      const bold = StyleSheet.flatten(resolveAppFontStyle({ fontWeight: '700', fontSize: 16 }));
+      expect(bold.fontFamily).toBe('Mali-Bold');
+    });
+
+    it('switches to Kalam and Caveat font families', () => {
+      const { setActiveFontFamily, resolveAppFontStyle } = require('../installFontDefaults');
+      setActiveFontFamily('kalam');
+      const kalamBold = StyleSheet.flatten(resolveAppFontStyle({ fontSize: 14 }));
+      expect(kalamBold.fontFamily).toBe('Kalam-Bold');
+
+      setActiveFontFamily('caveat');
+      const caveatBold = StyleSheet.flatten(resolveAppFontStyle({ fontSize: 14 }));
+      expect(caveatBold.fontFamily).toBe('Caveat_700Bold');
+    });
+
+    it('switches to System font and retains system styling without custom font family', () => {
+      const { setActiveFontFamily, resolveAppFontStyle } = require('../installFontDefaults');
+      setActiveFontFamily('system');
+      const resolved = StyleSheet.flatten(resolveAppFontStyle({ fontSize: 16, fontWeight: '700' }));
+      expect(resolved.fontFamily).toBeUndefined();
+      expect(resolved.fontWeight).toBe('700');
+    });
+
+    it('applies text scaling to fontSize and lineHeight', () => {
+      const { setActiveTextScale, resolveAppFontStyle } = require('../installFontDefaults');
+      setActiveTextScale(1.15); // Large scale
+
+      const scaled = StyleSheet.flatten(resolveAppFontStyle({ fontSize: 20, lineHeight: 28 }));
+      expect(scaled.fontSize).toBe(23); // 20 * 1.15 = 23
+      expect(scaled.lineHeight).toBe(32.2); // 28 * 1.15 = 32.2
+    });
+  });
 });
 

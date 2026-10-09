@@ -26,9 +26,9 @@ describe('TaskCard Swipe-to-Remove Feature', () => {
     expiresAt: null,
   };
 
-  it('renders the underneath delete reveal container with popup trash icon and remove button', async () => {
+  it('renders the underneath delete reveal container with a trash remove button', async () => {
     const onDelete = jest.fn();
-    const { getByTestId, getByText } = await render(
+    const { getByTestId, getByLabelText } = await render(
       <ThemeProvider>
         <TaskCard task={mockTask} onDelete={onDelete} />
       </ThemeProvider>
@@ -39,7 +39,7 @@ describe('TaskCard Swipe-to-Remove Feature', () => {
 
     const removeBtn = getByTestId('task-card-remove-button-occ-swipe-1');
     expect(removeBtn).toBeTruthy();
-    expect(getByText('Delete')).toBeTruthy();
+    expect(getByLabelText('Remove task: Recite Morning Adhkar')).toBeTruthy();
   });
 
   it('triggers onDelete callback when the revealed remove button is pressed', async () => {
@@ -53,6 +53,6 @@ describe('TaskCard Swipe-to-Remove Feature', () => {
     const removeBtn = getByTestId('task-card-remove-button-occ-swipe-1');
     await fireEvent.press(removeBtn);
 
-    expect(onDelete).toHaveBeenCalledWith(mockTask);
+    expect(onDelete).toHaveBeenCalledWith(mockTask, 'THIS_OCCURRENCE');
   });
 });

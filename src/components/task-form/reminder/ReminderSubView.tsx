@@ -13,6 +13,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import { AppBackButton } from '@/components/common/AppBackButton';
+import { PremiumLanternIcon } from '@/components/common/PremiumLanternIcon';
 import type { ScheduleMode } from '@/features/task-form/types';
 import type { ReminderPrayerAnchor } from '@/domain/task/types';
 import { MAX_REMINDERS_PER_TASK, formatReminderOffset, formatPrayerAnchor } from '@/domain/notification/reminderRule';
@@ -802,7 +803,7 @@ export function ReminderSubView({
                   </Text>
                   {!isPremium && (
                     <View style={{ marginStart: 6 }}>
-                      <MaterialCommunityIcons name="crown" size={14} color={colors.warning} />
+                      <PremiumLanternIcon size={14} />
                     </View>
                   )}
                 </View>

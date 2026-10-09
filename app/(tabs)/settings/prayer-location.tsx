@@ -18,15 +18,15 @@ import { PrayerTabIcon } from '@/components/prayer/PrayerTabBar';
 import type { Prayer } from '@/constants/prayers';
 import {
   SettingsPastelHeader,
-  SettingsSectionCard,
+  SettingsGroup,
+  SettingsGroupRow,
+  SettingsGroupDivider,
   SettingsSecLocationIcon,
   SettingsRowManualPinIcon,
   SettingsSecCalculatorIcon,
   SettingsSecAsrSunIcon,
   SettingsRowAsrCheckIcon,
   SettingsSecAdjustSlidersIcon,
-  SettingsRowPreviewClockIcon,
-  SettingsSecInfoCircleIcon,
   SettingsStepperMinusIcon,
   SettingsStepperPlusIcon,
   SettingsRowChevronDownIcon,
@@ -188,59 +188,35 @@ export default function PrayerLocationScreen() {
         showsVerticalScrollIndicator={false}
         testID="prayer-location-scroll"
       >
-        {/* CARD 1: LOCATION */}
-        <SettingsSectionCard
-          bgColor={colors.primaryLight}
-          customBadge={<SettingsSecLocationIcon size={40} />}
+        {/* GROUP 1: LOCATION */}
+        <SettingsGroup
           title="Location"
           subtitle="Used to calculate accurate prayer times"
           testID="location-section-card"
         >
-          {/* Row 1: Automatic (Recommended) */}
-          <View style={[styles.subRow, { borderBottomColor: colors.border, paddingVertical: spacing.sm }]}>
-            <View style={{ flex: 1, paddingRight: spacing.sm }}>
-              <Text style={[typography.labelMedium, { color: colors.textPrimary }]}>
-                Automatic (Recommended)
-              </Text>
-              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                Use your device&apos;s location
-              </Text>
-            </View>
-            <Switch
-              value={locationMode === 'AUTO'}
-              onValueChange={handleToggleAutoLocation}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.surface}
-              testID="auto-location-switch"
-            />
-          </View>
-
-          {/* Row 2: Manual Location */}
-          <Pressable
+          <SettingsGroupRow
+            customIcon={<SettingsSecLocationIcon size={38} />}
+            iconBgColor="transparent"
+            title="Automatic (Recommended)"
+            subtitle="Use your device's location"
+            isSwitch
+            switchValue={locationMode === 'AUTO'}
+            onSwitchChange={handleToggleAutoLocation}
+            testID="auto-location-switch"
+          />
+          <SettingsGroupDivider />
+          <SettingsGroupRow
+            customIcon={<SettingsRowManualPinIcon size={26} />}
+            iconBgColor={colors.primaryLight}
+            title="Manual Location"
+            subtitle={locationName || (latitude != null ? `${latitude.toFixed(2)}, ${longitude?.toFixed(2)}` : 'Fort Worth, Texas, USA')}
             onPress={() => setShowSearchInput(!showSearchInput)}
-            style={({ pressed }) => [
-              styles.subRow,
-              {
-                paddingVertical: spacing.sm,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            <SettingsRowManualPinIcon size={26} style={{ marginRight: spacing.xs }} />
-            <View style={{ flex: 1, paddingHorizontal: spacing.xs }}>
-              <Text style={[typography.labelMedium, { color: colors.textPrimary }]}>
-                Manual Location
-              </Text>
-              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                {locationName || (latitude != null ? `${latitude.toFixed(2)}, ${longitude?.toFixed(2)}` : 'Fort Worth, Texas, USA')}
-              </Text>
-            </View>
-            <Icon name="chevron-right" size="sm" color={colors.textTertiary} decorative />
-          </Pressable>
-
-          {/* Search Input when searching */}
+            showChevron
+            chevronDirection={showSearchInput ? 'down' : 'right'}
+            testID="manual-location-row"
+          />
           {showSearchInput && (
-            <View style={{ marginTop: spacing.xs }}>
+            <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md }}>
               <View style={[styles.searchBox, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border, borderRadius: radii.md }]}>
                 <Icon name="search" size="sm" color={colors.textSecondary} decorative style={{ marginEnd: spacing.xs }} />
                 <TextInput
@@ -281,55 +257,31 @@ export default function PrayerLocationScreen() {
               )}
             </View>
           )}
-
           {locationError && (
-            <Text style={[typography.caption, { color: colors.danger, marginTop: spacing.xs }]}>
+            <Text style={[typography.caption, { color: colors.danger, marginHorizontal: spacing.md, marginBottom: spacing.xs }]}>
               {locationError}
             </Text>
           )}
-        </SettingsSectionCard>
+        </SettingsGroup>
 
-        {/* CARD 2: CALCULATION METHOD */}
-        <SettingsSectionCard
-          bgColor={colors.primaryLight}
-          customBadge={<SettingsSecCalculatorIcon size={40} />}
+        {/* GROUP 2: CALCULATION METHOD */}
+        <SettingsGroup
           title="Calculation Method"
           subtitle="Choose the method used to calculate prayer times"
           testID="calculation-method-card"
         >
-          <Pressable
+          <SettingsGroupRow
+            customIcon={<SettingsSecCalculatorIcon size={38} />}
+            iconBgColor="transparent"
+            title={CALCULATION_METHOD_LABELS[currentMethod]?.label || 'Islamic Society of North America (ISNA)'}
+            subtitle={CALCULATION_METHOD_LABELS[currentMethod]?.description || 'Fajr 15°, Isha 15°'}
             onPress={() => setShowMethodPicker(!showMethodPicker)}
-            accessibilityRole="button"
-            accessibilityLabel="Calculation Method"
-            style={({ pressed }) => [
-              styles.methodCardInner,
-              {
-                backgroundColor: colors.surfaceSecondary,
-                borderColor: colors.border,
-                borderRadius: radii.md,
-                padding: spacing.md,
-                opacity: pressed ? 0.85 : 1,
-              },
-            ]}
+            showChevron
+            chevronDirection={showMethodPicker ? 'down' : 'right'}
             testID="calculation-method-selector"
-          >
-            <View style={{ flex: 1, paddingRight: spacing.sm }}>
-              <Text style={[typography.labelMedium, { color: colors.textPrimary }]}>
-                {CALCULATION_METHOD_LABELS[currentMethod]?.label || 'Islamic Society of North America (ISNA)'}
-              </Text>
-              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                {CALCULATION_METHOD_LABELS[currentMethod]?.description || 'Fajr 15°, Isha 15°'}
-              </Text>
-            </View>
-            <SettingsRowChevronDownIcon
-              size={18}
-              style={showMethodPicker ? { transform: [{ rotate: '180deg' }] } : undefined}
-            />
-          </Pressable>
-
-          {/* Expanded Method List */}
+          />
           {showMethodPicker && (
-            <View style={[styles.methodList, { borderTopColor: colors.border, marginTop: spacing.sm, paddingTop: spacing.xs }]}>
+            <View style={[styles.methodList, { borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth, padding: spacing.sm }]}>
               {METHOD_KEYS.map((k) => {
                 const info = CALCULATION_METHOD_LABELS[k];
                 const isSelected = currentMethod === k;
@@ -361,91 +313,50 @@ export default function PrayerLocationScreen() {
               })}
             </View>
           )}
-        </SettingsSectionCard>
+        </SettingsGroup>
 
-        {/* CARD 3: ASR CALCULATION METHOD */}
-        <SettingsSectionCard
-          bgColor={colors.primaryLight}
-          customBadge={<SettingsSecAsrSunIcon size={40} />}
+        {/* GROUP 3: ASR CALCULATION METHOD */}
+        <SettingsGroup
           title="Asr Calculation Method"
           subtitle="Choose the juristic method for Asr prayer"
           testID="asr-calculation-card"
         >
-          <View style={styles.asrRow}>
-            {/* Standard */}
-            <Pressable
-              onPress={() => handleSelectAsrMethod('SHAFI')}
-              accessibilityRole="button"
-              accessibilityLabel="Standard Shafi'i, Maliki, Hanbali"
-              style={({ pressed }) => [
-                styles.asrCard,
-                {
-                  backgroundColor: currentAsrMethod === 'SHAFI' ? colors.primaryLight : colors.surfaceSecondary,
-                  borderColor: currentAsrMethod === 'SHAFI' ? colors.primary : colors.border,
-                  borderWidth: currentAsrMethod === 'SHAFI' ? 1.5 : 1,
-                  borderRadius: radii.md,
-                  padding: spacing.md,
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}
-              testID="asr-method-shafi"
-            >
-              <View style={styles.asrCardHeader}>
-                <Text style={[typography.labelMedium, { color: currentAsrMethod === 'SHAFI' ? colors.primary : colors.textPrimary, flex: 1 }]}>
-                  Standard (Shafi&apos;i, Maliki, Hanbali)
-                </Text>
-                {currentAsrMethod === 'SHAFI' && <SettingsRowAsrCheckIcon size={20} />}
-              </View>
-              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 4 }]}>
-                Shadow = 1x
-              </Text>
-            </Pressable>
+          <SettingsGroupRow
+            customIcon={<SettingsSecAsrSunIcon size={38} />}
+            iconBgColor="transparent"
+            title="Standard (Shafi'i, Maliki, Hanbali)"
+            subtitle="Shadow = 1x"
+            isRadio
+            radioSelected={currentAsrMethod === 'SHAFI'}
+            onPress={() => handleSelectAsrMethod('SHAFI')}
+            testID="asr-method-shafi"
+          />
+          <SettingsGroupDivider />
+          <SettingsGroupRow
+            customIcon={<SettingsSecAsrSunIcon size={38} />}
+            iconBgColor="transparent"
+            title="Hanafi"
+            subtitle="Shadow = 2x"
+            isRadio
+            radioSelected={currentAsrMethod === 'HANAFI'}
+            onPress={() => handleSelectAsrMethod('HANAFI')}
+            testID="asr-method-hanafi"
+          />
+        </SettingsGroup>
 
-            {/* Hanafi */}
-            <Pressable
-              onPress={() => handleSelectAsrMethod('HANAFI')}
-              accessibilityRole="button"
-              accessibilityLabel="Hanafi"
-              style={({ pressed }) => [
-                styles.asrCard,
-                {
-                  backgroundColor: currentAsrMethod === 'HANAFI' ? colors.primaryLight : colors.surfaceSecondary,
-                  borderColor: currentAsrMethod === 'HANAFI' ? colors.primary : colors.border,
-                  borderWidth: currentAsrMethod === 'HANAFI' ? 1.5 : 1,
-                  borderRadius: radii.md,
-                  padding: spacing.md,
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}
-              testID="asr-method-hanafi"
-            >
-              <View style={styles.asrCardHeader}>
-                <Text style={[typography.labelMedium, { color: currentAsrMethod === 'HANAFI' ? colors.primary : colors.textPrimary, flex: 1 }]}>
-                  Hanafi
-                </Text>
-                {currentAsrMethod === 'HANAFI' && <SettingsRowAsrCheckIcon size={20} />}
-              </View>
-              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 4 }]}>
-                Shadow = 2x
-              </Text>
-            </Pressable>
-          </View>
-        </SettingsSectionCard>
-
-        {/* CARD 4: ADJUST PRAYER TIMES */}
-        <SettingsSectionCard
-          bgColor={colors.primaryLight}
-          customBadge={<SettingsSecAdjustSlidersIcon size={40} />}
+        {/* GROUP 4: ADJUST PRAYER TIMES */}
+        <SettingsGroup
           title="Adjust Prayer Times"
           subtitle="Fine-tune prayer times if needed"
           testID="adjust-prayer-times-card"
         >
-          <View style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }}>
-            {(['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const).map((p) => {
-              const val = adjustments[p] ?? 0;
-              const displayName = p.charAt(0).toUpperCase() + p.slice(1);
-              return (
-                <View key={p} style={[styles.adjustmentRow, { borderBottomColor: colors.border }]}>
+          {(['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const).map((p, index) => {
+            const val = adjustments[p] ?? 0;
+            const displayName = p.charAt(0).toUpperCase() + p.slice(1);
+            return (
+              <React.Fragment key={p}>
+                {index > 0 && <SettingsGroupDivider />}
+                <View style={[styles.adjustmentRow, { paddingHorizontal: spacing.md, paddingVertical: 10 }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <PrayerTabIcon prayer={p.toUpperCase() as Prayer} size={22} style={{ marginEnd: spacing.sm }} />
                     <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
@@ -461,9 +372,7 @@ export default function PrayerLocationScreen() {
                       onPress={() => handleAdjustPrayer(p, -1)}
                       style={({ pressed }) => [
                         styles.stepperBtn,
-                        {
-                          opacity: pressed ? 0.7 : 1,
-                        },
+                        { opacity: pressed ? 0.7 : 1 },
                       ]}
                       accessibilityLabel={`Decrease ${displayName}`}
                     >
@@ -474,9 +383,7 @@ export default function PrayerLocationScreen() {
                       onPress={() => handleAdjustPrayer(p, 1)}
                       style={({ pressed }) => [
                         styles.stepperBtn,
-                        {
-                          opacity: pressed ? 0.7 : 1,
-                        },
+                        { opacity: pressed ? 0.7 : 1 },
                       ]}
                       accessibilityLabel={`Increase ${displayName}`}
                     >
@@ -484,41 +391,10 @@ export default function PrayerLocationScreen() {
                     </Pressable>
                   </View>
                 </View>
-              );
-            })}
-          </View>
-        </SettingsSectionCard>
-
-        {/* ROW 5: PREVIEW TODAY'S PRAYER TIMES */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.previewCard,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderRadius: radii.card,
-              padding: spacing.md,
-              marginBottom: spacing.md,
-              opacity: pressed ? 0.85 : 1,
-            },
-            shadows.card,
-          ]}
-          onPress={() => router.back()}
-        >
-          <SettingsRowPreviewClockIcon size={36} style={{ marginRight: spacing.sm }} />
-          <Text style={[typography.labelLarge, { color: colors.textPrimary, fontStyle: 'italic', flex: 1 }]}>
-            Preview Today&apos;s Prayer Times
-          </Text>
-          <Icon name="chevron-right" size="sm" color={colors.textTertiary} decorative />
-        </Pressable>
-
-        {/* BOTTOM LOCAL CALCULATION INFO NOTICE */}
-        <View style={[styles.infoBanner, { backgroundColor: colors.primaryLight, borderRadius: radii.card, padding: spacing.md }]}>
-          <SettingsSecInfoCircleIcon size={28} style={{ marginRight: 10 }} />
-          <Text style={[typography.caption, { color: colors.primary, flex: 1, lineHeight: 18, fontStyle: 'italic' }]}>
-            Prayer times are calculated locally on your device. You can adjust them anytime if needed.
-          </Text>
-        </View>
+              </React.Fragment>
+            );
+          })}
+        </SettingsGroup>
       </ScrollView>
     </SafeAreaView>
   );

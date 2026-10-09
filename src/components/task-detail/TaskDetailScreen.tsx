@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Alert,
   StyleSheet,
   Image,
+  TextInput,
   type ImageSourcePropType,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,9 +16,11 @@ import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import { AppBackButton } from '@/components/common/AppBackButton';
 import { TaskCategoryIcon } from '@/components/task/TaskCategoryIcon';
+import { hasCustomTaskIcon } from '@/constants/taskIconAssets';
 import { TactileActionButton } from './TactileActionButton';
 import { getIconIdFromTags, detectTaskIcon } from '@/constants/taskIcons';
-import type { TaskDefinition, TaskOccurrence } from '@/domain/task/types';
+import { taskDefinitionRepository } from '@/data/repositories/TaskDefinitionRepository';
+import type { TaskDefinition, TaskOccurrence, SubtaskTemplate } from '@/domain/task/types';
 
 // Specialized icon image assets for Task Details screen
 const TASK_DETAIL_ICONS = {
@@ -45,6 +48,8 @@ export interface TaskDetailScreenProps {
   onBack: () => void;
   onToggleSubtask?: (occurrenceId: string, subtaskId: string) => Promise<void>;
   onAddSubtask?: (title: string) => Promise<void>;
+  onUpdateSubtask?: (subtaskId: string, newTitle: string) => Promise<void>;
+  onReorderSubtasks?: (reordered: SubtaskTemplate[]) => Promise<void>;
   onUpdateNotes?: (notes: string) => Promise<void>;
 }
 
@@ -55,14 +60,22 @@ export function TaskDetailScreen({
   onDelete,
   onBack,
   onToggleSubtask,
+  onUpdateSubtask,
+  onReorderSubtasks,
 }: TaskDetailScreenProps) {
   const { colors, spacing, radii, typography, shadows, isDark } = useTheme();
 
-  // Subtasks state
+  // Checklist state
   const [completedSubtaskIds, setCompletedSubtaskIds] = useState<string[]>(
     occurrence?.overrideData?.completedSubtaskIds ?? []
   );
-  const subtasksList = definition.subtasks ?? [];
+  const [subtasksList, setSubtasksList] = useState<SubtaskTemplate[]>(definition.subtasks ?? []);
+  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
+  const [editingSubtaskTitle, setEditingSubtaskTitle] = useState('');
+
+  useEffect(() => {
+    setSubtasksList(definition.subtasks ?? []);
+  }, [definition.subtasks]);
 
   // Notes state
   const notes =
@@ -157,6 +170,47 @@ export function TaskDetailScreen({
       }
     }
   };
+  const handleStartEditSubtask = (item: SubtaskTemplate) => {
+    setEditingSubtaskId(item.id);
+    setEditingSubtaskTitle(item.title);
+  };
+
+  const handleSaveEditSubtask = async (id: string) => {
+    const trimmed = editingSubtaskTitle.trim();
+    if (!trimmed) {
+      setEditingSubtaskId(null);
+      return;
+    }
+    const updated = subtasksList.map(s => (s.id === id ? { ...s, title: trimmed } : s));
+    setSubtasksList(updated);
+    setEditingSubtaskId(null);
+    if (onUpdateSubtask) {
+      await onUpdateSubtask(id, trimmed);
+    } else {
+      await taskDefinitionRepository.update(definition.id, { subtasks: updated });
+    }
+  };
+
+  const handleMoveSubtask = async (fromIndex: number, toIndex: number) => {
+    if (
+      fromIndex < 0 ||
+      toIndex < 0 ||
+      fromIndex >= subtasksList.length ||
+      toIndex >= subtasksList.length
+    ) {
+      return;
+    }
+    const updated = [...subtasksList];
+    const [moved] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, moved);
+    setSubtasksList(updated);
+    if (onReorderSubtasks) {
+      await onReorderSubtasks(updated);
+    } else {
+      await taskDefinitionRepository.update(definition.id, { subtasks: updated });
+    }
+  };
+
   const handleDeletePress = () => {
     const isRecurring = Boolean(definition.recurrenceRule || definition.hijriRecurrence);
     if (isRecurring) {
@@ -190,6 +244,9 @@ export function TaskDetailScreen({
   };
 
   const completedCount = subtasksList.filter(s => completedSubtaskIds.includes(s.id)).length;
+  const checklistPercent = subtasksList.length > 0
+    ? Math.round((completedCount / subtasksList.length) * 100)
+    : 0;
 
   return (
     <SafeAreaView
@@ -236,7 +293,7 @@ export function TaskDetailScreen({
               style={[
                 styles.heroIconBadge,
                 {
-                  backgroundColor: colors.primaryLight,
+                  backgroundColor: hasCustomTaskIcon(iconId) ? 'transparent' : colors.primaryLight,
                   borderRadius: 20,
                 },
               ]}
@@ -439,7 +496,7 @@ export function TaskDetailScreen({
           </View>
         </View>
 
-        {/* ── 3. Subtasks Checklist Card (Only shown if subtasks exist) ── */}
+        {/* ── 3. Checklist Card (Only shown if checklist items exist) ── */}
         {subtasksList.length > 0 && (
           <View
             style={[
@@ -462,7 +519,7 @@ export function TaskDetailScreen({
                   resizeMode="contain"
                 />
                 <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary }]}>
-                  Subtasks
+                  Checklist
                 </Text>
               </View>
               <View
@@ -477,31 +534,52 @@ export function TaskDetailScreen({
                 ]}
               >
                 <Text style={[typography.caption, { color: isDark ? '#34D399' : '#047857', fontSize: 13 }]}>
-                  {completedCount} of {subtasksList.length} done
+                  {completedCount} of {subtasksList.length} done ({checklistPercent}%)
                 </Text>
               </View>
             </View>
 
-            {/* Subtasks items */}
+            {/* Checklist progress bar */}
+            <View
+              style={[
+                styles.checklistProgressTrack,
+                {
+                  backgroundColor: colors.surfaceSecondary,
+                  borderRadius: radii.pill,
+                },
+              ]}
+            >
+              <View
+                style={{
+                  width: `${checklistPercent}%`,
+                  height: '100%',
+                  backgroundColor: colors.primary,
+                  borderRadius: radii.pill,
+                }}
+              />
+            </View>
+
+            {/* Checklist items */}
             <View style={styles.subtasksListContainer}>
-              {subtasksList.map(item => {
+              {subtasksList.map((item, index) => {
                 const isChecked = completedSubtaskIds.includes(item.id);
+                const isEditing = editingSubtaskId === item.id;
+
                 return (
-                  <Pressable
+                  <View
                     key={item.id}
-                    onPress={() => handleToggleSubtask(item.id)}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: isChecked }}
-                    accessibilityLabel={item.title}
-                    style={({ pressed }) => [
+                    style={[
                       styles.subtaskRow,
                       {
                         borderBottomColor: colors.border,
-                        opacity: pressed ? 0.7 : 1,
                       },
                     ]}
                   >
-                    <View
+                    <Pressable
+                      onPress={() => handleToggleSubtask(item.id)}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: isChecked }}
+                      accessibilityLabel={item.title}
                       style={[
                         styles.checkboxBox,
                         {
@@ -514,20 +592,99 @@ export function TaskDetailScreen({
                       ]}
                     >
                       {isChecked && <Icon name="check" size={16} color={colors.textOnPrimary} decorative />}
-                    </View>
-                    <Text
-                      style={[
-                        typography.bodyLarge,
-                        styles.subtaskText,
-                        {
-                          color: isChecked ? colors.textMuted : colors.textPrimary,
-                          textDecorationLine: isChecked ? 'line-through' : 'none',
-                        },
-                      ]}
-                    >
-                      {item.title}
-                    </Text>
-                  </Pressable>
+                    </Pressable>
+
+                    {isEditing ? (
+                      <View style={styles.inlineEditRow}>
+                        <TextInput
+                          value={editingSubtaskTitle}
+                          onChangeText={setEditingSubtaskTitle}
+                          onSubmitEditing={() => handleSaveEditSubtask(item.id)}
+                          autoFocus
+                          style={[
+                            styles.inlineEditInput,
+                            typography.bodyMedium,
+                            {
+                              color: colors.textPrimary,
+                              borderColor: colors.primary,
+                              backgroundColor: colors.surfaceSecondary,
+                              borderRadius: radii.sm,
+                            },
+                          ]}
+                        />
+                        <Pressable
+                          onPress={() => handleSaveEditSubtask(item.id)}
+                          accessibilityRole="button"
+                          accessibilityLabel="Save edit"
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          style={styles.iconBtn}
+                        >
+                          <Icon name="check" size={16} color={colors.primary} decorative />
+                        </Pressable>
+                        <Pressable
+                          onPress={() => setEditingSubtaskId(null)}
+                          accessibilityRole="button"
+                          accessibilityLabel="Cancel edit"
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          style={styles.iconBtn}
+                        >
+                          <Icon name="close" size={16} color={colors.textTertiary} decorative />
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <>
+                        <Pressable
+                          onPress={() => handleToggleSubtask(item.id)}
+                          style={{ flex: 1 }}
+                        >
+                          <Text
+                            style={[
+                              typography.bodyLarge,
+                              styles.subtaskText,
+                              {
+                                color: isChecked ? colors.textMuted : colors.textPrimary,
+                                textDecorationLine: isChecked ? 'line-through' : 'none',
+                              },
+                            ]}
+                          >
+                            {item.title}
+                          </Text>
+                        </Pressable>
+
+                        <View style={styles.itemActionButtons}>
+                          <Pressable
+                            onPress={() => handleStartEditSubtask(item)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Edit: ${item.title}`}
+                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                            style={styles.iconBtn}
+                          >
+                            <Icon name="pencil" size={14} color={colors.textSecondary} decorative />
+                          </Pressable>
+                          <Pressable
+                            onPress={() => handleMoveSubtask(index, index - 1)}
+                            disabled={index === 0}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Move up: ${item.title}`}
+                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                            style={[styles.iconBtn, { opacity: index === 0 ? 0.25 : 1 }]}
+                          >
+                            <Icon name="chevron-up" size={15} color={colors.textSecondary} decorative />
+                          </Pressable>
+                          <Pressable
+                            onPress={() => handleMoveSubtask(index, index + 1)}
+                            disabled={index === subtasksList.length - 1}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Move down: ${item.title}`}
+                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                            style={[styles.iconBtn, { opacity: index === subtasksList.length - 1 ? 0.25 : 1 }]}
+                          >
+                            <Icon name="chevron-down" size={15} color={colors.textSecondary} decorative />
+                          </Pressable>
+                        </View>
+                      </>
+                    )}
+                  </View>
                 );
               })}
             </View>
@@ -707,6 +864,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
+  checklistProgressTrack: {
+    height: 6,
+    width: '100%',
+    overflow: 'hidden',
+    marginTop: 8,
+    marginBottom: 10,
+  },
   subtasksListContainer: {
     marginTop: 4,
   },
@@ -715,6 +879,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  inlineEditRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  inlineEditInput: {
+    flex: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    fontSize: 15,
+  },
+  itemActionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  iconBtn: {
+    padding: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   checkboxBox: {
     alignItems: 'center',

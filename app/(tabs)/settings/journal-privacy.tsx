@@ -9,10 +9,10 @@ import {
 } from '@/services/journal/JournalLockController';
 import {
   SettingsPastelHeader,
-  SettingsSectionHeader,
-  SettingsToggle,
+  SettingsGroup,
+  SettingsGroupRow,
+  SettingsGroupDivider,
   SettingsInfoCard,
-  PastelOptionCard,
   SettingsAccExportIcon,
   SettingsAccImportIcon,
   SettingsAccEraseIcon,
@@ -190,93 +190,91 @@ export default function JournalPrivacyScreen({
         testID="journal-privacy-screen"
       >
         {/* BACKUP & DATA MANAGEMENT SECTION */}
-        <SettingsSectionHeader title="Backup & Restore" />
-        <View style={styles.cardsList}>
-          {/* 1. Export Backup */}
-          <PastelOptionCard
-            label="Export Backup"
+        <SettingsGroup
+          title="Backup & Restore"
+          subtitle="Export and import your planner data."
+        >
+          <SettingsGroupRow
+            title="Export Backup"
             subtitle="Save tasks, settings and streaks as JSON"
-            customBadge={<SettingsAccExportIcon size={40} />}
+            icon={<SettingsAccExportIcon size={40} />}
             onPress={handleExportBackup}
             disabled={isOperatingData}
+            showChevron
             testID="privacy-row-export-backup"
+            isFirst
           />
 
-          {/* 2. Import Backup */}
-          <PastelOptionCard
-            label="Import Backup"
+          <SettingsGroupDivider />
+
+          <SettingsGroupRow
+            title="Import Backup"
             subtitle="Restore data from a JSON backup file"
-            customBadge={<SettingsAccImportIcon size={40} />}
+            icon={<SettingsAccImportIcon size={40} />}
             onPress={handleImportBackup}
             disabled={isOperatingData}
+            showChevron
             testID="privacy-row-import-backup"
+            isLast
           />
-        </View>
+        </SettingsGroup>
 
         {/* ACCESS PROTECTION SECTION */}
-        <SettingsSectionHeader title="Access Protection" />
-        <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <SettingsGroup
+          title="Access Protection"
+          subtitle="Biometric security for your reflections."
+        >
           {isInitializing ? (
             <View style={{ padding: spacing.md, alignItems: 'center' }}>
               <ActivityIndicator color={colors.primary} />
             </View>
           ) : (
-            <SettingsToggle
-              label="Biometric Lock"
-              description="Require Face ID / fingerprint to unlock journal entries"
-              value={isEnabled}
-              onValueChange={handleToggle}
-              disabled={isProcessing}
+            <SettingsGroupRow
+              title="Biometric Lock"
+              subtitle="Require Face ID / fingerprint to unlock journal entries"
               icon="lock"
+              isSwitch
+              switchValue={isEnabled}
+              onSwitchChange={handleToggle}
+              disabled={isProcessing}
               testID="journal-lock-toggle"
+              isFirst
             />
           )}
-        </View>
 
-        {/* Current Security Status Card */}
-        <View
-          style={[
-            styles.statusCard,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderRadius: radii.md,
-              marginVertical: spacing.sm,
-              padding: spacing.md,
-            },
-          ]}
-        >
-          <Text style={[typography.labelMedium, { color: colors.textSecondary }]}>
-            CURRENT PRIVACY STATUS
-          </Text>
-          <View style={styles.statusRow}>
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
-              Journal Lock:
-            </Text>
-            <View
-              style={[
-                styles.badge,
-                {
-                  backgroundColor: isEnabled ? colors.primaryLight : colors.surfaceSecondary,
-                  borderRadius: radii.sm,
-                },
-              ]}
-              testID="journal-lock-status-badge"
-            >
-              <Text
-                style={[
-                  typography.labelSmall,
-                  { color: isEnabled ? colors.primary : colors.textSecondary },
-                ]}
-              >
-                {isEnabled ? 'PROTECTED (BIOMETRIC)' : 'UNLOCKED'}
+          <SettingsGroupDivider />
+
+          {/* Current Security Status Row */}
+          <View style={{ padding: spacing.md }}>
+            <View style={styles.statusRow}>
+              <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
+                Journal Lock:
               </Text>
+              <View
+                style={[
+                  styles.badge,
+                  {
+                    backgroundColor: isEnabled ? colors.primaryLight : colors.surfaceSecondary,
+                    borderRadius: radii.sm,
+                  },
+                ]}
+                testID="journal-lock-status-badge"
+              >
+                <Text
+                  style={[
+                    typography.labelSmall,
+                    { color: isEnabled ? colors.primary : colors.textSecondary },
+                  ]}
+                >
+                  {isEnabled ? 'PROTECTED (BIOMETRIC)' : 'UNLOCKED'}
+                </Text>
+              </View>
             </View>
+            <Text style={[typography.caption, { color: colors.textTertiary, marginTop: spacing.xs }]}>
+              Encryption remains fully active regardless of whether biometric locking is enabled.
+            </Text>
           </View>
-          <Text style={[typography.bodySmall, { color: colors.textTertiary, marginTop: spacing.xs }]}>
-            Encryption remains fully active regardless of whether biometric locking is enabled.
-          </Text>
-        </View>
+        </SettingsGroup>
 
         {/* Info card regarding encryption and local-first architecture */}
         <SettingsInfoCard
@@ -287,17 +285,22 @@ export default function JournalPrivacyScreen({
         />
 
         {/* DANGER ZONE SECTION */}
-        <SettingsSectionHeader title="Danger Zone" />
-        <View style={styles.cardsList}>
-          <PastelOptionCard
-            label="Erase All Data"
+        <SettingsGroup
+          title="Danger Zone"
+          subtitle="Permanent reset of all app data."
+        >
+          <SettingsGroupRow
+            title="Erase All Data"
             subtitle="Permanently delete all local data and reset app"
-            customBadge={<SettingsAccEraseIcon size={40} />}
+            icon={<SettingsAccEraseIcon size={40} />}
             onPress={handleEraseAllData}
             disabled={isOperatingData}
+            showChevron
             testID="privacy-row-erase-all"
+            isFirst
+            isLast
           />
-        </View>
+        </SettingsGroup>
 
         <Text
           style={[
@@ -306,7 +309,8 @@ export default function JournalPrivacyScreen({
               color: colors.textTertiary,
               textAlign: 'center',
               marginHorizontal: spacing.md,
-              marginTop: spacing.md,
+              marginTop: spacing.xs,
+              lineHeight: 18,
             },
           ]}
         >
@@ -323,22 +327,12 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-  },
-  group: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  statusCard: {
-    borderWidth: 1,
+    paddingTop: 8,
   },
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  cardsList: {
-    paddingTop: 4,
   },
   badge: {
     paddingHorizontal: 10,

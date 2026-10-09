@@ -1,10 +1,11 @@
-import React, { createContext, useCallback, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { darkTheme } from './darkTheme';
 import { lightTheme } from './lightTheme';
 import { ISLAMIC_THEMES, ISLAMIC_THEMES_MAP, type IslamicThemeDefinition } from './islamicThemes';
 import { iconSizes, radii, shadows, spacing, touchTargets, type Theme, type ThemeMode } from './tokens';
 import { typography } from './typography';
+import { subscribeFontSettings } from './installFontDefaults';
 
 export interface ThemeContextValue extends Theme {
   themeMode: ThemeMode;
@@ -50,6 +51,13 @@ export function ThemeProvider({
   const activeIslamicThemeId =
     controlledIslamicThemeId !== undefined ? controlledIslamicThemeId : internalIslamicThemeId;
   const systemColorScheme = useColorScheme(); // 'light' | 'dark' | null | undefined
+  const [, setFontRevision] = useState(0);
+
+  useEffect(() => {
+    return subscribeFontSettings(() => {
+      setFontRevision(prev => prev + 1);
+    });
+  }, []);
 
   const setThemeMode = useCallback(
     (newMode: ThemeMode) => {

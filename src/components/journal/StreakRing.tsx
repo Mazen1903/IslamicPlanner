@@ -52,7 +52,7 @@ export function StreakRing({
           {
             backgroundColor: streak > 0
               ? (isDark ? 'rgba(245, 158, 11, 0.18)' : 'rgba(245, 158, 11, 0.12)')
-              : (isDark ? 'rgba(15, 159, 74, 0.22)' : 'rgba(15, 159, 74, 0.1)'),
+              : 'transparent',
             borderRadius: radii.pill,
           },
         ]}
@@ -62,7 +62,7 @@ export function StreakRing({
         ) : (
           <Image
             source={JOURNAL_ACTION_ASSETS.streakSprout}
-            style={{ width: 22, height: 22 }}
+            style={{ width: 28, height: 28 }}
             resizeMode="contain"
           />
         )}

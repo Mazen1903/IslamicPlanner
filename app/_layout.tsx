@@ -3,7 +3,7 @@ import { View, Text, ActivityIndicator, StyleSheet, AppState, type AppStateStatu
 import { StatusBar } from 'expo-status-bar';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ThemeProvider, useTheme, type ThemeMode } from '@/theme';
+import { ThemeProvider, useTheme, type ThemeMode, setActiveFontFamily, setActiveTextScale } from '@/theme';
 import { Button } from '@/components/common/Button';
 import { getDatabase } from '@/data/db';
 import { migrateDatabase } from '@/data/migrator';
@@ -144,6 +144,19 @@ export default function RootLayout() {
           'Mali-MediumItalic': require('../assets/fonts/Mali-MediumItalic.ttf'),
           'Mali-SemiBold': require('../assets/fonts/Mali-SemiBold.ttf'),
           'Mali-SemiBoldItalic': require('../assets/fonts/Mali-SemiBoldItalic.ttf'),
+          Kalam: require('../assets/fonts/Kalam-Regular.ttf'),
+          'Kalam-Regular': require('../assets/fonts/Kalam-Regular.ttf'),
+          'Kalam-Bold': require('../assets/fonts/Kalam-Bold.ttf'),
+          'Kalam-Light': require('../assets/fonts/Kalam-Light.ttf'),
+          Caveat: require('../assets/fonts/Caveat_400Regular.ttf'),
+          'Caveat_400Regular': require('../assets/fonts/Caveat_400Regular.ttf'),
+          'Caveat-Regular': require('../assets/fonts/Caveat_400Regular.ttf'),
+          'Caveat_500Medium': require('../assets/fonts/Caveat_500Medium.ttf'),
+          'Caveat-Medium': require('../assets/fonts/Caveat_500Medium.ttf'),
+          'Caveat_600SemiBold': require('../assets/fonts/Caveat_600SemiBold.ttf'),
+          'Caveat-SemiBold': require('../assets/fonts/Caveat_600SemiBold.ttf'),
+          'Caveat_700Bold': require('../assets/fonts/Caveat_700Bold.ttf'),
+          'Caveat-Bold': require('../assets/fonts/Caveat_700Bold.ttf'),
         });
       } catch (fontErr) {
         console.warn('[RootLayout] Non-fatal font load error:', fontErr);
@@ -164,11 +177,17 @@ export default function RootLayout() {
         return;
       }
 
-      // Step 3: First app DB read (persisted theme) - safely post-migration
+      // Step 3: First app DB read (persisted theme & typography) - safely post-migration
       try {
         const settings = await userSettingsRepository.get();
         if (settings?.themeMode && !cancelled) {
           setThemeMode(settings.themeMode as ThemeMode);
+        }
+        if (settings?.appFontFamily && !cancelled) {
+          setActiveFontFamily(settings.appFontFamily);
+        }
+        if (settings?.appTextScale && !cancelled) {
+          setActiveTextScale(settings.appTextScale);
         }
       } catch (err) {
         console.warn('[RootLayout] Failed to load persisted theme mode:', err);

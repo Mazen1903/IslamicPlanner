@@ -11,6 +11,8 @@ export interface PlannerUiSections {
 
 export interface PlannerUiStoreState extends PlannerUiSections {
   isHydrated: boolean;
+  highlightedOccurrenceId: string | null;
+  setHighlightedOccurrenceId: (id: string | null) => void;
   hydrate: () => Promise<void>;
   togglePrevious: () => void;
   toggleToday: () => void;
@@ -49,6 +51,11 @@ function persistState(state: PlannerUiSections) {
 export const usePlannerUiStore = create<PlannerUiStoreState>((set, get) => ({
   ...DEFAULT_PLANNER_UI_SECTIONS,
   isHydrated: false,
+  highlightedOccurrenceId: null,
+
+  setHighlightedOccurrenceId: (id: string | null) => {
+    set({ highlightedOccurrenceId: id });
+  },
 
   hydrate: async () => {
     try {

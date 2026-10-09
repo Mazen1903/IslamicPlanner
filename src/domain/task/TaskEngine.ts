@@ -278,7 +278,7 @@ export class TaskEngine {
   async deleteTask(input: {
     occurrenceId?: string;
     definitionId: string;
-    scope: 'THIS_OCCURRENCE' | 'ALL_OCCURRENCES';
+    scope: 'THIS_OCCURRENCE' | 'THIS_AND_FUTURE' | 'ALL_OCCURRENCES';
   }): Promise<void> {
     const def = await this.defRepo.findById(input.definitionId);
     if (!def) {
@@ -294,6 +294,37 @@ export class TaskEngine {
       });
     } else if (input.scope === 'ALL_OCCURRENCES') {
       await this.deleteEntireSeries(def.seriesId);
+    } else if (input.scope === 'THIS_AND_FUTURE') {
+      if (!input.occurrenceId) {
+        throw new TaskValidationError(
+          `Cannot delete recurring task occurrence without occurrenceId`
+        );
+      }
+      const occ = await this.occRepo.findById(input.occurrenceId);
+      if (!occ) {
+        throw new TaskValidationError(`Occurrence ${input.occurrenceId} not found`);
+      }
+      const splitDate = occ.localDate;
+      const splitDateMinusOne = subtractCivilDay(splitDate);
+
+      await runInTransaction(async (tx: any) => {
+        // 1. Close active definition version at splitDateMinusOne
+        const active = await this.defRepo.findActiveBySeriesId(def.seriesId, tx);
+        if (active) {
+          await this.defRepo.closeVersion(active.id, splitDateMinusOne, tx);
+        }
+        // 2. Tombstone this occurrence
+        const { occurrence, previousStatus } = await this.occRepo.tombstone(input.occurrenceId!, tx);
+        if (previousStatus === 'COMPLETED') {
+          try {
+            await this.streakService.onOccurrenceUncompleted(occurrence.seriesId, occurrence.localDate);
+          } catch (e) {
+            console.warn('[TaskEngine] Failed to revert streak on delete:', e);
+          }
+        }
+        // 3. Physically delete pending future occurrences from splitDate onward
+        await this.occRepo.deletePendingFutureOccurrences(def.seriesId, splitDate, tx);
+      });
     } else {
       if (!input.occurrenceId) {
         throw new TaskValidationError(

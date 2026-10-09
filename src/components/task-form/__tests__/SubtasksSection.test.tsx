@@ -52,4 +52,61 @@ describe('SubtasksSection', () => {
       payload: { id: 'step-2' },
     });
   });
+
+  it('renders Checklist progress bar and percentage', async () => {
+    const dispatch = jest.fn();
+    const { getByText } = await render(
+      <ThemeProvider>
+        <SubtasksSection subtasks={initialSubtasks} dispatch={dispatch} />
+      </ThemeProvider>
+    );
+
+    expect(getByText('Checklist')).toBeTruthy();
+    expect(getByText('1/2 (50%)')).toBeTruthy();
+  });
+
+  it('allows inline editing of an item', async () => {
+    const dispatch = jest.fn();
+    const { getByTestId } = await render(
+      <ThemeProvider>
+        <SubtasksSection subtasks={initialSubtasks} dispatch={dispatch} />
+      </ThemeProvider>
+    );
+
+    // Tap edit button on step-1
+    await fireEvent.press(getByTestId('edit-subtask-step-1'));
+    const input = getByTestId('edit-input-step-1');
+    expect(input).toBeTruthy();
+
+    await fireEvent.changeText(input, 'Buy organic groceries');
+    await fireEvent.press(getByTestId('save-edit-step-1'));
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'UPDATE_SUBTASK',
+      payload: { id: 'step-1', title: 'Buy organic groceries' },
+    });
+  });
+
+  it('allows reordering items up and down', async () => {
+    const dispatch = jest.fn();
+    const { getByTestId } = await render(
+      <ThemeProvider>
+        <SubtasksSection subtasks={initialSubtasks} dispatch={dispatch} />
+      </ThemeProvider>
+    );
+
+    // Move step-2 up (index 1 -> index 0)
+    await fireEvent.press(getByTestId('move-up-step-2'));
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'REORDER_SUBTASKS',
+      payload: { fromIndex: 1, toIndex: 0 },
+    });
+
+    // Move step-1 down (index 0 -> index 1)
+    await fireEvent.press(getByTestId('move-down-step-1'));
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'REORDER_SUBTASKS',
+      payload: { fromIndex: 0, toIndex: 1 },
+    });
+  });
 });

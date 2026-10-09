@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, Pressable } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
@@ -9,21 +9,17 @@ import { usePlanningDayMutation } from '@/hooks/usePlanningDayMutation';
 import { userSettingsRepository } from '@/data/repositories/UserSettingsRepository';
 import {
   SettingsPastelHeader,
-  SettingsSectionCard,
+  SettingsGroup,
+  SettingsGroupRow,
+  SettingsGroupDivider,
   SettingsSecDayStartClockIcon,
-  SettingsSecCompletedCheckIcon,
-  SettingsSecOverdueBoltIcon,
-  SettingsSecInfoCircleIcon,
-  SettingsBadgeGoldLock,
-  SettingsCheckCircleIcon,
 } from '@/components/settings';
-import { PremiumBadge, PremiumLockedInfo } from '@/components/premium';
+import { PremiumLockedInfo } from '@/components/premium';
 import { TimePickerInput } from '@/components/task-form/DateTimePickerInput';
-import { Icon } from '@/components/common/Icon';
 import { usePaywallTestStore } from '@/stores/usePaywallTestStore';
 
 export default function PlanningDayScreen() {
-  const { colors, spacing, typography, touchTargets, radii, shadows } = useTheme();
+  const { colors, spacing, typography, radii, shadows } = useTheme();
   const router = useRouter();
   const { settings, reload } = useUserSettings();
   const { isPremium } = useEntitlement();
@@ -31,37 +27,31 @@ export default function PlanningDayScreen() {
   const { isSaving, setPlanningDayStart } = usePlanningDayMutation();
 
   const [showLockedInfo, setShowLockedInfo] = useState(false);
-  const [completedTasksMode, setCompletedTasksMode] = useState<'KEEP' | 'MOVE' | 'HIDE'>('KEEP');
-  const [overdueTasksMode, setOverdueTasksMode] = useState<'KEEP' | 'MOVE' | 'HIDE'>('KEEP');
 
-  React.useEffect(() => {
-    if (settings) {
-      if (settings.completedTasksMode) {
-        setCompletedTasksMode(settings.completedTasksMode as 'KEEP' | 'MOVE' | 'HIDE');
-      }
-      if (settings.overdueTasksMode) {
-        setOverdueTasksMode(settings.overdueTasksMode as 'KEEP' | 'MOVE' | 'HIDE');
-      }
-    }
-  }, [settings]);
-
-  const handleCompletedTasksModeChange = async (mode: 'KEEP' | 'MOVE' | 'HIDE') => {
-    setCompletedTasksMode(mode);
+  const hiddenSections: string[] = useMemo(() => {
     try {
-      await userSettingsRepository.upsert({ completedTasksMode: mode });
+      if (settings?.plannerHiddenSections) {
+        return JSON.parse(settings.plannerHiddenSections);
+      }
+    } catch {
+      // fallback
+    }
+    return [];
+  }, [settings?.plannerHiddenSections]);
+
+  const handleToggleSection = async (section: string) => {
+    if (!isPremium && !bypassPaywall) {
+      setShowLockedInfo(true);
+      return;
+    }
+    const next = hiddenSections.includes(section)
+      ? hiddenSections.filter(s => s !== section)
+      : [...hiddenSections, section];
+    try {
+      await userSettingsRepository.upsert({ plannerHiddenSections: JSON.stringify(next) });
       await reload();
     } catch (err) {
-      console.warn('Failed to persist completedTasksMode:', err);
-    }
-  };
-
-  const handleOverdueTasksModeChange = async (mode: 'KEEP' | 'MOVE' | 'HIDE') => {
-    setOverdueTasksMode(mode);
-    try {
-      await userSettingsRepository.upsert({ overdueTasksMode: mode });
-      await reload();
-    } catch (err) {
-      console.warn('Failed to persist overdueTasksMode:', err);
+      console.warn('Failed to persist plannerHiddenSections:', err);
     }
   };
 
@@ -188,91 +178,62 @@ export default function PlanningDayScreen() {
         showsVerticalScrollIndicator={false}
         testID="planning-day-screen"
       >
-        {/* CARD 1: DAY START */}
-        <SettingsSectionCard
-          bgColor={colors.primaryLight}
-          customBadge={<SettingsSecDayStartClockIcon size={40} />}
-          title="Day Start"
-          subtitle="Choose when your day starts."
+        {/* GROUP 1: DAY START */}
+        <SettingsGroup
+          title="Planning Day Begins At"
+          subtitle="Choose when your day transitions"
           testID="day-start-section-card"
         >
-          {/* Midnight (12:00 AM) */}
-          <Pressable
-            onPress={handleSelectMidnight}
-            disabled={isSaving}
-            style={({ pressed }) => [
-              styles.radioRow,
-              {
-                paddingVertical: spacing.sm,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-            accessibilityRole="checkbox"
-            accessibilityLabel="Midnight (12:00 AM)"
-            accessibilityState={{ checked: isMidnight }}
-            testID="planning-day-option-midnight"
-          >
-            <View style={[styles.radioCircle, { borderColor: isMidnight ? colors.primary : colors.border }]}>
-              {isMidnight && <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />}
-            </View>
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1, marginEnd: spacing.sm }]}>
-              Midnight (12:00 AM)
-            </Text>
-            {!isPremium && <SettingsBadgeGoldLock testID="premium-badge-midnight" />}
-          </Pressable>
-
           {/* Fajr (Default & Recommended) */}
-          <Pressable
+          <SettingsGroupRow
+            icon="sun"
+            iconBgColor="transparent"
+            title="Fajr (Default & Recommended)"
+            subtitle="Follows the dawn prayer"
+            isRadio
+            radioSelected={isFajr}
             onPress={handleSelectFajr}
             disabled={isSaving}
-            style={({ pressed }) => [
-              styles.radioRow,
-              {
-                paddingVertical: spacing.sm,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-            accessibilityRole="checkbox"
-            accessibilityLabel="Fajr (Default & Recommended)"
-            accessibilityState={{ checked: isFajr }}
             testID="planning-day-option-fajr"
-          >
-            <View style={[styles.radioCircle, { borderColor: isFajr ? colors.primary : colors.border }]}>
-              {isFajr && <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />}
-            </View>
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1, marginEnd: spacing.sm }]}>
-              Fajr (Default & Recommended)
-            </Text>
-          </Pressable>
+          />
+
+          <SettingsGroupDivider />
+
+          {/* Midnight (12:00 AM) */}
+          <SettingsGroupRow
+            icon="moon"
+            iconBgColor="transparent"
+            title="Midnight (12:00 AM)"
+            subtitle="Standard calendar day transition"
+            isRadio
+            radioSelected={isMidnight}
+            onPress={handleSelectMidnight}
+            isLocked={!isPremium && !bypassPaywall}
+            disabled={isSaving}
+            testID="planning-day-option-midnight"
+            lockBadgeTestID="premium-badge-midnight"
+          />
+
+          <SettingsGroupDivider />
 
           {/* Custom Time */}
-          <Pressable
+          <SettingsGroupRow
+            icon="clock"
+            iconBgColor="transparent"
+            title="Custom Time"
+            subtitle={isCustom ? `Begins at ${customTime}` : 'Choose a specific transition time'}
+            isRadio
+            radioSelected={isCustom}
             onPress={handleSelectCustom}
+            isLocked={!isPremium && !bypassPaywall}
             disabled={isSaving}
-            style={({ pressed }) => [
-              styles.radioRow,
-              {
-                paddingVertical: spacing.sm,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-            accessibilityRole="checkbox"
-            accessibilityLabel="Custom Time"
-            accessibilityState={{ checked: isCustom }}
             testID="planning-day-option-custom"
-          >
-            <View style={[styles.radioCircle, { borderColor: isCustom ? colors.primary : colors.border }]}>
-              {isCustom && <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />}
-            </View>
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1, marginEnd: spacing.sm }]}>
-              Custom Time
-            </Text>
-            {!isPremium && <SettingsBadgeGoldLock testID="premium-badge-custom" />}
-          </Pressable>
+            lockBadgeTestID="premium-badge-custom"
+          />
 
           {/* Time Picker if Custom & Premium (or bypass for testing) */}
           {isCustom && (isPremium || bypassPaywall) && (
-            <View style={{ marginTop: spacing.xs, paddingTop: spacing.xs, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }} testID="planning-day-time-picker">
+            <View style={{ padding: spacing.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }} testID="planning-day-time-picker">
               <TimePickerInput
                 value={customTime}
                 onChange={handleCustomTimeChange}
@@ -281,125 +242,70 @@ export default function PlanningDayScreen() {
             </View>
           )}
 
-          {/* Hidden/Subtle active mode label for contract verification */}
-          <Text style={[styles.hiddenContractText, { color: colors.textTertiary }]} testID="planning-day-current-value">
+          {/* Subtle active mode label for contract verification */}
+          <Text style={[styles.hiddenContractText, { color: colors.textTertiary, paddingHorizontal: spacing.md, paddingBottom: spacing.xs }]} testID="planning-day-current-value">
             Current active mode: {currentMode}
           </Text>
-        </SettingsSectionCard>
+        </SettingsGroup>
 
-        {/* CARD 2: COMPLETED TASKS */}
-        <SettingsSectionCard
-          bgColor={colors.primaryLight}
-          customBadge={<SettingsSecCompletedCheckIcon size={40} />}
-          title="Completed Tasks"
-          subtitle="Choose what happens after you complete a task."
-          testID="completed-tasks-section-card"
+        {/* GROUP 2: PLANNER SECTIONS */}
+        <SettingsGroup
+          title="Planner Sections"
+          subtitle="Show or hide sections in your daily planner"
+          testID="planner-sections-group"
         >
-          {/* Keep in today (move to bottom) */}
-          <Pressable
-            testID="completed-tasks-mode-keep"
-            onPress={() => handleCompletedTasksModeChange('KEEP')}
-            style={({ pressed }) => [
-              styles.radioRow,
-              {
-                paddingVertical: spacing.sm,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            {completedTasksMode === 'KEEP' ? (
-              <SettingsCheckCircleIcon size={20} style={{ marginRight: spacing.sm }} />
-            ) : (
-              <View style={[styles.radioCircle, { borderColor: colors.border, marginRight: spacing.sm }]} />
-            )}
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
-              Keep in today (move to bottom)
-            </Text>
-          </Pressable>
-
-          {/* Hide from today */}
-          <Pressable
-            testID="completed-tasks-mode-hide"
-            onPress={() => handleCompletedTasksModeChange('HIDE')}
-            style={({ pressed }) => [
-              styles.radioRow,
-              {
-                paddingVertical: spacing.sm,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            {completedTasksMode === 'HIDE' ? (
-              <SettingsCheckCircleIcon size={20} style={{ marginRight: spacing.sm }} />
-            ) : (
-              <View style={[styles.radioCircle, { borderColor: colors.border, marginRight: spacing.sm }]} />
-            )}
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
-              Hide from today
-            </Text>
-          </Pressable>
-        </SettingsSectionCard>
-
-        {/* CARD 3: OVERDUE TASKS */}
-        <SettingsSectionCard
-          bgColor={colors.primaryLight}
-          customBadge={<SettingsSecOverdueBoltIcon size={40} />}
-          title="Overdue Tasks"
-          subtitle="Choose how to handle overdue tasks."
-          testID="overdue-tasks-section-card"
-        >
-          {/* Keep in today (Recommended) */}
-          <Pressable
-            testID="overdue-tasks-mode-keep"
-            onPress={() => handleOverdueTasksModeChange('KEEP')}
-            style={({ pressed }) => [
-              styles.radioRow,
-              {
-                paddingVertical: spacing.sm,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            {overdueTasksMode === 'KEEP' ? (
-              <SettingsCheckCircleIcon size={20} style={{ marginRight: spacing.sm }} />
-            ) : (
-              <View style={[styles.radioCircle, { borderColor: colors.border, marginRight: spacing.sm }]} />
-            )}
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
-              Keep in today (Recommended)
-            </Text>
-          </Pressable>
-
-          {/* Hide from today */}
-          <Pressable
-            testID="overdue-tasks-mode-hide"
-            onPress={() => handleOverdueTasksModeChange('HIDE')}
-            style={({ pressed }) => [
-              styles.radioRow,
-              {
-                paddingVertical: spacing.sm,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            {overdueTasksMode === 'HIDE' ? (
-              <SettingsCheckCircleIcon size={20} style={{ marginRight: spacing.sm }} />
-            ) : (
-              <View style={[styles.radioCircle, { borderColor: colors.border, marginRight: spacing.sm }]} />
-            )}
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>
-              Hide from today
-            </Text>
-          </Pressable>
-        </SettingsSectionCard>
-
-        {/* BOTTOM HELPER NOTICE */}
-        <View style={[styles.infoBanner, { backgroundColor: colors.primaryLight, borderRadius: radii.card, padding: spacing.md }]}>
-          <SettingsSecInfoCircleIcon size={28} style={{ marginRight: 10 }} />
-          <Text style={[typography.caption, { color: colors.primary, flex: 1, lineHeight: 18, fontStyle: 'italic' }]}>
-            These settings help you organize your tasks in a way that fits your routine.
-          </Text>
-        </View>
+          <SettingsGroupRow
+            icon="refresh"
+            iconBgColor="transparent"
+            title="Previous"
+            subtitle="Show overdue and earlier prayer tasks"
+            isSwitch
+            switchValue={!hiddenSections.includes('PREVIOUS')}
+            onSwitchChange={() => handleToggleSection('PREVIOUS')}
+            onPress={!isPremium && !bypassPaywall ? () => setShowLockedInfo(true) : undefined}
+            isLocked={!isPremium && !bypassPaywall}
+            testID="planner-section-previous"
+          />
+          <SettingsGroupDivider />
+          <SettingsGroupRow
+            icon="calendar"
+            iconBgColor="transparent"
+            title="Today"
+            subtitle="Show tasks in the active prayer window"
+            isSwitch
+            switchValue={!hiddenSections.includes('TODAY')}
+            onSwitchChange={() => handleToggleSection('TODAY')}
+            onPress={!isPremium && !bypassPaywall ? () => setShowLockedInfo(true) : undefined}
+            isLocked={!isPremium && !bypassPaywall}
+            testID="planner-section-today"
+          />
+          <SettingsGroupDivider />
+          <SettingsGroupRow
+            icon="chevron-up"
+            iconBgColor="transparent"
+            title="Upcoming"
+            subtitle="Show future scheduled tasks"
+            isSwitch
+            switchValue={!hiddenSections.includes('UPCOMING')}
+            onSwitchChange={() => handleToggleSection('UPCOMING')}
+            onPress={!isPremium && !bypassPaywall ? () => setShowLockedInfo(true) : undefined}
+            isLocked={!isPremium && !bypassPaywall}
+            testID="planner-section-upcoming"
+          />
+          <SettingsGroupDivider />
+          <SettingsGroupRow
+            icon="check-circle"
+            iconBgColor="transparent"
+            title="Completed"
+            subtitle="Show tasks marked completed today"
+            isSwitch
+            switchValue={!hiddenSections.includes('COMPLETED')}
+            onSwitchChange={() => handleToggleSection('COMPLETED')}
+            onPress={!isPremium && !bypassPaywall ? () => setShowLockedInfo(true) : undefined}
+            isLocked={!isPremium && !bypassPaywall}
+            testID="planner-section-completed"
+          />
+        </SettingsGroup>
       </ScrollView>
 
       {/* Premium Locked Feature Sheet */}
@@ -407,7 +313,7 @@ export default function PlanningDayScreen() {
         visible={showLockedInfo}
         onClose={() => setShowLockedInfo(false)}
         title="Premium Feature"
-        description="Alternative day start boundaries (Midnight and Custom Time) are available with Islamic Planner Premium."
+        description="Planner section customization and custom day start boundaries are available with Islamic Planner Premium."
       />
     </SafeAreaView>
   );
@@ -420,37 +326,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 8,
   },
-  radioRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  radioCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
   hiddenContractText: {
     fontSize: 10,
     marginTop: 4,
-  },
-  infoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  infoIconCircle: {
-    width: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
   },
 });

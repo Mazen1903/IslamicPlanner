@@ -5,7 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import {
   SettingsPastelHeader,
-  SettingsSectionHeader,
+  SettingsGroup,
+  SettingsGroupDivider,
   SettingsInfoCard,
 } from '@/components/settings';
 
@@ -73,7 +74,7 @@ const FAQS: { category: string; items: FaqItem[] }[] = [
 ];
 
 export default function HelpScreen() {
-  const { colors, spacing, radii, typography } = useTheme();
+  const { colors, spacing, typography } = useTheme();
   const router = useRouter();
 
   return (
@@ -103,31 +104,31 @@ export default function HelpScreen() {
         />
 
         {FAQS.map((cat, catIdx) => (
-          <View key={catIdx} style={{ marginTop: spacing.md }}>
-            <SettingsSectionHeader title={cat.category} />
+          <SettingsGroup key={catIdx} title={cat.category}>
             {cat.items.map((item, itemIdx) => (
-              <View
-                key={itemIdx}
-                style={[
-                  styles.card,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.border,
-                    borderRadius: radii.md,
-                    padding: spacing.md,
-                    marginBottom: spacing.sm,
-                  },
-                ]}
-              >
-                <Text style={[typography.headlineMedium, { color: colors.textPrimary, fontSize: 16, fontWeight: '700' }]}>
-                  {item.question}
-                </Text>
-                <Text style={[typography.bodyMedium, { color: colors.textSecondary, marginTop: 6, lineHeight: 22 }]}>
-                  {item.answer}
-                </Text>
-              </View>
+              <React.Fragment key={itemIdx}>
+                {itemIdx > 0 && <SettingsGroupDivider />}
+                <View style={{ padding: spacing.md }}>
+                  <Text
+                    style={[
+                      typography.headlineMedium,
+                      { color: colors.textPrimary, fontSize: 16, fontWeight: '700' },
+                    ]}
+                  >
+                    {item.question}
+                  </Text>
+                  <Text
+                    style={[
+                      typography.bodyMedium,
+                      { color: colors.textSecondary, marginTop: 6, lineHeight: 22 },
+                    ]}
+                  >
+                    {item.answer}
+                  </Text>
+                </View>
+              </React.Fragment>
             ))}
-          </View>
+          </SettingsGroup>
         ))}
       </ScrollView>
     </SafeAreaView>
@@ -140,8 +141,5 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 8,
-  },
-  card: {
-    borderWidth: 1,
   },
 });

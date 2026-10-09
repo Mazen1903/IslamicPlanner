@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Switch, StyleSheet } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '@/theme';
+import { PremiumLanternIcon } from '@/components/common/PremiumLanternIcon';
 import { StreakFlameBadge } from '@/components/streak';
 import type { RecurrencePreset } from '@/features/task-form/types';
 
@@ -48,7 +49,7 @@ export function TrackStreakInlinePanel({
             </Text>
             {!isPremium && (
               <View style={{ marginStart: 6 }}>
-                <MaterialCommunityIcons name="crown" size={14} color={colors.warning} />
+                <PremiumLanternIcon size={14} />
               </View>
             )}
           </View>

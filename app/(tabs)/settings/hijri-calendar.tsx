@@ -21,11 +21,11 @@ import {
 import { useRouter } from 'expo-router';
 import {
   SettingsPastelHeader,
-  SettingsSectionHeader,
-  SettingsRow,
+  SettingsGroup,
+  SettingsGroupRow,
+  SettingsGroupDivider,
   SettingsStepper,
   SettingsInfoCard,
-  SettingsToggle,
 } from '@/components/settings';
 import { Button } from '@/components/common/Button';
 import { Icon } from '@/components/common/Icon';
@@ -218,19 +218,19 @@ export default function HijriCalendarScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: spacing.xxl }]}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: spacing.md, paddingBottom: spacing.xxl }]}
         testID="hijri-calendar-screen"
       >
-
         {/* EFFECTIVE PREVIEW CARD */}
         <View
           style={[
             styles.previewCard,
+            shadows.card,
             {
               backgroundColor: colors.surface,
               borderColor: colors.border,
-              borderRadius: radii.md,
-              margin: spacing.md,
+              borderRadius: radii.card,
+              marginVertical: spacing.md,
               padding: spacing.md,
             },
           ]}
@@ -258,53 +258,69 @@ export default function HijriCalendarScreen() {
         </View>
 
         {/* 1. CALENDAR CALCULATION BASE */}
-        <SettingsSectionHeader title="Calculation Authority" />
-        <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <SettingsRow
-            label="Calendar Calculation"
+        <SettingsGroup
+          title="Calculation Authority"
+          subtitle="Official astronomical reference."
+        >
+          <SettingsGroupRow
+            title="Calendar Calculation"
             value="Umm al-Qura"
             subtitle="Official astronomical calendar of Saudi Arabia"
             showChevron={false}
             icon="moon"
             testID="hijri-base-method-row"
+            isFirst
+            isLast
           />
-        </View>
+        </SettingsGroup>
 
         {/* 2. ISLAMIC OCCASIONS */}
-        <SettingsSectionHeader title="Occasions & Observances" />
-        <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <SettingsToggle
-            label="Show Islamic Occasions"
-            description="Highlight major occasions and Sunnah fasting days on the calendar"
-            value={calendarShowOccasions}
-            onValueChange={handleToggleOccasions}
+        <SettingsGroup
+          title="Occasions & Observances"
+          subtitle="Fasting days and Islamic milestones."
+        >
+          <SettingsGroupRow
+            title="Show Islamic Occasions"
+            subtitle="Highlight major occasions and Sunnah fasting days on the calendar"
+            isSwitch
+            switchValue={calendarShowOccasions}
+            onSwitchChange={handleToggleOccasions}
             icon="calendar-star"
             testID="calendar-show-occasions-toggle"
+            isFirst
+            isLast
           />
-        </View>
+        </SettingsGroup>
 
         {/* 3. GLOBAL DAY ADJUSTMENT */}
-        <SettingsSectionHeader title="Global Adjustment" />
-        <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <SettingsStepper
-            label="Global Adjustment"
-            value={globalAdj}
-            min={-2}
-            max={2}
-            unit="days"
-            onChange={handleGlobalAdjustmentChange}
-            testID="hijri-global-stepper"
-          />
-        </View>
+        <SettingsGroup
+          title="Global Adjustment"
+          subtitle="Synchronize with local moon sightings."
+        >
+          <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
+            <SettingsStepper
+              label="Global Adjustment"
+              value={globalAdj}
+              min={-2}
+              max={2}
+              unit="days"
+              onChange={handleGlobalAdjustmentChange}
+              testID="hijri-global-stepper"
+            />
+          </View>
+        </SettingsGroup>
+
         <SettingsInfoCard
           title="Moon Sighting Alignment"
           message="Adjust all Hijri dates by ±1 to 2 days to align with your local moon-sighting announcement. Modifying this setting reconciles all Hijri-recurring tasks."
           icon="info"
         />
 
-        {/* 3. MONTH-BY-MONTH OVERRIDES */}
-        <SettingsSectionHeader title="Month-by-Month Overrides" />
-        <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {/* 4. MONTH-BY-MONTH OVERRIDES */}
+        <SettingsGroup
+          title="Month-by-Month Overrides"
+          subtitle="Custom adjustments for specific Hijri months."
+        >
           {isLoadingOverrides ? (
             <View style={{ padding: spacing.md, alignItems: 'center' }}>
               <ActivityIndicator color={colors.primary} />
@@ -316,48 +332,49 @@ export default function HijriCalendarScreen() {
               </Text>
             </View>
           ) : (
-            overrides.map(ov => {
+            overrides.map((ov, idx) => {
               const mName = HIJRI_MONTH_NAMES[ov.hijriMonth as HijriMonthNumber] ?? `Month ${ov.hijriMonth}`;
               const sign = ov.adjustmentDays > 0 ? '+' : '';
               return (
-                <View
-                  key={`${ov.hijriYear}-${ov.hijriMonth}`}
-                  style={[
-                    styles.overrideRow,
-                    {
-                      minHeight: touchTargets.min,
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.sm,
-                      borderBottomColor: colors.border,
-                      borderBottomWidth: StyleSheet.hairlineWidth,
-                    },
-                  ]}
-                  testID={`override-item-${ov.hijriYear}-${ov.hijriMonth}`}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
-                      {mName} {ov.hijriYear} AH
-                    </Text>
-                    <Text style={[typography.bodySmall, { color: colors.textSecondary }]}>
-                      Adjustment: {sign}{ov.adjustmentDays} {Math.abs(ov.adjustmentDays) === 1 ? 'day' : 'days'}
-                    </Text>
-                  </View>
-
-                  <Pressable
-                    onPress={() => handleDeleteOverride(ov.hijriYear, ov.hijriMonth)}
-                    style={[styles.deleteButton, { minWidth: touchTargets.min, minHeight: touchTargets.min }]}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Remove override for ${mName} ${ov.hijriYear}`}
-                    testID={`delete-override-${ov.hijriYear}-${ov.hijriMonth}`}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                <React.Fragment key={`${ov.hijriYear}-${ov.hijriMonth}`}>
+                  {idx > 0 && <SettingsGroupDivider />}
+                  <View
+                    style={[
+                      styles.overrideRow,
+                      {
+                        minHeight: touchTargets.min,
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.sm,
+                      },
+                    ]}
+                    testID={`override-item-${ov.hijriYear}-${ov.hijriMonth}`}
                   >
-                    <Icon name="trash" size={18} color={colors.error} />
-                  </Pressable>
-                </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
+                        {mName} {ov.hijriYear} AH
+                      </Text>
+                      <Text style={[typography.bodySmall, { color: colors.textSecondary }]}>
+                        Adjustment: {sign}{ov.adjustmentDays} {Math.abs(ov.adjustmentDays) === 1 ? 'day' : 'days'}
+                      </Text>
+                    </View>
+
+                    <Pressable
+                      onPress={() => handleDeleteOverride(ov.hijriYear, ov.hijriMonth)}
+                      style={[styles.deleteButton, { minWidth: touchTargets.min, minHeight: touchTargets.min }]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove override for ${mName} ${ov.hijriYear}`}
+                      testID={`delete-override-${ov.hijriYear}-${ov.hijriMonth}`}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Icon name="trash" size={18} color={colors.error} />
+                    </Pressable>
+                  </View>
+                </React.Fragment>
               );
             })
           )}
 
+          <SettingsGroupDivider />
           <View style={{ padding: spacing.md }}>
             <Button
               title="Add Month Override"
@@ -366,7 +383,7 @@ export default function HijriCalendarScreen() {
               testID="add-override-button"
             />
           </View>
-        </View>
+        </SettingsGroup>
 
         {/* OVERRIDE MODAL */}
         <Modal
@@ -468,10 +485,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-  },
-  group: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingTop: 8,
   },
   previewCard: {
     borderWidth: 1,
@@ -505,5 +519,4 @@ const styles = StyleSheet.create({
   modalActions: {
     flexDirection: 'row',
   },
-
 });

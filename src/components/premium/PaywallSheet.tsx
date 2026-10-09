@@ -13,6 +13,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { purchaseService, type SubscriptionPackage } from '@/services/purchase/PurchaseService';
 import type { PremiumFeature } from '@/domain/entitlement/types';
+import { PremiumLanternIcon } from '@/components/common/PremiumLanternIcon';
 
 export interface PaywallSheetProps {
   visible: boolean;
@@ -64,6 +65,12 @@ const FEATURE_HIGHLIGHTS: FeatureHighlight[] = [
     icon: 'book-open-page-variant',
     title: 'Encrypted Photo Journal & Mood Analytics',
     description: 'Capture daily reflections, photos, and spiritual growth trends.',
+  },
+  {
+    key: 'FONTS',
+    icon: 'format-font',
+    title: 'Artistic Typography Styles',
+    description: 'Switch between Mali, Kalam, Caveat, and adjust text sizes to fit your reading preference.',
   },
 ];
 
@@ -211,7 +218,7 @@ export function PaywallSheet({
                 { backgroundColor: colors.primaryLight, borderColor: colors.primary },
               ]}
             >
-              <MaterialCommunityIcons name="crown" size={32} color={colors.primary} />
+              <PremiumLanternIcon size={40} glow />
             </View>
             <Text
               accessibilityRole="header"

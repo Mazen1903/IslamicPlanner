@@ -11,13 +11,24 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme, type ThemeMode } from '@/theme';
+import {
+  useTheme,
+  useHeroArt,
+  type ThemeMode,
+  AVAILABLE_FONTS,
+  TEXT_SIZE_OPTIONS,
+  useAppFontSettings,
+  type FontOption,
+  type TextScaleOption,
+} from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import { AppBackButton } from '@/components/common/AppBackButton';
+import { PremiumLanternIcon } from '@/components/common/PremiumLanternIcon';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { isFreeTheme } from '@/domain/entitlement/freeTier';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { PaywallSheet } from '@/components/premium/PaywallSheet';
+import { userSettingsRepository } from '@/data/repositories/UserSettingsRepository';
 import {
   DEFAULT_THEME_ITEM,
   THEME_CATEGORIES,
@@ -78,7 +89,39 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
 
   const [selectedCategory, setSelectedCategory] = useState<ThemeCategory>('all');
   const [gridWidth, setGridWidth] = useState<number>(INITIAL_GRID_WIDTH);
-  const { gate, paywallVisible, closePaywall, onPurchaseSuccess, isPremium } = usePremiumGate();
+  const {
+    gate,
+    paywallVisible,
+    gatedFeature,
+    closePaywall,
+    onPurchaseSuccess,
+    isPremium,
+  } = usePremiumGate();
+  const {
+    fontFamily: activeFontId,
+    textScale: activeScale,
+    setFontFamily,
+    setTextScale,
+  } = useAppFontSettings();
+
+  const handleSelectFont = (font: FontOption) => {
+    if (font.isPremium && !isPremium) {
+      gate('FONTS', () => {
+        setFontFamily(font.id);
+        void userSettingsRepository.upsert({ appFontFamily: font.id }).catch(() => {});
+      });
+      return;
+    }
+    setFontFamily(font.id);
+    void userSettingsRepository.upsert({ appFontFamily: font.id }).catch(() => {});
+  };
+
+  const handleSelectScale = (scaleOpt: TextScaleOption) => {
+    setTextScale(scaleOpt.scale);
+    void userSettingsRepository.upsert({ appTextScale: scaleOpt.id }).catch(() => {});
+  };
+
+  const heroArt = useHeroArt();
   const cardWidth = Math.floor((gridWidth - GRID_GAP) / 2);
   const cardHeight = Math.round(cardWidth / CARD_ASPECT);
   const cardSize = { width: cardWidth, height: cardHeight };
@@ -178,7 +221,7 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
 
           {/* Mosque Line-Art Illustration */}
           <Image
-            source={require('../../../assets/illustrations/settings_mosque_header.png')}
+            source={heroArt}
             style={styles.headerMosqueImage}
             resizeMode="contain"
             accessibilityRole="image"
@@ -230,11 +273,6 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
             <View style={styles.headerTextCol}>
               <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
                 Appearance Mode
-              </Text>
-              <Text
-                style={[styles.cardSubtitle, { color: colors.textSecondary }]}
-              >
-                Choose between system default, light, or dark display.
               </Text>
             </View>
           </View>
@@ -351,7 +389,149 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
         </View>
 
         {/* ======================================================== */}
-        {/* SECTION 2: ISLAMIC THEMES (2-Column Grid + Categories)   */}
+        {/* SECTION 2: TYPOGRAPHY & DISPLAY                         */}
+        {/* ======================================================== */}
+        <View
+          style={[
+            styles.sectionCard,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+            },
+          ]}
+          testID="typography-display-section"
+        >
+          {/* Section Header */}
+          <View style={styles.sectionHeaderRow}>
+            <View
+              style={[
+                styles.iconBadge,
+                {
+                  backgroundColor: isDark
+                    ? 'rgba(59, 130, 246, 0.18)'
+                    : '#DBEAFE',
+                },
+              ]}
+            >
+              <MaterialCommunityIcons name="format-font" size={20} color="#3B82F6" />
+            </View>
+            <View style={styles.headerTextCol}>
+              <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
+                Typography & Display
+              </Text>
+            </View>
+          </View>
+
+          {/* Subheading: Font Style */}
+          <Text style={[styles.subsectionLabel, { color: colors.textSecondary }]}>
+            FONT STYLE
+          </Text>
+
+          {/* Font Chips */}
+          <View style={styles.chipsWrap}>
+            {AVAILABLE_FONTS.map((font) => {
+              const isSelected = activeFontId === font.id;
+              return (
+                <Pressable
+                  key={font.id}
+                  onPress={() => handleSelectFont(font)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${font.name} font`}
+                  testID={`font-option-${font.id}`}
+                  style={[
+                    styles.fontChip,
+                    {
+                      backgroundColor: isSelected
+                        ? colors.primary
+                        : isDark
+                        ? 'rgba(255, 255, 255, 0.06)'
+                        : colors.surfaceSecondary,
+                      borderColor: isSelected ? colors.primary : colors.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      {
+                        color: isSelected
+                          ? colors.textOnPrimary
+                          : colors.textPrimary,
+                        fontWeight: isSelected ? '700' : '600',
+                      },
+                    ]}
+                  >
+                    {font.name}
+                  </Text>
+                  {font.isPremium && !isPremium && (
+                    <View style={styles.chipPremiumIcon}>
+                      <PremiumLanternIcon size={12} />
+                    </View>
+                  )}
+                  {isSelected && (
+                    <View style={styles.chipCheckmark}>
+                      <Icon name="check" size={12} color={colors.textOnPrimary} decorative />
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* Subheading: Text Size */}
+          <Text style={[styles.subsectionLabel, { color: colors.textSecondary, marginTop: 14 }]}>
+            TEXT SIZE
+          </Text>
+
+          {/* Text Size Chips */}
+          <View style={styles.chipsWrap}>
+            {TEXT_SIZE_OPTIONS.map((scaleOpt) => {
+              const isSelected = Math.abs(activeScale - scaleOpt.scale) < 0.05;
+              return (
+                <Pressable
+                  key={scaleOpt.id}
+                  onPress={() => handleSelectScale(scaleOpt)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Text size ${scaleOpt.label}`}
+                  testID={`text-scale-${scaleOpt.id}`}
+                  style={[
+                    styles.sizeChip,
+                    {
+                      backgroundColor: isSelected
+                        ? colors.primary
+                        : isDark
+                        ? 'rgba(255, 255, 255, 0.06)'
+                        : colors.surfaceSecondary,
+                      borderColor: isSelected ? colors.primary : colors.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      {
+                        color: isSelected
+                          ? colors.textOnPrimary
+                          : colors.textPrimary,
+                        fontWeight: isSelected ? '700' : '600',
+                      },
+                    ]}
+                  >
+                    {scaleOpt.label}
+                  </Text>
+                  {isSelected && (
+                    <View style={styles.chipCheckmark}>
+                      <Icon name="check" size={12} color={colors.textOnPrimary} decorative />
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ======================================================== */}
+        {/* SECTION 3: ISLAMIC THEMES (2-Column Grid + Categories)   */}
         {/* ======================================================== */}
         <View
           style={[
@@ -380,11 +560,6 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
             <View style={styles.headerTextCol}>
               <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
                 Islamic Themes
-              </Text>
-              <Text
-                style={[styles.cardSubtitle, { color: colors.textSecondary }]}
-              >
-                Palettes inspired by sacred places & times.
               </Text>
             </View>
           </View>
@@ -481,10 +656,10 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
                         </View>
                       )}
 
-                      {/* Locked Crown Badge for Extended Themes */}
+                      {/* Locked Lantern Badge for Extended Themes */}
                       {!isSelected && item.id !== 'default' && !isFreeTheme(item.id) && !isPremium && (
                         <View style={[styles.gridCrownBadge, { backgroundColor: colors.surface }]}>
-                          <MaterialCommunityIcons name="crown" size={12} color={colors.primary} />
+                          <PremiumLanternIcon size={14} />
                         </View>
                       )}
 
@@ -513,7 +688,7 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
         visible={paywallVisible}
         onClose={closePaywall}
         onSuccess={onPurchaseSuccess}
-        gatedFeature="ISLAMIC_THEMES_EXTENDED"
+        gatedFeature={gatedFeature ?? 'ISLAMIC_THEMES_EXTENDED'}
       />
     </SafeAreaView>
   );
@@ -765,5 +940,41 @@ const styles = StyleSheet.create({
     opacity: 0,
     height: 0,
     width: 0,
+  },
+  subsectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    marginBottom: 8,
+  },
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  fontChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  sizeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 13,
+  },
+  chipPremiumIcon: {
+    marginStart: 6,
+  },
+  chipCheckmark: {
+    marginStart: 6,
   },
 });

@@ -52,9 +52,8 @@ export function JournalHeader({
   return (
     <AppHeroHeader
       testID={testID}
-      artworkSource={require('../../../assets/icons/journal/illustrations/header_mosque_artwork_raw.png')}
-      artworkSize={{ width: 230, height: 130 }}
-      artworkPosition={{ right: -8, bottom: -10 }}
+      artworkSize={{ width: 180, height: 110 }}
+      artworkPosition={{ right: -4, bottom: -6 }}
       contentMaxWidth="62%"
       title={
         <View style={styles.titleColumn}>

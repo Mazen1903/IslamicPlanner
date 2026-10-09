@@ -1,9 +1,11 @@
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, and, lt, desc } from 'drizzle-orm';
 import { DateTime } from 'luxon';
-import { streakData } from '@/data/schema';
+import { streakData, taskDefinitions, taskOccurrences } from '@/data/schema';
 import { getDatabase, type AppDatabase } from '@/data/db';
-import type { StreakData } from '@/domain/task/types';
+import type { StreakData, TaskDefinition } from '@/domain/task/types';
 import { generateUuid } from '@/utils/uuid';
+import { RecurrenceEngine } from '@/domain/recurrence/RecurrenceEngine';
+import { parseHijriRecurrence } from '@/domain/task/jsonBoundary';
 
 function getDb(tx?: any): AppDatabase {
   return tx ?? getDatabase();
@@ -134,7 +136,8 @@ export class StreakRepository {
 
   /**
    * Increments current streak by 1 and updates longest streak if applicable.
-   * If already completed on the same civil date, acts idempotently without double-incrementing.
+   * Works for any recurrence period (daily, weekly, custom intervals).
+   * Ignores CANCELLED occurrences so user deletes do not break streaks.
    */
   async incrementStreak(
     seriesId: string,
@@ -152,26 +155,103 @@ export class StreakRepository {
     const db = getDb(tx);
     const now = new Date().toISOString();
 
-    // BUG-FIX: Consecutive-day continuity check.
-    // If the gap between lastCompletedDate and today is > 1 day the streak is
-    // broken regardless of whether the lifecycle sweep fired. Reset to 1.
     let newStreak: number;
-    if (existing.lastCompletedDate === null) {
+    const lastCompleted = existing.lastCompletedDate;
+    if (lastCompleted === null) {
       // No prior completion — first real completion, start at 1
       newStreak = 1;
     } else {
-      const lastDt = DateTime.fromISO(existing.lastCompletedDate, { zone: 'utc' });
+      const lastDt = DateTime.fromISO(lastCompleted, { zone: 'utc' });
       const completedDt = DateTime.fromISO(completedDate, { zone: 'utc' });
       const daysDiff = Math.round(completedDt.diff(lastDt, 'days').days);
       if (daysDiff < 1) {
         // Backfilled completion of an older historical date — does not advance or break the current forward streak
         return existing;
-      } else if (daysDiff > 1) {
-        // Gap detected (> 1 day) — streak broken, restart
-        newStreak = 1;
+      }
+
+      // Check if this series has recurrence rules
+      const defRows = await db
+        .select()
+        .from(taskDefinitions)
+        .where(eq(taskDefinitions.seriesId, seriesId));
+
+      const recurringDef = defRows.find(d => d.recurrenceRule != null || d.hijriRecurrence != null);
+
+      if (recurringDef && recurringDef.recurrenceRule) {
+        try {
+          const engine = new RecurrenceEngine();
+          const cleanRule = recurringDef.recurrenceRule.replace(/^RRULE:/i, '').trim();
+          const pseudoDef: TaskDefinition = {
+            id: recurringDef.id,
+            title: recurringDef.title,
+            description: recurringDef.description,
+            startDate: recurringDef.startDate,
+            source: recurringDef.source as any,
+            worshipItemKey: recurringDef.worshipItemKey,
+            scheduleType: recurringDef.scheduleType as any,
+            scheduleData: {} as any,
+            recurrenceRule: cleanRule,
+            hijriRecurrence: parseHijriRecurrence(recurringDef.hijriRecurrence),
+            recurrenceEnd: recurringDef.recurrenceEnd,
+            seriesId: recurringDef.seriesId,
+            seriesVersion: recurringDef.seriesVersion,
+            effectiveFromDate: recurringDef.effectiveFromDate,
+            effectiveToDate: recurringDef.effectiveToDate,
+            reminderRule: null,
+            priority: recurringDef.priority as any,
+            estimatedMinutes: recurringDef.estimatedMinutes,
+            notes: recurringDef.notes,
+            tags: [],
+            subtasks: [],
+            isActive: Boolean(recurringDef.isActive),
+            createdAt: recurringDef.createdAt,
+            updatedAt: recurringDef.updatedAt,
+          };
+
+          const intermediateDates = engine
+            .generateSeedDates(pseudoDef, {
+              start: lastCompleted,
+              end: completedDate,
+            })
+            .filter(d => d > lastCompleted && d < completedDate);
+
+          if (intermediateDates.length === 0) {
+            // No scheduled occurrences between them: completedDate is the consecutive scheduled occurrence!
+            newStreak = existing.currentStreak + 1;
+          } else {
+            // Check if all intermediate occurrences were CANCELLED (deleted by user)
+            const cancelledRows = await db
+              .select({ localDate: taskOccurrences.localDate })
+              .from(taskOccurrences)
+              .where(
+                and(
+                  eq(taskOccurrences.seriesId, seriesId),
+                  eq(taskOccurrences.status, 'CANCELLED'),
+                  inArray(taskOccurrences.localDate, intermediateDates)
+                )
+              );
+            const cancelledDates = new Set(cancelledRows.map(r => r.localDate));
+            const uncancelledMissed = intermediateDates.filter(d => !cancelledDates.has(d));
+
+            if (uncancelledMissed.length > 0) {
+              // User skipped/missed a scheduled active occurrence -> restart streak
+              newStreak = 1;
+            } else {
+              // Intermediate occurrences were cancelled/deleted, so streak continues!
+              newStreak = existing.currentStreak + 1;
+            }
+          }
+        } catch {
+          // Fallback if rule evaluation fails
+          newStreak = daysDiff <= 1 ? existing.currentStreak + 1 : 1;
+        }
       } else {
-        // Exactly consecutive day (1 day diff)
-        newStreak = existing.currentStreak + 1;
+        // Non-recurring or unit test series without definition in DB: daily consecutive check
+        if (daysDiff > 1) {
+          newStreak = 1;
+        } else {
+          newStreak = existing.currentStreak + 1;
+        }
       }
     }
 
@@ -218,18 +298,33 @@ export class StreakRepository {
     // BUG-FIX: decrement to 0 floor (not 1), so the badge correctly shows 0
     const newStreak = Math.max(0, existing.currentStreak - 1);
 
-    // BUG-FIX: Restore lastCompletedDate to the day before instead of nulling it.
-    // Nulling caused the next re-completion to hit the "first completion" branch
-    // and freeze the streak at 1. Setting it to completedDate-1 restores continuity.
     let restoredLastCompletedDate: string | null;
     if (newStreak === 0) {
       // No prior days in the streak — truly back to ground zero
       restoredLastCompletedDate = null;
     } else {
-      // Point lastCompletedDate back to the day before the reverted date
-      restoredLastCompletedDate = DateTime.fromISO(completedDate, { zone: 'utc' })
-        .minus({ days: 1 })
-        .toISODate();
+      // Look for the actual prior completed occurrence in task_occurrences
+      const priorCompleted = await db
+        .select({ localDate: taskOccurrences.localDate })
+        .from(taskOccurrences)
+        .where(
+          and(
+            eq(taskOccurrences.seriesId, seriesId),
+            eq(taskOccurrences.status, 'COMPLETED'),
+            lt(taskOccurrences.localDate, completedDate)
+          )
+        )
+        .orderBy(desc(taskOccurrences.localDate))
+        .limit(1);
+
+      if (priorCompleted.length > 0) {
+        restoredLastCompletedDate = priorCompleted[0].localDate;
+      } else {
+        // Fallback for series without occurrence records (e.g. unit tests)
+        restoredLastCompletedDate = DateTime.fromISO(completedDate, { zone: 'utc' })
+          .minus({ days: 1 })
+          .toISODate();
+      }
     }
 
     await db

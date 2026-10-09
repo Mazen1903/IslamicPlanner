@@ -11,7 +11,7 @@ import {
   type DimensionValue,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useTheme } from '@/theme';
+import { useTheme, useHeroArt } from '@/theme';
 import { MinimalistMosqueSilhouette } from '@/components/hero/MinimalistMosqueSilhouette';
 
 export interface AppHeroHeaderProps {
@@ -55,9 +55,10 @@ export function AppHeroHeader({
   contentMaxWidth,
 }: AppHeroHeaderProps) {
   const { colors, typography, spacing, isDark } = useTheme();
+  const heroArt = useHeroArt();
+  const effectiveArtwork = artworkSource !== undefined ? artworkSource : heroArt;
 
   const gradientColors = [colors.primaryLight, colors.surface, colors.surfaceSecondary] as const;
-
 
   return (
     <View style={[styles.outerWrapper, containerStyle]} testID={testID}>
@@ -79,7 +80,7 @@ export function AppHeroHeader({
           style={StyleSheet.absoluteFill}
         />
 
-        {/* Transparent Mosque / Custom Skyline Artwork (Option A: Minimalist Mosque Silhouette) */}
+        {/* Transparent Mosque / Custom Skyline Artwork */}
         <View
           style={[
             styles.mosqueArtWrapper,
@@ -88,14 +89,14 @@ export function AppHeroHeader({
           importantForAccessibility="no"
           accessibilityElementsHidden={true}
         >
-          {artworkSource ? (
+          {effectiveArtwork ? (
             <Image
-              source={artworkSource}
+              source={effectiveArtwork}
               style={[
                 styles.mosqueArtImage,
                 artworkSize ? { width: artworkSize.width, height: artworkSize.height } : null,
                 {
-                  opacity: isDark ? 0.72 : 0.88,
+                  opacity: isDark ? 0.78 : 0.92,
                 },
               ]}
               resizeMode="contain"

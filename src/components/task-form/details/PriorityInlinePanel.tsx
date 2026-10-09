@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '@/theme';
+import { PremiumLanternIcon } from '@/components/common/PremiumLanternIcon';
 import type { TaskPriority } from '@/domain/task/types';
 import { PriorityNormalBadgeIcon, PriorityImportantBadgeIcon } from '../RepeatIcons';
 
@@ -127,7 +128,7 @@ export function PriorityInlinePanel({ priority, onSelectPriority, isPremium = tr
             </Text>
             {!isPremium && (
               <View style={{ marginStart: 6 }}>
-                <MaterialCommunityIcons name="crown" size={14} color={colors.warning} />
+                <PremiumLanternIcon size={14} />
               </View>
             )}
           </View>

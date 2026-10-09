@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, type ViewStyle, type StyleProp } from 'react-native';
 import { useTheme } from '@/theme';
-import { Icon } from '@/components/common/Icon';
+import { PremiumLanternIcon } from '@/components/common/PremiumLanternIcon';
 
 export interface PremiumBadgeProps {
   style?: StyleProp<ViewStyle>;
@@ -31,12 +31,9 @@ export function PremiumBadge({
       accessibilityLabel="Premium feature"
       testID={testID}
     >
-      <Icon
-        name="lock"
-        size={11}
-        color={colors.textSecondary}
+      <PremiumLanternIcon
+        size={13}
         style={{ marginEnd: 3 }}
-        decorative
       />
       <Text
         style={[

@@ -21,6 +21,8 @@ import { useTodayStore } from '@/stores/useTodayStore';
 import { deriveOverdueState } from '@/services/TodayViewModelProjection';
 import { StreakFlameBadge } from '@/components/streak';
 import { LottiePriorityBadge } from './LottiePriorityBadge';
+import { DeleteTaskSheet } from './DeleteTaskSheet';
+import { getRecurrenceLabel } from '@/domain/recurrence/recurrenceLabel';
 
 export interface TaskCardProps {
   task: TaskCardViewModel;
@@ -31,8 +33,11 @@ export interface TaskCardProps {
   onDragStart?: (task: TaskCardViewModel) => void;
   onDragMove?: (task: TaskCardViewModel, gestureState: PanResponderGestureState) => void;
   onDragEnd?: (task: TaskCardViewModel, gestureState: PanResponderGestureState) => void;
-  onDelete?: (task: TaskCardViewModel) => void | boolean | Promise<void | boolean>;
+  onDelete?: (task: TaskCardViewModel, scope?: 'THIS_OCCURRENCE' | 'THIS_AND_FUTURE' | 'ALL_OCCURRENCES') => void | boolean | Promise<void | boolean>;
+  isHighlighted?: boolean;
 }
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function getCategoryTheme(
   title: string,
@@ -121,6 +126,7 @@ export function TaskCard({
   onDragMove,
   onDragEnd,
   onDelete,
+  isHighlighted = false,
 }: TaskCardProps) {
   const { colors, spacing, radii, typography, shadows, isDark } = useTheme();
   const router = useRouter();
@@ -128,6 +134,17 @@ export function TaskCard({
   const isCompleted = task.status === 'COMPLETED';
   const isMissed = task.status === 'MISSED';
   const isPending = task.status === 'PENDING';
+
+  // Highlight pulse animation (1.2s total)
+  const highlightAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (isHighlighted) {
+      Animated.sequence([
+        Animated.timing(highlightAnim, { toValue: 1, duration: 250, useNativeDriver: false }),
+        Animated.timing(highlightAnim, { toValue: 0, duration: 950, useNativeDriver: false }),
+      ]).start();
+    }
+  }, [isHighlighted, highlightAnim]);
 
   // Drag & Jiggle animations
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
@@ -142,6 +159,7 @@ export function TaskCard({
   const trashScale = useRef(new Animated.Value(0)).current;
   const trashOpacity = useRef(new Animated.Value(0)).current;
   const isSwipedOpenRef = useRef(false);
+  const [deleteSheetVisible, setDeleteSheetVisible] = useState(false);
   const onDeleteRef = useRef(onDelete);
   onDeleteRef.current = onDelete;
 
@@ -161,6 +179,11 @@ export function TaskCard({
       Vibration.vibrate(30);
     } catch {}
 
+    if (task.isRecurring) {
+      setDeleteSheetVisible(true);
+      return;
+    }
+
     Animated.timing(swipeX, {
       toValue: -500,
       duration: 220,
@@ -168,7 +191,7 @@ export function TaskCard({
     }).start();
 
     if (onDeleteRef.current) {
-      Promise.resolve(onDeleteRef.current(task))
+      Promise.resolve(onDeleteRef.current(task, 'THIS_OCCURRENCE'))
         .then(res => {
           if (res === false) {
             Animated.spring(swipeX, {
@@ -187,6 +210,48 @@ export function TaskCard({
         });
     }
   }, [task, swipeX]);
+
+  const handleSelectDeleteScope = useCallback(
+    (scope: 'THIS_OCCURRENCE' | 'THIS_AND_FUTURE' | 'ALL_OCCURRENCES') => {
+      setDeleteSheetVisible(false);
+      Animated.timing(swipeX, {
+        toValue: -500,
+        duration: 220,
+        useNativeDriver: true,
+      }).start();
+
+      if (onDeleteRef.current) {
+        Promise.resolve(onDeleteRef.current(task, scope))
+          .then(res => {
+            if (res === false) {
+              Animated.spring(swipeX, {
+                toValue: 0,
+                useNativeDriver: true,
+                friction: 6,
+              }).start();
+            }
+          })
+          .catch(() => {
+            Animated.spring(swipeX, {
+              toValue: 0,
+              useNativeDriver: true,
+              friction: 6,
+            }).start();
+          });
+      }
+    },
+    [task, swipeX]
+  );
+
+  const handleCloseDeleteSheet = useCallback(() => {
+    setDeleteSheetVisible(false);
+    isSwipedOpenRef.current = false;
+    Animated.spring(swipeX, {
+      toValue: 0,
+      useNativeDriver: true,
+      friction: 6,
+    }).start();
+  }, [swipeX]);
 
   // Fix #5: Keep drag callbacks in refs so the PanResponder closure is always current
   const onDragStartRef = useRef(onDragStart);
@@ -262,10 +327,10 @@ export function TaskCard({
           return;
         }
 
-        const baseOffset = isSwipedOpenRef.current ? -84 : 0;
+        const baseOffset = isSwipedOpenRef.current ? -72 : 0;
         const rawDx = baseOffset + gestureState.dx;
-        // Clamp between -200 (left) and 0 (closed)
-        const clampedDx = Math.min(0, Math.max(-200, rawDx));
+        // Clamp between -72 (left) and 0 (closed)
+        const clampedDx = Math.min(0, Math.max(-72, rawDx));
         swipeX.setValue(clampedDx);
 
         // Pop-up transition animation on trash icon:
@@ -293,17 +358,14 @@ export function TaskCard({
           return;
         }
 
-        const baseOffset = isSwipedOpenRef.current ? -84 : 0;
+        const baseOffset = isSwipedOpenRef.current ? -72 : 0;
         const totalDx = baseOffset + gestureState.dx;
 
-        if (totalDx < -140 || gestureState.vx < -1.0) {
-          // Full swipe to remove!
-          handleConfirmDelete();
-        } else if (totalDx < -40) {
-          // Reveal delete container
+        if (totalDx < -30) {
+          // Reveal delete container (clamped reveal only - no full swipe deletion)
           isSwipedOpenRef.current = true;
           Animated.spring(swipeX, {
-            toValue: -84,
+            toValue: -72,
             damping: 18,
             stiffness: 220,
             useNativeDriver: true,
@@ -439,21 +501,16 @@ export function TaskCard({
     <View style={styles.cardContainer}>
       {/* ── Underneath Delete Action Revealed on Swipe Left ── */}
       <View
-        style={[
-          styles.deleteUnderneathContainer,
-          {
-            borderRadius: radii.card,
-            backgroundColor: '#DC2626',
-          },
-        ]}
+        style={styles.deleteUnderneathContainer}
         testID={`task-card-delete-reveal-${task.occurrenceId}`}
+        pointerEvents="box-none"
       >
         <Pressable
           onPress={handleConfirmDelete}
           accessibilityRole="button"
           accessibilityLabel={`Remove task: ${task.title}`}
           testID={`task-card-remove-button-${task.occurrenceId}`}
-          style={styles.deleteRevealPressable}
+          style={[styles.deleteRevealPressable, { backgroundColor: colors.error }]}
         >
           <Animated.View
             style={[
@@ -471,8 +528,7 @@ export function TaskCard({
               },
             ]}
           >
-            <Icon name="trash" size={24} color="#FFFFFF" decorative />
-            <Text style={styles.deleteRevealText}>Delete</Text>
+            <Icon name="trash" size={22} color={colors.textOnPrimary} decorative />
           </Animated.View>
         </Pressable>
       </View>
@@ -493,44 +549,42 @@ export function TaskCard({
           },
         ]}
       >
-      <Pressable
-        onPress={handleCardPress}
-        onLongPress={handleLongPress}
-        delayLongPress={350}
-        accessibilityRole="button"
-        accessibilityLabel={`View task details: ${task.title}`}
-        style={({ pressed }) => [
-          styles.card,
-          shadows.card,
-          {
-            backgroundColor: isCompleted
-              ? colors.surfaceSecondary
-              : pressed
-              ? isDark
-                ? 'rgba(38, 48, 60, 0.95)'
-                : 'rgba(249, 250, 251, 0.98)'
-              : isDark
-              ? 'rgba(28, 35, 43, 0.98)'
-              : colors.surface,
-            borderRadius: radii.card,
-            paddingVertical: 12,
-            paddingHorizontal: 14,
-            borderColor: isUnlocked
-              ? '#10B981'
-              : task.priority === 'IMPORTANT' && !isCompleted
-              ? isDark
-                ? 'rgba(239, 68, 68, 0.4)'
-                : 'rgba(239, 68, 68, 0.25)'
-              : colors.border,
-            borderWidth: isUnlocked ? 2 : task.priority === 'IMPORTANT' && !isCompleted ? 1.5 : 1,
-            shadowColor: isUnlocked ? '#10B981' : '#000',
-            shadowOpacity: isUnlocked ? 0.35 : 0.04,
-            shadowRadius: isUnlocked ? 10 : 3,
-            elevation: isUnlocked ? 10 : 2,
-            opacity: isCompleted ? 0.72 : 1,
-          },
-        ]}
-        testID={`task-card-${task.occurrenceId}`}
+        <AnimatedPressable
+          onPress={handleCardPress}
+          onLongPress={handleLongPress}
+          delayLongPress={350}
+          accessibilityRole="button"
+          accessibilityLabel={`View task details: ${task.title}`}
+          style={[
+            styles.card,
+            shadows.card,
+            {
+              backgroundColor: isCompleted
+                ? colors.surfaceSecondary
+                : colors.surface,
+              borderRadius: radii.card,
+              paddingVertical: 12,
+              paddingHorizontal: 14,
+              borderColor: highlightAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [
+                  isUnlocked
+                    ? colors.primary
+                    : task.priority === 'IMPORTANT' && !isCompleted
+                    ? colors.error
+                    : colors.border,
+                  colors.primary,
+                ],
+              }),
+              borderWidth: isUnlocked ? 2 : task.priority === 'IMPORTANT' && !isCompleted ? 1.5 : 1,
+              shadowColor: isUnlocked ? colors.primary : colors.shadowColor,
+              shadowOpacity: isUnlocked ? 0.35 : 0.04,
+              shadowRadius: isUnlocked ? 10 : 3,
+              elevation: isUnlocked ? 10 : 2,
+              opacity: isCompleted ? 0.72 : 1,
+            },
+          ]}
+          testID={`task-card-${task.occurrenceId}`}
       >
         <View style={styles.mainRow}>
           {/* Left: Checkbox */}
@@ -595,6 +649,28 @@ export function TaskCard({
               {task.title}
             </Text>
 
+            {/* Checklist Progress Bar */}
+            {task.subtasks && task.subtasks.length > 0 && (
+              <View
+                style={[
+                  styles.checklistProgressBarTrack,
+                  { backgroundColor: colors.surfaceSecondary },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.checklistProgressBarFill,
+                    {
+                      backgroundColor: isCompleted ? colors.textMuted : colors.primary,
+                      width: `${Math.round(
+                        (task.subtasks.filter(s => s.isCompleted).length / task.subtasks.length) * 100
+                      )}%`,
+                    },
+                  ]}
+                />
+              </View>
+            )}
+
             {/* Metadata Pills Row */}
             <View style={styles.metadataRow}>
               {/* Schedule / Prayer Pill */}
@@ -605,16 +681,14 @@ export function TaskCard({
                     {
                       backgroundColor: isCompleted
                         ? colors.surface
-                        : isDark
-                        ? '#14382B'
-                        : '#E8F8F0',
+                        : colors.primaryLight,
                     },
                   ]}
                 >
                   <Icon
                     name="clock"
                     size={11}
-                    color={isCompleted ? colors.textMuted : isDark ? '#34D399' : '#059669'}
+                    color={isCompleted ? colors.textMuted : colors.primaryDark}
                     style={{ marginEnd: 4 }}
                     decorative
                   />
@@ -623,7 +697,7 @@ export function TaskCard({
                       typography.caption,
                       styles.metaPillText,
                       {
-                        color: isCompleted ? colors.textMuted : isDark ? '#34D399' : '#059669',
+                        color: isCompleted ? colors.textMuted : colors.primaryDark,
                       },
                     ]}
                     numberOfLines={1}
@@ -639,8 +713,8 @@ export function TaskCard({
                   style={[
                     styles.metaPill,
                     {
-                      backgroundColor: isDark ? 'rgba(16, 185, 129, 0.18)' : '#ECFDF5',
-                      borderColor: isDark ? 'rgba(52, 211, 153, 0.35)' : '#A7F3D0',
+                      backgroundColor: colors.primaryLight,
+                      borderColor: colors.primary,
                     },
                   ]}
                   testID={`task-recurring-badge-${task.occurrenceId}`}
@@ -648,7 +722,7 @@ export function TaskCard({
                   <Icon
                     name="refresh"
                     size={10}
-                    color={isDark ? '#34D399' : '#047857'}
+                    color={colors.primaryDark}
                     style={{ marginEnd: 3 }}
                     decorative
                   />
@@ -657,16 +731,16 @@ export function TaskCard({
                       typography.caption,
                       styles.metaPillText,
                       {
-                        color: isDark ? '#34D399' : '#047857',
+                        color: colors.primaryDark,
                       },
                     ]}
                   >
-                    Daily
+                    {getRecurrenceLabel(task.recurrenceRule, task.hijriRecurrence)}
                   </Text>
                 </View>
               )}
 
-              {/* Subtasks Progress Pill */}
+              {/* Subtasks / Checklist Progress Pill */}
               {task.subtasks && task.subtasks.length > 0 && (
                 <View
                   style={[
@@ -691,7 +765,7 @@ export function TaskCard({
                       { color: colors.textSecondary },
                     ]}
                   >
-                    {task.subtasks.filter(s => s.isCompleted).length}/{task.subtasks.length}
+                    Checklist {task.subtasks.filter(s => s.isCompleted).length}/{task.subtasks.length}
                   </Text>
                 </View>
               )}
@@ -737,40 +811,6 @@ export function TaskCard({
                   </Text>
                 </View>
               ) : null}
-
-              {/* Overdue Alert Pill */}
-              {isPending && overdueState.isOverdue && (
-                <View
-                  style={[
-                    styles.metaPill,
-                    styles.overduePill,
-                    {
-                      backgroundColor: colors.warning + '1E',
-                      borderColor: colors.warning + '60',
-                    },
-                  ]}
-                  testID={`overdue-badge-${task.occurrenceId}`}
-                >
-                  <Icon
-                    name="alert"
-                    size={11}
-                    color={colors.warning}
-                    style={{ marginEnd: 3 }}
-                    decorative
-                  />
-                  <Text
-                    style={[
-                      typography.caption,
-                      styles.metaPillText,
-                      { color: colors.warning, fontWeight: '700' },
-                    ]}
-                  >
-                    {overdueState.overdueMinutes >= 1
-                      ? `${overdueState.overdueMinutes} min overdue`
-                      : 'Overdue'}
-                  </Text>
-                </View>
-              )}
             </View>
           </View>
 
@@ -789,8 +829,15 @@ export function TaskCard({
             )}
           </View>
         </View>
-      </Pressable>
+      </AnimatedPressable>
     </Animated.View>
+
+    <DeleteTaskSheet
+      visible={deleteSheetVisible}
+      onClose={handleCloseDeleteSheet}
+      onSelectScope={handleSelectDeleteScope}
+      taskTitle={task.title}
+    />
     </View>
   );
 }
@@ -806,16 +853,15 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     right: 16,
-    left: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    overflow: 'hidden',
     zIndex: 0,
   },
   deleteRevealPressable: {
-    width: 84,
-    height: '100%',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -823,11 +869,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  deleteRevealText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 2,
+  checklistProgressBarTrack: {
+    height: 3,
+    borderRadius: 2,
+    marginTop: 6,
+    marginBottom: 4,
+    width: '100%',
+    overflow: 'hidden',
+  },
+  checklistProgressBarFill: {
+    height: '100%',
+    borderRadius: 2,
   },
   animatedCardWrapper: {
     width: '100%',
@@ -876,9 +928,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     lineHeight: 14,
-  },
-  overduePill: {
-    borderWidth: 1,
   },
   rightActions: {
     flexDirection: 'row',

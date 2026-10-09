@@ -28,59 +28,23 @@ describe('TaskCard Visual States — M11 Presentation (Overdue, Missed, Complete
     useTodayStore.getState().reset();
   });
 
-  it('displays calm "Overdue" text when task is < 1 minute overdue', async () => {
-    // 30 seconds after dueAt
-    const now = DateTime.fromISO('2026-09-15T14:00:30.000Z');
-    useTodayStore.getState().setNowMs(now.toMillis());
+  it('no longer renders an overdue pill; overdue tasks surface in the Previous section instead', async () => {
+    useTodayStore.getState().setNowMs(DateTime.fromISO('2026-09-15T14:05:00.000Z').toMillis());
 
-    const { getByTestId, getByText, queryByText } = await render(
+    const { queryByTestId, queryByText } = await render(
       <ThemeProvider>
         <TaskCard task={baseTask} />
       </ThemeProvider>
     );
 
-    const badge = getByTestId('overdue-badge-occ-card-1');
-    expect(badge).toBeTruthy();
-    expect(getByText('Overdue')).toBeTruthy();
-    // Invariant: No "0 min overdue", no exclamation mark
-    expect(queryByText(/0 min overdue/i)).toBeNull();
-    expect(queryByText(/!/)).toBeNull();
-  });
+    expect(queryByTestId('overdue-badge-occ-card-1')).toBeNull();
+    expect(queryByText(/overdue/i)).toBeNull();
 
-  it('displays "5 min overdue" calmly when 5 minutes past due', async () => {
-    // 5 minutes after dueAt
-    const now = DateTime.fromISO('2026-09-15T14:05:00.000Z');
-    useTodayStore.getState().setNowMs(now.toMillis());
-
-    const { getByText } = await render(
-      <ThemeProvider>
-        <TaskCard task={baseTask} />
-      </ThemeProvider>
-    );
-
-    expect(getByText('5 min overdue')).toBeTruthy();
-  });
-
-  it('updates overdue minutes from 5 to 6 min live when store nowMs changes (zero DB, zero reprojection)', async () => {
-    const now5 = DateTime.fromISO('2026-09-15T14:05:00.000Z');
-    useTodayStore.getState().setNowMs(now5.toMillis());
-
-    const { getByText, queryByText } = await render(
-      <ThemeProvider>
-        <TaskCard task={baseTask} />
-      </ThemeProvider>
-    );
-
-    expect(getByText('5 min overdue')).toBeTruthy();
-
-    // 1 minute passes: 1-second timer updates store.nowMs
-    const now6 = DateTime.fromISO('2026-09-15T14:06:00.000Z');
+    // Time passing does not reintroduce the pill.
     await act(async () => {
-      useTodayStore.getState().setNowMs(now6.toMillis());
+      useTodayStore.getState().setNowMs(DateTime.fromISO('2026-09-15T14:06:00.000Z').toMillis());
     });
-
-    expect(getByText('6 min overdue')).toBeTruthy();
-    expect(queryByText('5 min overdue')).toBeNull();
+    expect(queryByText(/overdue/i)).toBeNull();
   });
 
   it('overdue badge automatically disappears when now >= expiresAt', async () => {

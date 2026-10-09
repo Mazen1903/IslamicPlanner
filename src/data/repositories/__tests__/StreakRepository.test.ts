@@ -173,4 +173,106 @@ describe('StreakRepository', () => {
     await repo.disableStreak('series-x');
     expect(await repo.isStreakEnabled('series-x')).toBe(false);
   });
+
+  describe('Recurring habit streaks with any repeat period', () => {
+    const { getDatabase } = require('@/data/db');
+    const { taskDefinitions, taskOccurrences } = require('@/data/schema');
+
+    it('weekly recurring habit increments streak across weekly intervals', async () => {
+      const db = getDatabase();
+      const seriesId = 'series-weekly-fri';
+
+      // Insert weekly definition (every Friday)
+      await db.insert(taskDefinitions).values({
+        id: 'def-weekly-fri',
+        title: 'Read Surah Al-Kahf',
+        startDate: '2026-10-02',
+        scheduleType: 'ANYTIME_TODAY',
+        scheduleData: '{}',
+        recurrenceRule: 'RRULE:FREQ=WEEKLY;BYDAY=FR',
+        seriesId,
+        seriesVersion: 1,
+        isActive: true,
+        createdAt: '2026-10-01T00:00:00.000Z',
+        updatedAt: '2026-10-01T00:00:00.000Z',
+      });
+
+      await repo.enableStreak(seriesId);
+
+      // Friday Oct 2: 1st completion
+      const day1 = await repo.incrementStreak(seriesId, '2026-10-02');
+      expect(day1?.currentStreak).toBe(1);
+
+      // Friday Oct 9: consecutive scheduled occurrence (7 days later) -> streak = 2!
+      const day2 = await repo.incrementStreak(seriesId, '2026-10-09');
+      expect(day2?.currentStreak).toBe(2);
+
+      // Friday Oct 16: consecutive scheduled occurrence (7 days later) -> streak = 3!
+      const day3 = await repo.incrementStreak(seriesId, '2026-10-16');
+      expect(day3?.currentStreak).toBe(3);
+    });
+
+    it('weekly recurring habit resets to 1 if a scheduled week is skipped', async () => {
+      const db = getDatabase();
+      const seriesId = 'series-weekly-skip';
+
+      await db.insert(taskDefinitions).values({
+        id: 'def-weekly-skip',
+        title: 'Weekly Task',
+        startDate: '2026-10-02',
+        scheduleType: 'ANYTIME_TODAY',
+        scheduleData: '{}',
+        recurrenceRule: 'RRULE:FREQ=WEEKLY;BYDAY=FR',
+        seriesId,
+        seriesVersion: 1,
+        isActive: true,
+        createdAt: '2026-10-01T00:00:00.000Z',
+        updatedAt: '2026-10-01T00:00:00.000Z',
+      });
+
+      await repo.enableStreak(seriesId);
+      await repo.incrementStreak(seriesId, '2026-10-02'); // streak = 1
+
+      // Skip Friday Oct 9, complete Friday Oct 16 (gap with uncancelled missed occurrence in between)
+      const day3 = await repo.incrementStreak(seriesId, '2026-10-16');
+      expect(day3?.currentStreak).toBe(1); // Reset to 1 because Oct 9 was missed
+    });
+
+    it('ignoring CANCELLED occurrences: user delete does not break streak', async () => {
+      const db = getDatabase();
+      const seriesId = 'series-weekly-delete';
+
+      await db.insert(taskDefinitions).values({
+        id: 'def-weekly-delete',
+        title: 'Weekly Task With Delete',
+        startDate: '2026-10-02',
+        scheduleType: 'ANYTIME_TODAY',
+        scheduleData: '{}',
+        recurrenceRule: 'RRULE:FREQ=WEEKLY;BYDAY=FR',
+        seriesId,
+        seriesVersion: 1,
+        isActive: true,
+        createdAt: '2026-10-01T00:00:00.000Z',
+        updatedAt: '2026-10-01T00:00:00.000Z',
+      });
+
+      // Oct 9 was CANCELLED (deleted by user)
+      await db.insert(taskOccurrences).values({
+        id: 'occ-oct-9',
+        taskDefinitionId: 'def-weekly-delete',
+        seriesId,
+        localDate: '2026-10-09',
+        planningDayKey: '2026-10-09',
+        timezone: 'UTC',
+        status: 'CANCELLED',
+      });
+
+      await repo.enableStreak(seriesId);
+      await repo.incrementStreak(seriesId, '2026-10-02'); // streak = 1
+
+      // Complete Oct 16: intermediate Oct 9 was CANCELLED, so streak continues!
+      const day3 = await repo.incrementStreak(seriesId, '2026-10-16');
+      expect(day3?.currentStreak).toBe(2);
+    });
+  });
 });

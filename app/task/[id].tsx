@@ -117,6 +117,21 @@ export default function TaskEditScreen() {
     await refresh();
   };
 
+  const handleUpdateSubtask = async (subtaskId: string, newTitle: string) => {
+    const updatedSubtasks = (definition.subtasks ?? []).map(s =>
+      s.id === subtaskId ? { ...s, title: newTitle } : s
+    );
+    await taskDefinitionRepository.update(definition.id, { subtasks: updatedSubtasks });
+    setDefinition(prev => prev ? { ...prev, subtasks: updatedSubtasks } : null);
+    await refresh();
+  };
+
+  const handleReorderSubtasks = async (reordered: any[]) => {
+    await taskDefinitionRepository.update(definition.id, { subtasks: reordered });
+    setDefinition(prev => prev ? { ...prev, subtasks: reordered } : null);
+    await refresh();
+  };
+
   const handleUpdateNotes = async (newNotes: string) => {
     if (occurrence) {
       await taskEngine.updateOccurrenceOverride(occurrence.id, {
@@ -168,6 +183,8 @@ export default function TaskEditScreen() {
       onBack={() => router.back()}
       onToggleSubtask={handleToggleSubtask}
       onAddSubtask={handleAddSubtask}
+      onUpdateSubtask={handleUpdateSubtask}
+      onReorderSubtasks={handleReorderSubtasks}
       onUpdateNotes={handleUpdateNotes}
     />
   );

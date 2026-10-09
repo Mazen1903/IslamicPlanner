@@ -3,7 +3,14 @@ import { userSettings } from '@/data/schema';
 import { getDatabase, type AppDatabase } from '@/data/db';
 import type { Coordinates } from '@/domain/prayer/types';
 
-export type UserSettingsRow = typeof userSettings.$inferSelect;
+export type UserSettingsRow = Omit<
+  typeof userSettings.$inferSelect,
+  'plannerHiddenSections' | 'appFontFamily' | 'appTextScale'
+> & {
+  plannerHiddenSections?: string | null;
+  appFontFamily?: string | null;
+  appTextScale?: string | null;
+};
 export type UserSettingsPatch = Partial<Omit<typeof userSettings.$inferInsert, 'id' | 'createdAt'>>;
 
 function getDb(tx?: any): AppDatabase {

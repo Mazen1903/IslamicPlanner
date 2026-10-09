@@ -23,6 +23,7 @@ import {
   type TaskIconDef,
 } from '@/constants/taskIcons';
 import { TaskCategoryIcon } from '@/components/task/TaskCategoryIcon';
+import { PremiumLanternIcon } from '@/components/common/PremiumLanternIcon';
 import { useTheme } from '@/theme';
 import { isFreeTaskIcon } from '@/domain/entitlement/freeTier';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
@@ -109,7 +110,7 @@ const IconTile = React.memo(function IconTile({
             },
           ]}
         >
-          <MaterialCommunityIcons name="crown" size={10} color={primaryColor} />
+          <PremiumLanternIcon size={11} />
         </View>
       )}
     </Pressable>

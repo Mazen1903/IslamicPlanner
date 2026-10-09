@@ -58,9 +58,7 @@ function BaseJournalBadge({
   const bg = backgroundColor ?? (isDark ? darkBg : lightBg);
   const border = borderColor ?? borderTint;
   const borderRadius = Math.max(6, Math.round(size * 0.28));
-  const iconSize = imageSource
-    ? Math.max(16, Math.round(size * 0.68))
-    : Math.max(12, Math.round(size * 0.52));
+  const iconSize = Math.max(12, Math.round(size * 0.52));
 
   return (
     <View
@@ -73,6 +71,8 @@ function BaseJournalBadge({
         {
           width: size,
           height: size,
+        },
+        !imageSource && {
           borderRadius,
           backgroundColor: bg,
           borderColor: border,
@@ -89,7 +89,7 @@ function BaseJournalBadge({
       {imageSource ? (
         <Image
           source={imageSource}
-          style={{ width: iconSize, height: iconSize }}
+          style={{ width: size, height: size }}
           resizeMode="contain"
         />
       ) : iconFamily === 'Ionicons' ? (

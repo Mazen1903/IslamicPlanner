@@ -140,6 +140,7 @@ export type FormAction =
   | { type: 'UPDATE_SUBTASK'; payload: { id: string; title: string } }
   | { type: 'TOGGLE_SUBTASK'; payload: { id: string } }
   | { type: 'REMOVE_SUBTASK'; payload: { id: string } }
+  | { type: 'REORDER_SUBTASKS'; payload: { fromIndex: number; toIndex: number } }
   | { type: 'SET_TAGS'; payload: string[] }
   | { type: 'SET_REMINDERS'; payload: number[] }
   | { type: 'ADD_REMINDER'; payload: number }

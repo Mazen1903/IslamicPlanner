@@ -6,9 +6,9 @@ import Constants from 'expo-constants';
 import { useTheme } from '@/theme';
 import {
   SettingsPastelHeader,
-  SettingsSectionHeader,
-  SettingsRow,
-  PastelOptionCard,
+  SettingsGroup,
+  SettingsGroupRow,
+  SettingsGroupDivider,
   SettingsQuoteCard,
   SettingsAboutHelpCenterIcon,
   SettingsAboutPrivacyPolicyIcon,
@@ -55,7 +55,7 @@ const CREDITS: { name: string; license: string; purpose: string }[] = [
 ];
 
 export default function AboutScreen() {
-  const { colors, spacing, radii, typography } = useTheme();
+  const { colors, spacing, typography } = useTheme();
   const router = useRouter();
 
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
@@ -90,48 +90,62 @@ export default function AboutScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: spacing.xxl }]}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: spacing.md, paddingBottom: spacing.xxl }]}
         testID="about-screen"
       >
-        <View style={styles.cardsList}>
-          {/* 1. Help Center */}
-          <PastelOptionCard
-            label="Help Center"
+        {/* RESOURCES & LEGAL GROUP */}
+        <SettingsGroup
+          title="Resources & Legal"
+          subtitle="Documentation and application policies"
+        >
+          <SettingsGroupRow
+            title="Help Center"
             subtitle="Find answers to common questions"
-            customBadge={<SettingsAboutHelpCenterIcon size={40} />}
+            icon={<SettingsAboutHelpCenterIcon size={40} />}
             onPress={() => router.push('/(tabs)/settings/help' as any)}
+            showChevron
             testID="about-row-help-center"
+            isFirst
           />
 
-          {/* 2. Privacy Policy */}
-          <PastelOptionCard
-            label="Privacy Policy"
+          <SettingsGroupDivider />
+
+          <SettingsGroupRow
+            title="Privacy Policy"
             subtitle="How we protect your data"
-            customBadge={<SettingsAboutPrivacyPolicyIcon size={40} />}
+            icon={<SettingsAboutPrivacyPolicyIcon size={40} />}
             onPress={() => router.push('/(tabs)/settings/privacy-policy' as any)}
+            showChevron
             testID="about-row-privacy"
           />
 
-          {/* 3. Terms of Service */}
-          <PastelOptionCard
-            label="Terms of Service"
+          <SettingsGroupDivider />
+
+          <SettingsGroupRow
+            title="Terms of Service"
             subtitle="Our terms and conditions"
-            customBadge={<SettingsAboutTermsIcon size={40} />}
+            icon={<SettingsAboutTermsIcon size={40} />}
             onPress={() => router.push('/(tabs)/settings/terms' as any)}
+            showChevron
             testID="about-row-terms"
+            isLast={Platform.OS !== 'android'}
           />
 
-          {/* 4. Rate the App (only on Android where store identifier exists) */}
           {Platform.OS === 'android' && (
-            <PastelOptionCard
-              label="Rate the App"
-              subtitle="Leave a review on Google Play"
-              customBadge={<SettingsAboutRateStarIcon size={40} />}
-              onPress={handleRateApp}
-              testID="about-row-rate"
-            />
+            <>
+              <SettingsGroupDivider />
+              <SettingsGroupRow
+                title="Rate the App"
+                subtitle="Leave a review on Google Play"
+                icon={<SettingsAboutRateStarIcon size={40} />}
+                onPress={handleRateApp}
+                showChevron
+                testID="about-row-rate"
+                isLast
+              />
+            </>
           )}
-        </View>
+        </SettingsGroup>
 
         {/* Hadith Inspiration Card */}
         <SettingsQuoteCard
@@ -139,7 +153,6 @@ export default function AboutScreen() {
           citation="— Prophet Muhammad (peace be upon him)"
           testID="about-hadith-card"
         />
-
 
         {/* Footer with App Version */}
         <View style={[styles.footerContainer, { marginVertical: spacing.md, alignItems: 'center' }]}>
@@ -167,24 +180,31 @@ export default function AboutScreen() {
               { color: colors.textTertiary, marginTop: 4 },
             ]}
           >
-            ♥ Built with care for a better you
+            Built with care for a better you
           </Text>
         </View>
 
         {/* Open Source Acknowledgements */}
-        <SettingsSectionHeader title="Open Source Acknowledgements" testID="credits-section" />
-        <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {CREDITS.map(credit => (
-            <SettingsRow
-              key={credit.name}
-              label={credit.name}
-              subtitle={credit.purpose}
-              value={credit.license}
-              showChevron={false}
-              testID={`credit-item-${credit.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
-            />
+        <SettingsGroup
+          title="Open Source Acknowledgements"
+          subtitle="Honoring the open-source libraries that power this app"
+          testID="credits-section"
+        >
+          {CREDITS.map((credit, idx) => (
+            <React.Fragment key={credit.name}>
+              {idx > 0 && <SettingsGroupDivider />}
+              <SettingsGroupRow
+                title={credit.name}
+                subtitle={credit.purpose}
+                value={credit.license}
+                showChevron={false}
+                testID={`credit-item-${credit.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
+                isFirst={idx === 0}
+                isLast={idx === CREDITS.length - 1}
+              />
+            </React.Fragment>
           ))}
-        </View>
+        </SettingsGroup>
       </ScrollView>
     </SafeAreaView>
   );
@@ -196,17 +216,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-  },
-  cardsList: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 8,
   },
   footerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  group: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
 });

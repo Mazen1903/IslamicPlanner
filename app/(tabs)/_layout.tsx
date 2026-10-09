@@ -1,16 +1,20 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { View, StyleSheet, useWindowDimensions, Easing } from 'react-native';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomNavBar } from '@/components/layout/BottomNavBar';
 import { ExpandingAddTaskModal } from '@/components/task-form/ExpandingAddTaskModal';
 import { useAddTaskModalStore, type FabOrigin } from '@/stores/useAddTaskModalStore';
 import { useTodayStore } from '@/stores/useTodayStore';
+import { useToastStore } from '@/stores/useToastStore';
+import { usePlannerUiStore } from '@/stores/usePlannerUiStore';
 import { PlannerRefreshCoordinator } from '@/services/PlannerRefreshCoordinator';
+import { Toast } from '@/components/common/Toast';
 import { DateTime } from 'luxon';
 import { useTheme } from '@/theme';
 
 export default function TabLayout() {
+  const router = useRouter();
   const { colors } = useTheme();
   const screenDimensions = useWindowDimensions();
   const isOpen = useAddTaskModalStore(s => s.isOpen);
@@ -46,7 +50,8 @@ export default function TabLayout() {
     ? { ...origin, y: origin.y - containerY }
     : null;
 
-  const handleSuccess = useCallback(async () => {
+  const handleSuccess = useCallback(async (info?: { definitionId?: string; targetPrayer?: any; isSyncIncomplete?: boolean }) => {
+    closeModal();
     const store = useTodayStore.getState();
     const token = store.startRefresh();
     try {
@@ -62,7 +67,24 @@ export default function TabLayout() {
     } catch (err) {
       console.warn('[TabLayout] Failed to refresh Planner after adding task:', err);
     }
-  }, []);
+
+    if (info?.targetPrayer) {
+      useTodayStore.getState().setSelectedPrayer(info.targetPrayer);
+    }
+
+    if (info?.definitionId) {
+      usePlannerUiStore.getState().setHighlightedOccurrenceId(info.definitionId);
+      setTimeout(() => {
+        usePlannerUiStore.getState().setHighlightedOccurrenceId(null);
+      }, 1200);
+    }
+
+    if (!info?.isSyncIncomplete) {
+      useToastStore.getState().showToast({ message: 'Task added' });
+    }
+
+    router.navigate('/(tabs)/planner');
+  }, [closeModal, router]);
 
   return (
     <View ref={containerRef} style={[styles.container, { backgroundColor: colors.background }]} onLayout={onContainerLayout}>
@@ -140,6 +162,8 @@ export default function TabLayout() {
         onClose={closeModal}
         onSuccess={handleSuccess}
       />
+
+      <Toast />
     </View>
   );
 }

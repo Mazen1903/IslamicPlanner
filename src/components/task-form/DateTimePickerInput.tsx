@@ -4,6 +4,9 @@ import {
   Text,
   Pressable,
   ScrollView,
+  FlatList,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
   StyleSheet,
   type ViewStyle,
   type StyleProp,
@@ -264,6 +267,120 @@ function from24Hour(timeStr: string): { hour12: number; minute: number; ampm: 'A
   return { hour12, minute, ampm };
 }
 
+const ITEM_HEIGHT = 40;
+const VISIBLE_ITEMS = 5;
+const WHEEL_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS; // 200
+const PADDING_VERTICAL = (WHEEL_HEIGHT - ITEM_HEIGHT) / 2; // 80
+
+interface WheelColumnProps<T> {
+  data: readonly T[];
+  selectedValue: T;
+  onSelect: (value: T) => void;
+  renderLabel: (value: T) => string;
+  testIdPrefix: string;
+  label: string;
+}
+
+function WheelColumn<T extends string | number>({
+  data,
+  selectedValue,
+  onSelect,
+  renderLabel,
+  testIdPrefix,
+  label,
+}: WheelColumnProps<T>) {
+  const { colors, typography, radii } = useTheme();
+  const listRef = React.useRef<FlatList<T>>(null);
+
+  React.useEffect(() => {
+    const idx = data.indexOf(selectedValue);
+    if (idx >= 0) {
+      listRef.current?.scrollToOffset({
+        offset: idx * ITEM_HEIGHT,
+        animated: false,
+      });
+    }
+  }, []);
+
+  const handleMomentumScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = e.nativeEvent.contentOffset.y;
+    const index = Math.round(y / ITEM_HEIGHT);
+    const clampedIndex = Math.max(0, Math.min(data.length - 1, index));
+    const item = data[clampedIndex];
+    if (item !== undefined && item !== selectedValue) {
+      onSelect(item);
+    }
+  };
+
+  return (
+    <View style={styles.columnWrapper}>
+      <Text style={[typography.caption, { color: colors.textSecondary, textAlign: 'center', marginBottom: 6 }]}>
+        {label}
+      </Text>
+      <View style={{ height: WHEEL_HEIGHT, width: '100%', overflow: 'hidden' }}>
+        <FlatList
+          ref={listRef}
+          data={data as T[]}
+          keyExtractor={item => String(item)}
+          snapToInterval={ITEM_HEIGHT}
+          decelerationRate="fast"
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
+          initialNumToRender={data.length}
+          maxToRenderPerBatch={data.length}
+          contentContainerStyle={{ paddingVertical: PADDING_VERTICAL }}
+          getItemLayout={(_, index) => ({
+            length: ITEM_HEIGHT,
+            offset: ITEM_HEIGHT * index,
+            index,
+          })}
+          onMomentumScrollEnd={handleMomentumScrollEnd}
+          renderItem={({ item, index }) => {
+            const isSelected = item === selectedValue;
+            return (
+              <Pressable
+                onPress={() => {
+                  onSelect(item);
+                  listRef.current?.scrollToOffset({
+                    offset: index * ITEM_HEIGHT,
+                    animated: true,
+                  });
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`${label} ${renderLabel(item)}`}
+                accessibilityState={{ selected: isSelected }}
+                testID={`${testIdPrefix}-${renderLabel(item).toLowerCase()}`}
+                style={[
+                  styles.slotItem,
+                  {
+                    height: ITEM_HEIGHT,
+                    borderRadius: radii.md,
+                    backgroundColor: isSelected ? colors.primaryLight : 'transparent',
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    typography.headlineMedium,
+                    {
+                      color: isSelected ? colors.primaryDark : colors.textSecondary,
+                      fontWeight: isSelected ? '700' : '500',
+                      textAlign: 'center',
+                      opacity: isSelected ? 1 : 0.5,
+                    },
+                  ]}
+                >
+                  {renderLabel(item)}
+                </Text>
+              </Pressable>
+            );
+          }}
+        />
+      </View>
+    </View>
+  );
+}
+
 export function TimePickerInput({
   value,
   onChange,
@@ -355,50 +472,30 @@ export function TimePickerInput({
           testID={`${testID}-picker`}
         >
           <View style={styles.timePickerColumnsRow}>
+            {/* Shared center selection band */}
+            <View
+              pointerEvents="none"
+              style={[
+                styles.centerSelectionBand,
+                {
+                  top: 24 + PADDING_VERTICAL,
+                  height: ITEM_HEIGHT,
+                  backgroundColor: colors.primaryLight,
+                  borderColor: colors.border,
+                  borderRadius: radii.md,
+                },
+              ]}
+            />
+
             {/* Hours Column */}
-            <View style={styles.columnWrapper}>
-              <Text style={[typography.caption, { color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xs }]}>
-                Hour
-              </Text>
-              <ScrollView
-                style={styles.drumScroll}
-                showsVerticalScrollIndicator={false}
-                nestedScrollEnabled
-              >
-                {HOURS.map(h => {
-                  const isSelected = h === hour12;
-                  return (
-                    <Pressable
-                      key={h}
-                      onPress={() => handleSelectHour(h)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: isSelected }}
-                      testID={`time-hour-${h}`}
-                      style={[
-                        styles.slotItem,
-                        isSelected && {
-                          backgroundColor: colors.primaryLight,
-                          borderRadius: radii.md,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          typography.headlineMedium,
-                          {
-                            color: isSelected ? colors.primaryDark : colors.textSecondary,
-                            fontWeight: isSelected ? '700' : '500',
-                            textAlign: 'center',
-                          },
-                        ]}
-                      >
-                        {h}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
+            <WheelColumn
+              data={HOURS}
+              selectedValue={hour12}
+              onSelect={handleSelectHour}
+              renderLabel={h => String(h)}
+              testIdPrefix="time-hour"
+              label="Hour"
+            />
 
             {/* Separator Colon */}
             <View style={styles.colonWrapper}>
@@ -408,89 +505,24 @@ export function TimePickerInput({
             </View>
 
             {/* Minutes Column */}
-            <View style={styles.columnWrapper}>
-              <Text style={[typography.caption, { color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xs }]}>
-                Minute
-              </Text>
-              <ScrollView
-                style={styles.drumScroll}
-                showsVerticalScrollIndicator={false}
-                nestedScrollEnabled
-              >
-                {MINUTES.map(m => {
-                  const isSelected = m === minute;
-                  const mStr = String(m).padStart(2, '0');
-                  return (
-                    <Pressable
-                      key={m}
-                      onPress={() => handleSelectMinute(m)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: isSelected }}
-                      testID={`time-minute-${mStr}`}
-                      style={[
-                        styles.slotItem,
-                        isSelected && {
-                          backgroundColor: colors.primaryLight,
-                          borderRadius: radii.md,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          typography.headlineMedium,
-                          {
-                            color: isSelected ? colors.primaryDark : colors.textSecondary,
-                            fontWeight: isSelected ? '700' : '500',
-                            textAlign: 'center',
-                          },
-                        ]}
-                      >
-                        {mStr}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
+            <WheelColumn
+              data={MINUTES}
+              selectedValue={minute}
+              onSelect={handleSelectMinute}
+              renderLabel={m => String(m).padStart(2, '0')}
+              testIdPrefix="time-minute"
+              label="Minute"
+            />
 
             {/* AM / PM Column */}
-            <View style={styles.ampmColumn}>
-              <Text style={[typography.caption, { color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xs }]}>
-                Period
-              </Text>
-              {(['AM', 'PM'] as const).map(period => {
-                const isSelected = ampm === period;
-                return (
-                  <Pressable
-                    key={period}
-                    onPress={() => handleSelectAmpm(period)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isSelected }}
-                    testID={`time-ampm-${period.toLowerCase()}`}
-                    style={[
-                      styles.ampmButton,
-                      {
-                        backgroundColor: isSelected ? colors.primary : colors.surfaceSecondary,
-                        borderColor: isSelected ? colors.primary : colors.border,
-                        borderRadius: radii.pill,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        typography.labelLarge,
-                        {
-                          color: isSelected ? colors.textOnPrimary : colors.textSecondary,
-                          fontWeight: isSelected ? '700' : '600',
-                        },
-                      ]}
-                    >
-                      {period}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <WheelColumn
+              data={['AM', 'PM'] as const}
+              selectedValue={ampm}
+              onSelect={handleSelectAmpm}
+              renderLabel={p => p}
+              testIdPrefix="time-ampm"
+              label="Period"
+            />
           </View>
 
           {/* Done Button */}
@@ -586,39 +618,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
+    position: 'relative',
+  },
+  centerSelectionBand: {
+    position: 'absolute',
+    left: 8,
+    right: 8,
+    borderWidth: 1,
+    opacity: 0.45,
+    zIndex: 0,
   },
   columnWrapper: {
     flex: 1,
     alignItems: 'center',
-  },
-  drumScroll: {
-    maxHeight: 160,
-    width: '100%',
+    zIndex: 1,
   },
   slotItem: {
-    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 2,
   },
   colonWrapper: {
-    paddingHorizontal: 6,
-    paddingTop: 16,
+    paddingHorizontal: 4,
+    paddingTop: 24,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  ampmColumn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  ampmButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    zIndex: 1,
   },
   doneButton: {
     paddingVertical: 10,

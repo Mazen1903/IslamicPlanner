@@ -15,7 +15,8 @@ export type PremiumFeature =
   | 'JOURNAL_MOOD_TRENDS'
   | 'JOURNAL_EXPORT'
   | 'TEMPLATES_UNLIMITED'
-  | 'CUSTOM_CATEGORIES';
+  | 'CUSTOM_CATEGORIES'
+  | 'FONTS';
 
 export type EntitlementSnapshot =
   | { status: 'READY'; tier: EntitlementTier; isPremium: boolean; source: 'LOCAL_DB' }

@@ -163,34 +163,25 @@ describe('PlanningDayScreen', () => {
     });
   });
 
-  it('persists completed tasks mode when a radio option is pressed', async () => {
-    const { userSettingsRepository } = require('@/data/repositories/UserSettingsRepository');
-    const upsertSpy = jest.spyOn(userSettingsRepository, 'upsert').mockResolvedValue({} as any);
+  it('renders the four Planner Sections switches in place of the old completed/overdue mode radios', async () => {
     await renderScreen('FAJR');
 
-    fireEvent.press(screen.getByTestId('completed-tasks-mode-hide'));
-    await waitFor(() => {
-      expect(upsertSpy).toHaveBeenCalledWith({ completedTasksMode: 'HIDE' });
-      expect(mockReload).toHaveBeenCalled();
-    });
+    expect(screen.getByTestId('planner-sections-group')).toBeTruthy();
+    expect(screen.getByTestId('planner-section-previous')).toBeTruthy();
+    expect(screen.getByTestId('planner-section-today')).toBeTruthy();
+    expect(screen.getByTestId('planner-section-upcoming')).toBeTruthy();
+    expect(screen.getByTestId('planner-section-completed')).toBeTruthy();
   });
 
-  it('persists overdue tasks mode when a radio option is pressed', async () => {
-    const { userSettingsRepository } = require('@/data/repositories/UserSettingsRepository');
-    const upsertSpy = jest.spyOn(userSettingsRepository, 'upsert').mockResolvedValue({} as any);
+  it('no longer renders the legacy completed/overdue mode controls or the bottom notice', async () => {
     await renderScreen('FAJR');
 
-    fireEvent.press(screen.getByTestId('overdue-tasks-mode-hide'));
-    await waitFor(() => {
-      expect(upsertSpy).toHaveBeenCalledWith({ overdueTasksMode: 'HIDE' });
-      expect(mockReload).toHaveBeenCalled();
-    });
-  });
-
-  it('does not render unimplemented MOVE options for completed and overdue tasks', async () => {
-    await renderScreen('FAJR');
-
+    expect(screen.queryByTestId('completed-tasks-mode-hide')).toBeNull();
+    expect(screen.queryByTestId('completed-tasks-mode-keep')).toBeNull();
+    expect(screen.queryByTestId('overdue-tasks-mode-hide')).toBeNull();
+    expect(screen.queryByTestId('overdue-tasks-mode-keep')).toBeNull();
     expect(screen.queryByTestId('completed-tasks-mode-move')).toBeNull();
     expect(screen.queryByTestId('overdue-tasks-mode-move')).toBeNull();
   });
 });
+

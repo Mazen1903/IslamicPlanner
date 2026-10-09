@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useCallback, useEffect } from 'react';
+import React, { useMemo, useRef, useCallback, useEffect, useState } from 'react';
 import { StyleSheet, ScrollView, View, Text, Pressable, useWindowDimensions, Vibration, type PanResponderGestureState } from 'react-native';
 import { DateTime } from 'luxon';
 import { useTheme } from '@/theme';
@@ -9,6 +9,7 @@ import { AllDoneState } from './AllDoneState';
 import { Icon } from '@/components/common/Icon';
 import { useTodayStore } from '@/stores/useTodayStore';
 import { usePlannerUiStore } from '@/stores/usePlannerUiStore';
+import { useToastStore } from '@/stores/useToastStore';
 import { deriveOverdueState } from '@/services/TodayViewModelProjection';
 
 export interface TaskListProps {
@@ -31,7 +32,9 @@ export interface TaskListProps {
   onDragTargetChange?: (prayer: Prayer | null) => void;
   completedTasksMode?: 'KEEP' | 'MOVE' | 'HIDE';
   overdueTasksMode?: 'KEEP' | 'MOVE' | 'HIDE';
-  onDeleteTask?: (task: TaskCardViewModel) => void | boolean | Promise<void | boolean>;
+  plannerHiddenSections?: string[] | null;
+  isPremium?: boolean;
+  onDeleteTask?: (task: TaskCardViewModel, scope?: 'THIS_OCCURRENCE' | 'THIS_AND_FUTURE' | 'ALL_OCCURRENCES') => void | boolean | Promise<void | boolean>;
 }
 const PRAYERS: Prayer[] = ['FAJR', 'DHUHR', 'ASR', 'MAGHRIB', 'ISHA'];
 
@@ -104,9 +107,63 @@ export function TaskList({
   onDragTargetChange,
   completedTasksMode = 'KEEP',
   overdueTasksMode = 'KEEP',
+  plannerHiddenSections = [],
+  isPremium = false,
   onDeleteTask,
 }: TaskListProps) {
   const { colors, typography } = useTheme();
+
+  const highlightedOccurrenceId = usePlannerUiStore(s => s.highlightedOccurrenceId);
+  const [hiddenDeletedIds, setHiddenDeletedIds] = useState<Set<string>>(new Set());
+
+  const isSectionHidden = useCallback(
+    (sectionKey: 'PREVIOUS' | 'TODAY' | 'UPCOMING' | 'COMPLETED') => {
+      if (!isPremium) return false; // Free users fail-closed (all sections visible)
+      if (!plannerHiddenSections || !Array.isArray(plannerHiddenSections)) return false;
+      return plannerHiddenSections.includes(sectionKey);
+    },
+    [isPremium, plannerHiddenSections]
+  );
+
+  const handleDeleteTask = useCallback(
+    async (task: TaskCardViewModel, scope: 'THIS_OCCURRENCE' | 'THIS_AND_FUTURE' | 'ALL_OCCURRENCES' = 'THIS_OCCURRENCE') => {
+      if (task.isRecurring) {
+        try {
+          await onDeleteTask?.(task, scope);
+          useToastStore.getState().showToast({
+            message: scope === 'ALL_OCCURRENCES' ? 'Series deleted' : 'Occurrence deleted',
+          });
+        } catch (err) {
+          console.warn('[TaskList] Failed to delete recurring task:', err);
+        }
+        return;
+      }
+
+      setHiddenDeletedIds(prev => new Set(prev).add(task.occurrenceId));
+      useToastStore.getState().showToast({
+        message: 'Task deleted',
+        durationMs: 5000,
+        action: {
+          label: 'Undo',
+          onPress: () => {
+            setHiddenDeletedIds(prev => {
+              const next = new Set(prev);
+              next.delete(task.occurrenceId);
+              return next;
+            });
+          },
+        },
+        onCommit: async () => {
+          try {
+            await onDeleteTask?.(task, 'THIS_OCCURRENCE');
+          } catch (err) {
+            console.warn('[TaskList] Failed to commit one-off delete:', err);
+          }
+        },
+      });
+    },
+    [onDeleteTask]
+  );
 
   // Collapsible section states persisted across app restarts
   const {
@@ -297,190 +354,109 @@ export function TaskList({
 
   // Partition tasks into Previous, Today, Upcoming, and Completed Today
   const { previousTasks, todayTasks, upcomingTasks, completedTasks } = useMemo(() => {
-    const isShowingCurrentPrayer = selectedPrayer === currentPrayer && allTabs && allTabs.length > 0;
-
     const seenIds = new Set<string>();
     const completed: TaskCardViewModel[] = [];
     const previous: TaskCardViewModel[] = [];
-    const upcoming: TaskCardViewModel[] = [];
     const today: TaskCardViewModel[] = [];
+    const upcomingRaw: TaskCardViewModel[] = [];
 
-    if (!isShowingCurrentPrayer) {
-      // User is explicitly viewing a specific prayer tab (e.g. Fajr, Asr, Maghrib, Isha)
-      // All pending tasks scheduled for this prayer appear directly under "Today" so they are immediately visible.
-      // Also retain upcoming tasks from upcoming days below so user does not lose visibility of future schedule.
-      if (completedTasksMode !== 'HIDE') {
-        for (const task of tab.completedTasks) {
-          if (!seenIds.has(task.occurrenceId)) {
-            seenIds.add(task.occurrenceId);
-            completed.push(task);
-          }
-        }
-      }
+    // Collect all tabs to process (all tabs if present, otherwise just current tab)
+    const tabsToProcess = allTabs && allTabs.length > 0 ? allTabs : [tab];
 
-      if (overdueTasksMode !== 'HIDE') {
-        for (const task of tab.missedTasks) {
-          if (!seenIds.has(task.occurrenceId)) {
-            seenIds.add(task.occurrenceId);
-            previous.push(task);
-          }
-        }
-      }
+    for (const t of tabsToProcess) {
+      // 1. Scheduled tasks
+      for (const task of t.scheduledTasks) {
+        if (hiddenDeletedIds.has(task.occurrenceId) || seenIds.has(task.occurrenceId)) continue;
+        seenIds.add(task.occurrenceId);
 
-      for (const task of tab.scheduledTasks) {
-        if (!seenIds.has(task.occurrenceId)) {
-          seenIds.add(task.occurrenceId);
+        if (task.status === 'COMPLETED') {
+          if (completedTasksMode !== 'HIDE') completed.push(task);
+        } else if (task.status === 'MISSED' || deriveOverdueState(task, now).isOverdue) {
+          if (overdueTasksMode !== 'HIDE') previous.push(task);
+        } else if (t.prayer === selectedPrayer) {
           today.push(task);
+        } else {
+          const prayerIdx = PRAYERS.indexOf(t.prayer);
+          const selectedIdx = PRAYERS.indexOf(selectedPrayer);
+          if (prayerIdx > selectedIdx) {
+            upcomingRaw.push(task);
+          } else {
+            if (overdueTasksMode !== 'HIDE') previous.push(task);
+          }
         }
       }
 
-      if (tab.anytimeTasks) {
-        for (const task of tab.anytimeTasks) {
+      // 2. Missed tasks
+      if (overdueTasksMode !== 'HIDE') {
+        for (const task of t.missedTasks) {
+          if (hiddenDeletedIds.has(task.occurrenceId) || seenIds.has(task.occurrenceId)) continue;
+          seenIds.add(task.occurrenceId);
+          previous.push(task);
+        }
+      }
+
+      // 3. Completed tasks
+      if (completedTasksMode !== 'HIDE') {
+        for (const task of t.completedTasks) {
+          if (hiddenDeletedIds.has(task.occurrenceId) || seenIds.has(task.occurrenceId)) continue;
+          seenIds.add(task.occurrenceId);
+          completed.push(task);
+        }
+      }
+
+      // 4. Anytime tasks
+      if (t.anytimeTasks) {
+        for (const task of t.anytimeTasks) {
+          if (hiddenDeletedIds.has(task.occurrenceId) || seenIds.has(task.occurrenceId)) continue;
+          seenIds.add(task.occurrenceId);
+
           if (task.status === 'COMPLETED') {
-            if (completedTasksMode !== 'HIDE' && !seenIds.has(task.occurrenceId)) {
-              seenIds.add(task.occurrenceId);
-              completed.push(task);
-            }
-          } else if (!seenIds.has(task.occurrenceId)) {
-            seenIds.add(task.occurrenceId);
+            if (completedTasksMode !== 'HIDE') completed.push(task);
+          } else if (task.status === 'MISSED' || deriveOverdueState(task, now).isOverdue) {
+            if (overdueTasksMode !== 'HIDE') previous.push(task);
+          } else {
             today.push(task);
           }
         }
       }
-
-      // Retain upcoming days' tasks in the upcoming section
-      for (const task of upcomingDaysTasks) {
-        if (!seenIds.has(task.occurrenceId)) {
-          seenIds.add(task.occurrenceId);
-          upcoming.push(task);
-        }
-      }
-
-      today.sort((a, b) => {
-        if (a.sortInstant && b.sortInstant) {
-          return a.sortInstant.localeCompare(b.sortInstant);
-        }
-        if (a.sortInstant) return -1;
-        if (b.sortInstant) return 1;
-        return 0;
-      });
-
-      return {
-        previousTasks: previous,
-        todayTasks: today,
-        upcomingTasks: upcoming,
-        completedTasks: completed,
-      };
     }
 
-    // Unified current prayer view (aggregates past, current, and upcoming prayers for today)
-    const tabsToProcess = allTabs;
-
-    // 1. Collect completed tasks
-    if (completedTasksMode !== 'HIDE') {
-      for (const t of tabsToProcess) {
-        for (const task of t.completedTasks) {
-          if (!seenIds.has(task.occurrenceId)) {
-            seenIds.add(task.occurrenceId);
-            completed.push(task);
-          }
-        }
-      }
-    }
-
-    // 2. Collect previous tasks (missed, overdue, past prayers)
-    if (overdueTasksMode !== 'HIDE') {
-      for (const t of tabsToProcess) {
-        // Explicit missed tasks
-        for (const task of t.missedTasks) {
-          if (!seenIds.has(task.occurrenceId)) {
-            seenIds.add(task.occurrenceId);
-            previous.push(task);
-          }
-        }
-
-        // Past prayer tab pending tasks
-        if (t.temporalState === 'PAST') {
-          for (const task of t.scheduledTasks) {
-            if (!seenIds.has(task.occurrenceId)) {
-              seenIds.add(task.occurrenceId);
-              previous.push(task);
-            }
-          }
-        } else {
-          // Current or future tab tasks that are overdue
-          for (const task of t.scheduledTasks) {
-            if (!seenIds.has(task.occurrenceId)) {
-              const overdue = deriveOverdueState(task, now);
-              if (overdue.isOverdue) {
-                seenIds.add(task.occurrenceId);
-                previous.push(task);
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // 3. Collect upcoming tasks (tasks from upcoming future days only)
+    // 5. Upcoming days tasks
     for (const task of upcomingDaysTasks) {
-      if (!seenIds.has(task.occurrenceId)) {
-        seenIds.add(task.occurrenceId);
-        upcoming.push(task);
-      }
-    }
+      if (hiddenDeletedIds.has(task.occurrenceId) || seenIds.has(task.occurrenceId)) continue;
+      seenIds.add(task.occurrenceId);
 
-    // 4. Collect today tasks (all pending scheduled tasks for today across all prayer tabs + anytime tasks)
-    for (const t of tabsToProcess) {
-      for (const task of t.scheduledTasks) {
-        if (!seenIds.has(task.occurrenceId)) {
-          seenIds.add(task.occurrenceId);
-          today.push(task);
-        }
-      }
-    }
-
-    // Anytime tasks scheduled for today
-    if (tab.anytimeTasks) {
-      for (const task of tab.anytimeTasks) {
-        if (task.status === 'COMPLETED') {
-          if (completedTasksMode !== 'HIDE' && !seenIds.has(task.occurrenceId)) {
-            seenIds.add(task.occurrenceId);
-            completed.push(task);
-          }
-        } else if (!seenIds.has(task.occurrenceId)) {
-          seenIds.add(task.occurrenceId);
-          today.push(task);
-        }
+      if (task.status === 'COMPLETED') {
+        if (completedTasksMode !== 'HIDE') completed.push(task);
+      } else {
+        upcomingRaw.push(task);
       }
     }
 
     // Sort today tasks chronologically by sortInstant
     today.sort((a, b) => {
-      if (a.sortInstant && b.sortInstant) {
-        return a.sortInstant.localeCompare(b.sortInstant);
-      }
+      if (a.sortInstant && b.sortInstant) return a.sortInstant.localeCompare(b.sortInstant);
       if (a.sortInstant) return -1;
       if (b.sortInstant) return 1;
       return 0;
     });
 
-    // Deduplicate repetitive occurrences in upcoming:
-    // Avoid repeating an occurrence already in today or previous
-    // For recurring tasks, only show the earliest upcoming occurrence per series
+    // Sort upcoming tasks chronologically by sortInstant
+    upcomingRaw.sort((a, b) => {
+      if (a.sortInstant && b.sortInstant) return a.sortInstant.localeCompare(b.sortInstant);
+      if (a.sortInstant) return -1;
+      if (b.sortInstant) return 1;
+      return 0;
+    });
+
+    // Deduplicate repetitive occurrences in upcoming per series
     const activeKeys = new Set<string>();
-    for (const t of today) {
-      const key = t.taskDefinitionId || t.occurrenceId;
-      activeKeys.add(key);
-    }
-    for (const t of previous) {
-      const key = t.taskDefinitionId || t.occurrenceId;
-      activeKeys.add(key);
-    }
+    for (const t of today) activeKeys.add(t.taskDefinitionId || t.occurrenceId);
+    for (const t of previous) activeKeys.add(t.taskDefinitionId || t.occurrenceId);
 
     const seenUpcomingKeys = new Set<string>();
     const deduplicatedUpcoming: TaskCardViewModel[] = [];
-    for (const t of upcoming) {
+    for (const t of upcomingRaw) {
       const key = t.taskDefinitionId || t.occurrenceId;
       if (!activeKeys.has(key) && !seenUpcomingKeys.has(key)) {
         seenUpcomingKeys.add(key);
@@ -494,7 +470,7 @@ export function TaskList({
       upcomingTasks: deduplicatedUpcoming,
       completedTasks: completed,
     };
-  }, [tab, allTabs, upcomingDaysTasks, selectedPrayer, currentPrayer, completedTasksMode, overdueTasksMode, now]);
+  }, [tab, allTabs, upcomingDaysTasks, selectedPrayer, completedTasksMode, overdueTasksMode, now, hiddenDeletedIds]);
 
   const totalActionableTasks = previousTasks.length + todayTasks.length + upcomingTasks.length;
   const totalTasks = totalActionableTasks + completedTasks.length;
@@ -514,8 +490,8 @@ export function TaskList({
       showsVerticalScrollIndicator={false}
       testID="today-task-list"
     >
-      {/* 1. Previous Section — Fix #7: hide entirely when empty */}
-      {previousTasks.length > 0 && (
+      {/* 1. Previous Section */}
+      {!isSectionHidden('PREVIOUS') && overdueTasksMode !== 'HIDE' && previousTasks.length > 0 && (
         <View style={styles.sectionContainer} testID="section-previous">
           <SectionHeader
             title="Previous"
@@ -533,11 +509,12 @@ export function TaskList({
                   onComplete={onCompleteTask}
                   onUndo={onUndoTask}
                   onToggleSubtask={onToggleSubtask}
-                  onDelete={onDeleteTask}
+                  onDelete={handleDeleteTask}
                   isDraggable={task.status === 'PENDING'}
                   onDragStart={handleDragStart}
                   onDragMove={handleDragMove}
                   onDragEnd={handleDragEnd}
+                  isHighlighted={task.occurrenceId === highlightedOccurrenceId || task.taskDefinitionId === highlightedOccurrenceId}
                 />
               ))}
             </View>
@@ -546,73 +523,79 @@ export function TaskList({
       )}
 
       {/* 2. Today Section */}
-      <View style={styles.sectionContainer} testID="section-today">
-        <SectionHeader
-          title="Today"
-          count={todayTasks.length}
-          isExpanded={todayExpanded}
-          onToggle={toggleToday}
-          testID="section-header-today"
-        />
-        {todayExpanded && (
-          <View style={styles.cardsContainer} testID="section-content-today">
-            {todayTasks.length === 0 ? (
-              <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No tasks for today</Text>
-            ) : (
-              todayTasks.map(task => (
-                <TaskCard
-                  key={task.occurrenceId}
-                  task={task}
-                  onComplete={onCompleteTask}
-                  onUndo={onUndoTask}
-                  onToggleSubtask={onToggleSubtask}
-                  onDelete={onDeleteTask}
-                  isDraggable={task.status === 'PENDING'}
-                  onDragStart={handleDragStart}
-                  onDragMove={handleDragMove}
-                  onDragEnd={handleDragEnd}
-                />
-              ))
-            )}
-          </View>
-        )}
-      </View>
+      {!isSectionHidden('TODAY') && (
+        <View style={styles.sectionContainer} testID="section-today">
+          <SectionHeader
+            title="Today"
+            count={todayTasks.length}
+            isExpanded={todayExpanded}
+            onToggle={toggleToday}
+            testID="section-header-today"
+          />
+          {todayExpanded && (
+            <View style={styles.cardsContainer} testID="section-content-today">
+              {todayTasks.length === 0 ? (
+                <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No tasks for today</Text>
+              ) : (
+                todayTasks.map(task => (
+                  <TaskCard
+                    key={task.occurrenceId}
+                    task={task}
+                    onComplete={onCompleteTask}
+                    onUndo={onUndoTask}
+                    onToggleSubtask={onToggleSubtask}
+                    onDelete={handleDeleteTask}
+                    isDraggable={task.status === 'PENDING'}
+                    onDragStart={handleDragStart}
+                    onDragMove={handleDragMove}
+                    onDragEnd={handleDragEnd}
+                    isHighlighted={task.occurrenceId === highlightedOccurrenceId || task.taskDefinitionId === highlightedOccurrenceId}
+                  />
+                ))
+              )}
+            </View>
+          )}
+        </View>
+      )}
 
       {/* 3. Upcoming Section */}
-      <View style={styles.sectionContainer} testID="section-upcoming">
-        <SectionHeader
-          title="Upcoming"
-          count={upcomingTasks.length}
-          isExpanded={isUpcomingOpen}
-          onToggle={toggleUpcoming}
-          testID="section-header-upcoming"
-        />
-        {isUpcomingOpen && (
-          <View style={styles.cardsContainer} testID="section-content-upcoming">
-            {upcomingTasks.length === 0 ? (
-              <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No upcoming tasks</Text>
-            ) : (
-              upcomingTasks.map(task => (
-                <TaskCard
-                  key={task.occurrenceId}
-                  task={task}
-                  onComplete={onCompleteTask}
-                  onUndo={onUndoTask}
-                  onToggleSubtask={onToggleSubtask}
-                  onDelete={onDeleteTask}
-                  isDraggable={task.status === 'PENDING'}
-                  onDragStart={handleDragStart}
-                  onDragMove={handleDragMove}
-                  onDragEnd={handleDragEnd}
-                />
-              ))
-            )}
-          </View>
-        )}
-      </View>
+      {!isSectionHidden('UPCOMING') && (
+        <View style={styles.sectionContainer} testID="section-upcoming">
+          <SectionHeader
+            title="Upcoming"
+            count={upcomingTasks.length}
+            isExpanded={isUpcomingOpen}
+            onToggle={toggleUpcoming}
+            testID="section-header-upcoming"
+          />
+          {isUpcomingOpen && (
+            <View style={styles.cardsContainer} testID="section-content-upcoming">
+              {upcomingTasks.length === 0 ? (
+                <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No upcoming tasks</Text>
+              ) : (
+                upcomingTasks.map(task => (
+                  <TaskCard
+                    key={task.occurrenceId}
+                    task={task}
+                    onComplete={onCompleteTask}
+                    onUndo={onUndoTask}
+                    onToggleSubtask={onToggleSubtask}
+                    onDelete={handleDeleteTask}
+                    isDraggable={task.status === 'PENDING'}
+                    onDragStart={handleDragStart}
+                    onDragMove={handleDragMove}
+                    onDragEnd={handleDragEnd}
+                    isHighlighted={task.occurrenceId === highlightedOccurrenceId || task.taskDefinitionId === highlightedOccurrenceId}
+                  />
+                ))
+              )}
+            </View>
+          )}
+        </View>
+      )}
 
       {/* 4. Completed Today Section */}
-      {completedTasksMode !== 'HIDE' && (
+      {!isSectionHidden('COMPLETED') && completedTasksMode !== 'HIDE' && (
         <View style={styles.sectionContainer} testID="section-completed">
           <SectionHeader
             title="Completed Today"
@@ -633,8 +616,9 @@ export function TaskList({
                     onComplete={onCompleteTask}
                     onUndo={onUndoTask}
                     onToggleSubtask={onToggleSubtask}
-                    onDelete={onDeleteTask}
+                    onDelete={handleDeleteTask}
                     isDraggable={false}
+                    isHighlighted={task.occurrenceId === highlightedOccurrenceId || task.taskDefinitionId === highlightedOccurrenceId}
                   />
                 ))
               )}
@@ -644,7 +628,7 @@ export function TaskList({
       )}
 
       {/* Subtle Check all completed tasks link as shown in design */}
-      {completedTasksMode !== 'HIDE' && !completedExpanded && completedTasks.length > 0 && (
+      {!isSectionHidden('COMPLETED') && completedTasksMode !== 'HIDE' && !completedExpanded && completedTasks.length > 0 && (
         <Pressable
           onPress={handleToggleCompleted}
           style={styles.checkCompletedButton}

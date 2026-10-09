@@ -23,6 +23,7 @@ import {
 } from './details';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
+import { PremiumLanternIcon } from '@/components/common/PremiumLanternIcon';
 import { PaywallSheet } from '@/components/premium/PaywallSheet';
 
 export interface TaskDetailsCardProps {
@@ -176,9 +177,10 @@ export function TaskDetailsCard({ state, dispatch, onOpenReminderSettings }: Tas
           style={[
             styles.iconBadge,
             {
-              backgroundColor: hasReminder ? colors.primaryLight : colors.surfaceSecondary,
+              backgroundColor: 'transparent',
               borderRadius: 12,
               marginEnd: spacing.md,
+              opacity: hasReminder ? 1 : 0.55,
             },
           ]}
         >
@@ -271,12 +273,10 @@ export function TaskDetailsCard({ state, dispatch, onOpenReminderSettings }: Tas
           style={[
             styles.iconBadge,
             {
-              backgroundColor:
-                state.recurrencePreset !== 'NONE'
-                  ? colors.primaryLight
-                  : colors.surfaceSecondary,
+              backgroundColor: 'transparent',
               borderRadius: 12,
               marginEnd: spacing.md,
+              opacity: state.recurrencePreset !== 'NONE' ? 1 : 0.55,
             },
           ]}
         >
@@ -386,7 +386,7 @@ export function TaskDetailsCard({ state, dispatch, onOpenReminderSettings }: Tas
             </Text>
             {!isPremium && (
               <View style={{ marginStart: 6 }}>
-                <MaterialCommunityIcons name="crown" size={13} color={colors.warning} />
+                <PremiumLanternIcon size={14} />
               </View>
             )}
           </View>
@@ -511,7 +511,7 @@ export function TaskDetailsCard({ state, dispatch, onOpenReminderSettings }: Tas
             </Text>
             {!isPremium && (
               <View style={{ marginStart: 6 }}>
-                <MaterialCommunityIcons name="crown" size={13} color={colors.warning} />
+                <PremiumLanternIcon size={14} />
               </View>
             )}
           </View>
@@ -581,12 +581,10 @@ export function TaskDetailsCard({ state, dispatch, onOpenReminderSettings }: Tas
           style={[
             styles.iconBadge,
             {
-              backgroundColor:
-                state.notes.trim()
-                  ? colors.primaryLight
-                  : colors.surfaceSecondary,
+              backgroundColor: 'transparent',
               borderRadius: 12,
               marginEnd: spacing.md,
+              opacity: state.notes.trim() ? 1 : 0.55,
             },
           ]}
         >

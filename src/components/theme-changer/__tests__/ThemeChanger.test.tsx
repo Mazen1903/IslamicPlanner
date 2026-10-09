@@ -169,6 +169,46 @@ describe('ThemeGalleryScreen', () => {
     expect(screen.getByTestId('islamic-theme-samarkand_turquoise')).toBeTruthy();
     expect(screen.queryByTestId('islamic-theme-fajr_awakening')).toBeNull();
   });
+
+  it('renders Typography & Display section and allows switching free fonts and text sizes', async () => {
+    mockIsPremium = false;
+    await render(
+      <ThemeProvider>
+        <ThemeGalleryScreen />
+      </ThemeProvider>
+    );
+
+    // Section exists
+    expect(screen.getByTestId('typography-display-section')).toBeTruthy();
+    expect(screen.getByText('Typography & Display')).toBeTruthy();
+    expect(screen.getByText('FONT STYLE')).toBeTruthy();
+    expect(screen.getByText('TEXT SIZE')).toBeTruthy();
+
+    // Fonts rendered
+    expect(screen.getByTestId('font-option-comic')).toBeTruthy();
+    expect(screen.getByTestId('font-option-system')).toBeTruthy();
+    expect(screen.getByTestId('font-option-mali')).toBeTruthy();
+    expect(screen.getByTestId('font-option-kalam')).toBeTruthy();
+    expect(screen.getByTestId('font-option-caveat')).toBeTruthy();
+
+    // Text sizes rendered
+    expect(screen.getByTestId('text-scale-small')).toBeTruthy();
+    expect(screen.getByTestId('text-scale-default')).toBeTruthy();
+    expect(screen.getByTestId('text-scale-large')).toBeTruthy();
+    expect(screen.getByTestId('text-scale-xlarge')).toBeTruthy();
+
+    // Selecting free font (system) does not trigger paywall
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('font-option-system'));
+    });
+    expect(screen.queryByTestId('paywall-sheet')).toBeNull();
+
+    // Selecting premium font (mali) triggers paywall for free user
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('font-option-mali'));
+    });
+    expect(screen.getByTestId('paywall-sheet')).toBeTruthy();
+  });
 });
 
 describe('ThemePreviewModal', () => {

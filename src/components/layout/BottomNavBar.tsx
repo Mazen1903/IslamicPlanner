@@ -4,6 +4,7 @@ import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { Icon, type IconName } from '@/components/common/Icon';
 import { PlannerNavIcon, CalendarNavIcon, JournalNavIcon, MoreNavIcon } from './navIcons';
+import { Svg, Path } from 'react-native-svg';
 import { useAddTaskModalStore, type FabOrigin } from '@/stores/useAddTaskModalStore';
 import { JOURNAL_NAV_ASSETS } from '@/constants/journalIconAssets';
 
@@ -302,11 +303,15 @@ export function BottomNavBar(props: BottomNavBarProps) {
                   ]}
                   testID="bottom-nav-add"
                 >
-                  <Image
-                    source={JOURNAL_NAV_ASSETS.plusButton}
-                    style={{ width: 28, height: 28 }}
-                    resizeMode="contain"
-                  />
+                  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M12 5V19M5 12H19"
+                      stroke="#FFFFFF"
+                      strokeWidth={2.6}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
                 </Pressable>
               </View>
             </View>

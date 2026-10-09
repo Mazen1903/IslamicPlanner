@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
-import { useTheme } from '@/theme';
+import { useTheme, useHeroArt } from '@/theme';
 import { SettingsBackButtonIcon } from './SettingsIcons';
 import { AppBackButton } from '@/components/common/AppBackButton';
 
@@ -24,6 +24,7 @@ export function SettingsPastelHeader({
   backTestID,
 }: SettingsPastelHeaderProps) {
   const { colors, spacing, typography, touchTargets } = useTheme();
+  const heroArt = useHeroArt();
 
   return (
     <View style={[styles.container, { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm }]} testID={testID}>
@@ -53,7 +54,7 @@ export function SettingsPastelHeader({
       {showMosqueArt && (
         <View style={styles.imageCol}>
           <Image
-            source={require('../../../assets/illustrations/settings_mosque_header.png')}
+            source={heroArt}
             style={styles.headerArt}
             resizeMode="contain"
             accessibilityRole="image"

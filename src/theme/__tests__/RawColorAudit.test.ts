@@ -79,6 +79,8 @@ const CATEGORY_B_APPROVED_FILES = new Set([
   // Lock-screen alarm preview: fixed white text + dark scrims over photographic
   // wallpapers; must stay theme-independent to mirror the real OS lock screen.
   'src/components/task-form/reminder/ReminderStyleSubView.tsx',
+  // Bespoke SVG vector lantern asset with radiant gold/amber gradient stops
+  'src/components/common/PremiumLanternIcon.tsx',
 ]);
 
 /**

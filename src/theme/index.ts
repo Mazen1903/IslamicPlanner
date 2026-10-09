@@ -6,3 +6,4 @@ export * from './ThemeProvider';
 export * from './useTheme';
 export * from './islamicThemes';
 export * from './installFontDefaults';
+export * from './useHeroArt';

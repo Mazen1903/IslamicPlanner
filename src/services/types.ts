@@ -62,6 +62,7 @@ export interface TaskCardViewModel {
   localDate?: string | null;
   date?: string | null;
   recurrenceRule?: string | null;
+  hijriRecurrence?: string | null;
   isRecurring?: boolean;
 }
 

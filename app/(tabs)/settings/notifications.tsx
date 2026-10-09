@@ -18,7 +18,9 @@ import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import {
   SettingsPastelHeader,
-  SettingsSectionCard,
+  SettingsGroup,
+  SettingsGroupRow,
+  SettingsGroupDivider,
   SettingsSecPrayerAlertsIcon,
   SettingsSecTaskRemindersIcon,
   SettingsSecJournalReminderIcon,
@@ -32,6 +34,9 @@ import {
 } from '@/services/notification/NotificationSchedulerAdapter';
 import { notificationChannelManager } from '@/services/notification/NotificationChannelManager';
 import { notificationReconciliationService } from '@/services/notification/NotificationReconciliationService';
+import { REMINDER_SOUNDS, getSoundById } from '@/constants/reminderSounds';
+import { REMINDER_BACKGROUNDS, getBackgroundById } from '@/constants/reminderBackgrounds';
+import { SoundPicker } from '@/components/task-form/reminder/SoundPicker';
 
 export interface NotificationSettingsProps {
   adapter?: typeof notificationSchedulerAdapter;
@@ -55,7 +60,7 @@ export default function NotificationSettingsScreen({
   channelManager = notificationChannelManager,
   reconciliationService = notificationReconciliationService,
 }: NotificationSettingsProps) {
-  const { colors, spacing, radii, typography } = useTheme();
+  const { colors, spacing, radii, typography, shadows } = useTheme();
   const router = useRouter();
 
   const { settings, reload } = useUserSettings();
@@ -70,6 +75,11 @@ export default function NotificationSettingsScreen({
   const [taskReminders, setTaskReminders] = useState(true);
   const [taskVibration, setTaskVibration] = useState(true);
   const [defaultReminderMinutes, setDefaultReminderMinutes] = useState<number | null>(null);
+  const [defaultReminderType, setDefaultReminderType] = useState<'STANDARD' | 'ENHANCED'>('STANDARD');
+  const [defaultSoundId, setDefaultSoundId] = useState<string>('default');
+  const [defaultBackgroundId, setDefaultBackgroundId] = useState<string>('night_mosque');
+  const [showSoundPicker, setShowSoundPicker] = useState(false);
+
   const [quietHours, setQuietHours] = useState(false);
   const [quietHoursStart, setQuietHoursStart] = useState('22:00');
   const [quietHoursEnd, setQuietHoursEnd] = useState('06:00');
@@ -97,6 +107,17 @@ export default function NotificationSettingsScreen({
       if (settings.taskVibrationEnabled !== undefined) setTaskVibration(settings.taskVibrationEnabled);
       if ((settings as any).defaultReminderMinutes !== undefined) {
         setDefaultReminderMinutes((settings as any).defaultReminderMinutes);
+      }
+      if (settings.reminderDefaults) {
+        try {
+          const parsed = JSON.parse(settings.reminderDefaults);
+          if (parsed.offsetMinutes !== undefined) setDefaultReminderMinutes(parsed.offsetMinutes);
+          if (parsed.reminderType) setDefaultReminderType(parsed.reminderType);
+          if (parsed.soundId) setDefaultSoundId(parsed.soundId);
+          if (parsed.backgroundId) setDefaultBackgroundId(parsed.backgroundId);
+        } catch {
+          // fallback
+        }
       }
       if (settings.quietHoursEnabled !== undefined) setQuietHours(settings.quietHoursEnabled);
       if ((settings as any).quietHoursStart) setQuietHoursStart((settings as any).quietHoursStart);
@@ -155,6 +176,41 @@ export default function NotificationSettingsScreen({
       }
     } catch (err) {
       console.warn('[NotificationSettings] Failed to save taskVibrationEnabled:', err);
+    }
+  };
+
+  const saveReminderDefaults = async (patch: {
+    offsetMinutes?: number | null;
+    reminderType?: 'STANDARD' | 'ENHANCED';
+    soundId?: string;
+    backgroundId?: string;
+  }) => {
+    const nextOffset = patch.offsetMinutes !== undefined ? patch.offsetMinutes : defaultReminderMinutes;
+    const nextType = patch.reminderType !== undefined ? patch.reminderType : defaultReminderType;
+    const nextSound = patch.soundId !== undefined ? patch.soundId : defaultSoundId;
+    const nextBg = patch.backgroundId !== undefined ? patch.backgroundId : defaultBackgroundId;
+
+    if (patch.offsetMinutes !== undefined) setDefaultReminderMinutes(nextOffset);
+    if (patch.reminderType !== undefined) setDefaultReminderType(nextType);
+    if (patch.soundId !== undefined) setDefaultSoundId(nextSound);
+    if (patch.backgroundId !== undefined) setDefaultBackgroundId(nextBg);
+
+    const payload = JSON.stringify({
+      offsetMinutes: nextOffset,
+      reminderType: nextType,
+      soundId: nextSound,
+      backgroundId: nextBg,
+    });
+
+    try {
+      const updateObj: Record<string, any> = { reminderDefaults: payload };
+      if (patch.offsetMinutes !== undefined) {
+        updateObj.defaultReminderMinutes = patch.offsetMinutes;
+      }
+      await userSettingsRepository.upsert(updateObj);
+      await reload();
+    } catch (err) {
+      console.warn('[NotificationSettings] Failed to save reminderDefaults:', err);
     }
   };
 
@@ -346,6 +402,9 @@ export default function NotificationSettingsScreen({
     }
   };
 
+  const activeSound = getSoundById(defaultSoundId);
+  const activeBackground = getBackgroundById(defaultBackgroundId);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
       <SettingsPastelHeader
@@ -362,159 +421,179 @@ export default function NotificationSettingsScreen({
         showsVerticalScrollIndicator={false}
         testID="notification-settings-scroll"
       >
-        {/* CARD 1: PRAYER ALERTS */}
-        <SettingsSectionCard
-          bgColor={colors.dangerSurface}
-          customBadge={<SettingsSecPrayerAlertsIcon size={40} />}
+        {/* GROUP 1: PRAYER ALERTS */}
+        <SettingsGroup
           title="Prayer Alerts"
           subtitle="Get notified for prayer times."
-          rightElement={
-            <Switch
-              testID="prayer-notifications-switch"
-              value={prayerNotifications}
-              onValueChange={handlePrayerNotificationsChange}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.surface}
-            />
-          }
           testID="prayer-alerts-section-card"
         >
-          {/* Sub-row: Vibration (Android only) */}
-          {Platform.OS === 'android' && (
-            <View style={[styles.subRow, { borderBottomWidth: 0, paddingVertical: spacing.sm }]}>
-              <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Vibration</Text>
+          <SettingsGroupRow
+            icon={<SettingsSecPrayerAlertsIcon size={44} />}
+            title="Prayer Notifications"
+            subtitle="Adhan and prayer time reminders"
+            rightElement={
               <Switch
-                testID="prayer-vibration-switch"
-                value={prayerVibration}
-                onValueChange={handlePrayerVibrationChange}
+                testID="prayer-notifications-switch"
+                value={prayerNotifications}
+                onValueChange={handlePrayerNotificationsChange}
                 trackColor={{ false: colors.border, true: colors.primary }}
                 thumbColor={colors.surface}
               />
-            </View>
-          )}
-        </SettingsSectionCard>
+            }
+            isFirst
+            isLast={Platform.OS !== 'android'}
+          />
 
-        {/* CARD 2: TASK REMINDERS */}
-        <SettingsSectionCard
-          bgColor={colors.dangerSurface}
-          customBadge={<SettingsSecTaskRemindersIcon size={40} />}
+          {Platform.OS === 'android' && (
+            <>
+              <SettingsGroupDivider />
+              <SettingsGroupRow
+                icon={<Icon name="bell" size="sm" color={colors.primary} decorative />}
+                title="Vibration"
+                subtitle="Vibrate device when prayer time arrives"
+                rightElement={
+                  <Switch
+                    testID="prayer-vibration-switch"
+                    value={prayerVibration}
+                    onValueChange={handlePrayerVibrationChange}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                    thumbColor={colors.surface}
+                  />
+                }
+                isLast
+              />
+            </>
+          )}
+        </SettingsGroup>
+
+        {/* GROUP 2: TASK REMINDERS */}
+        <SettingsGroup
           title="Task Reminders"
-          subtitle="Get reminders for your tasks."
-          rightElement={
-            <Switch
-              testID="task-reminders-switch"
-              value={taskReminders}
-              onValueChange={handleTaskRemindersChange}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.surface}
-            />
-          }
+          subtitle="Get reminders for your scheduled tasks."
           testID="task-reminders-section-card"
         >
-          {/* System Permission Banner inside card if needed */}
-          {isLoading ? (
-            <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: spacing.xs }} />
-          ) : !permission?.canSchedule ? (
-            <View
-              style={[
-                styles.permissionNoticeBox,
-                {
-                  backgroundColor: colors.surfaceSecondary,
-                  borderColor: colors.border,
-                  borderRadius: radii.md,
-                  padding: spacing.sm,
-                  marginBottom: spacing.sm,
-                },
-              ]}
-            >
-              {permission?.status === 'DENIED' ? (
-                <>
-                  <Text style={[typography.caption, { color: colors.textPrimary, marginBottom: spacing.xs }]}>
-                    Notifications are disabled in system settings.
-                  </Text>
-                  <Pressable
-                    onPress={handleOpenSettings}
-                    accessibilityRole="button"
-                    accessibilityLabel="Open System Settings"
-                    testID="open-settings-btn"
-                    style={[
-                      styles.smallActionBtn,
-                      { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.sm },
-                    ]}
-                  >
-                    <Icon name="settings" size="xs" color={colors.textPrimary} style={{ marginEnd: 4 }} decorative />
-                    <Text style={[typography.labelSmall, { color: colors.textPrimary }]}>Open Settings</Text>
-                  </Pressable>
-                </>
-              ) : (
-                <>
-                  <Text style={[typography.caption, { color: colors.textPrimary, marginBottom: spacing.xs }]}>
-                    Enable notifications to receive reminders for scheduled tasks.
-                  </Text>
-                  <Pressable
-                    onPress={handleEnableNotifications}
-                    disabled={isRequesting}
-                    accessibilityRole="button"
-                    accessibilityLabel="Enable Notifications"
-                    testID="enable-notifications-btn"
-                    style={[
-                      styles.smallActionBtn,
-                      { backgroundColor: colors.primary, borderColor: colors.primary, borderRadius: radii.sm },
-                    ]}
-                  >
-                    {isRequesting ? (
-                      <ActivityIndicator size="small" color={colors.textOnPrimary} />
-                    ) : (
-                      <>
-                        <Icon name="bell" size="xs" color={colors.textOnPrimary} style={{ marginEnd: 4 }} decorative />
-                        <Text style={[typography.labelSmall, { color: colors.textOnPrimary }]}>
-                          Enable Notifications
-                        </Text>
-                      </>
-                    )}
-                  </Pressable>
-                </>
-              )}
-            </View>
-          ) : (
-            <View style={[styles.grantedBadge, { paddingBottom: spacing.xs }]} testID="notifications-enabled-container">
-              <Icon name="check" size="xs" color={colors.primary} decorative style={{ marginEnd: 4 }} />
-              <Text
-                style={[typography.caption, { color: colors.primary, fontWeight: '700' }]}
-                testID="notifications-enabled-label"
-              >
-                Notifications enabled
-              </Text>
-            </View>
-          )}
-
-          {/* Sub-row: Vibration (Android only) */}
-          {Platform.OS === 'android' && (
-            <View style={[styles.subRow, { borderBottomWidth: 0, paddingVertical: spacing.sm }]}>
-              <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1 }]}>Vibration</Text>
+          <SettingsGroupRow
+            icon={<SettingsSecTaskRemindersIcon size={44} />}
+            title="Task Reminders"
+            subtitle="Notifications for upcoming tasks"
+            rightElement={
               <Switch
-                testID="task-vibration-switch"
-                value={taskVibration}
-                onValueChange={handleTaskVibrationChange}
+                testID="task-reminders-switch"
+                value={taskReminders}
+                onValueChange={handleTaskRemindersChange}
                 trackColor={{ false: colors.border, true: colors.primary }}
                 thumbColor={colors.surface}
               />
-            </View>
+            }
+            isFirst
+          />
+
+          {/* System Permission Notice or Status */}
+          <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.xs }}>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: spacing.xs }} />
+            ) : !permission?.canSchedule ? (
+              <View
+                style={[
+                  styles.permissionNoticeBox,
+                  {
+                    backgroundColor: colors.surfaceSecondary,
+                    borderColor: colors.border,
+                    borderRadius: radii.md,
+                    padding: spacing.sm,
+                    marginBottom: spacing.xs,
+                  },
+                ]}
+              >
+                {permission?.status === 'DENIED' ? (
+                  <>
+                    <Text style={[typography.caption, { color: colors.textPrimary, marginBottom: spacing.xs }]}>
+                      Notifications are disabled in system settings.
+                    </Text>
+                    <Pressable
+                      onPress={handleOpenSettings}
+                      accessibilityRole="button"
+                      accessibilityLabel="Open System Settings"
+                      testID="open-settings-btn"
+                      style={[
+                        styles.smallActionBtn,
+                        { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.sm },
+                      ]}
+                    >
+                      <Icon name="settings" size="xs" color={colors.textPrimary} style={{ marginEnd: 4 }} decorative />
+                      <Text style={[typography.labelSmall, { color: colors.textPrimary }]}>Open Settings</Text>
+                    </Pressable>
+                  </>
+                ) : (
+                  <>
+                    <Text style={[typography.caption, { color: colors.textPrimary, marginBottom: spacing.xs }]}>
+                      Enable notifications to receive reminders for scheduled tasks.
+                    </Text>
+                    <Pressable
+                      onPress={handleEnableNotifications}
+                      disabled={isRequesting}
+                      accessibilityRole="button"
+                      accessibilityLabel="Enable Notifications"
+                      testID="enable-notifications-btn"
+                      style={[
+                        styles.smallActionBtn,
+                        { backgroundColor: colors.primary, borderColor: colors.primary, borderRadius: radii.sm },
+                      ]}
+                    >
+                      {isRequesting ? (
+                        <ActivityIndicator size="small" color={colors.textOnPrimary} />
+                      ) : (
+                        <>
+                          <Icon name="bell" size="xs" color={colors.textOnPrimary} style={{ marginEnd: 4 }} decorative />
+                          <Text style={[typography.labelSmall, { color: colors.textOnPrimary }]}>
+                            Enable Notifications
+                          </Text>
+                        </>
+                      )}
+                    </Pressable>
+                  </>
+                )}
+              </View>
+            ) : (
+              <View style={[styles.grantedBadge, { paddingVertical: spacing.xs }]} testID="notifications-enabled-container">
+                <Icon name="check" size="xs" color={colors.primary} decorative style={{ marginEnd: 4 }} />
+                <Text
+                  style={[typography.caption, { color: colors.primary, fontWeight: '700' }]}
+                  testID="notifications-enabled-label"
+                >
+                  Notifications enabled
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Sub-row: Vibration (Android only) */}
+          {Platform.OS === 'android' && (
+            <>
+              <SettingsGroupDivider />
+              <SettingsGroupRow
+                icon={<Icon name="bell" size="sm" color={colors.primary} decorative />}
+                title="Vibration"
+                subtitle="Vibrate device on reminder alerts"
+                rightElement={
+                  <Switch
+                    testID="task-vibration-switch"
+                    value={taskVibration}
+                    onValueChange={handleTaskVibrationChange}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                    thumbColor={colors.surface}
+                  />
+                }
+              />
+            </>
           )}
 
-          {/* Sub-row: Default reminder for new tasks */}
-          <View
-            style={[
-              styles.defaultReminderContainer,
-              {
-                borderTopWidth: StyleSheet.hairlineWidth,
-                borderTopColor: colors.border,
-                paddingTop: spacing.sm,
-                marginTop: spacing.xs,
-              },
-            ]}
-          >
-            <Text style={[typography.bodyMedium, { color: colors.textPrimary }]}>Default Reminder for New Tasks</Text>
+          {/* Default reminder for new tasks */}
+          <SettingsGroupDivider />
+          <View style={[styles.expandedSection, { paddingHorizontal: spacing.md, paddingVertical: spacing.sm }]}>
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
+              Default Reminder Timing
+            </Text>
             <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2, marginBottom: spacing.xs }]}>
               Pre-filled when creating new tasks.
             </Text>
@@ -561,57 +640,208 @@ export default function NotificationSettingsScreen({
               })}
             </ScrollView>
           </View>
-        </SettingsSectionCard>
 
-        {/* CARD 3: DAILY JOURNAL REMINDER */}
-        <SettingsSectionCard
-          bgColor={colors.dangerSurface}
-          customBadge={<SettingsSecJournalReminderIcon size={40} />}
+          {/* Default Reminder Style: Standard vs Alarm */}
+          <SettingsGroupDivider />
+          <View style={[styles.expandedSection, { paddingHorizontal: spacing.md, paddingVertical: spacing.sm }]}>
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
+              Default Reminder Style
+            </Text>
+            <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2, marginBottom: spacing.xs }]}>
+              Choose standard notification or full-screen alarm experience.
+            </Text>
+            <View style={[styles.segmentedRow, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md, padding: 3 }]}>
+              <Pressable
+                onPress={() => saveReminderDefaults({ reminderType: 'STANDARD' })}
+                accessibilityRole="button"
+                accessibilityState={{ selected: defaultReminderType === 'STANDARD' }}
+                style={[
+                  styles.segmentedItem,
+                  {
+                    backgroundColor: defaultReminderType === 'STANDARD' ? colors.surface : 'transparent',
+                    borderRadius: radii.sm,
+                  },
+                  defaultReminderType === 'STANDARD' && shadows.card,
+                ]}
+              >
+                <Text
+                  style={[
+                    typography.labelMedium,
+                    {
+                      color: defaultReminderType === 'STANDARD' ? colors.primary : colors.textSecondary,
+                      fontWeight: defaultReminderType === 'STANDARD' ? '700' : '500',
+                    },
+                  ]}
+                >
+                  Standard Banner
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => saveReminderDefaults({ reminderType: 'ENHANCED' })}
+                accessibilityRole="button"
+                accessibilityState={{ selected: defaultReminderType === 'ENHANCED' }}
+                style={[
+                  styles.segmentedItem,
+                  {
+                    backgroundColor: defaultReminderType === 'ENHANCED' ? colors.surface : 'transparent',
+                    borderRadius: radii.sm,
+                  },
+                  defaultReminderType === 'ENHANCED' && shadows.card,
+                ]}
+              >
+                <Text
+                  style={[
+                    typography.labelMedium,
+                    {
+                      color: defaultReminderType === 'ENHANCED' ? colors.primary : colors.textSecondary,
+                      fontWeight: defaultReminderType === 'ENHANCED' ? '700' : '500',
+                    },
+                  ]}
+                >
+                  Full-Screen Alarm
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Default Sound Picker */}
+          <SettingsGroupDivider />
+          <SettingsGroupRow
+            icon={<Icon name="bell" size="sm" color={colors.primary} decorative />}
+            title="Default Sound"
+            subtitle={activeSound.name}
+            rightElement={
+              <Icon name="chevron-right" size="sm" color={colors.textTertiary} directional decorative />
+            }
+            onPress={() => setShowSoundPicker(true)}
+            testID="default-sound-row"
+          />
+
+          {/* Default Alarm Background */}
+          <SettingsGroupDivider />
+          <View style={[styles.expandedSection, { paddingHorizontal: spacing.md, paddingVertical: spacing.sm }]}>
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
+              Default Alarm Background
+            </Text>
+            <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2, marginBottom: spacing.xs }]}>
+              Lock screen wallpaper for enhanced reminders ({activeBackground.name}).
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingVertical: spacing.xs, gap: spacing.xs }}
+            >
+              {REMINDER_BACKGROUNDS.map((bg) => {
+                const isSelected = defaultBackgroundId === bg.id;
+                return (
+                  <Pressable
+                    key={bg.id}
+                    onPress={() => saveReminderDefaults({ backgroundId: bg.id })}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
+                    accessibilityLabel={`Background: ${bg.name}`}
+                    style={[
+                      styles.bgThumbnail,
+                      {
+                        backgroundColor: bg.colorGradient[0],
+                        borderColor: isSelected ? colors.primary : colors.border,
+                        borderWidth: isSelected ? 2.5 : 1,
+                        borderRadius: radii.md,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        StyleSheet.absoluteFill,
+                        {
+                          backgroundColor: bg.colorGradient[1],
+                          opacity: 0.5,
+                          borderRadius: radii.md,
+                        },
+                      ]}
+                    />
+                    {isSelected && (
+                      <View style={[styles.checkCircle, { backgroundColor: colors.primary }]}>
+                        <Icon name="check" size={10} color={colors.textOnPrimary} decorative />
+                      </View>
+                    )}
+                    <Text
+                      style={[
+                        typography.caption,
+                        {
+                          color: colors.textOnPrimary,
+                          fontSize: 10,
+                          fontWeight: '700',
+                          textShadowColor: colors.shadowElevated,
+                          textShadowRadius: 2,
+                        },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {bg.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </SettingsGroup>
+
+        {/* GROUP 3: DAILY JOURNAL REMINDER */}
+        <SettingsGroup
           title="Daily Journal"
           subtitle="Get a gentle evening reminder for your reflection."
-          rightElement={
-            <Switch
-              testID="journal-reminder-switch"
-              value={journalReminderEnabled}
-              onValueChange={handleJournalReminderChange}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.surface}
-            />
-          }
           testID="journal-reminder-section-card"
         >
-          {/* Sub-row: Reminder Time */}
-          <TimePickerInput
-            value={journalReminderTime}
-            onChange={handleJournalReminderTimeChange}
-            label="Reminder Time"
-            testID="journal-reminder-time-row"
+          <SettingsGroupRow
+            icon={<SettingsSecJournalReminderIcon size={44} />}
+            title="Daily Reflection"
+            subtitle="Gentle reminder to write in your journal"
+            rightElement={
+              <Switch
+                testID="journal-reminder-switch"
+                value={journalReminderEnabled}
+                onValueChange={handleJournalReminderChange}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.surface}
+              />
+            }
+            isFirst
+            isLast={!journalReminderEnabled}
           />
-        </SettingsSectionCard>
 
-        {/* CARD 4: GENERAL */}
-        <SettingsSectionCard
-          bgColor={colors.dangerSurface}
-          customBadge={<SettingsSecGeneralBellIcon size={40} />}
-          title="General"
-          testID="general-section-card"
-        >
-          {/* Sub-row: Quiet Hours */}
-          <View style={[styles.subRow, { borderBottomWidth: 0, paddingVertical: spacing.sm }]}>
-            <View style={{ flex: 1, paddingEnd: spacing.sm }}>
-              <Text style={[typography.bodyMedium, { color: colors.textPrimary }]}>Quiet Hours</Text>
-              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                Pause non-prayer notifications.
-              </Text>
-            </View>
-            <Switch
-              testID="quiet-hours-switch"
-              value={quietHours}
-              onValueChange={handleQuietHoursChange}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.surface}
+          <SettingsGroupDivider />
+          <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
+            <TimePickerInput
+              value={journalReminderTime}
+              onChange={handleJournalReminderTimeChange}
+              label="Reminder Time"
+              testID="journal-reminder-time-row"
             />
           </View>
+        </SettingsGroup>
+
+        {/* GROUP 4: GENERAL */}
+        <SettingsGroup
+          title="General"
+          subtitle="System & quiet hours configuration."
+          testID="general-section-card"
+        >
+          <SettingsGroupRow
+            icon={<SettingsSecGeneralBellIcon size={44} />}
+            title="Quiet Hours"
+            subtitle="Pause non-prayer notifications during sleep"
+            rightElement={
+              <Switch
+                testID="quiet-hours-switch"
+                value={quietHours}
+                onValueChange={handleQuietHoursChange}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.surface}
+              />
+            }
+            isFirst
+          />
 
           {/* Quiet Hours Expandable Configuration */}
           {quietHours && (
@@ -621,8 +851,8 @@ export default function NotificationSettingsScreen({
                 {
                   borderTopWidth: StyleSheet.hairlineWidth,
                   borderTopColor: colors.border,
-                  paddingTop: spacing.xs,
-                  marginTop: spacing.xs,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.xs,
                 },
               ]}
               testID="quiet-hours-expanded-section"
@@ -651,20 +881,13 @@ export default function NotificationSettingsScreen({
           )}
 
           {/* Sub-row: Send Test Notification */}
-          <View
-            style={[
-              styles.testSection,
-              {
-                borderTopWidth: StyleSheet.hairlineWidth,
-                borderTopColor: colors.border,
-                paddingTop: spacing.md,
-                marginTop: spacing.sm,
-              },
-            ]}
-          >
+          <SettingsGroupDivider />
+          <View style={[styles.testSection, { paddingHorizontal: spacing.md, paddingVertical: spacing.sm }]}>
             <View style={styles.testHeaderRow}>
               <View style={{ flex: 1, paddingEnd: spacing.sm }}>
-                <Text style={[typography.bodyMedium, { color: colors.textPrimary }]}>Test Notification</Text>
+                <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
+                  Test Notification
+                </Text>
                 <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
                   Schedule a test notification to verify delivery on this device.
                 </Text>
@@ -718,15 +941,26 @@ export default function NotificationSettingsScreen({
               </View>
             )}
           </View>
-        </SettingsSectionCard>
+        </SettingsGroup>
 
         {/* Required Android Delivery Policy Disclaimer */}
-        <View style={{ marginTop: spacing.md, paddingHorizontal: 4 }}>
+        <View style={{ marginTop: spacing.xs, paddingHorizontal: 4 }}>
           <Text style={[typography.caption, { color: colors.textTertiary, lineHeight: 18 }]}>
             Android may delay reminder delivery according to system battery and alarm policies when exact-alarm capability is unavailable.
           </Text>
         </View>
       </ScrollView>
+
+      {/* Sound Picker Modal */}
+      <SoundPicker
+        visible={showSoundPicker}
+        onClose={() => setShowSoundPicker(false)}
+        selectedSoundId={defaultSoundId}
+        onSelectSound={(soundId) => {
+          saveReminderDefaults({ soundId });
+          setShowSoundPicker(false);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -737,12 +971,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 8,
-  },
-  subRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   permissionNoticeBox: {
     borderWidth: 1,
@@ -759,13 +987,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  defaultReminderContainer: {},
+  expandedSection: {},
   presetChipsScroll: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   presetChip: {
     borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  segmentedItem: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bgThumbnail: {
+    width: 70,
+    height: 50,
+    padding: 4,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  checkCircle: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -372,7 +372,10 @@ export function useToday(options: UseTodayOptions = {}) {
     []
   );
 
-  const deleteTask = useCallback(async (taskOrId: TaskCardViewModel | string): Promise<boolean> => {
+  const deleteTask = useCallback(async (
+    taskOrId: TaskCardViewModel | string,
+    scope: 'THIS_OCCURRENCE' | 'THIS_AND_FUTURE' | 'ALL_OCCURRENCES' = 'THIS_OCCURRENCE'
+  ): Promise<boolean> => {
     let occurrenceId: string | undefined;
     let defId: string | undefined;
 
@@ -399,7 +402,7 @@ export function useToday(options: UseTodayOptions = {}) {
       await taskEngine.deleteTask({
         occurrenceId,
         definitionId: defId,
-        scope: 'THIS_OCCURRENCE',
+        scope,
       });
       await performFullRefresh(false);
       return true;

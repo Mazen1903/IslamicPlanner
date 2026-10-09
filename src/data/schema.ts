@@ -156,6 +156,9 @@ export const userSettings = sqliteTable('user_settings', {
     .default(true),
   plannerUiState: text('planner_ui_state'),
   reminderDefaults: text('reminder_defaults'),
+  plannerHiddenSections: text('planner_hidden_sections').default('[]'),
+  appFontFamily: text('app_font_family').default('comic'),
+  appTextScale: text('app_text_scale').default('normal'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });

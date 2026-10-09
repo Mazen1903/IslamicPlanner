@@ -232,13 +232,13 @@ export function ReminderStyleSubView({
               style={[
                 styles.soundIconBadge,
                 {
-                  backgroundColor: colors.primaryLight,
+                  backgroundColor: 'transparent',
                   borderRadius: radii.pill,
                   marginEnd: spacing.md,
                 },
               ]}
             >
-              <Icon name="bell" size={20} color={colors.primary} decorative />
+              <Icon name="bell" size={38} color={colors.primary} decorative />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[typography.labelLarge, { color: colors.textPrimary, fontWeight: '700' }]}>

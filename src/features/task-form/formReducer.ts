@@ -27,6 +27,9 @@ export interface CreateFormInitialParams {
   editScope?: EditScope;
   initialStreakEnabled?: boolean;
   defaultReminderMinutes?: number | null;
+  defaultReminderType?: 'STANDARD' | 'ENHANCED';
+  defaultSoundId?: string;
+  defaultBackgroundId?: string;
   initialTitle?: string;
 }
 
@@ -332,12 +335,12 @@ export function createInitialFormState(params: CreateFormInitialParams): FormSta
 
     // Reminders 2.0
     reminderEnabled: true,
-    reminderSoundId: 'default',
+    reminderSoundId: params.defaultSoundId ?? 'default',
     reminderCustomSoundUri: null,
-    reminderType: 'STANDARD',
+    reminderType: params.defaultReminderType ?? 'STANDARD',
     reminderEnhancedMode: 'FULL_SCREEN',
     reminderPlaybackCount: 1,
-    reminderBackgroundId: 'night_mosque',
+    reminderBackgroundId: params.defaultBackgroundId ?? 'night_mosque',
     reminderPrayerAnchors: [],
     reminderTimeSensitive: false,
     reminderNag: false,
@@ -522,6 +525,27 @@ export function formReducer(state: FormState, action: FormAction): FormState {
         subtasks: state.subtasks.filter(s => s.id !== action.payload.id),
         isDirty: true,
       };
+
+    case 'REORDER_SUBTASKS': {
+      const { fromIndex, toIndex } = action.payload;
+      if (
+        fromIndex < 0 ||
+        fromIndex >= state.subtasks.length ||
+        toIndex < 0 ||
+        toIndex >= state.subtasks.length ||
+        fromIndex === toIndex
+      ) {
+        return state;
+      }
+      const updated = [...state.subtasks];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      return {
+        ...state,
+        subtasks: updated,
+        isDirty: true,
+      };
+    }
 
     case 'SET_TAGS':
       return {

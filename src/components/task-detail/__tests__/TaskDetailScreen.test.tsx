@@ -72,7 +72,7 @@ describe('TaskDetailScreen', () => {
     expect(getByText('Task Details')).toBeTruthy();
     expect(getByText('Recite Surah Al-Kahf')).toBeTruthy();
     expect(getByText('Important')).toBeTruthy();
-    expect(getByText('Subtasks')).toBeTruthy();
+    expect(getByText('Checklist')).toBeTruthy();
     expect(getByText('First 10 ayat')).toBeTruthy();
     expect(getByText('Last 10 ayat')).toBeTruthy();
     expect(getByText('Notes')).toBeTruthy();
@@ -112,7 +112,7 @@ describe('TaskDetailScreen', () => {
 
     // Unadded metadata must NOT be rendered
     expect(queryByText('Notes')).toBeNull();
-    expect(queryByText('Subtasks')).toBeNull();
+    expect(queryByText('Checklist')).toBeNull();
     expect(queryByText('Important')).toBeNull();
     expect(queryByText('20m')).toBeNull();
     expect(queryByText('Schedule & Information')).toBeNull();
@@ -135,6 +135,37 @@ describe('TaskDetailScreen', () => {
 
     await fireEvent.press(getByLabelText('Last 10 ayat'));
     expect(onToggle).toHaveBeenCalledWith('occ-1', 'st-2');
+  });
+
+  it('allows inline editing and reordering of checklist items', async () => {
+    const onUpdateSubtask = jest.fn().mockResolvedValue(undefined);
+    const onReorderSubtasks = jest.fn().mockResolvedValue(undefined);
+
+    const { getByLabelText } = await render(
+      <ThemeProvider>
+        <TaskDetailScreen
+          definition={mockDefinition}
+          occurrence={mockOccurrence}
+          onEditFull={jest.fn()}
+          onDelete={jest.fn()}
+          onBack={jest.fn()}
+          onUpdateSubtask={onUpdateSubtask}
+          onReorderSubtasks={onReorderSubtasks}
+        />
+      </ThemeProvider>
+    );
+
+    // Edit item
+    await fireEvent.press(getByLabelText('Edit: First 10 ayat'));
+    await fireEvent.press(getByLabelText('Save edit'));
+    expect(onUpdateSubtask).toHaveBeenCalledWith('st-1', 'First 10 ayat');
+
+    // Move item down
+    await fireEvent.press(getByLabelText('Move down: First 10 ayat'));
+    expect(onReorderSubtasks).toHaveBeenCalledWith([
+      { id: 'st-2', title: 'Last 10 ayat' },
+      { id: 'st-1', title: 'First 10 ayat' },
+    ]);
   });
 
   it('triggers edit full task from bottom green action button', async () => {

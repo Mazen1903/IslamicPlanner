@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useTheme, type ThemeColors } from '@/theme';
+import { PremiumLanternIcon } from '@/components/common/PremiumLanternIcon';
 
 export interface SettingsIconProps {
   size?: number;
@@ -464,7 +465,7 @@ export const SettingsPremCrownIcon = createSettingsBadgeIcon({
   defaultSize: 44,
   label: 'Go Premium',
   getBgColor: colors => colors.prayerAsr,
-  renderIcon: (size, colors) => <FontAwesome5 name="crown" size={size} color={colors.warning} />,
+  renderIcon: (size) => <PremiumLanternIcon size={Math.round(size * 0.9)} glow />,
 });
 
 export const SettingsPremGiftMissionIcon = createSettingsBadgeIcon({

@@ -10,4 +10,5 @@ export { SettingsPastelHeader, type SettingsPastelHeaderProps } from './Settings
 export { SettingsQuoteCard, type SettingsQuoteCardProps } from './SettingsQuoteCard';
 export { SettingsSectionCard, type SettingsSectionCardProps } from './SettingsSectionCard';
 export { SettingsGridTile, type SettingsGridTileProps } from './SettingsGridTile';
+export * from './SettingsGroup';
 export * from './SettingsIcons';

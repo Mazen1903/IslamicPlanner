@@ -22,7 +22,7 @@ export interface ExpandingAddTaskModalProps {
   initialDate?: string | null;
   initialTitle?: string | null;
   onClose: () => void;
-  onSuccess: () => void | Promise<void>;
+  onSuccess: (info?: any) => void | Promise<void>;
 }
 
 export function ExpandingAddTaskModal({
@@ -35,6 +35,7 @@ export function ExpandingAddTaskModal({
 }: ExpandingAddTaskModalProps) {
   const { colors, isDark } = useTheme();
   const hasSavedRef = useRef(false);
+  const savedInfoRef = useRef<any>(null);
 
   const civilToday = DateTime.now().toFormat('yyyy-MM-dd');
   const viewModel = useTodayStore(s => s.viewModel);
@@ -43,20 +44,22 @@ export function ExpandingAddTaskModal({
 
   const handleClose = useCallback(() => {
     if (hasSavedRef.current) {
-      onSuccess();
+      onSuccess(savedInfoRef.current);
       hasSavedRef.current = false;
+      savedInfoRef.current = null;
     }
     onClose();
   }, [onClose, onSuccess]);
 
   const handleSaved = useCallback(() => {
     hasSavedRef.current = true;
-    onSuccess();
+    onSuccess(savedInfoRef.current);
   }, [onSuccess]);
 
-  const handleSuccess = useCallback(async () => {
+  const handleSuccess = useCallback(async (info?: any) => {
     hasSavedRef.current = false;
-    await onSuccess();
+    savedInfoRef.current = null;
+    await onSuccess(info);
     handleClose();
   }, [onSuccess, handleClose]);
 

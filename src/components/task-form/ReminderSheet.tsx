@@ -219,10 +219,10 @@ export function ReminderSheet({
                   <View
                     style={[
                       styles.anytimeIconBadge,
-                      { backgroundColor: colors.primaryLight, borderRadius: radii.md, marginEnd: spacing.sm },
+                      { backgroundColor: 'transparent', borderRadius: radii.md, marginEnd: spacing.sm },
                     ]}
                   >
-                    <Icon name="sun" size={24} color={colors.primary} decorative />
+                    <Icon name="sun" size={36} color={colors.primary} decorative />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[typography.headlineMedium, { color: colors.textPrimary, fontSize: 16 }]}>

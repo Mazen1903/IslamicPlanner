@@ -1,4 +1,4 @@
-import React, { useReducer, useState, useRef, useEffect } from 'react';
+import React, { useReducer, useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -41,8 +41,17 @@ import { TaskCategoryIcon } from '@/components/task/TaskCategoryIcon';
 import { detectTaskIcon } from '@/constants/taskIcons';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { ReminderSubView, ReminderStyleSubView } from './reminder';
+import { useToastStore } from '@/stores/useToastStore';
+import type { Prayer } from '@/constants/prayers';
 
 export type FormView = 'MAIN' | 'RELATIVE_PRAYER' | 'REMINDER' | 'REMINDER_STYLE';
+
+export interface TaskFormSuccessInfo {
+  definitionId?: string;
+  seriesId?: string;
+  targetPrayer?: Prayer;
+  isSyncIncomplete?: boolean;
+}
 
 export interface TaskFormScreenProps {
   initialDefinition?: TaskDefinition;
@@ -54,7 +63,7 @@ export interface TaskFormScreenProps {
   initialTitle?: string;
   inputProvider?: TodayTemporalInputProvider;
   orchestrator?: TaskFormOrchestrator;
-  onSuccess: () => void;
+  onSuccess: (info?: TaskFormSuccessInfo) => void;
   onCancel: () => void;
   onSaved?: () => void | Promise<void>;
 }
@@ -119,6 +128,16 @@ export function TaskFormScreen({
   const defaultDate = DateTime.now().toFormat('yyyy-MM-dd');
   const { settings } = useUserSettings();
   const defaultReminderMinutes = (settings as any)?.defaultReminderMinutes ?? null;
+  const parsedReminderDefaults = useMemo(() => {
+    try {
+      if (settings?.reminderDefaults) {
+        return JSON.parse(settings.reminderDefaults);
+      }
+    } catch {
+      // fallback
+    }
+    return null;
+  }, [settings?.reminderDefaults]);
 
   // Form State via useReducer
   const [state, dispatch] = useReducer(
@@ -130,7 +149,10 @@ export function TaskFormScreen({
       initialDefinition,
       initialOccurrence,
       editScope: initialScope ?? (isRecurringSeries ? 'ALL_OCCURRENCES' : undefined),
-      defaultReminderMinutes,
+      defaultReminderMinutes: parsedReminderDefaults?.offsetMinutes ?? defaultReminderMinutes,
+      defaultReminderType: parsedReminderDefaults?.reminderType,
+      defaultSoundId: parsedReminderDefaults?.soundId,
+      defaultBackgroundId: parsedReminderDefaults?.backgroundId,
       initialTitle,
     },
     createInitialFormState
@@ -245,6 +267,35 @@ export function TaskFormScreen({
       setSaveResult(result);
       if (result.status === 'SAVED_AND_SYNCED' || result.status === 'SAVED_SYNC_INCOMPLETE') {
         onSaved?.();
+
+        let targetPrayer: Prayer | undefined;
+        if (state.scheduleMode === 'PRAYER_RELATIVE') {
+          targetPrayer = state.relativeDraft.prayer;
+        } else if (state.scheduleMode === 'PRAYER_WINDOW') {
+          targetPrayer = state.windowDraft.startPrayer;
+        } else if (initialPrayerTab) {
+          targetPrayer = initialPrayerTab;
+        }
+
+        if (result.status === 'SAVED_SYNC_INCOMPLETE') {
+          useToastStore.getState().showToast({
+            message: 'Sync incomplete',
+            action: {
+              label: 'Retry',
+              onPress: () => {
+                orchestrator.retrySync().catch(console.warn);
+              },
+            },
+          });
+        }
+
+        onSuccess({
+          definitionId: result.definitionId,
+          seriesId: result.seriesId,
+          targetPrayer,
+          isSyncIncomplete: result.status === 'SAVED_SYNC_INCOMPLETE',
+        });
+        return;
       }
     } catch (err: any) {
       Alert.alert('Save Error', err.message || 'An unexpected error occurred while saving.');
@@ -498,7 +549,7 @@ export function TaskFormScreen({
               <Pressable
                 onPress={() => setIsSubtasksExpanded(true)}
                 accessibilityRole="button"
-                accessibilityLabel="Add subtask"
+                accessibilityLabel="Add checklist item"
                 testID="expand-add-subtask-button"
                 style={({ pressed }) => [
                   styles.addSubtaskRowButton,
@@ -521,7 +572,7 @@ export function TaskFormScreen({
                   <Icon name="plus" size={14} color={colors.primary} decorative />
                 </View>
                 <Text style={[typography.bodyMedium, { color: colors.primary, fontWeight: '600', fontSize: 15 }]}>
-                  Add subtask
+                  Add checklist item
                 </Text>
               </Pressable>
             )}

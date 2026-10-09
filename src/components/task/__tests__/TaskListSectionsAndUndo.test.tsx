@@ -414,11 +414,13 @@ describe('TaskList Sections and Undo Functionality', () => {
         </ThemeProvider>
       );
 
-      // Today should contain all 4 tasks scheduled for today across all prayer tabs
-      expect(screen.getByText('Today (4)')).toBeTruthy();
+      // Today contains only tasks in the selected prayer window (Dhuhr)
+      expect(screen.getByText('Today (1)')).toBeTruthy();
 
-      // Upcoming should contain tasks from upcoming future days (1 task)
-      expect(screen.getByText('Upcoming (1)')).toBeTruthy();
+      // Upcoming holds later prayers + future days, de-duplicated per series:
+      // 'Recite Tasbeeh' (already in Today) is dropped, 'Review Quran' counts once
+      // (Asr + Maghrib occurrences), plus 'Tomorrow Quran' => 2
+      expect(screen.getByText('Upcoming (2)')).toBeTruthy();
     });
 
     it('shows scheduled tasks directly in Today when viewing a past or future prayer tab', async () => {

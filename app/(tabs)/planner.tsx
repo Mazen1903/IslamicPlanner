@@ -16,11 +16,15 @@ import { ReschedulePrayerModal } from '@/components/task/ReschedulePrayerModal';
 import { getTodayDateSubtitle } from '@/utils/todayDateSubtitle';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useAddTaskModalStore } from '@/stores/useAddTaskModalStore';
+import { useEntitlement } from '@/hooks/useEntitlement';
+import { usePaywallTestStore } from '@/stores/usePaywallTestStore';
 
 export default function PlannerScreen() {
   const { colors, spacing, typography, radii, touchTargets, activeIslamicTheme } = useTheme();
   const router = useRouter();
   const { settings } = useUserSettings();
+  const { isPremium } = useEntitlement();
+  const bypassPaywall = usePaywallTestStore(s => s.bypassPaywall);
   const {
     viewModel,
     status,
@@ -235,6 +239,8 @@ export default function PlannerScreen() {
               onDragTargetChange={setDragTargetPrayer}
               completedTasksMode={(settings?.completedTasksMode as any) ?? 'KEEP'}
               overdueTasksMode={(settings?.overdueTasksMode as any) ?? 'KEEP'}
+              plannerHiddenSections={settings?.plannerHiddenSections ? JSON.parse(settings.plannerHiddenSections) : []}
+              isPremium={isPremium || bypassPaywall}
               onDeleteTask={deleteTask}
             />
           </View>

@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
-import { useTheme } from '@/theme';
+import { useTheme, useHeroArt } from '@/theme';
 import { AppBackButton } from '@/components/common/AppBackButton';
 
 interface TaskHeaderBannerProps {
@@ -18,6 +18,7 @@ export function TaskHeaderBanner({
   backTestID = 'task-form-back-button',
 }: TaskHeaderBannerProps) {
   const { colors, spacing, typography } = useTheme();
+  const heroArt = useHeroArt();
   const insetsContext = useContext(SafeAreaInsetsContext);
   const topInset = insetsContext?.top ?? 0;
   const topPadding = topInset > 0 ? topInset + spacing.xs : spacing.sm;
@@ -41,7 +42,7 @@ export function TaskHeaderBanner({
         accessibilityElementsHidden={true}
       >
         <Image
-          source={require('../../../assets/task_header_art.png')}
+          source={heroArt}
           style={styles.headerArt}
           resizeMode="contain"
         />
