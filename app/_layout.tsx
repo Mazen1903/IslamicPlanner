@@ -13,6 +13,7 @@ import { useOnboardingStore } from '@/stores/useOnboardingStore';
 import * as Font from 'expo-font';
 import * as SecureStore from 'expo-secure-store';
 import { widgetSyncCoordinator } from '@/services/widget/WidgetSyncCoordinator';
+import { FontEntitlementGuard } from '@/components/common/FontEntitlementGuard';
 
 export type BootstrapState = 'LOADING' | 'READY' | 'ERROR';
 
@@ -261,6 +262,7 @@ export default function RootLayout() {
         onIslamicThemeChange={handleIslamicThemeChange}
       >
         <ThemedStatusBar />
+        {bootstrapState === 'READY' && <FontEntitlementGuard />}
         {bootstrapState === 'READY' && <RootGate />}
         {bootstrapState === 'LOADING' && <BootstrapLoadingView />}
         {bootstrapState === 'ERROR' && <BootstrapErrorView onRetry={handleRetry} />}

@@ -244,9 +244,11 @@ export const SettingsHubAccountIcon = createSettingsHubImageIcon({
   label: 'Account & Sync',
 });
 
-export const SettingsHubPremiumIcon = createSettingsHubImageIcon({
-  source: SETTINGS_ICONS.hubPremium,
+export const SettingsHubPremiumIcon = createSettingsBadgeIcon({
+  defaultSize: 44,
   label: 'Premium',
+  getBgColor: colors => colors.prayerAsr,
+  renderIcon: (size) => <PremiumLanternIcon size={Math.round(size * 0.9)} glow />,
 });
 
 export const SettingsHubAboutIcon = createSettingsHubImageIcon({
@@ -995,7 +997,7 @@ export function SettingsBadgeGoldLock({
       accessibilityRole="image"
       testID={testID}
     >
-      <Ionicons name="lock-closed" size={10} color={colors.warning} />
+      <PremiumLanternIcon size={12} />
       <Text style={{ fontSize: 10, fontWeight: '700', color: colors.warning, marginLeft: 3 }}>
         PRO
       </Text>

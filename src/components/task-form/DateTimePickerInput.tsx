@@ -320,6 +320,7 @@ function WheelColumn<T extends string | number>({
       <View style={{ height: WHEEL_HEIGHT, width: '100%', overflow: 'hidden' }}>
         <FlatList
           ref={listRef}
+          testID={`${testIdPrefix}-list`}
           data={data as T[]}
           keyExtractor={item => String(item)}
           snapToInterval={ITEM_HEIGHT}
