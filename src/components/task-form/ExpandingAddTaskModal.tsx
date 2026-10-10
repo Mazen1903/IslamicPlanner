@@ -36,6 +36,9 @@ export function ExpandingAddTaskModal({
   onSuccess,
 }: ExpandingAddTaskModalProps) {
   const { colors, isDark } = useTheme();
+  const insetsContext = useContext(SafeAreaInsetsContext);
+  const bottomInset = insetsContext?.bottom ?? initialWindowMetrics?.insets?.bottom ?? 0;
+
   const hasSavedRef = useRef(false);
   const savedInfoRef = useRef<any>(null);
 
@@ -78,9 +81,6 @@ export function ExpandingAddTaskModal({
   if (!visible) {
     return null;
   }
-
-  const insetsContext = useContext(SafeAreaInsetsContext);
-  const bottomInset = insetsContext?.bottom ?? initialWindowMetrics?.insets?.bottom ?? 0;
 
   return (
     <Modal
