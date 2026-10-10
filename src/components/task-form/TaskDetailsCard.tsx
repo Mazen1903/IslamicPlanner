@@ -25,6 +25,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { PremiumLanternIcon } from '@/components/common/PremiumLanternIcon';
 import { PaywallSheet } from '@/components/premium/PaywallSheet';
+import { Collapsible } from '@/components/common/Collapsible';
 
 export interface TaskDetailsCardProps {
   state: FormState;
@@ -222,7 +223,7 @@ export function TaskDetailsCard({ state, dispatch, onOpenReminderSettings }: Tas
       </Pressable>
 
       {/* Reminder Inline Panel */}
-      {openRow === 'REMINDER' && (
+      <Collapsible expanded={openRow === 'REMINDER'} testID="collapsible-reminder">
         <View
           style={[
             styles.inlinePanelContainer,
@@ -247,7 +248,7 @@ export function TaskDetailsCard({ state, dispatch, onOpenReminderSettings }: Tas
             onOpenReminderSettings={onOpenReminderSettings ?? (() => {})}
           />
         </View>
-      )}
+      </Collapsible>
 
       {/* Inset Divider */}
       <View style={[styles.insetDivider, { backgroundColor: colors.border }]} />
@@ -318,7 +319,7 @@ export function TaskDetailsCard({ state, dispatch, onOpenReminderSettings }: Tas
       </Pressable>
 
       {/* Repeat Inline Panel */}
-      {openRow === 'REPEAT' && (
+      <Collapsible expanded={openRow === 'REPEAT'} testID="collapsible-repeat">
         <View
           style={[
             styles.inlinePanelContainer,
@@ -335,7 +336,7 @@ export function TaskDetailsCard({ state, dispatch, onOpenReminderSettings }: Tas
         >
           <RepeatInlinePanel state={state} dispatch={dispatch} />
         </View>
-      )}
+      </Collapsible>
 
       {/* Inset Divider */}
       <View style={[styles.insetDivider, { backgroundColor: colors.border }]} />
@@ -442,7 +443,7 @@ export function TaskDetailsCard({ state, dispatch, onOpenReminderSettings }: Tas
       </Pressable>
 
       {/* Priority Inline Panel */}
-      {openRow === 'PRIORITY' && (
+      <Collapsible expanded={openRow === 'PRIORITY'} testID="collapsible-priority">
         <View
           style={[
             styles.inlinePanelContainer,
@@ -463,7 +464,7 @@ export function TaskDetailsCard({ state, dispatch, onOpenReminderSettings }: Tas
             isPremium={isPremium}
           />
         </View>
-      )}
+      </Collapsible>
 
       {/* Inset Divider */}
       <View style={[styles.insetDivider, { backgroundColor: colors.border }]} />
@@ -533,7 +534,7 @@ export function TaskDetailsCard({ state, dispatch, onOpenReminderSettings }: Tas
       </Pressable>
 
       {/* Track Streak Inline Panel */}
-      {openRow === 'STREAK' && (
+      <Collapsible expanded={openRow === 'STREAK'} testID="collapsible-streak">
         <View
           style={[
             styles.inlinePanelContainer,
@@ -555,7 +556,7 @@ export function TaskDetailsCard({ state, dispatch, onOpenReminderSettings }: Tas
             isPremium={isPremium}
           />
         </View>
-      )}
+      </Collapsible>
 
       {/* Inset Divider */}
       <View style={[styles.insetDivider, { backgroundColor: colors.border }]} />
@@ -627,7 +628,7 @@ export function TaskDetailsCard({ state, dispatch, onOpenReminderSettings }: Tas
       </Pressable>
 
       {/* Notes Inline Panel */}
-      {openRow === 'NOTES' && (
+      <Collapsible expanded={openRow === 'NOTES'} testID="collapsible-notes">
         <View
           style={[
             styles.inlinePanelContainer,
@@ -647,7 +648,7 @@ export function TaskDetailsCard({ state, dispatch, onOpenReminderSettings }: Tas
             onChangeNotes={text => dispatch({ type: 'SET_NOTES', payload: text })}
           />
         </View>
-      )}
+      </Collapsible>
 
       {/* Paywall Modal */}
       <PaywallSheet

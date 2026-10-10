@@ -66,6 +66,7 @@ interface DraggableDetailSubtaskRowProps {
   style?: StyleProp<ViewStyle>;
   testID?: string;
   isEditing: boolean;
+  onDragActiveChange?: (isDragging: boolean) => void;
   children: React.ReactNode;
 }
 
@@ -76,6 +77,7 @@ function DraggableDetailSubtaskRow({
   style,
   testID,
   isEditing,
+  onDragActiveChange,
   children,
 }: DraggableDetailSubtaskRowProps) {
   const translateY = useRef(new Animated.Value(0)).current;
@@ -97,6 +99,7 @@ function DraggableDetailSubtaskRow({
   const finish = (dy: number) => {
     const from = indexRef.current;
     const to = computeDropIndex(from, dy, rowHeightRef.current, countRef.current);
+    onDragActiveChange?.(false);
     Animated.parallel([
       Animated.spring(translateY, { toValue: 0, useNativeDriver: true }),
       Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
@@ -115,15 +118,19 @@ function DraggableDetailSubtaskRow({
     } catch {}
     isDraggingRef.current = true;
     setDragging(true);
+    onDragActiveChange?.(true);
     Animated.spring(scale, { toValue: 1.03, useNativeDriver: true }).start();
   };
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => isDraggingRef.current,
       onMoveShouldSetPanResponder: (_evt, gestureState) => {
-        if (!isDraggingRef.current) return false;
-        return Math.abs(gestureState.dy) > 3;
+        return isDraggingRef.current && Math.abs(gestureState.dy) > 2;
+      },
+      onMoveShouldSetPanResponderCapture: (_evt, gestureState) => {
+        return isDraggingRef.current && Math.abs(gestureState.dy) > 2;
       },
       onPanResponderTerminationRequest: () => false,
       onPanResponderMove: (_evt, g) => {
@@ -193,6 +200,7 @@ export function TaskDetailScreen({
   const [subtasksList, setSubtasksList] = useState<SubtaskTemplate[]>(definition.subtasks ?? []);
   const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
   const [editingSubtaskTitle, setEditingSubtaskTitle] = useState('');
+  const [isSubtaskDragging, setIsSubtaskDragging] = useState(false);
 
   useEffect(() => {
     setSubtasksList(definition.subtasks ?? []);
@@ -393,6 +401,8 @@ export function TaskDetailScreen({
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        scrollEnabled={!isSubtaskDragging}
         contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
       >
         {/* ── 2. Hero Title & Status Card ── */}
@@ -697,6 +707,7 @@ export function TaskDetailScreen({
                     count={subtasksList.length}
                     onReorder={handleMoveSubtask}
                     isEditing={isEditing}
+                    onDragActiveChange={setIsSubtaskDragging}
                     style={[
                       styles.subtaskRow,
                       {

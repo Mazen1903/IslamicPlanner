@@ -16,6 +16,7 @@ import type { FormState, FormAction, ScheduleMode, SchedulePreviewResult } from 
 import { type Prayer, PRAYER_NAMES } from '@/constants/prayers';
 import { PrayerTabIcon } from '@/components/prayer/PrayerTabBar';
 import { DatePickerInput, TimePickerInput } from './DateTimePickerInput';
+import { Collapsible } from '@/components/common/Collapsible';
 
 const PRAYERS: Prayer[] = ['FAJR', 'DHUHR', 'ASR', 'MAGHRIB', 'ISHA'];
 
@@ -42,6 +43,17 @@ export function ScheduleModeCards({
   style,
 }: ScheduleModeCardsProps) {
   const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
+
+  const availableEndPrayers = React.useMemo<Prayer[]>(() => {
+    const start = state.windowDraft.startPrayer;
+    const startIdx = PRAYERS.indexOf(start);
+    if (startIdx === -1) return ['DHUHR', 'ASR', 'MAGHRIB', 'ISHA'];
+    if (start === 'FAJR') {
+      return ['DHUHR', 'ASR', 'MAGHRIB', 'ISHA'];
+    }
+    const sameDayEnds = PRAYERS.slice(startIdx + 1);
+    return [...sameDayEnds, 'FAJR'];
+  }, [state.windowDraft.startPrayer]);
 
   const modes: { mode: ScheduleMode; label: string }[] = [
     {
@@ -137,20 +149,21 @@ export function ScheduleModeCards({
       )}
 
       {/* Unified Inline Mode Fields */}
-      {state.scheduleMode !== null && (
-        <View
-          style={[
-            styles.fieldsContainer,
-            shadows.card,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderRadius: radii.card,
-              padding: spacing.lg,
-              marginTop: spacing.md,
-            },
-          ]}
-        >
+      <Collapsible expanded={state.scheduleMode !== null} testID="schedule-mode-collapsible">
+        {state.scheduleMode !== null && (
+          <View
+            style={[
+              styles.fieldsContainer,
+              shadows.card,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderRadius: radii.card,
+                padding: spacing.lg,
+                marginTop: spacing.md,
+              },
+            ]}
+          >
           {state.scheduleMode === 'EXACT_TIME' && (
             <View testID="exact-time-fields" style={styles.exactFieldsStack}>
               <DatePickerInput
@@ -345,13 +358,26 @@ export function ScheduleModeCards({
                 Start Prayer (inclusive)
               </Text>
               <View style={styles.prayerRow}>
-                {PRAYERS.slice(0, 4).map(p => {
+                {PRAYERS.map(p => {
                   const isStartSelected = state.windowDraft.startPrayer === p;
                   const displayName = PRAYER_NAMES[p] ?? (p.charAt(0) + p.slice(1).toLowerCase());
                   return (
                     <Pressable
                       key={p}
-                      onPress={() => dispatch({ type: 'UPDATE_WINDOW_DRAFT', payload: { startPrayer: p } })}
+                      onPress={() => {
+                        const startIdx = PRAYERS.indexOf(p);
+                        const nextAvailableEnds: Prayer[] = p === 'FAJR'
+                          ? ['DHUHR', 'ASR', 'MAGHRIB', 'ISHA']
+                          : [...PRAYERS.slice(startIdx + 1), 'FAJR'];
+                        if (!nextAvailableEnds.includes(state.windowDraft.endPrayer)) {
+                          dispatch({
+                            type: 'UPDATE_WINDOW_DRAFT',
+                            payload: { startPrayer: p, endPrayer: nextAvailableEnds[0] },
+                          });
+                        } else {
+                          dispatch({ type: 'UPDATE_WINDOW_DRAFT', payload: { startPrayer: p } });
+                        }
+                      }}
                       accessibilityRole="button"
                       accessibilityState={{ selected: isStartSelected }}
                       accessibilityLabel={`Start prayer: ${p}`}
@@ -397,16 +423,17 @@ export function ScheduleModeCards({
                 End Prayer (exclusive)
               </Text>
               <View style={styles.prayerRow}>
-                {PRAYERS.slice(1).map(p => {
+                {availableEndPrayers.map(p => {
                   const isEndSelected = state.windowDraft.endPrayer === p;
-                  const displayName = PRAYER_NAMES[p] ?? (p.charAt(0) + p.slice(1).toLowerCase());
+                  const isNextDay = p === 'FAJR' && state.windowDraft.startPrayer !== 'FAJR';
+                  const displayName = isNextDay ? 'Fajr (+1)' : (PRAYER_NAMES[p] ?? (p.charAt(0) + p.slice(1).toLowerCase()));
                   return (
                     <Pressable
                       key={p}
                       onPress={() => dispatch({ type: 'UPDATE_WINDOW_DRAFT', payload: { endPrayer: p } })}
                       accessibilityRole="button"
                       accessibilityState={{ selected: isEndSelected }}
-                      accessibilityLabel={`End prayer: ${p}`}
+                      accessibilityLabel={`End prayer: ${isNextDay ? 'Fajr next day' : p}`}
                       testID={`window-end-${p.toLowerCase()}`}
                       style={({ pressed }) => [
                         styles.prayerChip,
@@ -428,12 +455,14 @@ export function ScheduleModeCards({
                         style={{ marginBottom: 2 }}
                       />
                       <Text
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
                         style={[
                           typography.caption,
                           {
                             color: isEndSelected ? colors.primaryDark : colors.textPrimary,
                             fontWeight: isEndSelected ? '700' : '600',
-                            fontSize: 12,
+                            fontSize: 11,
                           },
                         ]}
                       >
@@ -464,6 +493,7 @@ export function ScheduleModeCards({
           )}
         </View>
       )}
+      </Collapsible>
   </View>
 );
 }

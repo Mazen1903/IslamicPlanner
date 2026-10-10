@@ -500,8 +500,17 @@ export function TaskCard({
   return (
     <View style={styles.cardContainer}>
       {/* ── Underneath Delete Action Revealed on Swipe Left ── */}
-      <View
-        style={styles.deleteUnderneathContainer}
+      <Animated.View
+        style={[
+          styles.deleteUnderneathContainer,
+          {
+            opacity: swipeX.interpolate({
+              inputRange: [-80, -20, 0],
+              outputRange: [1, 0.5, 0],
+              extrapolate: 'clamp',
+            }),
+          },
+        ]}
         testID={`task-card-delete-reveal-${task.occurrenceId}`}
         pointerEvents="box-none"
       >
@@ -531,7 +540,7 @@ export function TaskCard({
             <Icon name="trash" size={22} color={colors.textOnPrimary} decorative />
           </Animated.View>
         </Pressable>
-      </View>
+      </Animated.View>
 
       {/* ── Foreground Draggable & Swipable Card ── */}
       <Animated.View

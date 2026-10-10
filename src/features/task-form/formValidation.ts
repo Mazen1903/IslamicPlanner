@@ -70,7 +70,8 @@ export function validateForm(state: FormState): ValidationResult {
       } else {
         const startIdx = PRAYER_ORDER.indexOf(startPrayer);
         const endIdx = PRAYER_ORDER.indexOf(endPrayer);
-        if (startIdx >= endIdx) {
+        const isNextDayFajr = endPrayer === 'FAJR' && startIdx >= 1;
+        if (startIdx >= endIdx && !isNextDayFajr) {
           errors.prayerWindow = 'Prayer window cannot wrap around midnight in v1';
         }
       }

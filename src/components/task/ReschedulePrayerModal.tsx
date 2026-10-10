@@ -98,10 +98,6 @@ export function ReschedulePrayerModal({
     return result;
   }, [targetPrayer]);
 
-  if (!task || !targetPrayer) {
-    return null;
-  }
-
   const handleSelectOffset = (mins: number) => {
     setOffsetMinutes(mins);
     setCustomOffsetInput(String(mins));
@@ -125,6 +121,7 @@ export function ReschedulePrayerModal({
   };
 
   const handleConfirm = () => {
+    if (!task || !targetPrayer) return;
     try {
       Vibration.vibrate(30);
     } catch {}
@@ -143,14 +140,19 @@ export function ReschedulePrayerModal({
 
   // Live relative preview label
   const liveRelativeLabel = useMemo(() => {
+    if (!targetPrayer) return '';
     if (offsetMinutes === 0) {
       return `At ${prayerCapitalized}`;
     }
     const sign = direction === 'BEFORE' ? '−' : '+';
     return `${prayerCapitalized} ${sign} ${offsetMinutes} min`;
-  }, [prayerCapitalized, direction, offsetMinutes]);
+  }, [targetPrayer, prayerCapitalized, direction, offsetMinutes]);
 
   const sheetBg = colors.surfaceElevated ?? colors.surface;
+
+  if (!visible || !task || !targetPrayer) {
+    return null;
+  }
 
   return (
     <Modal

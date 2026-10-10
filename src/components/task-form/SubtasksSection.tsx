@@ -20,6 +20,7 @@ export interface SubtasksSectionProps {
   dispatch: React.Dispatch<FormAction>;
   style?: StyleProp<ViewStyle>;
   hideDivider?: boolean;
+  onDragActiveChange?: (isDragging: boolean) => void;
 }
 
 export function computeDropIndex(fromIndex: number, dy: number, rowHeight: number, count: number): number {
@@ -35,6 +36,7 @@ interface DraggableSubtaskRowProps {
   style?: StyleProp<ViewStyle>;
   testID?: string;
   isEditing: boolean;
+  onDragActiveChange?: (isDragging: boolean) => void;
   children: React.ReactNode;
 }
 
@@ -45,6 +47,7 @@ function DraggableSubtaskRow({
   style,
   testID,
   isEditing,
+  onDragActiveChange,
   children,
 }: DraggableSubtaskRowProps) {
   const translateY = useRef(new Animated.Value(0)).current;
@@ -66,6 +69,7 @@ function DraggableSubtaskRow({
   const finish = (dy: number) => {
     const from = indexRef.current;
     const to = computeDropIndex(from, dy, rowHeightRef.current, countRef.current);
+    onDragActiveChange?.(false);
     Animated.parallel([
       Animated.spring(translateY, { toValue: 0, useNativeDriver: true }),
       Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
@@ -84,15 +88,19 @@ function DraggableSubtaskRow({
     } catch {}
     isDraggingRef.current = true;
     setDragging(true);
+    onDragActiveChange?.(true);
     Animated.spring(scale, { toValue: 1.03, useNativeDriver: true }).start();
   };
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => isDraggingRef.current,
       onMoveShouldSetPanResponder: (_evt, gestureState) => {
-        if (!isDraggingRef.current) return false;
-        return Math.abs(gestureState.dy) > 3;
+        return isDraggingRef.current && Math.abs(gestureState.dy) > 2;
+      },
+      onMoveShouldSetPanResponderCapture: (_evt, gestureState) => {
+        return isDraggingRef.current && Math.abs(gestureState.dy) > 2;
       },
       onPanResponderTerminationRequest: () => false,
       onPanResponderMove: (_evt, g) => {
@@ -142,7 +150,7 @@ function DraggableSubtaskRow({
   );
 }
 
-export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: SubtasksSectionProps) {
+export function SubtasksSection({ subtasks, dispatch, style, hideDivider, onDragActiveChange }: SubtasksSectionProps) {
   const { colors, spacing, radii, typography } = useTheme();
 
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
@@ -261,6 +269,7 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
               count={subtasks.length}
               onReorder={handleReorder}
               isEditing={isEditing}
+              onDragActiveChange={onDragActiveChange}
               style={[
                 styles.subtaskRow,
                 {
@@ -412,6 +421,7 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
             accessibilityRole="button"
             accessibilityLabel="Add checklist item"
             testID="add-subtask-button"
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             style={[
               styles.addButton,
               {

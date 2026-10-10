@@ -1,3 +1,4 @@
+import { DateTime } from 'luxon';
 import type { Prayer } from '@/constants/prayers';
 import { PRAYERS, PRAYER_ORDER } from '@/constants/prayers';
 import { PlanningDayEngine, PlanningDayError } from '@/domain/planning-day';
@@ -259,8 +260,9 @@ export function resolvePlacement(
 
       const startIdx = PRAYER_ORDER.indexOf(startPrayer);
       const endIdx = PRAYER_ORDER.indexOf(endPrayer);
+      const isNextDayFajr = endPrayer === 'FAJR' && startIdx >= 1;
 
-      if (endIdx < startIdx) {
+      if (endIdx < startIdx && !isNextDayFajr) {
         throw new SchedulingResolutionError(
           'INVALID_PRAYER_WINDOW',
           `Prayer window wrapping across days is not supported in v1 (start="${startPrayer}", end="${endPrayer}").`
@@ -270,11 +272,15 @@ export function resolvePlacement(
       const startPeriod = context.timeline.periods.find(
         (p) => p.prayer === startPrayer && p.sourceDate === occurrenceSeedDate
       );
-      const endPeriod = context.timeline.periods.find(
-        (p) => p.prayer === endPrayer && p.sourceDate === occurrenceSeedDate
-      );
+      const nextDate = DateTime.fromISO(occurrenceSeedDate).plus({ days: 1 }).toFormat('yyyy-MM-dd');
+      const endPeriod = isNextDayFajr
+        ? context.timeline.periods.find((p) => p.prayer === 'FAJR' && p.sourceDate === nextDate)
+          ?? context.timeline.periods.find((p) => p.prayer === 'FAJR' && p.start > (startPeriod?.start ?? ''))
+        : context.timeline.periods.find(
+            (p) => p.prayer === endPrayer && p.sourceDate === occurrenceSeedDate
+          );
 
-      if (!startPeriod || !endPeriod) {
+      if (!startPeriod || (!endPeriod && !startPeriod.end)) {
         throw new SchedulingResolutionError(
           'MISSING_PRAYER_ANCHOR',
           `Prayer window anchors [${startPrayer}, ${endPrayer}] not found in timeline for source date "${occurrenceSeedDate}".`
@@ -282,8 +288,10 @@ export function resolvePlacement(
       }
 
       const windowStart = startPeriod.start;
-      const windowEnd = endPeriod.start;
-      const eligiblePrayerSections = PRAYER_ORDER.slice(startIdx, endIdx);
+      const windowEnd = endPeriod ? endPeriod.start : startPeriod.end;
+      const eligiblePrayerSections = isNextDayFajr
+        ? PRAYER_ORDER.slice(startIdx)
+        : PRAYER_ORDER.slice(startIdx, endIdx);
 
       // Planning day key is derived from the concrete window start
       const planningDayKey = resolvePlanningDayKeyForTime(context, windowStart);

@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { DateTime } from 'luxon';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
@@ -85,7 +85,8 @@ export function TaskFormScreen({
   onSaved,
 }: TaskFormScreenProps) {
   const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
-  const insets = useSafeAreaInsets();
+  const contextInsets = React.useContext(SafeAreaInsetsContext);
+  const insets = contextInsets ?? { top: 0, bottom: 0, left: 0, right: 0 };
 
   const isEdit = Boolean(initialDefinition);
   const isRecurringSeries = Boolean(
@@ -182,6 +183,7 @@ export function TaskFormScreen({
   const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(
     () => Boolean(state.subtasks && state.subtasks.length > 0)
   );
+  const [isSubtaskDragging, setIsSubtaskDragging] = useState(false);
 
   // Orchestrator Result state
   const [saveResult, setSaveResult] = useState<OrchestratorResult | null>(null);
@@ -375,7 +377,7 @@ export function TaskFormScreen({
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['top', 'left', 'right']}
+        edges={['top', 'left', 'right', 'bottom']}
         testID="task-form-screen"
       >
         <ReminderSubView
@@ -418,7 +420,7 @@ export function TaskFormScreen({
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['top', 'left', 'right']}
+        edges={['top', 'left', 'right', 'bottom']}
         testID="task-form-screen"
       >
         <ReminderStyleSubView
@@ -460,11 +462,13 @@ export function TaskFormScreen({
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        scrollEnabled={!isSubtaskDragging}
         contentContainerStyle={[
           styles.scrollContent,
           {
             padding: spacing.lg,
-            paddingBottom: Math.max(insets?.bottom ?? 0, spacing.xl) + 40,
+            paddingBottom: Math.max(insets?.bottom ?? 0, 24) + 64,
           },
         ]}
       >
@@ -551,6 +555,7 @@ export function TaskFormScreen({
                 subtasks={state.subtasks}
                 dispatch={dispatch}
                 hideDivider={true}
+                onDragActiveChange={setIsSubtaskDragging}
               />
             ) : (
               <Pressable

@@ -7,6 +7,8 @@ import {
   BackHandler,
 } from 'react-native';
 import { DateTime } from 'luxon';
+import { useContext } from 'react';
+import { SafeAreaInsetsContext, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { TaskFormScreen } from '@/components/task-form/TaskFormScreen';
 import { useTodayStore } from '@/stores/useTodayStore';
@@ -77,6 +79,9 @@ export function ExpandingAddTaskModal({
     return null;
   }
 
+  const insetsContext = useContext(SafeAreaInsetsContext);
+  const bottomInset = insetsContext?.bottom ?? initialWindowMetrics?.insets?.bottom ?? 0;
+
   return (
     <Modal
       testID="expanding-add-task-modal"
@@ -95,7 +100,13 @@ export function ExpandingAddTaskModal({
       <View
         testID="expanding-add-task-container"
         accessibilityViewIsModal={true}
-        style={[styles.container, { backgroundColor: colors.background }]}
+        style={[
+          styles.container,
+          {
+            backgroundColor: colors.background,
+            paddingBottom: Math.max(bottomInset, 16),
+          },
+        ]}
       >
         <View testID="expanding-add-task-content" style={styles.content}>
           <TaskFormScreen

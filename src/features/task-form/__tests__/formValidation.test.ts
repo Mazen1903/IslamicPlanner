@@ -78,14 +78,22 @@ describe('formValidation (M10)', () => {
     expect(res.isValid).toBe(false);
     expect(res.errors.prayerWindow).toBe('Start and end prayers cannot be the same');
 
-    // Wrapping (e.g. Isha -> Fajr)
+    // Invalid wrapping (e.g. Isha -> Dhuhr)
+    state = formReducer(state, {
+      type: 'UPDATE_WINDOW_DRAFT',
+      payload: { startPrayer: 'ISHA', endPrayer: 'DHUHR' },
+    });
+    res = validateForm(state);
+    expect(res.isValid).toBe(false);
+    expect(res.errors.prayerWindow).toBe('Prayer window cannot wrap around midnight in v1');
+
+    // Valid overnight window (Isha -> Fajr next day)
     state = formReducer(state, {
       type: 'UPDATE_WINDOW_DRAFT',
       payload: { startPrayer: 'ISHA', endPrayer: 'FAJR' },
     });
     res = validateForm(state);
-    expect(res.isValid).toBe(false);
-    expect(res.errors.prayerWindow).toBe('Prayer window cannot wrap around midnight in v1');
+    expect(res.isValid).toBe(true);
 
     // Valid non-wrapping
     state = formReducer(state, {
