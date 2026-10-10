@@ -21,7 +21,7 @@ import { useTodayStore } from '@/stores/useTodayStore';
 import { deriveOverdueState } from '@/services/TodayViewModelProjection';
 import { StreakFlameBadge } from '@/components/streak';
 import { LottiePriorityBadge } from './LottiePriorityBadge';
-import { DeleteTaskSheet } from './DeleteTaskSheet';
+import { Collapsible } from '@/components/common/Collapsible';
 import { getRecurrenceLabel } from '@/domain/recurrence/recurrenceLabel';
 
 export interface TaskCardProps {
@@ -135,6 +135,10 @@ export function TaskCard({
   const isMissed = task.status === 'MISSED';
   const isPending = task.status === 'PENDING';
 
+  // Inline expansion state
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [showRecurringDelete, setShowRecurringDelete] = useState(false);
+
   // Highlight pulse animation (1.2s total)
   const highlightAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -154,12 +158,6 @@ export function TaskCard({
   const [isUnlocked, setIsUnlocked] = useState(false);
   const jiggleLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
-  // Swipe to remove animation state
-  const swipeX = useRef(new Animated.Value(0)).current;
-  const trashScale = useRef(new Animated.Value(0)).current;
-  const trashOpacity = useRef(new Animated.Value(0)).current;
-  const isSwipedOpenRef = useRef(false);
-  const [deleteSheetVisible, setDeleteSheetVisible] = useState(false);
   const onDeleteRef = useRef(onDelete);
   onDeleteRef.current = onDelete;
 
@@ -167,93 +165,12 @@ export function TaskCard({
   useEffect(() => {
     if (prevOccurrenceIdRef.current !== task.occurrenceId) {
       prevOccurrenceIdRef.current = task.occurrenceId;
-      isSwipedOpenRef.current = false;
-      swipeX.setValue(0);
-      trashScale.setValue(0);
-      trashOpacity.setValue(0);
+      setIsExpanded(false);
+      setShowRecurringDelete(false);
     }
-  }, [task.occurrenceId, swipeX, trashScale, trashOpacity]);
+  }, [task.occurrenceId]);
 
-  const handleConfirmDelete = useCallback(() => {
-    try {
-      Vibration.vibrate(30);
-    } catch {}
-
-    if (task.isRecurring) {
-      setDeleteSheetVisible(true);
-      return;
-    }
-
-    Animated.timing(swipeX, {
-      toValue: -500,
-      duration: 220,
-      useNativeDriver: true,
-    }).start();
-
-    if (onDeleteRef.current) {
-      Promise.resolve(onDeleteRef.current(task, 'THIS_OCCURRENCE'))
-        .then(res => {
-          if (res === false) {
-            Animated.spring(swipeX, {
-              toValue: 0,
-              useNativeDriver: true,
-              friction: 6,
-            }).start();
-          }
-        })
-        .catch(() => {
-          Animated.spring(swipeX, {
-            toValue: 0,
-            useNativeDriver: true,
-            friction: 6,
-          }).start();
-        });
-    }
-  }, [task, swipeX]);
-
-  const handleSelectDeleteScope = useCallback(
-    (scope: 'THIS_OCCURRENCE' | 'THIS_AND_FUTURE' | 'ALL_OCCURRENCES') => {
-      setDeleteSheetVisible(false);
-      Animated.timing(swipeX, {
-        toValue: -500,
-        duration: 220,
-        useNativeDriver: true,
-      }).start();
-
-      if (onDeleteRef.current) {
-        Promise.resolve(onDeleteRef.current(task, scope))
-          .then(res => {
-            if (res === false) {
-              Animated.spring(swipeX, {
-                toValue: 0,
-                useNativeDriver: true,
-                friction: 6,
-              }).start();
-            }
-          })
-          .catch(() => {
-            Animated.spring(swipeX, {
-              toValue: 0,
-              useNativeDriver: true,
-              friction: 6,
-            }).start();
-          });
-      }
-    },
-    [task, swipeX]
-  );
-
-  const handleCloseDeleteSheet = useCallback(() => {
-    setDeleteSheetVisible(false);
-    isSwipedOpenRef.current = false;
-    Animated.spring(swipeX, {
-      toValue: 0,
-      useNativeDriver: true,
-      friction: 6,
-    }).start();
-  }, [swipeX]);
-
-  // Fix #5: Keep drag callbacks in refs so the PanResponder closure is always current
+  // Drag callbacks in refs so the PanResponder closure is always current
   const onDragStartRef = useRef(onDragStart);
   const onDragMoveRef = useRef(onDragMove);
   const onDragEndRef = useRef(onDragEnd);
@@ -266,7 +183,6 @@ export function TaskCard({
     setIsUnlocked(false);
     jiggleLoopRef.current?.stop();
     jiggleAnim.setValue(0);
-    // Fix #8: Use native driver for transform animations
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
     Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: true }).start();
   }, [jiggleAnim, scaleAnim, pan]);
@@ -305,113 +221,24 @@ export function TaskCard({
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onPanResponderTerminationRequest: () => !isUnlockedRef.current,
-      onMoveShouldSetPanResponder: (_evt, gestureState) => {
-        if (isUnlockedRef.current) return true;
-        // Terminal historical records (completed or missed) are immutable and cannot be deleted via swipe
-        if (isCompleted || isMissed) return false;
-        // Check for horizontal swipe to the left
-        const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.2;
-        if (isHorizontal && gestureState.dx < -8) {
-          return true;
-        }
-        // If already open, allow swiping right to close
-        if (isSwipedOpenRef.current && isHorizontal && gestureState.dx > 8) {
-          return true;
-        }
-        return false;
-      },
+      onMoveShouldSetPanResponder: () => Boolean(isUnlockedRef.current),
       onPanResponderMove: (_evt, gestureState) => {
         if (isUnlockedRef.current) {
           pan.setValue({ x: gestureState.dx, y: gestureState.dy });
           onDragMoveRef.current?.(task, gestureState);
-          return;
-        }
-
-        const baseOffset = isSwipedOpenRef.current ? -72 : 0;
-        const rawDx = baseOffset + gestureState.dx;
-        // Clamp between -72 (left) and 0 (closed)
-        const clampedDx = Math.min(0, Math.max(-72, rawDx));
-        swipeX.setValue(clampedDx);
-
-        // Pop-up transition animation on trash icon:
-        if (clampedDx < -15) {
-          Animated.spring(trashScale, {
-            toValue: 1,
-            damping: 12,
-            stiffness: 220,
-            useNativeDriver: true,
-          }).start();
-          Animated.timing(trashOpacity, {
-            toValue: 1,
-            duration: 120,
-            useNativeDriver: true,
-          }).start();
-        } else {
-          trashScale.setValue(0);
-          trashOpacity.setValue(0);
         }
       },
       onPanResponderRelease: (_evt, gestureState) => {
         if (isUnlockedRef.current) {
           resetDragState();
           onDragEndRef.current?.(task, gestureState);
-          return;
-        }
-
-        const baseOffset = isSwipedOpenRef.current ? -72 : 0;
-        const totalDx = baseOffset + gestureState.dx;
-
-        if (totalDx < -30) {
-          // Reveal delete container (clamped reveal only - no full swipe deletion)
-          isSwipedOpenRef.current = true;
-          Animated.spring(swipeX, {
-            toValue: -72,
-            damping: 18,
-            stiffness: 220,
-            useNativeDriver: true,
-          }).start();
-          Animated.spring(trashScale, {
-            toValue: 1,
-            damping: 10,
-            stiffness: 240,
-            useNativeDriver: true,
-          }).start();
-          Animated.timing(trashOpacity, {
-            toValue: 1,
-            duration: 100,
-            useNativeDriver: true,
-          }).start();
-        } else {
-          // Spring back to closed
-          isSwipedOpenRef.current = false;
-          Animated.spring(swipeX, {
-            toValue: 0,
-            damping: 20,
-            stiffness: 240,
-            useNativeDriver: true,
-          }).start();
-          Animated.timing(trashScale, {
-            toValue: 0,
-            duration: 120,
-            useNativeDriver: true,
-          }).start();
-          Animated.timing(trashOpacity, {
-            toValue: 0,
-            duration: 120,
-            useNativeDriver: true,
-          }).start();
         }
       },
       onPanResponderTerminate: (_evt, gestureState) => {
         if (isUnlockedRef.current) {
           resetDragState();
           onDragEndRef.current?.(task, gestureState);
-          return;
         }
-        isSwipedOpenRef.current = false;
-        Animated.spring(swipeX, { toValue: 0, useNativeDriver: true }).start();
-        Animated.timing(trashScale, { toValue: 0, duration: 120, useNativeDriver: true }).start();
-        Animated.timing(trashOpacity, { toValue: 0, duration: 120, useNativeDriver: true }).start();
       },
     })
   ).current;
@@ -482,13 +309,14 @@ export function TaskCard({
 
   const handleCardPress = () => {
     if (isUnlockedRef.current) return;
-    if (isSwipedOpenRef.current) {
-      isSwipedOpenRef.current = false;
-      Animated.spring(swipeX, { toValue: 0, useNativeDriver: true }).start();
-      Animated.timing(trashScale, { toValue: 0, duration: 120, useNativeDriver: true }).start();
-      Animated.timing(trashOpacity, { toValue: 0, duration: 120, useNativeDriver: true }).start();
-      return;
-    }
+    try {
+      Vibration.vibrate(10);
+    } catch {}
+    setIsExpanded(prev => !prev);
+    setShowRecurringDelete(false);
+  };
+
+  const handleEditPress = () => {
     if (task.occurrenceId || task.taskDefinitionId) {
       router.push({
         pathname: '/task/[id]',
@@ -497,59 +325,41 @@ export function TaskCard({
     }
   };
 
-  return (
-    <View style={styles.cardContainer}>
-      {/* ── Underneath Delete Action Revealed on Swipe Left ── */}
-      <Animated.View
-        style={[
-          styles.deleteUnderneathContainer,
-          {
-            opacity: swipeX.interpolate({
-              inputRange: [-80, -20, 0],
-              outputRange: [1, 0.5, 0],
-              extrapolate: 'clamp',
-            }),
-          },
-        ]}
-        testID={`task-card-delete-reveal-${task.occurrenceId}`}
-        pointerEvents="box-none"
-      >
-        <Pressable
-          onPress={handleConfirmDelete}
-          accessibilityRole="button"
-          accessibilityLabel={`Remove task: ${task.title}`}
-          testID={`task-card-remove-button-${task.occurrenceId}`}
-          style={[styles.deleteRevealPressable, { backgroundColor: colors.error }]}
-        >
-          <Animated.View
-            style={[
-              styles.deleteIconPopWrapper,
-              {
-                transform: [
-                  {
-                    scale: trashScale.interpolate({
-                      inputRange: [0, 0.7, 1],
-                      outputRange: [0, 1.25, 1],
-                    }),
-                  },
-                ],
-                opacity: trashOpacity,
-              },
-            ]}
-          >
-            <Icon name="trash" size={22} color={colors.textOnPrimary} decorative />
-          </Animated.View>
-        </Pressable>
-      </Animated.View>
+  const handleDeletePress = () => {
+    try {
+      Vibration.vibrate(25);
+    } catch {}
 
-      {/* ── Foreground Draggable & Swipable Card ── */}
+    if (task.isRecurring) {
+      setShowRecurringDelete(true);
+      return;
+    }
+
+    onDeleteRef.current?.(task, 'THIS_OCCURRENCE');
+  };
+
+  const handleSelectDeleteScope = (scope: 'THIS_OCCURRENCE' | 'THIS_AND_FUTURE' | 'ALL_OCCURRENCES') => {
+    try {
+      Vibration.vibrate(30);
+    } catch {}
+    setShowRecurringDelete(false);
+    onDeleteRef.current?.(task, scope);
+  };
+
+  const handleCancelRecurringDelete = () => {
+    setShowRecurringDelete(false);
+  };
+
+  return (
+    <View style={styles.cardContainer} testID={`task-card-container-${task.occurrenceId}`}>
+      {/* ── Foreground Draggable Card with Inline Expansion ── */}
       <Animated.View
         {...panResponder.panHandlers}
         style={[
           styles.animatedCardWrapper,
           {
             transform: [
-              { translateX: Animated.add(pan.x, swipeX) },
+              { translateX: pan.x },
               { translateY: pan.y },
               { scale: scaleAnim },
               { rotate },
@@ -563,7 +373,7 @@ export function TaskCard({
           onLongPress={handleLongPress}
           delayLongPress={350}
           accessibilityRole="button"
-          accessibilityLabel={`View task details: ${task.title}`}
+          accessibilityLabel={`${task.title}. ${isExpanded ? 'Expanded' : 'Collapsed'}. Tap to toggle details.`}
           style={[
             styles.card,
             shadows.card,
@@ -579,274 +389,522 @@ export function TaskCard({
                 outputRange: [
                   isUnlocked
                     ? colors.primary
+                    : isExpanded
+                    ? (isDark ? 'rgba(15, 159, 74, 0.45)' : colors.primary)
                     : task.priority === 'IMPORTANT' && !isCompleted
                     ? colors.error
                     : colors.border,
                   colors.primary,
                 ],
               }),
-              borderWidth: isUnlocked ? 2 : task.priority === 'IMPORTANT' && !isCompleted ? 1.5 : 1,
+              borderWidth: isUnlocked ? 2 : isExpanded ? 1.5 : task.priority === 'IMPORTANT' && !isCompleted ? 1.5 : 1,
               shadowColor: isUnlocked ? colors.primary : colors.shadowColor,
-              shadowOpacity: isUnlocked ? 0.35 : 0.04,
-              shadowRadius: isUnlocked ? 10 : 3,
-              elevation: isUnlocked ? 10 : (shadows.card.elevation ?? 0),
+              shadowOpacity: isUnlocked ? 0.35 : isExpanded ? 0.12 : 0.04,
+              shadowRadius: isUnlocked ? 10 : isExpanded ? 6 : 3,
+              elevation: isUnlocked ? 10 : isExpanded ? 4 : (shadows.card.elevation ?? 0),
               opacity: isCompleted ? 0.72 : 1,
             },
           ]}
           testID={`task-card-${task.occurrenceId}`}
-      >
-        <View style={styles.mainRow}>
-          {/* Left: Checkbox */}
-          <TaskCheckbox
-            checked={isCompleted}
-            disabled={isMissed}
-            onToggle={() => {
-              if (isCompleted && onUndo) {
-                onUndo(task.occurrenceId);
-              } else if (isPending && onComplete) {
-                onComplete(task.occurrenceId);
+        >
+          <View style={styles.mainRow}>
+            {/* Left: Checkbox */}
+            <TaskCheckbox
+              checked={isCompleted}
+              disabled={isMissed}
+              onToggle={() => {
+                if (isCompleted && onUndo) {
+                  onUndo(task.occurrenceId);
+                } else if (isPending && onComplete) {
+                  onComplete(task.occurrenceId);
+                }
+              }}
+              accessibilityLabel={
+                isCompleted
+                  ? `Undo completion for task: ${task.title}`
+                  : `Complete task: ${task.title}`
               }
-            }}
-            accessibilityLabel={
-              isCompleted
-                ? `Undo completion for task: ${task.title}`
-                : `Complete task: ${task.title}`
-            }
-            testID={`checkbox-${task.occurrenceId}`}
-          />
-
-          {/* Pastel Squircle Category / Task Icon */}
-          <View
-            style={[
-              styles.taskIconBadge,
-              {
-                backgroundColor: hasCustomTaskIcon(task.icon) ? 'transparent' : category.bg,
-                borderRadius: 14,
-                marginEnd: spacing.sm,
-                opacity: isCompleted ? 0.6 : 1,
-              },
-            ]}
-            testID={`task-icon-badge-${task.occurrenceId}`}
-          >
-            <TaskCategoryIcon
-              iconId={task.icon}
-              size={hasCustomTaskIcon(task.icon) ? 48 : 26}
-              color={category.color}
+              testID={`checkbox-${task.occurrenceId}`}
             />
-          </View>
 
-          {/* Title, Subtasks, and metadata block */}
-          <View
-            style={styles.contentContainer}
-            accessible={true}
-            accessibilityLabel={compositeLabel}
-          >
-            {/* Task Title */}
-            <Text
+            {/* Pastel Squircle Category / Task Icon */}
+            <View
               style={[
-                typography.bodyLarge,
-                styles.titleText,
+                styles.taskIconBadge,
                 {
-                  color: isCompleted ? colors.textMuted : colors.textPrimary,
-                  textDecorationLine: isCompleted ? 'line-through' : 'none',
-                  fontSize: 15,
-                  fontWeight: '600',
+                  backgroundColor: hasCustomTaskIcon(task.icon) ? 'transparent' : category.bg,
+                  borderRadius: 14,
+                  marginEnd: spacing.sm,
+                  opacity: isCompleted ? 0.6 : 1,
                 },
               ]}
-              numberOfLines={1}
+              testID={`task-icon-badge-${task.occurrenceId}`}
             >
-              {task.title}
-            </Text>
+              <TaskCategoryIcon
+                iconId={task.icon}
+                size={hasCustomTaskIcon(task.icon) ? 48 : 26}
+                color={category.color}
+              />
+            </View>
 
-            {/* Checklist Progress Bar */}
-            {task.subtasks && task.subtasks.length > 0 && (
-              <View
+            {/* Title, Subtasks, and metadata block */}
+            <View
+              style={styles.contentContainer}
+              accessible={true}
+              accessibilityLabel={compositeLabel}
+            >
+              {/* Task Title */}
+              <Text
                 style={[
-                  styles.checklistProgressBarTrack,
-                  { backgroundColor: colors.surfaceSecondary },
+                  typography.bodyLarge,
+                  styles.titleText,
+                  {
+                    color: isCompleted ? colors.textMuted : colors.textPrimary,
+                    textDecorationLine: isCompleted ? 'line-through' : 'none',
+                    fontSize: 15,
+                    fontWeight: '600',
+                  },
                 ]}
+                numberOfLines={isExpanded ? undefined : 1}
               >
-                <View
-                  style={[
-                    styles.checklistProgressBarFill,
-                    {
-                      backgroundColor: isCompleted ? colors.textMuted : colors.primary,
-                      width: `${Math.round(
-                        (task.subtasks.filter(s => s.isCompleted).length / task.subtasks.length) * 100
-                      )}%`,
-                    },
-                  ]}
-                />
-              </View>
-            )}
+                {task.title}
+              </Text>
 
-            {/* Metadata Pills Row */}
-            <View style={styles.metadataRow}>
-              {/* Schedule / Prayer Pill */}
-              {scheduleDisplay ? (
-                <View
-                  style={[
-                    styles.metaPill,
-                    {
-                      backgroundColor: isCompleted
-                        ? colors.surface
-                        : colors.primaryLight,
-                    },
-                  ]}
-                >
-                  <Icon
-                    name="clock"
-                    size={11}
-                    color={isCompleted ? colors.textMuted : colors.primaryDark}
-                    style={{ marginEnd: 4 }}
-                    decorative
-                  />
-                  <Text
-                    style={[
-                      typography.caption,
-                      styles.metaPillText,
-                      {
-                        color: isCompleted ? colors.textMuted : colors.primaryDark,
-                      },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {scheduleDisplay}
-                  </Text>
-                </View>
-              ) : null}
-
-              {/* Recurring Badge Pill */}
-              {task.isRecurring && (
-                <View
-                  style={[
-                    styles.metaPill,
-                    {
-                      backgroundColor: colors.primaryLight,
-                      borderColor: colors.primary,
-                    },
-                  ]}
-                  testID={`task-recurring-badge-${task.occurrenceId}`}
-                >
-                  <Icon
-                    name="refresh"
-                    size={10}
-                    color={colors.primaryDark}
-                    style={{ marginEnd: 3 }}
-                    decorative
-                  />
-                  <Text
-                    style={[
-                      typography.caption,
-                      styles.metaPillText,
-                      {
-                        color: colors.primaryDark,
-                      },
-                    ]}
-                  >
-                    {getRecurrenceLabel(task.recurrenceRule, task.hijriRecurrence)}
-                  </Text>
-                </View>
-              )}
-
-              {/* Subtasks / Checklist Progress Pill */}
+              {/* Checklist Progress Bar */}
               {task.subtasks && task.subtasks.length > 0 && (
                 <View
                   style={[
-                    styles.metaPill,
-                    {
-                      backgroundColor: isCompleted ? colors.surface : colors.surfaceSecondary,
-                    },
+                    styles.checklistProgressBarTrack,
+                    { backgroundColor: colors.surfaceSecondary },
                   ]}
-                  testID={`subtasks-progress-${task.occurrenceId}`}
                 >
-                  <Icon
-                    name="checkbox"
-                    size={11}
-                    color={colors.textSecondary}
-                    style={{ marginEnd: 3 }}
-                    decorative
-                  />
-                  <Text
+                  <View
                     style={[
-                      typography.caption,
-                      styles.metaPillText,
-                      { color: colors.textSecondary },
+                      styles.checklistProgressBarFill,
+                      {
+                        backgroundColor: isCompleted ? colors.textMuted : colors.primary,
+                        width: `${Math.round(
+                          (task.subtasks.filter(s => s.isCompleted).length / task.subtasks.length) * 100
+                        )}%`,
+                      },
                     ]}
-                  >
-                    Checklist {task.subtasks.filter(s => s.isCompleted).length}/{task.subtasks.length}
-                  </Text>
-                </View>
-              )}
-
-              {/* Notes Indicator Pill */}
-              {task.notes && task.notes.trim().length > 0 && (
-                <View
-                  style={[
-                    styles.metaPill,
-                    {
-                      backgroundColor: isCompleted ? colors.surface : colors.surfaceSecondary,
-                    },
-                  ]}
-                  testID={`notes-indicator-${task.occurrenceId}`}
-                >
-                  <Icon
-                    name="document"
-                    size={11}
-                    color={colors.textSecondary}
-                    decorative
                   />
                 </View>
               )}
 
-              {/* Duration Pill */}
-              {task.estimatedMinutes ? (
-                <View
-                  style={[
-                    styles.metaPill,
-                    {
-                      backgroundColor: isCompleted ? colors.surface : colors.surfaceSecondary,
-                    },
-                  ]}
-                >
-                  <Text
+              {/* Metadata Pills Row */}
+              <View style={styles.metadataRow}>
+                {/* Schedule / Prayer Pill */}
+                {scheduleDisplay ? (
+                  <View
                     style={[
-                      typography.caption,
-                      styles.metaPillText,
-                      { color: colors.textTertiary },
+                      styles.metaPill,
+                      {
+                        backgroundColor: isCompleted
+                          ? colors.surface
+                          : colors.primaryLight,
+                      },
                     ]}
                   >
-                    {task.estimatedMinutes}m
-                  </Text>
-                </View>
-              ) : null}
+                    <Icon
+                      name="clock"
+                      size={11}
+                      color={isCompleted ? colors.textMuted : colors.primaryDark}
+                      style={{ marginEnd: 4 }}
+                      decorative
+                    />
+                    <Text
+                      style={[
+                        typography.caption,
+                        styles.metaPillText,
+                        {
+                          color: isCompleted ? colors.textMuted : colors.primaryDark,
+                        },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {scheduleDisplay}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {/* Recurring Badge Pill */}
+                {task.isRecurring && (
+                  <View
+                    style={[
+                      styles.metaPill,
+                      {
+                        backgroundColor: colors.primaryLight,
+                        borderColor: colors.primary,
+                      },
+                    ]}
+                    testID={`task-recurring-badge-${task.occurrenceId}`}
+                  >
+                    <Icon
+                      name="refresh"
+                      size={10}
+                      color={colors.primaryDark}
+                      style={{ marginEnd: 3 }}
+                      decorative
+                    />
+                    <Text
+                      style={[
+                        typography.caption,
+                        styles.metaPillText,
+                        {
+                          color: colors.primaryDark,
+                        },
+                      ]}
+                    >
+                      {getRecurrenceLabel(task.recurrenceRule, task.hijriRecurrence)}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Subtasks / Checklist Progress Pill */}
+                {task.subtasks && task.subtasks.length > 0 && (
+                  <View
+                    style={[
+                      styles.metaPill,
+                      {
+                        backgroundColor: isCompleted ? colors.surface : colors.surfaceSecondary,
+                      },
+                    ]}
+                    testID={`subtasks-progress-${task.occurrenceId}`}
+                  >
+                    <Icon
+                      name="checkbox"
+                      size={11}
+                      color={colors.textSecondary}
+                      style={{ marginEnd: 3 }}
+                      decorative
+                    />
+                    <Text
+                      style={[
+                        typography.caption,
+                        styles.metaPillText,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      Checklist {task.subtasks.filter(s => s.isCompleted).length}/{task.subtasks.length}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Notes Indicator Pill */}
+                {task.notes && task.notes.trim().length > 0 && (
+                  <View
+                    style={[
+                      styles.metaPill,
+                      {
+                        backgroundColor: isCompleted ? colors.surface : colors.surfaceSecondary,
+                      },
+                    ]}
+                    testID={`notes-indicator-${task.occurrenceId}`}
+                  >
+                    <Icon
+                      name="document"
+                      size={11}
+                      color={colors.textSecondary}
+                      decorative
+                    />
+                  </View>
+                )}
+
+                {/* Duration Pill */}
+                {task.estimatedMinutes ? (
+                  <View
+                    style={[
+                      styles.metaPill,
+                      {
+                        backgroundColor: isCompleted ? colors.surface : colors.surfaceSecondary,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        typography.caption,
+                        styles.metaPillText,
+                        { color: colors.textTertiary },
+                      ]}
+                    >
+                      {task.estimatedMinutes}m
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+
+            {/* Right side indicators: Streak Flame, Priority Badge, and Expansion Chevron */}
+            <View style={styles.rightActions}>
+              {task.streakCount !== null && task.streakCount !== undefined && task.streakCount >= 0 && (
+                <StreakFlameBadge count={task.streakCount} size={36} testID={`streak-badge-${task.occurrenceId}`} />
+              )}
+
+              {task.priority === 'IMPORTANT' && (
+                <LottiePriorityBadge
+                  size={32}
+                  testID={`important-badge-${task.occurrenceId}`}
+                  accessibilityLabel="Important task"
+                />
+              )}
+
+              <View style={styles.chevronWrapper} testID={`task-card-chevron-${task.occurrenceId}`}>
+                <Icon
+                  name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                  color={isExpanded ? colors.primary : colors.textTertiary}
+                  decorative
+                />
+              </View>
             </View>
           </View>
 
-          {/* Right side indicators: Streak Flame and Priority Badge */}
-          <View style={styles.rightActions}>
-            {task.streakCount !== null && task.streakCount !== undefined && task.streakCount >= 0 && (
-              <StreakFlameBadge count={task.streakCount} size={36} testID={`streak-badge-${task.occurrenceId}`} />
-            )}
-
-            {task.priority === 'IMPORTANT' && (
-              <LottiePriorityBadge
-                size={32}
-                testID={`important-badge-${task.occurrenceId}`}
-                accessibilityLabel="Important task"
+          {/* ── Inline Fluid Expanded Section ── */}
+          <Collapsible expanded={isExpanded} testID={`task-card-expanded-${task.occurrenceId}`}>
+            <View style={styles.expandedContentWrapper}>
+              {/* Subtle Divider */}
+              <View
+                style={[
+                  styles.expandedDivider,
+                  { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' },
+                ]}
               />
-            )}
-          </View>
-        </View>
-      </AnimatedPressable>
-    </Animated.View>
 
-    <DeleteTaskSheet
-      visible={deleteSheetVisible}
-      onClose={handleCloseDeleteSheet}
-      onSelectScope={handleSelectDeleteScope}
-      taskTitle={task.title}
-    />
+              {/* Notes Block (if present) */}
+              {task.notes && task.notes.trim().length > 0 && (
+                <View
+                  style={[
+                    styles.notesContainer,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : colors.surfaceSecondary,
+                      borderRadius: radii.sm ?? 8,
+                    },
+                  ]}
+                  testID={`task-card-notes-${task.occurrenceId}`}
+                >
+                  <Icon
+                    name="document"
+                    size={13}
+                    color={colors.textSecondary}
+                    decorative
+                    style={{ marginTop: 2, marginEnd: 6 }}
+                  />
+                  <Text style={[typography.bodySmall, styles.notesText, { color: colors.textSecondary }]}>
+                    {task.notes}
+                  </Text>
+                </View>
+              )}
+
+              {/* Interactive Subtasks Checklist (if present) */}
+              {task.subtasks && task.subtasks.length > 0 && (
+                <View style={styles.subtasksContainer} testID={`task-card-subtasks-${task.occurrenceId}`}>
+                  <View style={styles.subtasksHeaderRow}>
+                    <Text style={[typography.caption, { color: colors.textSecondary, fontWeight: '600' }]}>
+                      Checklist ({task.subtasks.filter(s => s.isCompleted).length}/{task.subtasks.length})
+                    </Text>
+                  </View>
+                  {task.subtasks.map((subtask) => (
+                    <Pressable
+                      key={subtask.id}
+                      onPress={() => onToggleSubtask?.(task.occurrenceId, subtask.id)}
+                      style={({ pressed }) => [
+                        styles.subtaskRow,
+                        { opacity: pressed ? 0.7 : 1 },
+                      ]}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: subtask.isCompleted }}
+                      accessibilityLabel={`${subtask.isCompleted ? 'Completed' : 'Incomplete'} checklist item: ${subtask.title}`}
+                      testID={`subtask-item-${task.occurrenceId}-${subtask.id}`}
+                    >
+                      <View
+                        style={[
+                          styles.subtaskCheckbox,
+                          {
+                            borderColor: subtask.isCompleted ? colors.primary : colors.border,
+                            backgroundColor: subtask.isCompleted ? colors.primary : 'transparent',
+                            borderRadius: 4,
+                          },
+                        ]}
+                      >
+                        {subtask.isCompleted && (
+                          <Icon name="check" size={10} color={colors.textOnPrimary} decorative />
+                        )}
+                      </View>
+                      <Text
+                        style={[
+                          typography.bodySmall,
+                          styles.subtaskTitle,
+                          {
+                            color: subtask.isCompleted ? colors.textMuted : colors.textPrimary,
+                            textDecorationLine: subtask.isCompleted ? 'line-through' : 'none',
+                          },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {subtask.title}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+
+              {/* Inline Recurring Delete Confirmation Options */}
+              {showRecurringDelete ? (
+                <View
+                  style={[
+                    styles.recurringDeleteContainer,
+                    {
+                      backgroundColor: isDark ? 'rgba(239, 68, 68, 0.12)' : 'rgba(239, 68, 68, 0.08)',
+                      borderColor: isDark ? 'rgba(239, 68, 68, 0.25)' : 'rgba(239, 68, 68, 0.18)',
+                      borderRadius: radii.md ?? 12,
+                    },
+                  ]}
+                  testID={`task-card-recurring-delete-options-${task.occurrenceId}`}
+                >
+                  <Text style={[typography.labelMedium, { color: colors.error, fontWeight: '700', marginBottom: 4 }]}>
+                    Delete Recurring Task
+                  </Text>
+                  <Text style={[typography.caption, { color: colors.textSecondary, marginBottom: 10 }]}>
+                    Choose which occurrences of this task to delete:
+                  </Text>
+
+                  <View style={styles.recurringButtonsColumn}>
+                    <Pressable
+                      onPress={() => handleSelectDeleteScope('THIS_OCCURRENCE')}
+                      style={({ pressed }) => [
+                        styles.recurringOptionBtn,
+                        {
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surface,
+                          opacity: pressed ? 0.7 : 1,
+                        },
+                      ]}
+                      testID={`delete-scope-this-occurrence-${task.occurrenceId}`}
+                      accessibilityRole="button"
+                      accessibilityLabel="Delete this occurrence only"
+                    >
+                      <Text style={[typography.labelSmall, { color: colors.textPrimary }]}>
+                        This occurrence only
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => handleSelectDeleteScope('THIS_AND_FUTURE')}
+                      style={({ pressed }) => [
+                        styles.recurringOptionBtn,
+                        {
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surface,
+                          opacity: pressed ? 0.7 : 1,
+                        },
+                      ]}
+                      testID={`delete-scope-this-and-future-${task.occurrenceId}`}
+                      accessibilityRole="button"
+                      accessibilityLabel="Delete this and future occurrences"
+                    >
+                      <Text style={[typography.labelSmall, { color: colors.textPrimary }]}>
+                        This and future occurrences
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => handleSelectDeleteScope('ALL_OCCURRENCES')}
+                      style={({ pressed }) => [
+                        styles.recurringOptionBtn,
+                        {
+                          backgroundColor: isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.14)',
+                          opacity: pressed ? 0.7 : 1,
+                        },
+                      ]}
+                      testID={`delete-scope-all-occurrences-${task.occurrenceId}`}
+                      accessibilityRole="button"
+                      accessibilityLabel="Delete all occurrences"
+                    >
+                      <Text style={[typography.labelSmall, { color: colors.error, fontWeight: '600' }]}>
+                        All occurrences
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={handleCancelRecurringDelete}
+                      style={({ pressed }) => [
+                        styles.recurringCancelBtn,
+                        { opacity: pressed ? 0.7 : 1 },
+                      ]}
+                      testID={`delete-scope-cancel-${task.occurrenceId}`}
+                      accessibilityRole="button"
+                      accessibilityLabel="Cancel delete"
+                    >
+                      <Text style={[typography.caption, { color: colors.textTertiary }]}>Cancel</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : (
+                /* Standard Quick Action Buttons: Edit Task & Delete */
+                <View style={styles.actionsRow}>
+                  <Pressable
+                    onPress={handleEditPress}
+                    style={({ pressed }) => [
+                      styles.actionBtn,
+                      styles.editBtn,
+                      {
+                        backgroundColor: isDark ? 'rgba(15, 159, 74, 0.18)' : colors.primaryLight,
+                        borderColor: isDark ? 'rgba(15, 159, 74, 0.3)' : colors.primary,
+                        opacity: pressed ? 0.7 : 1,
+                      },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit task ${task.title}`}
+                    testID={`task-card-edit-btn-${task.occurrenceId}`}
+                  >
+                    <Icon
+                      name="edit"
+                      size={13}
+                      color={isDark ? colors.primary : colors.primaryDark}
+                      decorative
+                      style={{ marginEnd: 5 }}
+                    />
+                    <Text
+                      style={[
+                        typography.labelSmall,
+                        { color: isDark ? colors.primary : colors.primaryDark, fontWeight: '600' },
+                      ]}
+                    >
+                      Edit Task
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={handleDeletePress}
+                    style={({ pressed }) => [
+                      styles.actionBtn,
+                      styles.deleteBtn,
+                      {
+                        backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : colors.dangerSurface,
+                        borderColor: isDark ? 'rgba(239, 68, 68, 0.25)' : 'rgba(239, 68, 68, 0.2)',
+                        opacity: pressed ? 0.7 : 1,
+                      },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete task ${task.title}`}
+                    testID={`task-card-delete-btn-${task.occurrenceId}`}
+                  >
+                    <Icon
+                      name="trash"
+                      size={13}
+                      color={colors.error}
+                      decorative
+                      style={{ marginEnd: 5 }}
+                    />
+                    <Text style={[typography.labelSmall, { color: colors.error, fontWeight: '600' }]}>
+                      Delete
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
+            </View>
+          </Collapsible>
+        </AnimatedPressable>
+      </Animated.View>
     </View>
   );
 }
@@ -856,27 +914,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: '100%',
     marginBottom: 8,
-  },
-  deleteUnderneathContainer: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    zIndex: 0,
-  },
-  deleteRevealPressable: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteIconPopWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   checklistProgressBarTrack: {
     height: 3,
@@ -943,5 +980,93 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginStart: 10,
     gap: 6,
+  },
+  chevronWrapper: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  expandedContentWrapper: {
+    paddingTop: 8,
+    paddingBottom: 2,
+  },
+  expandedDivider: {
+    height: 1,
+    width: '100%',
+    marginBottom: 10,
+  },
+  notesContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 10,
+  },
+  notesText: {
+    lineHeight: 18,
+  },
+  subtasksContainer: {
+    marginBottom: 10,
+  },
+  subtasksHeaderRow: {
+    marginBottom: 6,
+  },
+  subtaskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+  subtaskCheckbox: {
+    width: 16,
+    height: 16,
+    borderWidth: 1.2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginEnd: 8,
+  },
+  subtaskTitle: {
+    flex: 1,
+    lineHeight: 18,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 4,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  editBtn: {},
+  deleteBtn: {},
+  recurringDeleteContainer: {
+    borderWidth: 1,
+    padding: 12,
+    marginTop: 4,
+  },
+  recurringButtonsColumn: {
+    gap: 6,
+  },
+  recurringOptionBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recurringCancelBtn: {
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
   },
 });
