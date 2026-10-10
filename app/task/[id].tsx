@@ -14,7 +14,7 @@ import type { TaskDefinition, TaskOccurrence } from '@/domain/task/types';
 
 export default function TaskEditScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, mode } = useLocalSearchParams<{ id: string; mode?: string }>();
   const { colors, typography, spacing } = useTheme();
   const { refresh, toggleSubtask } = useToday();
 
@@ -22,7 +22,7 @@ export default function TaskEditScreen() {
   const [definition, setDefinition] = useState<TaskDefinition | null>(null);
   const [occurrence, setOccurrence] = useState<TaskOccurrence | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isEditingFull, setIsEditingFull] = useState(false);
+  const [isEditingFull, setIsEditingFull] = useState(mode === 'full');
 
   useEffect(() => {
     let isMounted = true;
@@ -93,6 +93,10 @@ export default function TaskEditScreen() {
 
   const handleSuccess = async () => {
     await refresh();
+    if (mode === 'full') {
+      router.back();
+      return;
+    }
     // Reload definition and occurrence
     const updatedDef = await taskDefinitionRepository.findById(definition.id);
     if (updatedDef) setDefinition(updatedDef);
@@ -169,7 +173,13 @@ export default function TaskEditScreen() {
         initialOccurrence={occurrence ?? undefined}
         initialCivilSeedDate={occurrence?.localDate ?? definition.startDate}
         onSuccess={handleSuccess}
-        onCancel={() => setIsEditingFull(false)}
+        onCancel={() => {
+          if (mode === 'full') {
+            router.back();
+          } else {
+            setIsEditingFull(false);
+          }
+        }}
       />
     );
   }

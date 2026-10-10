@@ -330,7 +330,11 @@ export function TaskCard({
     if (task.occurrenceId || task.taskDefinitionId) {
       router.push({
         pathname: '/task/[id]',
-        params: { id: task.occurrenceId || task.taskDefinitionId, defId: task.taskDefinitionId },
+        params: {
+          id: task.occurrenceId || task.taskDefinitionId,
+          defId: task.taskDefinitionId,
+          mode: 'full',
+        },
       });
     }
   };

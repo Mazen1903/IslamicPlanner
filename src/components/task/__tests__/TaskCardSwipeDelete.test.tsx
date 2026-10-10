@@ -105,7 +105,7 @@ describe('TaskCard Inline Fluid Expansion', () => {
     await fireEvent.press(getByTestId('task-card-edit-btn-occ-expand-1'));
     expect(pushMock).toHaveBeenCalledWith({
       pathname: '/task/[id]',
-      params: { id: 'occ-expand-1', defId: 'def-expand-1' },
+      params: { id: 'occ-expand-1', defId: 'def-expand-1', mode: 'full' },
     });
   });
 
