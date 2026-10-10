@@ -22,6 +22,14 @@ export interface CollapsibleProps {
   testID?: string;
 }
 
+/**
+ * Height-animated collapsible.
+ *
+ * Content is rendered inside an absolutely positioned child so it always lays out at its
+ * natural height (independent of the animated wrapper height). The wrapper's explicit
+ * `height` is driven by `measuredHeight * progress`, which avoids any dependence on
+ * maxHeight clamping or first-frame measurement.
+ */
 export function Collapsible({
   expanded,
   children,
@@ -31,9 +39,9 @@ export function Collapsible({
   style,
   testID,
 }: CollapsibleProps) {
-  const [contentHeight, setContentHeight] = useState(0);
   const [isRendered, setIsRendered] = useState(expanded);
   const progress = useSharedValue(expanded ? 1 : 0);
+  const measuredHeight = useSharedValue(0);
   const isInitialMount = useRef(true);
 
   useEffect(() => {
@@ -65,23 +73,9 @@ export function Collapsible({
   }, [expanded, duration, unmountOnCollapse, progress, transitionKey]);
 
   const animatedStyle = useAnimatedStyle(() => {
-    const isFullyExpanded = progress.value >= 1;
-    let targetMaxHeight: number | undefined;
-
-    if (isFullyExpanded) {
-      targetMaxHeight = undefined;
-    } else if (contentHeight > 0) {
-      targetMaxHeight = contentHeight * progress.value;
-    } else if (progress.value === 0) {
-      targetMaxHeight = 0;
-    } else {
-      targetMaxHeight = undefined;
-    }
-
     return {
       opacity: progress.value,
-      maxHeight: targetMaxHeight,
-      overflow: 'hidden',
+      height: measuredHeight.value * progress.value,
     };
   });
 
@@ -91,14 +85,15 @@ export function Collapsible({
 
   return (
     <Animated.View
-      style={[animatedStyle, style]}
+      style={[{ overflow: 'hidden' }, animatedStyle, style]}
       testID={testID}
     >
       <View
+        style={{ position: 'absolute', top: 0, start: 0, end: 0 }}
         onLayout={e => {
           const h = e.nativeEvent.layout.height;
-          if (h > 0 && Math.abs(h - contentHeight) > 1) {
-            setContentHeight(h);
+          if (h > 0 && Math.abs(h - measuredHeight.value) > 0.5) {
+            measuredHeight.value = h;
           }
         }}
         collapsable={false}
