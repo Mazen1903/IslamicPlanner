@@ -11,15 +11,18 @@
       "resizeMode": "contain",
       "backgroundColor": "#0E442B"
     },
+    "backgroundColor": "#0F1114",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
+      "backgroundColor": "#0F1114",
       "bundleIdentifier": "com.mm1903.islamicplannerapp",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Islamic Daily Planner needs your location to calculate accurate prayer times."
       }
     },
     "android": {
+      "backgroundColor": "#0F1114",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",

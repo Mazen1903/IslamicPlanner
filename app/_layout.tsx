@@ -1,7 +1,15 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, AppState, type AppStateStatus } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Slot, Stack, useRouter, useSegments } from 'expo-router';
+import {
+  Slot,
+  Stack,
+  useRouter,
+  useSegments,
+  ThemeProvider as NavigationThemeProvider,
+  DarkTheme as NavDarkTheme,
+  DefaultTheme as NavDefaultTheme,
+} from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme, type ThemeMode, setActiveFontFamily, setActiveTextScale } from '@/theme';
 import { Button } from '@/components/common/Button';
@@ -69,10 +77,27 @@ export function ThemedStatusBar() {
 }
 
 export function RootGate() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const status = useOnboardingStore(s => s.status);
   const segments = useSegments();
   const router = useRouter();
+
+  const navTheme = useMemo(() => {
+    const base = isDark ? NavDarkTheme : NavDefaultTheme;
+    return {
+      ...base,
+      dark: isDark,
+      colors: {
+        ...base.colors,
+        primary: colors.primary,
+        background: colors.background,
+        card: colors.surface,
+        text: colors.textPrimary,
+        border: colors.border,
+        notification: colors.primary,
+      },
+    };
+  }, [isDark, colors]);
 
   useEffect(() => {
     useOnboardingStore.getState().initialize();
@@ -114,17 +139,40 @@ export function RootGate() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        animation: 'default',
-        contentStyle: { backgroundColor: colors.background },
-      }}
-    >
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="task/[id]" options={{ headerShown: false, presentation: 'card' }} />
-      <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-    </Stack>
+    <NavigationThemeProvider value={navTheme}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: 'slide_from_right',
+            contentStyle: { backgroundColor: colors.background },
+          }}
+        >
+          <Stack.Screen
+            name="(tabs)"
+            options={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.background },
+            }}
+          />
+          <Stack.Screen
+            name="task/[id]"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              contentStyle: { backgroundColor: colors.background },
+            }}
+          />
+          <Stack.Screen
+            name="onboarding"
+            options={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.background },
+            }}
+          />
+        </Stack>
+      </View>
+    </NavigationThemeProvider>
   );
 }
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Text, ActivityIndicator, StyleSheet, Alert } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
@@ -18,11 +18,12 @@ export default function TaskEditScreen() {
   const { colors, typography, spacing } = useTheme();
   const { refresh, toggleSubtask } = useToday();
 
+  const isFullMode = mode === 'full' || (Array.isArray(mode) && mode[0] === 'full');
   const [loading, setLoading] = useState(true);
   const [definition, setDefinition] = useState<TaskDefinition | null>(null);
   const [occurrence, setOccurrence] = useState<TaskOccurrence | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isEditingFull, setIsEditingFull] = useState(mode === 'full');
+  const [isEditingFull, setIsEditingFull] = useState(isFullMode);
 
   useEffect(() => {
     let isMounted = true;
@@ -93,7 +94,7 @@ export default function TaskEditScreen() {
 
   const handleSuccess = async () => {
     await refresh();
-    if (mode === 'full') {
+    if (isFullMode) {
       router.back();
       return;
     }
@@ -168,39 +169,46 @@ export default function TaskEditScreen() {
 
   if (isEditingFull) {
     return (
-      <TaskFormScreen
-        initialDefinition={definition}
-        initialOccurrence={occurrence ?? undefined}
-        initialCivilSeedDate={occurrence?.localDate ?? definition.startDate}
-        onSuccess={handleSuccess}
-        onCancel={() => {
-          if (mode === 'full') {
-            router.back();
-          } else {
-            setIsEditingFull(false);
-          }
-        }}
-      />
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
+        <TaskFormScreen
+          initialDefinition={definition}
+          initialOccurrence={occurrence ?? undefined}
+          initialCivilSeedDate={occurrence?.localDate ?? definition.startDate}
+          onSuccess={handleSuccess}
+          onCancel={() => {
+            if (isFullMode) {
+              router.back();
+            } else {
+              setIsEditingFull(false);
+            }
+          }}
+        />
+      </View>
     );
   }
 
   return (
-    <TaskDetailScreen
-      definition={definition}
-      occurrence={occurrence}
-      onEditFull={() => setIsEditingFull(true)}
-      onDelete={handleDelete}
-      onBack={() => router.back()}
-      onToggleSubtask={handleToggleSubtask}
-      onAddSubtask={handleAddSubtask}
-      onUpdateSubtask={handleUpdateSubtask}
-      onReorderSubtasks={handleReorderSubtasks}
-      onUpdateNotes={handleUpdateNotes}
-    />
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <TaskDetailScreen
+        definition={definition}
+        occurrence={occurrence}
+        onEditFull={() => setIsEditingFull(true)}
+        onDelete={handleDelete}
+        onBack={() => router.back()}
+        onToggleSubtask={handleToggleSubtask}
+        onAddSubtask={handleAddSubtask}
+        onUpdateSubtask={handleUpdateSubtask}
+        onReorderSubtasks={handleReorderSubtasks}
+        onUpdateNotes={handleUpdateNotes}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   center: {
     flex: 1,
     alignItems: 'center',
