@@ -191,6 +191,9 @@ export function TaskList({
   // "Mark all done" so the checklist and the task stay consistent.
   const handleCompleteTask = useCallback(
     (occurrenceId: string) => {
+      // Auto-collapse if this task (or any task) was expanded so it is compact in Completed Today
+      setExpandedOccurrenceId(prev => (prev === occurrenceId ? null : prev));
+
       const task = findTaskById(occurrenceId);
       const incompleteIds = (task?.subtasks ?? []).filter(s => !s.isCompleted).map(s => s.id);
 

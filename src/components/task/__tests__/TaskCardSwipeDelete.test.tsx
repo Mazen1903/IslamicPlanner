@@ -191,4 +191,25 @@ describe('TaskCard Inline Fluid Expansion', () => {
     );
     expect(getByTestId('task-card-edit-btn-occ-expand-1')).toBeTruthy();
   });
+
+  it('when an expanded task is marked completed via checkbox, onToggleExpand is called to collapse it', async () => {
+    const onComplete = jest.fn();
+    const onToggleExpand = jest.fn();
+    const { getByTestId } = await render(
+      <ThemeProvider>
+        <TaskCard
+          task={mockTask}
+          isExpanded={true}
+          onToggleExpand={onToggleExpand}
+          onComplete={onComplete}
+        />
+      </ThemeProvider>
+    );
+
+    // Click checkbox
+    await fireEvent.press(getByTestId('checkbox-occ-expand-1'));
+
+    expect(onToggleExpand).toHaveBeenCalled();
+    expect(onComplete).toHaveBeenCalledWith('occ-expand-1');
+  });
 });

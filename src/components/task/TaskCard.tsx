@@ -176,6 +176,13 @@ export function TaskCard({
     }
   }, [task.occurrenceId]);
 
+  useEffect(() => {
+    if (isCompleted) {
+      setInternalExpanded(false);
+      setShowRecurringDelete(false);
+    }
+  }, [isCompleted]);
+
   // Drag callbacks in refs so the PanResponder closure is always current
   const onDragStartRef = useRef(onDragStart);
   const onDragMoveRef = useRef(onDragMove);
@@ -401,7 +408,7 @@ export function TaskCard({
                 ? (isDark ? '#131D17' : colors.surfaceSecondary)
                 : (isDark ? '#141E18' : '#FFFFFF'),
               borderRadius: radii.card ?? 16,
-              paddingVertical: 14,
+              paddingVertical: isCompleted ? 10 : 14,
               paddingHorizontal: 15,
               borderStartWidth: 4,
               borderStartColor: isCompleted
@@ -441,6 +448,11 @@ export function TaskCard({
                 if (isCompleted && onUndo) {
                   onUndo(task.occurrenceId);
                 } else if (isPending && onComplete) {
+                  if (onToggleExpand && isExpanded) {
+                    onToggleExpand();
+                  }
+                  setInternalExpanded(false);
+                  setShowRecurringDelete(false);
                   onComplete(task.occurrenceId);
                 }
               }}
@@ -497,8 +509,8 @@ export function TaskCard({
                 {task.title}
               </Text>
 
-              {/* Checklist Progress Bar */}
-              {task.subtasks && task.subtasks.length > 0 && (
+              {/* Checklist Progress Bar (only on pending tasks) */}
+              {task.subtasks && task.subtasks.length > 0 && !isCompleted && (
                 <View
                   style={[
                     styles.checklistProgressBarTrack,
