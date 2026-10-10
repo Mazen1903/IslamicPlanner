@@ -16,7 +16,7 @@ export default function TaskEditScreen() {
   const router = useRouter();
   const { id, mode } = useLocalSearchParams<{ id: string; mode?: string }>();
   const { colors, typography, spacing } = useTheme();
-  const { refresh, toggleSubtask } = useToday();
+  const { refresh, toggleSubtask } = useToday({ autoLoad: false, enableTimer: false });
 
   const isFullMode = mode === 'full' || (Array.isArray(mode) && mode[0] === 'full');
   const [loading, setLoading] = useState(true);

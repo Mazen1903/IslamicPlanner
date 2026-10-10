@@ -45,6 +45,8 @@ export interface UseTodayOptions {
   notificationService?: NotificationReconciliationService;
   engine?: TaskEngine;
   enableTimer?: boolean;
+  /** When false, skips the initial full refresh on mount (default true). */
+  autoLoad?: boolean;
 }
 
 export function useToday(options: UseTodayOptions = {}) {
@@ -182,9 +184,12 @@ export function useToday(options: UseTodayOptions = {}) {
   );
 
   // Initial load — fast path: render immediately with cached location, GPS in background
+  const autoLoad = options.autoLoad !== false;
   useEffect(() => {
-    performFastInitialLoad();
-  }, [performFastInitialLoad]);
+    if (autoLoad) {
+      performFastInitialLoad();
+    }
+  }, [performFastInitialLoad, autoLoad]);
 
   // App foreground: full refresh and sync selectedPrayer = currentPrayer
   useAppForeground(
