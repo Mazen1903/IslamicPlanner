@@ -10,9 +10,6 @@ import Animated, {
   withTiming,
   Easing,
   runOnJS,
-  LinearTransition,
-  FadeIn,
-  FadeOut,
 } from 'react-native-reanimated';
 
 export interface CollapsibleProps {
@@ -68,14 +65,22 @@ export function Collapsible({
   }, [expanded, duration, unmountOnCollapse, progress, transitionKey]);
 
   const animatedStyle = useAnimatedStyle(() => {
+    const isFullyExpanded = progress.value >= 1;
+    let targetMaxHeight: number | undefined;
+
+    if (isFullyExpanded) {
+      targetMaxHeight = undefined;
+    } else if (contentHeight > 0) {
+      targetMaxHeight = contentHeight * progress.value;
+    } else if (progress.value === 0) {
+      targetMaxHeight = 0;
+    } else {
+      targetMaxHeight = undefined;
+    }
+
     return {
       opacity: progress.value,
-      maxHeight:
-        progress.value >= 1
-          ? undefined
-          : contentHeight > 0
-          ? contentHeight * progress.value
-          : 0,
+      maxHeight: targetMaxHeight,
       overflow: 'hidden',
     };
   });
@@ -86,7 +91,6 @@ export function Collapsible({
 
   return (
     <Animated.View
-      layout={LinearTransition.duration(duration)}
       style={[animatedStyle, style]}
       testID={testID}
     >
@@ -99,14 +103,7 @@ export function Collapsible({
         }}
         collapsable={false}
       >
-        <Animated.View
-          key={transitionKey !== undefined ? String(transitionKey) : 'content'}
-          entering={FadeIn.duration(180)}
-          exiting={FadeOut.duration(120)}
-          layout={LinearTransition.duration(duration)}
-        >
-          {children}
-        </Animated.View>
+        {children}
       </View>
     </Animated.View>
   );

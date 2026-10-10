@@ -388,29 +388,35 @@ export function TaskCard({
             shadows.card,
             {
               backgroundColor: isCompleted
-                ? colors.surfaceSecondary
-                : colors.surface,
-              borderRadius: radii.card,
-              paddingVertical: 12,
-              paddingHorizontal: 14,
+                ? (isDark ? '#131D17' : colors.surfaceSecondary)
+                : (isDark ? '#141E18' : '#FFFFFF'),
+              borderRadius: radii.card ?? 16,
+              paddingVertical: 14,
+              paddingHorizontal: 15,
+              borderStartWidth: 4,
+              borderStartColor: isCompleted
+                ? colors.textMuted
+                : task.priority === 'IMPORTANT'
+                ? colors.error
+                : (isDark ? '#10B981' : colors.primary),
               borderColor: highlightAnim.interpolate({
                 inputRange: [0, 1],
                 outputRange: [
                   isUnlocked
                     ? colors.primary
                     : isExpanded
-                    ? (isDark ? 'rgba(15, 159, 74, 0.45)' : colors.primary)
+                    ? (isDark ? '#10B981' : colors.primary)
                     : task.priority === 'IMPORTANT' && !isCompleted
-                    ? colors.error
-                    : colors.border,
+                    ? (isDark ? 'rgba(239, 68, 68, 0.45)' : 'rgba(239, 68, 68, 0.35)')
+                    : (isDark ? 'rgba(16, 185, 129, 0.22)' : 'rgba(5, 150, 105, 0.18)'),
                   colors.primary,
                 ],
               }),
-              borderWidth: isUnlocked ? 2 : isExpanded ? 1.5 : task.priority === 'IMPORTANT' && !isCompleted ? 1.5 : 1,
-              shadowColor: isUnlocked ? colors.primary : colors.shadowColor,
-              shadowOpacity: isUnlocked ? 0.35 : isExpanded ? 0.12 : 0.04,
-              shadowRadius: isUnlocked ? 10 : isExpanded ? 6 : 3,
-              elevation: isUnlocked ? 10 : isExpanded ? 4 : (shadows.card.elevation ?? 0),
+              borderWidth: isUnlocked ? 2 : isExpanded ? 1.5 : 1.2,
+              shadowColor: colors.primary,
+              shadowOpacity: isUnlocked ? 0.35 : isExpanded ? 0.16 : (isDark ? 0.12 : 0.06),
+              shadowRadius: isUnlocked ? 10 : isExpanded ? 8 : 4,
+              elevation: isUnlocked ? 10 : isExpanded ? 4 : 2,
               opacity: isCompleted ? 0.72 : 1,
             },
           ]}
@@ -443,6 +449,8 @@ export function TaskCard({
                 {
                   backgroundColor: hasCustomTaskIcon(task.icon) ? 'transparent' : category.bg,
                   borderRadius: 14,
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
+                  borderWidth: 1,
                   marginEnd: spacing.sm,
                   opacity: isCompleted ? 0.6 : 1,
                 },
@@ -451,7 +459,7 @@ export function TaskCard({
             >
               <TaskCategoryIcon
                 iconId={task.icon}
-                size={hasCustomTaskIcon(task.icon) ? 48 : 26}
+                size={hasCustomTaskIcon(task.icon) ? 46 : 26}
                 color={category.color}
               />
             </View>
@@ -470,8 +478,8 @@ export function TaskCard({
                   {
                     color: isCompleted ? colors.textMuted : colors.textPrimary,
                     textDecorationLine: isCompleted ? 'line-through' : 'none',
-                    fontSize: 15,
-                    fontWeight: '600',
+                    fontSize: 15.5,
+                    fontWeight: '700',
                   },
                 ]}
                 numberOfLines={isExpanded ? undefined : 1}
@@ -511,14 +519,21 @@ export function TaskCard({
                       {
                         backgroundColor: isCompleted
                           ? colors.surface
-                          : colors.primaryLight,
+                          : isDark
+                          ? 'rgba(16, 185, 129, 0.16)'
+                          : 'rgba(16, 185, 129, 0.1)',
+                        borderColor: isCompleted
+                          ? 'transparent'
+                          : isDark
+                          ? 'rgba(16, 185, 129, 0.35)'
+                          : 'rgba(16, 185, 129, 0.25)',
                       },
                     ]}
                   >
                     <Icon
                       name="clock"
                       size={11}
-                      color={isCompleted ? colors.textMuted : colors.primaryDark}
+                      color={isCompleted ? colors.textMuted : isDark ? '#34D399' : colors.primaryDark}
                       style={{ marginEnd: 4 }}
                       decorative
                     />
@@ -527,7 +542,8 @@ export function TaskCard({
                         typography.caption,
                         styles.metaPillText,
                         {
-                          color: isCompleted ? colors.textMuted : colors.primaryDark,
+                          color: isCompleted ? colors.textMuted : isDark ? '#34D399' : colors.primaryDark,
+                          fontWeight: '700',
                         },
                       ]}
                       numberOfLines={1}
@@ -543,8 +559,8 @@ export function TaskCard({
                     style={[
                       styles.metaPill,
                       {
-                        backgroundColor: colors.primaryLight,
-                        borderColor: colors.primary,
+                        backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+                        borderColor: isDark ? 'rgba(59, 130, 246, 0.35)' : 'rgba(59, 130, 246, 0.25)',
                       },
                     ]}
                     testID={`task-recurring-badge-${task.occurrenceId}`}
@@ -552,7 +568,7 @@ export function TaskCard({
                     <Icon
                       name="refresh"
                       size={10}
-                      color={colors.primaryDark}
+                      color={isDark ? '#60A5FA' : '#1D4ED8'}
                       style={{ marginEnd: 3 }}
                       decorative
                     />
@@ -561,7 +577,8 @@ export function TaskCard({
                         typography.caption,
                         styles.metaPillText,
                         {
-                          color: colors.primaryDark,
+                          color: isDark ? '#60A5FA' : '#1D4ED8',
+                          fontWeight: '600',
                         },
                       ]}
                     >
@@ -576,7 +593,12 @@ export function TaskCard({
                     style={[
                       styles.metaPill,
                       {
-                        backgroundColor: isCompleted ? colors.surface : colors.surfaceSecondary,
+                        backgroundColor: isCompleted
+                          ? colors.surface
+                          : isDark
+                          ? 'rgba(255, 255, 255, 0.08)'
+                          : colors.surfaceSecondary,
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
                       },
                     ]}
                     testID={`subtasks-progress-${task.occurrenceId}`}
@@ -592,10 +614,10 @@ export function TaskCard({
                       style={[
                         typography.caption,
                         styles.metaPillText,
-                        { color: colors.textSecondary },
+                        { color: colors.textSecondary, fontWeight: '600' },
                       ]}
                     >
-                      Checklist {task.subtasks.filter(s => s.isCompleted).length}/{task.subtasks.length}
+                      {task.subtasks.filter(s => s.isCompleted).length}/{task.subtasks.length}
                     </Text>
                   </View>
                 )}
@@ -663,16 +685,19 @@ export function TaskCard({
                   styles.chevronWrapper,
                   {
                     backgroundColor: isExpanded
-                      ? (isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)')
-                      : 'transparent',
+                      ? (isDark ? 'rgba(16, 185, 129, 0.22)' : 'rgba(16, 185, 129, 0.15)')
+                      : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'),
+                    borderColor: isExpanded
+                      ? (isDark ? '#10B981' : colors.primary)
+                      : (isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)'),
                   },
                 ]}
                 testID={`task-card-chevron-${task.occurrenceId}`}
               >
                 <Icon
                   name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                  size={15}
-                  color={isExpanded ? (isDark ? '#34D399' : colors.primary) : colors.textTertiary}
+                  size={14}
+                  color={isExpanded ? (isDark ? '#34D399' : colors.primaryDark) : colors.textSecondary}
                   decorative
                 />
               </View>
@@ -1004,9 +1029,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   chevronWrapper: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1061,16 +1087,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginTop: 4,
+    marginTop: 6,
+    paddingTop: 2,
   },
   actionBtn: {
     flex: 1,
-    height: 38,
+    height: 40,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
     borderWidth: 1,
   },
   editBtn: {},
