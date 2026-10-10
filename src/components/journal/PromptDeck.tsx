@@ -96,7 +96,11 @@ export function PromptDeck({
             >
               <Image
                 source={JOURNAL_PROMPT_DECK_ASSETS.prevArrow}
-                style={{ width: 14, height: 14 }}
+                style={{
+                  width: 14,
+                  height: 14,
+                  tintColor: isDark ? colors.textPrimary : undefined,
+                }}
                 resizeMode="contain"
               />
             </SoftCircleButton>
@@ -108,7 +112,11 @@ export function PromptDeck({
             >
               <Image
                 source={JOURNAL_PROMPT_DECK_ASSETS.nextArrow}
-                style={{ width: 14, height: 14 }}
+                style={{
+                  width: 14,
+                  height: 14,
+                  tintColor: isDark ? colors.textPrimary : undefined,
+                }}
                 resizeMode="contain"
               />
             </SoftCircleButton>
@@ -169,7 +177,7 @@ export function PromptDeck({
                   source={JOURNAL_PROMPT_DECK_ASSETS.lanternArtwork}
                   style={[
                     styles.lanternImage,
-                    { opacity: isDark ? 0.65 : 0.88 },
+                    { opacity: isDark ? 0.82 : 0.88 },
                   ]}
                   resizeMode="contain"
                 />

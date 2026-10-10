@@ -74,7 +74,11 @@ export const JournalEditor = forwardRef<JournalEditorRef, JournalEditorProps>(
           >
             <Image
               source={JOURNAL_ACTION_ASSETS.focusPencilGreen}
-              style={{ width: 14, height: 14 }}
+              style={{
+                width: 14,
+                height: 14,
+                tintColor: isDark ? colors.primary : undefined,
+              }}
               resizeMode="contain"
             />
             <Text
@@ -174,7 +178,12 @@ export const JournalEditor = forwardRef<JournalEditorRef, JournalEditorProps>(
             </Text>
             <Image
               source={JOURNAL_ACTION_ASSETS.expandArrowGreen}
-              style={{ width: 12, height: 12, marginStart: 3 }}
+              style={{
+                width: 12,
+                height: 12,
+                marginStart: 3,
+                tintColor: isDark ? colors.primary : undefined,
+              }}
               resizeMode="contain"
             />
           </Pressable>
