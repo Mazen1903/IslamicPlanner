@@ -28,6 +28,7 @@ export interface CollapsibleProps {
   children: React.ReactNode;
   duration?: number;
   unmountOnCollapse?: boolean;
+  transitionKey?: any;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 }
@@ -37,6 +38,7 @@ export function Collapsible({
   children,
   duration = 260,
   unmountOnCollapse = true,
+  transitionKey,
   style,
   testID,
 }: CollapsibleProps) {
@@ -77,7 +79,7 @@ export function Collapsible({
         }
       );
     }
-  }, [expanded, duration, unmountOnCollapse, progress]);
+  }, [expanded, duration, unmountOnCollapse, progress, transitionKey]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {

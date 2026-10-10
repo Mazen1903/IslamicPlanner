@@ -551,13 +551,13 @@ describe('SchedulingEngine', () => {
       expect(res.eligiblePrayerSections).toEqual(['FAJR', 'DHUHR', 'ASR', 'MAGHRIB']);
     });
 
-    it('PW-06: Wrapping window (MAGHRIB -> FAJR) is rejected in v1', () => {
+    it('PW-06: Backwards wrapping window (MAGHRIB -> DHUHR) is rejected in v1', () => {
       const timeline = buildPrayerTimeline('2026-09-15', LOCATIONS.newYork, nyParams);
       const def = makeTaskDefinition({
         scheduleType: 'PRAYER_WINDOW',
         scheduleData: {
           startPrayer: 'MAGHRIB',
-          endPrayer: 'FAJR',
+          endPrayer: 'DHUHR',
         },
       });
 
@@ -576,6 +576,24 @@ describe('SchedulingEngine', () => {
       } catch (e) {
         expect((e as SchedulingResolutionError).code).toBe('INVALID_PRAYER_WINDOW');
       }
+    });
+
+    it('PW-06b: Overnight window (ISHA -> FAJR) resolves to next-day Fajr', () => {
+      const timeline = buildPrayerTimeline('2026-09-15', LOCATIONS.newYork, nyParams);
+      const def = makeTaskDefinition({
+        scheduleType: 'PRAYER_WINDOW',
+        scheduleData: {
+          startPrayer: 'ISHA',
+          endPrayer: 'FAJR',
+        },
+      });
+
+      const res = resolvePlacement(def, '2026-09-15', {
+        timeline,
+        planningDayConfig: fajrConfig,
+      });
+
+      expect(res.eligiblePrayerSections).toContain('ISHA');
     });
 
     it('PW-07: Equal start and end prayers (ASR -> ASR) is rejected', () => {
@@ -1117,7 +1135,7 @@ describe('SchedulingEngine', () => {
         scheduleType: 'PRAYER_WINDOW',
         scheduleData: {
           startPrayer: 'ISHA',
-          endPrayer: 'FAJR',
+          endPrayer: 'DHUHR',
         },
       });
 

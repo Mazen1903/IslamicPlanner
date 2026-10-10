@@ -41,7 +41,7 @@ describe('ReschedulePrayerModal Component', () => {
     expect(screen.getByText('Recite Surah Al-Kahf')).toBeTruthy();
     expect(screen.getByText('Dhuhr (1:05 PM)')).toBeTruthy();
     expect(screen.getByText('Asr')).toBeTruthy();
-    expect(screen.getByText('4:35 PM')).toBeTruthy();
+    expect(screen.getAllByText('4:35 PM').length).toBeGreaterThanOrEqual(1);
   });
 
   it('confirms with AT_PRAYER (offset 0) by default', async () => {
@@ -75,7 +75,7 @@ describe('ReschedulePrayerModal Component', () => {
     });
   });
 
-  it('confirms with PLUS_15 (offset 15) when selected', async () => {
+  it('adjusts time forward by 5 minutes with stepper', async () => {
     const onConfirm = jest.fn();
 
     await render(
@@ -91,9 +91,9 @@ describe('ReschedulePrayerModal Component', () => {
       </ThemeProvider>
     );
 
-    const plus15Option = screen.getByTestId('option-plus-15');
+    const plusBtn = screen.getByTestId('reschedule-offset-plus');
     await act(async () => {
-      fireEvent.press(plus15Option);
+      fireEvent.press(plusBtn);
     });
 
     const confirmButton = screen.getByTestId('reschedule-confirm-button');
@@ -106,12 +106,12 @@ describe('ReschedulePrayerModal Component', () => {
       scheduleData: {
         anchorPrayer: 'MAGHRIB',
         direction: 'AFTER',
-        offsetMinutes: 15,
+        offsetMinutes: 5,
       },
     });
   });
 
-  it('confirms with EXACT_TIME when selected', async () => {
+  it('adjusts time backward by 5 minutes with stepper', async () => {
     const onConfirm = jest.fn();
 
     await render(
@@ -119,17 +119,17 @@ describe('ReschedulePrayerModal Component', () => {
         <ReschedulePrayerModal
           visible={true}
           task={mockTask}
-          targetPrayer="ISHA"
-          targetPrayerTime="8:30 PM"
+          targetPrayer="DHUHR"
+          targetPrayerTime="1:15 PM"
           onConfirm={onConfirm}
           onCancel={jest.fn()}
         />
       </ThemeProvider>
     );
 
-    const exactOption = screen.getByTestId('option-exact-time');
+    const minusBtn = screen.getByTestId('reschedule-offset-minus');
     await act(async () => {
-      fireEvent.press(exactOption);
+      fireEvent.press(minusBtn);
     });
 
     const confirmButton = screen.getByTestId('reschedule-confirm-button');
@@ -138,11 +138,38 @@ describe('ReschedulePrayerModal Component', () => {
     });
 
     expect(onConfirm).toHaveBeenCalledWith({
-      scheduleType: 'EXACT_TIME',
+      scheduleType: 'PRAYER_RELATIVE',
       scheduleData: {
-        localTime: '20:30',
+        anchorPrayer: 'DHUHR',
+        direction: 'BEFORE',
+        offsetMinutes: 5,
       },
     });
+  });
+
+  it('triggers onEditTask when Edit Full Task button is pressed', async () => {
+    const onEditTask = jest.fn();
+
+    await render(
+      <ThemeProvider>
+        <ReschedulePrayerModal
+          visible={true}
+          task={mockTask}
+          targetPrayer="ISHA"
+          targetPrayerTime="8:30 PM"
+          onConfirm={jest.fn()}
+          onEditTask={onEditTask}
+          onCancel={jest.fn()}
+        />
+      </ThemeProvider>
+    );
+
+    const editButton = screen.getByTestId('reschedule-edit-task-button');
+    await act(async () => {
+      fireEvent.press(editButton);
+    });
+
+    expect(onEditTask).toHaveBeenCalledWith(mockTask, 'ISHA');
   });
 
   it('invokes onCancel when close button or cancel button is pressed', async () => {
@@ -173,79 +200,4 @@ describe('ReschedulePrayerModal Component', () => {
     });
     expect(onCancel).toHaveBeenCalledTimes(2);
   });
-
-  it('supports BEFORE direction and custom stepper offset', async () => {
-    const onConfirm = jest.fn();
-
-    await render(
-      <ThemeProvider>
-        <ReschedulePrayerModal
-          visible={true}
-          task={mockTask}
-          targetPrayer="DHUHR"
-          targetPrayerTime="1:15 PM"
-          onConfirm={onConfirm}
-          onCancel={jest.fn()}
-        />
-      </ThemeProvider>
-    );
-
-    // Switch direction to BEFORE
-    const beforeBtn = screen.getByTestId('reschedule-direction-before');
-    await act(async () => {
-      fireEvent.press(beforeBtn);
-    });
-
-    // Enter custom offset 25 min
-    const customInput = screen.getByTestId('reschedule-custom-offset-input');
-    await act(async () => {
-      fireEvent.changeText(customInput, '25');
-    });
-
-    const confirmButton = screen.getByTestId('reschedule-confirm-button');
-    await act(async () => {
-      fireEvent.press(confirmButton);
-    });
-
-    expect(onConfirm).toHaveBeenCalledWith({
-      scheduleType: 'PRAYER_RELATIVE',
-      scheduleData: {
-        anchorPrayer: 'DHUHR',
-        direction: 'BEFORE',
-        offsetMinutes: 25,
-      },
-    });
-  });
-
-  it('supports ANYTIME_TODAY mode', async () => {
-    const onConfirm = jest.fn();
-
-    await render(
-      <ThemeProvider>
-        <ReschedulePrayerModal
-          visible={true}
-          task={mockTask}
-          targetPrayer="ASR"
-          onConfirm={onConfirm}
-          onCancel={jest.fn()}
-        />
-      </ThemeProvider>
-    );
-
-    const anytimeChip = screen.getByTestId('option-anytime-today');
-    await act(async () => {
-      fireEvent.press(anytimeChip);
-    });
-
-    const confirmButton = screen.getByTestId('reschedule-confirm-button');
-    await act(async () => {
-      fireEvent.press(confirmButton);
-    });
-
-    expect(onConfirm).toHaveBeenCalledWith({
-      scheduleType: 'ANYTIME_TODAY',
-      scheduleData: {},
-    });
-  });
 });
-

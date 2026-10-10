@@ -83,6 +83,18 @@ export default function PlannerScreen() {
     setTargetReschedulePrayer(null);
   }, []);
 
+  const handleEditTaskFromReschedule = useCallback((task: TaskCardViewModel, _targetPrayer: Prayer) => {
+    setRescheduleModalVisible(false);
+    setTaskToReschedule(null);
+    setTargetReschedulePrayer(null);
+    if (task.occurrenceId || task.taskDefinitionId) {
+      router.push({
+        pathname: '/task/[id]',
+        params: { id: task.occurrenceId || task.taskDefinitionId, defId: task.taskDefinitionId },
+      });
+    }
+  }, [router]);
+
   const isFirstFocusRef = useRef(true);
 
   // Refresh schedule whenever user navigates back to Planner tab
@@ -253,6 +265,7 @@ export default function PlannerScreen() {
           targetPrayer={targetReschedulePrayer}
           targetPrayerTime={targetPrayerTime}
           onConfirm={handleConfirmReschedule}
+          onEditTask={handleEditTaskFromReschedule}
           onCancel={handleCancelReschedule}
         />
       </SafeAreaView>

@@ -44,17 +44,6 @@ export function ScheduleModeCards({
 }: ScheduleModeCardsProps) {
   const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
 
-  const availableEndPrayers = React.useMemo<Prayer[]>(() => {
-    const start = state.windowDraft.startPrayer;
-    const startIdx = PRAYERS.indexOf(start);
-    if (startIdx === -1) return ['DHUHR', 'ASR', 'MAGHRIB', 'ISHA'];
-    if (start === 'FAJR') {
-      return ['DHUHR', 'ASR', 'MAGHRIB', 'ISHA'];
-    }
-    const sameDayEnds = PRAYERS.slice(startIdx + 1);
-    return [...sameDayEnds, 'FAJR'];
-  }, [state.windowDraft.startPrayer]);
-
   const modes: { mode: ScheduleMode; label: string }[] = [
     {
       mode: 'EXACT_TIME',
@@ -88,7 +77,11 @@ export function ScheduleModeCards({
             <Pressable
               key={item.mode}
               onPress={() => {
-                dispatch({ type: 'SET_SCHEDULE_MODE', payload: item.mode });
+                if (state.scheduleMode === item.mode) {
+                  dispatch({ type: 'SET_SCHEDULE_MODE', payload: null as any });
+                } else {
+                  dispatch({ type: 'SET_SCHEDULE_MODE', payload: item.mode });
+                }
               }}
               accessibilityRole="radio"
               accessibilityState={{ checked: isSelected }}
@@ -149,7 +142,11 @@ export function ScheduleModeCards({
       )}
 
       {/* Unified Inline Mode Fields */}
-      <Collapsible expanded={state.scheduleMode !== null} testID="schedule-mode-collapsible">
+      <Collapsible
+        expanded={state.scheduleMode !== null}
+        transitionKey={state.scheduleMode}
+        testID="schedule-mode-collapsible"
+      >
         {state.scheduleMode !== null && (
           <View
             style={[
@@ -364,20 +361,7 @@ export function ScheduleModeCards({
                   return (
                     <Pressable
                       key={p}
-                      onPress={() => {
-                        const startIdx = PRAYERS.indexOf(p);
-                        const nextAvailableEnds: Prayer[] = p === 'FAJR'
-                          ? ['DHUHR', 'ASR', 'MAGHRIB', 'ISHA']
-                          : [...PRAYERS.slice(startIdx + 1), 'FAJR'];
-                        if (!nextAvailableEnds.includes(state.windowDraft.endPrayer)) {
-                          dispatch({
-                            type: 'UPDATE_WINDOW_DRAFT',
-                            payload: { startPrayer: p, endPrayer: nextAvailableEnds[0] },
-                          });
-                        } else {
-                          dispatch({ type: 'UPDATE_WINDOW_DRAFT', payload: { startPrayer: p } });
-                        }
-                      }}
+                      onPress={() => dispatch({ type: 'UPDATE_WINDOW_DRAFT', payload: { startPrayer: p } })}
                       accessibilityRole="button"
                       accessibilityState={{ selected: isStartSelected }}
                       accessibilityLabel={`Start prayer: ${p}`}
@@ -423,17 +407,16 @@ export function ScheduleModeCards({
                 End Prayer (exclusive)
               </Text>
               <View style={styles.prayerRow}>
-                {availableEndPrayers.map(p => {
+                {PRAYERS.map(p => {
                   const isEndSelected = state.windowDraft.endPrayer === p;
-                  const isNextDay = p === 'FAJR' && state.windowDraft.startPrayer !== 'FAJR';
-                  const displayName = isNextDay ? 'Fajr (+1)' : (PRAYER_NAMES[p] ?? (p.charAt(0) + p.slice(1).toLowerCase()));
+                  const displayName = PRAYER_NAMES[p] ?? (p.charAt(0) + p.slice(1).toLowerCase());
                   return (
                     <Pressable
                       key={p}
                       onPress={() => dispatch({ type: 'UPDATE_WINDOW_DRAFT', payload: { endPrayer: p } })}
                       accessibilityRole="button"
                       accessibilityState={{ selected: isEndSelected }}
-                      accessibilityLabel={`End prayer: ${isNextDay ? 'Fajr next day' : p}`}
+                      accessibilityLabel={`End prayer: ${p}`}
                       testID={`window-end-${p.toLowerCase()}`}
                       style={({ pressed }) => [
                         styles.prayerChip,
@@ -455,14 +438,12 @@ export function ScheduleModeCards({
                         style={{ marginBottom: 2 }}
                       />
                       <Text
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
                         style={[
                           typography.caption,
                           {
                             color: isEndSelected ? colors.primaryDark : colors.textPrimary,
                             fontWeight: isEndSelected ? '700' : '600',
-                            fontSize: 11,
+                            fontSize: 12,
                           },
                         ]}
                       >

@@ -1,15 +1,17 @@
 import type { ImageSourcePropType } from 'react-native';
 
+const CLASSIC_HERO: ImageSourcePropType = require('../../assets/hero/default_light.png');
+
 export const HERO_ART: Record<string, ImageSourcePropType> = {
-  rawdah_emerald: require('../../assets/hero/rawdah_emerald.png'),
-  fajr_awakening: require('../../assets/hero/fajr_awakening.png'),
-  tahajjud_noor: require('../../assets/hero/tahajjud_noor.png'),
-  andalusian_oasis: require('../../assets/hero/andalusian_oasis.png'),
-  sacred_tawaf: require('../../assets/hero/sacred_tawaf.png'),
-  blessed_olive: require('../../assets/hero/blessed_olive.png'),
-  samarkand_turquoise: require('../../assets/hero/samarkand_turquoise.png'),
-  celestial_caravan: require('../../assets/hero/celestial_caravan.png'),
-  maghrib_lantern: require('../../assets/hero/maghrib_lantern.png'),
-  default_light: require('../../assets/hero/default_light.png'),
-  default_dark: require('../../assets/hero/default_dark.png'),
+  rawdah_emerald: CLASSIC_HERO,
+  fajr_awakening: CLASSIC_HERO,
+  tahajjud_noor: CLASSIC_HERO,
+  andalusian_oasis: CLASSIC_HERO,
+  sacred_tawaf: CLASSIC_HERO,
+  blessed_olive: CLASSIC_HERO,
+  samarkand_turquoise: CLASSIC_HERO,
+  celestial_caravan: CLASSIC_HERO,
+  maghrib_lantern: CLASSIC_HERO,
+  default_light: CLASSIC_HERO,
+  default_dark: CLASSIC_HERO,
 };
