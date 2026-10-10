@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   View,
   Text,
@@ -6,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   Image,
+  Vibration,
   type ImageSourcePropType,
   type StyleProp,
   type ViewStyle,
@@ -77,6 +77,9 @@ export function ScheduleModeCards({
             <Pressable
               key={item.mode}
               onPress={() => {
+                try {
+                  Vibration.vibrate(15);
+                } catch {}
                 if (state.scheduleMode === item.mode) {
                   dispatch({ type: 'SET_SCHEDULE_MODE', payload: null as any });
                 } else {
@@ -93,13 +96,15 @@ export function ScheduleModeCards({
                 {
                   backgroundColor: isSelected ? colors.primaryLight : colors.surface,
                   borderColor: isSelected ? colors.primary : colors.border,
+                  borderWidth: isSelected ? 2 : 1,
                   borderRadius: radii.card,
                   paddingVertical: spacing.md,
                   paddingHorizontal: spacing.sm,
                   alignItems: 'center',
                   justifyContent: 'center',
                   minHeight: 96,
-                  opacity: pressed ? 0.8 : 1,
+                  transform: [{ scale: pressed ? 0.95 : 1 }],
+                  opacity: pressed ? 0.85 : 1,
                 },
               ]}
             >

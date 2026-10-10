@@ -24,6 +24,23 @@ export interface ReschedulePrayerModalProps {
   onCancel: () => void;
 }
 
+/**
+ * Resolves any theme color token (including semi-transparent rgba tokens)
+ * to a guaranteed 100% solid, fully opaque RGB/Hex color.
+ */
+export function toOpaqueColor(color: string, fallback: string = '#FFFFFF'): string {
+  if (!color) return fallback;
+  if (color.startsWith('#')) {
+    if (color.length === 9) return color.slice(0, 7);
+    return color;
+  }
+  const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if (rgbaMatch) {
+    return `rgb(${rgbaMatch[1]}, ${rgbaMatch[2]}, ${rgbaMatch[3]})`;
+  }
+  return color;
+}
+
 export function ReschedulePrayerModal({
   visible,
   task,
@@ -33,7 +50,16 @@ export function ReschedulePrayerModal({
   onEditTask,
   onCancel,
 }: ReschedulePrayerModalProps) {
-  const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
+  const { colors, spacing, radii, typography, touchTargets, shadows, isDark } = useTheme();
+
+  const solidSurface = useMemo(
+    () => toOpaqueColor(colors.surface, isDark ? '#1E244B' : '#FFFFFF'),
+    [colors.surface, isDark]
+  );
+  const solidSurfaceSecondary = useMemo(
+    () => toOpaqueColor(colors.surfaceSecondary, isDark ? '#252C58' : '#F4F7F5'),
+    [colors.surfaceSecondary, isDark]
+  );
 
   const [offsetMinutes, setOffsetMinutes] = useState<number>(0);
 
@@ -131,20 +157,20 @@ export function ReschedulePrayerModal({
       <View style={styles.modalRoot}>
         {/* Dimmed solid overlay backdrop */}
         <Pressable
-          style={[styles.overlay, { backgroundColor: 'rgba(0, 0, 0, 0.65)' }]}
+          style={[styles.overlay, { backgroundColor: 'rgba(0, 0, 0, 0.70)' }]}
           onPress={onCancel}
           accessibilityRole="button"
           accessibilityLabel="Dismiss reschedule backdrop"
         />
 
-        {/* Clean, opaque dialog card */}
+        {/* Clean, 100% opaque dialog card */}
         <View
           accessibilityViewIsModal={true}
           style={[
             styles.dialogContainer,
             shadows.elevated,
             {
-              backgroundColor: colors.surface,
+              backgroundColor: solidSurface,
               borderColor: colors.border,
               borderRadius: radii.xl,
               padding: spacing.lg,
@@ -184,7 +210,7 @@ export function ReschedulePrayerModal({
             style={[
               styles.transitionCard,
               {
-                backgroundColor: colors.surfaceSecondary,
+                backgroundColor: solidSurfaceSecondary,
                 borderColor: colors.border,
                 borderRadius: radii.md,
                 padding: spacing.md,
@@ -226,7 +252,7 @@ export function ReschedulePrayerModal({
             style={[
               styles.timeAdjustmentCard,
               {
-                backgroundColor: colors.surfaceSecondary,
+                backgroundColor: solidSurfaceSecondary,
                 borderRadius: radii.md,
                 padding: spacing.md,
                 marginBottom: spacing.lg,
@@ -245,7 +271,7 @@ export function ReschedulePrayerModal({
                 style={({ pressed }) => [
                   styles.stepperBtn,
                   {
-                    backgroundColor: colors.surface,
+                    backgroundColor: solidSurface,
                     borderColor: colors.border,
                     opacity: pressed ? 0.75 : 1,
                   },
@@ -260,7 +286,7 @@ export function ReschedulePrayerModal({
                 style={[
                   styles.timeDisplayBox,
                   {
-                    backgroundColor: colors.surface,
+                    backgroundColor: solidSurface,
                     borderColor: colors.primary,
                   },
                 ]}
@@ -281,7 +307,7 @@ export function ReschedulePrayerModal({
                 style={({ pressed }) => [
                   styles.stepperBtn,
                   {
-                    backgroundColor: colors.surface,
+                    backgroundColor: solidSurface,
                     borderColor: colors.border,
                     opacity: pressed ? 0.75 : 1,
                   },
@@ -324,7 +350,7 @@ export function ReschedulePrayerModal({
               style={({ pressed }) => [
                 styles.editTaskButton,
                 {
-                  backgroundColor: pressed ? colors.primaryLight : colors.surfaceSecondary,
+                  backgroundColor: pressed ? colors.primaryLight : solidSurfaceSecondary,
                   borderColor: colors.primary,
                   borderRadius: radii.md,
                   borderWidth: 1,

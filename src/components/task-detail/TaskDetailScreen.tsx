@@ -20,6 +20,7 @@ import { DateTime } from 'luxon';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
 import { AppBackButton } from '@/components/common/AppBackButton';
+import { AppHeroHeader } from '@/components/common/AppHeroHeader';
 import { TaskCategoryIcon } from '@/components/task/TaskCategoryIcon';
 import { hasCustomTaskIcon } from '@/constants/taskIconAssets';
 import { TactileActionButton } from './TactileActionButton';
@@ -383,21 +384,14 @@ export function TaskDetailScreen({
       edges={['top', 'left', 'right']}
       testID="task-detail-screen"
     >
-      {/* ── 1. Top Navigation Bar ── */}
-      <View style={[styles.headerBar, { borderBottomColor: colors.border }]}>
-        <AppBackButton
-          onPress={onBack}
-          accessibilityLabel="Go back"
-          testID="task-detail-back-button"
-          size={38}
-        />
-
-        <Text style={[typography.headlineLarge, styles.headerTitle, { color: colors.textPrimary }]}>
-          Task Details
-        </Text>
-
-        <View style={styles.headerRightPlaceholder} />
-      </View>
+      {/* ── 1. Top Universal Hero Header ── */}
+      <AppHeroHeader
+        title="Task Details"
+        showBack={true}
+        onBack={onBack}
+        backTestID="task-detail-back-button"
+        testID="task-detail-header-banner"
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}

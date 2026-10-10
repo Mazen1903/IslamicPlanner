@@ -200,4 +200,25 @@ describe('ReschedulePrayerModal Component', () => {
     });
     expect(onCancel).toHaveBeenCalledTimes(2);
   });
+
+  describe('toOpaqueColor utility', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { toOpaqueColor } = require('../ReschedulePrayerModal');
+
+    it('converts rgba with alpha to opaque rgb', () => {
+      expect(toOpaqueColor('rgba(30, 36, 75, 0.75)')).toBe('rgb(30, 36, 75)');
+      expect(toOpaqueColor('rgba(37, 44, 88, 0.65)')).toBe('rgb(37, 44, 88)');
+      expect(toOpaqueColor('rgba(255, 255, 255, 0.88)')).toBe('rgb(255, 255, 255)');
+    });
+
+    it('preserves solid hex colors and strips 8-digit hex alpha', () => {
+      expect(toOpaqueColor('#1E244B')).toBe('#1E244B');
+      expect(toOpaqueColor('#1E244B80')).toBe('#1E244B');
+    });
+
+    it('falls back safely if color is falsy', () => {
+      expect(toOpaqueColor('', '#FFFFFF')).toBe('#FFFFFF');
+    });
+  });
 });
+

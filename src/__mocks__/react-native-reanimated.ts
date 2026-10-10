@@ -84,6 +84,30 @@ export function runOnJS<T extends (...args: any[]) => any>(fn: T) {
   return fn;
 }
 
+export const LinearTransition = {
+  duration: (_d?: number) => ({
+    duration: () => LinearTransition,
+    easing: () => LinearTransition,
+    springify: () => LinearTransition,
+    damping: () => LinearTransition,
+  }),
+  springify: () => ({
+    damping: () => LinearTransition,
+  }),
+};
+
+export const FadeIn = {
+  duration: (_d?: number) => FadeIn,
+  delay: (_d?: number) => FadeIn,
+  easing: () => FadeIn,
+};
+
+export const FadeOut = {
+  duration: (_d?: number) => FadeOut,
+  delay: (_d?: number) => FadeOut,
+  easing: () => FadeOut,
+};
+
 const AnimatedView = React.forwardRef(function AnimatedView(props: any, ref: any) {
   return React.createElement(View, { ref, ...props });
 });

@@ -13,6 +13,9 @@ import Animated, {
   withTiming,
   Easing,
   runOnJS,
+  LinearTransition,
+  FadeIn,
+  FadeOut,
 } from 'react-native-reanimated';
 
 if (
@@ -99,7 +102,11 @@ export function Collapsible({
   }
 
   return (
-    <Animated.View style={[animatedStyle, style]} testID={testID}>
+    <Animated.View
+      layout={LinearTransition.duration(duration)}
+      style={[animatedStyle, style]}
+      testID={testID}
+    >
       <View
         onLayout={e => {
           const h = e.nativeEvent.layout.height;
@@ -109,7 +116,14 @@ export function Collapsible({
         }}
         collapsable={false}
       >
-        {children}
+        <Animated.View
+          key={transitionKey !== undefined ? String(transitionKey) : 'content'}
+          entering={FadeIn.duration(180)}
+          exiting={FadeOut.duration(120)}
+          layout={LinearTransition.duration(duration)}
+        >
+          {children}
+        </Animated.View>
       </View>
     </Animated.View>
   );

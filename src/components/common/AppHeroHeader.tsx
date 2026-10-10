@@ -13,6 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme, useHeroArt } from '@/theme';
 import { MinimalistMosqueSilhouette } from '@/components/hero/MinimalistMosqueSilhouette';
+import { AppBackButton } from '@/components/common/AppBackButton';
 
 export interface AppHeroHeaderProps {
   title: string | React.ReactNode;
@@ -26,12 +27,19 @@ export interface AppHeroHeaderProps {
   children?: React.ReactNode;
   /** Custom artwork source to override the default mosque skyline (e.g. Journal) */
   artworkSource?: ImageSourcePropType;
+  /** Whether to show the mosque artwork (defaults to true) */
+  showMosqueArt?: boolean;
   /** Custom artwork dimensions */
   artworkSize?: { width: number; height: number };
   /** Custom artwork positioning */
   artworkPosition?: { right?: number; bottom?: number; top?: number; left?: number };
   /** Constrain max width of content to ensure wide artwork has clear breathing room */
   contentMaxWidth?: DimensionValue;
+  /** Optional back navigation button */
+  showBack?: boolean;
+  onBack?: () => void;
+  backTestID?: string;
+  backAccessibilityLabel?: string;
 }
 
 /**
@@ -50,9 +58,14 @@ export function AppHeroHeader({
   containerStyle,
   children,
   artworkSource,
+  showMosqueArt = true,
   artworkSize,
   artworkPosition,
   contentMaxWidth,
+  showBack = false,
+  onBack,
+  backTestID,
+  backAccessibilityLabel,
 }: AppHeroHeaderProps) {
   const { colors, typography, spacing, isDark } = useTheme();
   const heroArt = useHeroArt();
@@ -81,39 +94,50 @@ export function AppHeroHeader({
         />
 
         {/* Transparent Mosque / Custom Skyline Artwork */}
-        <View
-          style={[
-            styles.mosqueArtWrapper,
-            artworkPosition,
-          ]}
-          importantForAccessibility="no"
-          accessibilityElementsHidden={true}
-        >
-          {effectiveArtwork ? (
-            <Image
-              source={effectiveArtwork}
-              style={[
-                styles.mosqueArtImage,
-                artworkSize ? { width: artworkSize.width, height: artworkSize.height } : null,
-                {
-                  opacity: isDark ? 0.78 : 0.92,
-                },
-              ]}
-              resizeMode="contain"
-              accessibilityRole="image"
-              accessibilityLabel="Islamic mosque illustration"
-            />
-          ) : (
-            <MinimalistMosqueSilhouette
-              width={artworkSize?.width ?? 220}
-              height={artworkSize?.height ?? 88}
-            />
-          )}
-        </View>
+        {showMosqueArt && (
+          <View
+            style={[
+              styles.mosqueArtWrapper,
+              artworkPosition,
+            ]}
+            importantForAccessibility="no"
+            accessibilityElementsHidden={true}
+          >
+            {effectiveArtwork ? (
+              <Image
+                source={effectiveArtwork}
+                style={[
+                  styles.mosqueArtImage,
+                  artworkSize ? { width: artworkSize.width, height: artworkSize.height } : null,
+                  {
+                    opacity: isDark ? 0.78 : 0.92,
+                  },
+                ]}
+                resizeMode="contain"
+                accessibilityRole="image"
+                accessibilityLabel="Islamic mosque illustration"
+              />
+            ) : (
+              <MinimalistMosqueSilhouette
+                width={artworkSize?.width ?? 220}
+                height={artworkSize?.height ?? 88}
+              />
+            )}
+          </View>
+        )}
 
         {/* Top Content Row: Title/Dates (Left) and Actions (Right) */}
         <View style={styles.topRow}>
           <View style={[styles.textColumn, contentMaxWidth ? { maxWidth: contentMaxWidth } : null]}>
+            {showBack && (
+              <AppBackButton
+                onPress={onBack}
+                accessibilityLabel={backAccessibilityLabel ?? 'Back'}
+                testID={backTestID ?? 'header-back-button'}
+                size={34}
+                style={{ marginBottom: 6 }}
+              />
+            )}
             {typeof title === 'string' ? (
               <Text
                 style={[typography.headlineLarge, styles.titleText, { color: colors.textPrimary }]}
