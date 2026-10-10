@@ -51,7 +51,7 @@ describe('TaskCard Inline Fluid Expansion', () => {
     recurrenceRule: 'FREQ=DAILY',
   };
 
-  it('renders card with expand/collapse chevron indicator', async () => {
+  it('renders card ready for inline expansion without chevron arrow', async () => {
     const { getByTestId, queryByTestId } = await render(
       <ThemeProvider>
         <TaskCard task={mockTask} />
@@ -59,7 +59,7 @@ describe('TaskCard Inline Fluid Expansion', () => {
     );
 
     expect(getByTestId('task-card-occ-expand-1')).toBeTruthy();
-    expect(getByTestId('task-card-chevron-occ-expand-1')).toBeTruthy();
+    expect(queryByTestId('task-card-chevron-occ-expand-1')).toBeNull();
   });
 
   it('taps card to expand inline and reveal Edit Task and Delete buttons, notes, and subtasks', async () => {

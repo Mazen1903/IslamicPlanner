@@ -85,11 +85,11 @@ export function Collapsible({
 
   return (
     <Animated.View
-      style={[{ overflow: 'hidden' }, animatedStyle, style]}
+      style={[{ width: '100%', overflow: 'hidden' }, animatedStyle, style]}
       testID={testID}
     >
       <View
-        style={{ position: 'absolute', top: 0, start: 0, end: 0 }}
+        style={{ width: '100%', position: 'absolute', top: 0, start: 0, end: 0 }}
         onLayout={e => {
           const h = e.nativeEvent.layout.height;
           if (h > 0 && Math.abs(h - measuredHeight.value) > 0.5) {

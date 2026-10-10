@@ -23,6 +23,7 @@ import { StreakFlameBadge } from '@/components/streak';
 import { LottiePriorityBadge } from './LottiePriorityBadge';
 import { Collapsible } from '@/components/common/Collapsible';
 import { getRecurrenceLabel } from '@/domain/recurrence/recurrenceLabel';
+import { TactileActionButton } from '@/components/task-detail/TactileActionButton';
 
 export interface TaskCardProps {
   task: TaskCardViewModel;
@@ -680,27 +681,6 @@ export function TaskCard({
                 />
               )}
 
-              <View
-                style={[
-                  styles.chevronWrapper,
-                  {
-                    backgroundColor: isExpanded
-                      ? (isDark ? 'rgba(16, 185, 129, 0.22)' : 'rgba(16, 185, 129, 0.15)')
-                      : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'),
-                    borderColor: isExpanded
-                      ? (isDark ? '#10B981' : colors.primary)
-                      : (isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)'),
-                  },
-                ]}
-                testID={`task-card-chevron-${task.occurrenceId}`}
-              >
-                <Icon
-                  name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                  size={14}
-                  color={isExpanded ? (isDark ? '#34D399' : colors.primaryDark) : colors.textSecondary}
-                  decorative
-                />
-              </View>
             </View>
           </View>
 
@@ -886,66 +866,25 @@ export function TaskCard({
                   </View>
                 </View>
               ) : (
-                /* Standard Quick Action Buttons: Edit Task & Delete */
+                /* Standard Quick Action Buttons: Tactile 3D Delete & Edit Task */
                 <View style={styles.actionsRow}>
-                  <Pressable
-                    onPress={handleEditPress}
-                    style={({ pressed }) => [
-                      styles.actionBtn,
-                      styles.editBtn,
-                      {
-                        backgroundColor: isDark ? 'rgba(15, 159, 74, 0.18)' : colors.primaryLight,
-                        borderColor: isDark ? 'rgba(15, 159, 74, 0.3)' : colors.primary,
-                        opacity: pressed ? 0.7 : 1,
-                      },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Edit task ${task.title}`}
-                    testID={`task-card-edit-btn-${task.occurrenceId}`}
-                  >
-                    <Icon
-                      name="edit"
-                      size={13}
-                      color={isDark ? colors.primary : colors.primaryDark}
-                      decorative
-                      style={{ marginEnd: 5 }}
-                    />
-                    <Text
-                      style={[
-                        typography.labelSmall,
-                        { color: isDark ? colors.primary : colors.primaryDark, fontWeight: '600' },
-                      ]}
-                    >
-                      Edit Task
-                    </Text>
-                  </Pressable>
-
-                  <Pressable
+                  <TactileActionButton
+                    title="Delete"
+                    iconName="trash"
+                    variant="danger"
                     onPress={handleDeletePress}
-                    style={({ pressed }) => [
-                      styles.actionBtn,
-                      styles.deleteBtn,
-                      {
-                        backgroundColor: isDark ? 'rgba(239, 68, 68, 0.14)' : colors.dangerSurface,
-                        borderColor: isDark ? 'rgba(239, 68, 68, 0.25)' : 'rgba(239, 68, 68, 0.2)',
-                        opacity: pressed ? 0.7 : 1,
-                      },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Delete task ${task.title}`}
                     testID={`task-card-delete-btn-${task.occurrenceId}`}
-                  >
-                    <Icon
-                      name="trash"
-                      size={13}
-                      color={colors.error}
-                      decorative
-                      style={{ marginEnd: 5 }}
-                    />
-                    <Text style={[typography.labelSmall, { color: colors.error, fontWeight: '600' }]}>
-                      Delete
-                    </Text>
-                  </Pressable>
+                    accessibilityLabel={`Delete task ${task.title}`}
+                  />
+
+                  <TactileActionButton
+                    title="Edit Task"
+                    iconName="edit"
+                    variant="success"
+                    onPress={handleEditPress}
+                    testID={`task-card-edit-btn-${task.occurrenceId}`}
+                    accessibilityLabel={`Edit task ${task.title}`}
+                  />
                 </View>
               )}
             </View>
@@ -1028,14 +967,6 @@ const styles = StyleSheet.create({
     marginStart: 10,
     gap: 6,
   },
-  chevronWrapper: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   expandedContentWrapper: {
     paddingTop: 8,
     paddingBottom: 2,
@@ -1086,22 +1017,10 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 6,
-    paddingTop: 2,
+    gap: 12,
+    marginTop: 8,
+    paddingTop: 4,
   },
-  actionBtn: {
-    flex: 1,
-    height: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  editBtn: {},
-  deleteBtn: {},
   recurringDeleteContainer: {
     borderWidth: 1,
     padding: 12,
