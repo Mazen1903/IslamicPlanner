@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, StyleSheet, Text, Pressable, ActivityIndicator, Image } from 'react-native';
+import { View, StyleSheet, Text, Pressable, ActivityIndicator, Image, InteractionManager } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/theme';
@@ -104,7 +104,10 @@ export default function PlannerScreen() {
         isFirstFocusRef.current = false;
         return;
       }
-      refreshRef.current();
+      const interaction = InteractionManager.runAfterInteractions(() => {
+        refreshRef.current();
+      });
+      return () => interaction.cancel();
     }, [])
   );
 

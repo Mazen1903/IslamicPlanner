@@ -72,7 +72,30 @@ export function Collapsible({
     }
   }, [expanded, duration, unmountOnCollapse, progress, transitionKey]);
 
+  const innerAnimatedStyle = useAnimatedStyle(() => {
+    const isAnimating = progress.value > 0 && progress.value < 1;
+    return {
+      position: isAnimating ? 'absolute' : 'relative',
+      top: 0,
+      start: 0,
+      end: 0,
+      width: '100%',
+    };
+  });
+
   const animatedStyle = useAnimatedStyle(() => {
+    if (progress.value === 0) {
+      return {
+        opacity: 0,
+        height: 0,
+      };
+    }
+    if (progress.value >= 1) {
+      return {
+        opacity: 1,
+        height: undefined,
+      };
+    }
     return {
       opacity: progress.value,
       height: measuredHeight.value * progress.value,
@@ -88,8 +111,8 @@ export function Collapsible({
       style={[{ width: '100%', overflow: 'hidden' }, animatedStyle, style]}
       testID={testID}
     >
-      <View
-        style={{ width: '100%', position: 'absolute', top: 0, start: 0, end: 0 }}
+      <Animated.View
+        style={innerAnimatedStyle}
         onLayout={e => {
           const h = e.nativeEvent.layout.height;
           if (h > 0 && Math.abs(h - measuredHeight.value) > 0.5) {
@@ -99,7 +122,7 @@ export function Collapsible({
         collapsable={false}
       >
         {children}
-      </View>
+      </Animated.View>
     </Animated.View>
   );
 }

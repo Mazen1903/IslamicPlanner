@@ -69,6 +69,7 @@ export function ThemedStatusBar() {
 }
 
 export function RootGate() {
+  const { colors } = useTheme();
   const status = useOnboardingStore(s => s.status);
   const segments = useSegments();
   const router = useRouter();
@@ -113,7 +114,13 @@ export function RootGate() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false, animation: 'default' }}>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        animation: 'default',
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="task/[id]" options={{ headerShown: false, presentation: 'card' }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false }} />

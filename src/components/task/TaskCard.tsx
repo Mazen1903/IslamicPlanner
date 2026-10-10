@@ -327,6 +327,11 @@ export function TaskCard({
   };
 
   const handleEditPress = () => {
+    if (onToggleExpand) {
+      onToggleExpand();
+    } else {
+      setInternalExpanded(false);
+    }
     if (task.occurrenceId || task.taskDefinitionId) {
       router.push({
         pathname: '/task/[id]',
