@@ -52,7 +52,11 @@ export function SettingsPastelHeader({
       </View>
 
       {showMosqueArt && (
-        <View style={styles.imageCol}>
+        <View
+          style={styles.artworkContainer}
+          importantForAccessibility="no"
+          accessibilityElementsHidden={true}
+        >
           <Image
             source={heroArt}
             style={styles.headerArt}
@@ -68,6 +72,8 @@ export function SettingsPastelHeader({
 
 const styles = StyleSheet.create({
   container: {
+    position: 'relative',
+    overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -75,21 +81,27 @@ const styles = StyleSheet.create({
   },
   leftCol: {
     flex: 1,
-    paddingRight: 8,
+    paddingRight: 60,
     justifyContent: 'center',
+    zIndex: 1,
   },
   backButton: {
     justifyContent: 'center',
     alignItems: 'flex-start',
   },
-  imageCol: {
-    width: 110,
-    height: 85,
+  artworkContainer: {
+    position: 'absolute',
+    top: -6,
+    right: -48,
+    width: 210,
+    height: 130,
     alignItems: 'flex-end',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    pointerEvents: 'none',
+    zIndex: 0,
   },
   headerArt: {
-    width: 110,
-    height: 85,
+    width: 210,
+    height: 130,
   },
 });

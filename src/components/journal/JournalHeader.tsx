@@ -52,8 +52,6 @@ export function JournalHeader({
   return (
     <AppHeroHeader
       testID={testID}
-      artworkSize={{ width: 180, height: 110 }}
-      artworkPosition={{ right: -4, bottom: -6 }}
       contentMaxWidth="62%"
       title={
         <View style={styles.titleColumn}>

@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
+import { SheetSafeArea } from '@/components/layout/SheetSafeArea';
 
 export interface DeleteTaskSheetProps {
   visible: boolean;
@@ -34,6 +35,8 @@ export function DeleteTaskSheet({
       transparent
       animationType="fade"
       onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
       testID={testID}
     >
       <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
@@ -44,22 +47,23 @@ export function DeleteTaskSheet({
           testID="delete-sheet-backdrop"
         />
 
-        <View
-          style={[
-            styles.sheetContainer,
-            shadows.elevated,
-            {
-              backgroundColor: colors.surface,
-              borderTopLeftRadius: radii.xl,
-              borderTopRightRadius: radii.xl,
-              paddingHorizontal: spacing.lg,
-              paddingTop: spacing.lg,
-              paddingBottom: spacing.xxl,
-            },
-          ]}
-          testID="delete-sheet-content"
-          accessibilityViewIsModal={true}
-        >
+        <SheetSafeArea backgroundColor={colors.surface} minBottomPadding={spacing.xxl}>
+          <View
+            style={[
+              styles.sheetContainer,
+              shadows.elevated,
+              {
+                backgroundColor: colors.surface,
+                borderTopLeftRadius: radii.xl,
+                borderTopRightRadius: radii.xl,
+                paddingHorizontal: spacing.lg,
+                paddingTop: spacing.lg,
+                paddingBottom: spacing.sm,
+              },
+            ]}
+            testID="delete-sheet-content"
+            accessibilityViewIsModal={true}
+          >
           {/* Header */}
           <View style={styles.header}>
             <View
@@ -213,6 +217,7 @@ export function DeleteTaskSheet({
             </Text>
           </Pressable>
         </View>
+        </SheetSafeArea>
       </View>
     </Modal>
   );

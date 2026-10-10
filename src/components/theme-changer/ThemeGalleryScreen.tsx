@@ -204,7 +204,7 @@ export function ThemeGalleryScreen({ onBack }: ThemeGalleryScreenProps) {
         styles.safeArea,
         { backgroundColor: isDark ? colors.background : '#F8FAFC' },
       ]}
-      edges={['top', 'left', 'right']}
+      edges={['top', 'left', 'right', 'bottom']}
     >
       {/* ======================================================== */}
       {/* 1. TOP HEADER (Replicated from appearance.jpeg)          */}

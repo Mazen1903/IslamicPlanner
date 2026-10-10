@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useContext, createContext } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Animated,
   PanResponder,
-  type GestureResponderHandlers,
+  Vibration,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -22,17 +22,6 @@ export interface SubtasksSectionProps {
   hideDivider?: boolean;
 }
 
-/**
- * Drag-to-reorder support. Each row owns its translateY and a PanResponder; the
- * grip handle (rendered anywhere inside the row) reads the handlers from context
- * so the existing row markup does not need to change.
- */
-interface DragContextValue {
-  panHandlers: GestureResponderHandlers;
-  dragging: boolean;
-}
-const DragContext = createContext<DragContextValue | null>(null);
-
 export function computeDropIndex(fromIndex: number, dy: number, rowHeight: number, count: number): number {
   if (count <= 0 || rowHeight <= 0) return fromIndex;
   const shift = Math.round(dy / rowHeight);
@@ -45,17 +34,28 @@ interface DraggableSubtaskRowProps {
   onReorder: (fromIndex: number, toIndex: number) => void;
   style?: StyleProp<ViewStyle>;
   testID?: string;
+  isEditing: boolean;
   children: React.ReactNode;
 }
 
-function DraggableSubtaskRow({ index, count, onReorder, style, testID, children }: DraggableSubtaskRowProps) {
+function DraggableSubtaskRow({
+  index,
+  count,
+  onReorder,
+  style,
+  testID,
+  isEditing,
+  children,
+}: DraggableSubtaskRowProps) {
   const translateY = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
   const { shadows } = useTheme();
   const [dragging, setDragging] = useState(false);
   const rowHeightRef = useRef(48);
   const indexRef = useRef(index);
   const countRef = useRef(count);
   const onReorderRef = useRef(onReorder);
+  const isDraggingRef = useRef(false);
 
   useEffect(() => {
     indexRef.current = index;
@@ -66,26 +66,62 @@ function DraggableSubtaskRow({ index, count, onReorder, style, testID, children 
   const finish = (dy: number) => {
     const from = indexRef.current;
     const to = computeDropIndex(from, dy, rowHeightRef.current, countRef.current);
-    translateY.setValue(0);
+    Animated.parallel([
+      Animated.spring(translateY, { toValue: 0, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
+    ]).start();
+    isDraggingRef.current = false;
     setDragging(false);
-    if (to !== from) onReorderRef.current(from, to);
+    if (to !== from) {
+      onReorderRef.current(from, to);
+    }
+  };
+
+  const handleLongPress = () => {
+    if (isEditing) return;
+    try {
+      Vibration.vibrate(30);
+    } catch {}
+    isDraggingRef.current = true;
+    setDragging(true);
+    Animated.spring(scale, { toValue: 1.03, useNativeDriver: true }).start();
   };
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        if (!isDraggingRef.current) return false;
+        return Math.abs(gestureState.dy) > 3;
+      },
       onPanResponderTerminationRequest: () => false,
-      onPanResponderGrant: () => setDragging(true),
-      onPanResponderMove: (_evt, g) => translateY.setValue(g.dy),
-      onPanResponderRelease: (_evt, g) => finish(g.dy),
-      onPanResponderTerminate: () => finish(0),
+      onPanResponderMove: (_evt, g) => {
+        if (isDraggingRef.current) {
+          translateY.setValue(g.dy);
+        }
+      },
+      onPanResponderRelease: (_evt, g) => {
+        if (isDraggingRef.current) {
+          finish(g.dy);
+        }
+      },
+      onPanResponderTerminate: () => {
+        if (isDraggingRef.current) {
+          finish(0);
+        }
+      },
     })
   ).current;
 
   return (
-    <DragContext.Provider value={{ panHandlers: panResponder.panHandlers, dragging }}>
+    <Pressable
+      onLongPress={handleLongPress}
+      delayLongPress={350}
+      accessible={false}
+      style={{ width: '100%' }}
+    >
       <Animated.View
+        {...panResponder.panHandlers}
         onLayout={e => {
           rowHeightRef.current = e.nativeEvent.layout.height || rowHeightRef.current;
         }}
@@ -93,39 +129,21 @@ function DraggableSubtaskRow({ index, count, onReorder, style, testID, children 
           style,
           dragging && styles.rowDragging,
           dragging && shadows.elevated,
-          { transform: [{ translateY }], zIndex: dragging ? 10 : 0 },
+          {
+            transform: [{ translateY }, { scale }],
+            zIndex: dragging ? 10 : 0,
+          },
         ]}
         testID={testID}
       >
         {children}
       </Animated.View>
-    </DragContext.Provider>
-  );
-}
-
-function SubtaskDragHandle({ title, testID }: { title: string; testID: string }) {
-  const ctx = useContext(DragContext);
-  const { colors } = useTheme();
-  return (
-    <View
-      {...(ctx?.panHandlers ?? {})}
-      accessible
-      accessibilityRole="adjustable"
-      accessibilityLabel={`Drag to reorder: ${title}`}
-      accessibilityHint="Drag up or down, or use the move up and move down buttons"
-      testID={testID}
-      style={styles.dragHandle}
-      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-    >
-      {[0, 1, 2].map(i => (
-        <View key={i} style={[styles.dragBar, { backgroundColor: colors.textTertiary }]} />
-      ))}
-    </View>
+    </Pressable>
   );
 }
 
 export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: SubtasksSectionProps) {
-  const { colors, spacing, radii, typography, touchTargets } = useTheme();
+  const { colors, spacing, radii, typography } = useTheme();
 
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const newSubtaskRef = useRef('');
@@ -178,30 +196,12 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
     setEditingTitle('');
   };
 
-  const handleMoveUp = (index: number) => {
-    if (index > 0) {
-      dispatch({
-        type: 'REORDER_SUBTASKS',
-        payload: { fromIndex: index, toIndex: index - 1 },
-      });
-    }
-  };
-
   const handleReorder = (fromIndex: number, toIndex: number) => {
     if (fromIndex === toIndex) return;
     dispatch({
       type: 'REORDER_SUBTASKS',
       payload: { fromIndex, toIndex },
     });
-  };
-
-  const handleMoveDown = (index: number) => {
-    if (index < subtasks.length - 1) {
-      dispatch({
-        type: 'REORDER_SUBTASKS',
-        payload: { fromIndex: index, toIndex: index + 1 },
-      });
-    }
   };
 
   return (
@@ -250,7 +250,7 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
           </View>
         )}
 
-        {/* Existing checklist items list */}
+        {/* Checklist items list */}
         {subtasks.map((subtask, index) => {
           const isEditing = editingId === subtask.id;
 
@@ -260,11 +260,12 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
               index={index}
               count={subtasks.length}
               onReorder={handleReorder}
+              isEditing={isEditing}
               style={[
                 styles.subtaskRow,
                 {
                   paddingHorizontal: spacing.xs,
-                  paddingVertical: 8,
+                  paddingVertical: 10,
                   marginBottom: spacing.xs,
                   borderBottomColor: colors.border,
                   borderBottomWidth: StyleSheet.hairlineWidth,
@@ -282,15 +283,16 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
                 style={[
                   styles.subtaskCheck,
                   {
-                    borderColor: subtask.isCompleted ? colors.primary : colors.border,
+                    borderColor: subtask.isCompleted ? colors.primary : colors.checkboxUnchecked,
                     backgroundColor: subtask.isCompleted ? colors.primary : 'transparent',
+                    borderWidth: 2,
                   },
                 ]}
               >
                 {subtask.isCompleted ? (
                   <Icon
                     name="check"
-                    size={13}
+                    size={14}
                     color={colors.textOnPrimary}
                     decorative
                   />
@@ -342,6 +344,10 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
               ) : (
                 <Pressable
                   onPress={() => handleStartEdit(subtask)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Edit ${subtask.title}`}
+                  accessibilityHint="Tap to edit, long press to reorder"
+                  testID={`edit-subtask-${subtask.id}`}
                   style={styles.textContainer}
                 >
                   <Text
@@ -359,115 +365,67 @@ export function SubtasksSection({ subtasks, dispatch, style, hideDivider }: Subt
                 </Pressable>
               )}
 
-              {/* Action Buttons (when not editing) */}
+              {/* Action Button: X delete button */}
               {!isEditing && (
-                <View style={styles.actionsRow}>
-                  {/* Drag handle */}
-                  <SubtaskDragHandle title={subtask.title} testID={`drag-subtask-${subtask.id}`} />
-
-                  {/* Edit button */}
-                  <Pressable
-                    onPress={() => handleStartEdit(subtask)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Edit: ${subtask.title}`}
-                    testID={`edit-subtask-${subtask.id}`}
-                    style={styles.iconButton}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Icon name="pencil" size={14} color={colors.textSecondary} decorative />
-                  </Pressable>
-
-                  {/* Move Up */}
-                  <Pressable
-                    onPress={() => handleMoveUp(index)}
-                    disabled={index === 0}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Move up: ${subtask.title}`}
-                    testID={`move-up-${subtask.id}`}
-                    style={[styles.iconButton, { opacity: index === 0 ? 0.25 : 1 }]}
-                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                  >
-                    <Icon name="chevron-up" size={15} color={colors.textSecondary} decorative />
-                  </Pressable>
-
-                  {/* Move Down */}
-                  <Pressable
-                    onPress={() => handleMoveDown(index)}
-                    disabled={index === subtasks.length - 1}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Move down: ${subtask.title}`}
-                    testID={`move-down-${subtask.id}`}
-                    style={[styles.iconButton, { opacity: index === subtasks.length - 1 ? 0.25 : 1 }]}
-                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                  >
-                    <Icon name="chevron-down" size={15} color={colors.textSecondary} decorative />
-                  </Pressable>
-
-                  {/* Remove button */}
-                  <Pressable
-                    onPress={() => handleRemoveSubtask(subtask.id)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Remove checklist item: ${subtask.title}`}
-                    testID={`remove-subtask-${subtask.id}`}
-                    style={({ pressed }) => [
-                      styles.iconButton,
-                      { opacity: pressed ? 0.6 : 1 },
-                    ]}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Icon name="close" size={16} color={colors.textTertiary} decorative />
-                  </Pressable>
-                </View>
+                <Pressable
+                  onPress={() => handleRemoveSubtask(subtask.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove: ${subtask.title}`}
+                  testID={`remove-subtask-${subtask.id}`}
+                  style={styles.iconButton}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Icon name="close" size={15} color={colors.textTertiary} decorative />
+                </Pressable>
               )}
             </DraggableSubtaskRow>
           );
         })}
 
-        {/* Input Row for adding new item */}
-        <View style={[styles.inputRow, subtasks.length > 0 && { marginTop: spacing.xs }]}>
+        {/* Add new subtask input row */}
+        <View style={[styles.addRow, { marginTop: spacing.sm }]}>
           <TextInput
+            placeholder="Add a checklist item..."
+            placeholderTextColor={colors.textTertiary}
             value={newSubtaskTitle}
             onChangeText={text => {
               newSubtaskRef.current = text;
               setNewSubtaskTitle(text);
             }}
             onSubmitEditing={handleAddSubtask}
-            placeholder="Add a checklist item..."
-            placeholderTextColor={colors.textTertiary}
-            accessibilityLabel="New subtask title"
-            testID="new-subtask-input"
+            returnKeyType="done"
             style={[
-              styles.subtaskInput,
+              styles.addInput,
               typography.bodyMedium,
               {
-                borderColor: colors.border,
-                borderRadius: radii.md,
-                backgroundColor: colors.surfaceSecondary,
                 color: colors.textPrimary,
-                paddingHorizontal: spacing.md,
-                minHeight: touchTargets.min,
+                borderColor: colors.border,
+                backgroundColor: colors.surfaceSecondary,
+                borderRadius: radii.sm,
               },
             ]}
+            testID="new-subtask-input"
           />
           <Pressable
             onPress={handleAddSubtask}
+            disabled={!newSubtaskTitle.trim()}
             accessibilityRole="button"
-            accessibilityLabel="Add subtask"
+            accessibilityLabel="Add checklist item"
             testID="add-subtask-button"
-            style={({ pressed }) => [
-              styles.addBtn,
+            style={[
+              styles.addButton,
               {
-                backgroundColor: colors.primary,
-                borderRadius: radii.md,
-                minHeight: touchTargets.min,
-                paddingHorizontal: spacing.md,
-                opacity: pressed ? 0.8 : 1,
+                backgroundColor: newSubtaskTitle.trim() ? colors.primary : colors.disabledBackground,
+                borderRadius: radii.sm,
               },
             ]}
           >
-            <Text style={[typography.labelMedium, { color: colors.textOnPrimary, fontWeight: '700' }]}>
-              Add
-            </Text>
+            <Icon
+              name="plus"
+              size={18}
+              color={newSubtaskTitle.trim() ? colors.textOnPrimary : colors.disabledText}
+              decorative
+            />
           </Pressable>
         </View>
       </View>
@@ -483,16 +441,14 @@ const styles = StyleSheet.create({
     height: 1,
     width: '100%',
   },
-  content: {
-    width: '100%',
-  },
+  content: {},
   headerBlock: {
     marginBottom: 12,
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 6,
   },
   percentBadge: {
@@ -501,48 +457,36 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   progressTrack: {
-    height: 6,
+    height: 4,
     width: '100%',
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
   },
-  rowDragging: {
-    opacity: 0.92,
-  },
-  dragHandle: {
-    width: 22,
-    paddingVertical: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
-  },
-  dragBar: {
-    width: 14,
-    height: 2,
-    borderRadius: 1,
-  },
   subtaskRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 42,
+    width: '100%',
+  },
+  rowDragging: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 8,
   },
   subtaskCheck: {
     width: 22,
     height: 22,
     borderRadius: 6,
-    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    marginEnd: 8,
+    marginEnd: 10,
   },
   textContainer: {
     flex: 1,
+    paddingVertical: 4,
   },
   subtaskText: {
     fontSize: 15,
-    marginHorizontal: 4,
   },
   editRow: {
     flex: 1,
@@ -552,32 +496,31 @@ const styles = StyleSheet.create({
   },
   inlineEditInput: {
     flex: 1,
+    borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderWidth: 1,
     fontSize: 15,
   },
-  actionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
   iconButton: {
-    padding: 5,
+    padding: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  inputRow: {
+  addRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  subtaskInput: {
+  addInput: {
     flex: 1,
     borderWidth: 1,
-    fontSize: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
   },
-  addBtn: {
+  addButton: {
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
   },

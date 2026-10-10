@@ -173,7 +173,7 @@ export default function PrayerLocationScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right', 'bottom']}>
       <SettingsPastelHeader
         title="Prayer & Location"
         subtitle="Set your location and prayer time preferences"

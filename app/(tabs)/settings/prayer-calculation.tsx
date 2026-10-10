@@ -447,7 +447,7 @@ export default function PrayerCalculationScreen() {
     return (
       <SafeAreaView
         style={[styles.safeArea, { backgroundColor: colors.background }]}
-        edges={['top', 'left', 'right']}
+        edges={['top', 'left', 'right', 'bottom']}
       >
         <SettingsScreenHeader title="Prayer Calculation" backTestID="prayer-calc-back-button" />
         <View style={styles.loadingContainer}>
@@ -460,7 +460,7 @@ export default function PrayerCalculationScreen() {
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.background }]}
-      edges={['top', 'left', 'right']}
+      edges={['top', 'left', 'right', 'bottom']}
     >
       <SettingsScreenHeader title="Prayer Calculation" backTestID="prayer-calc-back-button" />
       <PrayerCalculationForm settings={settings} reload={reload} />

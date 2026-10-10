@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DateTime } from 'luxon';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
@@ -85,6 +85,7 @@ export function TaskFormScreen({
   onSaved,
 }: TaskFormScreenProps) {
   const { colors, spacing, radii, typography, touchTargets, shadows } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const isEdit = Boolean(initialDefinition);
   const isRecurringSeries = Boolean(
@@ -459,7 +460,13 @@ export function TaskFormScreen({
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            padding: spacing.lg,
+            paddingBottom: Math.max(insets?.bottom ?? 0, spacing.xl) + 40,
+          },
+        ]}
       >
         {/* Unified Task & Subtasks Section */}
         <View style={[styles.titleSection, { marginBottom: spacing.md }]}>

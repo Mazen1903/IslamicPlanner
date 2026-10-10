@@ -77,7 +77,7 @@ export default function AboutScreen() {
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.background }]}
-      edges={['top', 'left', 'right']}
+      edges={['top', 'left', 'right', 'bottom']}
     >
       <SettingsPastelHeader
         title="About & Help"

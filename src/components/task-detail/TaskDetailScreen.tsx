@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useContext } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,14 @@ import {
   StyleSheet,
   Image,
   TextInput,
+  Animated,
+  PanResponder,
+  Vibration,
   type ImageSourcePropType,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaInsetsContext, initialWindowMetrics } from 'react-native-safe-area-context';
 import { DateTime } from 'luxon';
 import { useTheme } from '@/theme';
 import { Icon } from '@/components/common/Icon';
@@ -20,6 +25,7 @@ import { hasCustomTaskIcon } from '@/constants/taskIconAssets';
 import { TactileActionButton } from './TactileActionButton';
 import { getIconIdFromTags, detectTaskIcon } from '@/constants/taskIcons';
 import { taskDefinitionRepository } from '@/data/repositories/TaskDefinitionRepository';
+import { computeDropIndex } from '../task-form/SubtasksSection';
 import type { TaskDefinition, TaskOccurrence, SubtaskTemplate } from '@/domain/task/types';
 
 // Specialized icon image assets for Task Details screen
@@ -53,6 +59,119 @@ export interface TaskDetailScreenProps {
   onUpdateNotes?: (notes: string) => Promise<void>;
 }
 
+interface DraggableDetailSubtaskRowProps {
+  index: number;
+  count: number;
+  onReorder: (fromIndex: number, toIndex: number) => void;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+  isEditing: boolean;
+  children: React.ReactNode;
+}
+
+function DraggableDetailSubtaskRow({
+  index,
+  count,
+  onReorder,
+  style,
+  testID,
+  isEditing,
+  children,
+}: DraggableDetailSubtaskRowProps) {
+  const translateY = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+  const { shadows } = useTheme();
+  const [dragging, setDragging] = useState(false);
+  const rowHeightRef = useRef(48);
+  const indexRef = useRef(index);
+  const countRef = useRef(count);
+  const onReorderRef = useRef(onReorder);
+  const isDraggingRef = useRef(false);
+
+  useEffect(() => {
+    indexRef.current = index;
+    countRef.current = count;
+    onReorderRef.current = onReorder;
+  }, [index, count, onReorder]);
+
+  const finish = (dy: number) => {
+    const from = indexRef.current;
+    const to = computeDropIndex(from, dy, rowHeightRef.current, countRef.current);
+    Animated.parallel([
+      Animated.spring(translateY, { toValue: 0, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
+    ]).start();
+    isDraggingRef.current = false;
+    setDragging(false);
+    if (to !== from) {
+      onReorderRef.current(from, to);
+    }
+  };
+
+  const handleLongPress = () => {
+    if (isEditing) return;
+    try {
+      Vibration.vibrate(30);
+    } catch {}
+    isDraggingRef.current = true;
+    setDragging(true);
+    Animated.spring(scale, { toValue: 1.03, useNativeDriver: true }).start();
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        if (!isDraggingRef.current) return false;
+        return Math.abs(gestureState.dy) > 3;
+      },
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderMove: (_evt, g) => {
+        if (isDraggingRef.current) {
+          translateY.setValue(g.dy);
+        }
+      },
+      onPanResponderRelease: (_evt, g) => {
+        if (isDraggingRef.current) {
+          finish(g.dy);
+        }
+      },
+      onPanResponderTerminate: () => {
+        if (isDraggingRef.current) {
+          finish(0);
+        }
+      },
+    })
+  ).current;
+
+  return (
+    <Pressable
+      onLongPress={handleLongPress}
+      delayLongPress={350}
+      accessible={false}
+      style={{ width: '100%' }}
+    >
+      <Animated.View
+        {...panResponder.panHandlers}
+        onLayout={e => {
+          rowHeightRef.current = e.nativeEvent.layout.height || rowHeightRef.current;
+        }}
+        style={[
+          style,
+          dragging && shadows.elevated,
+          {
+            transform: [{ translateY }, { scale }],
+            zIndex: dragging ? 10 : 0,
+          },
+        ]}
+        testID={testID}
+      >
+        {children}
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 export function TaskDetailScreen({
   definition,
   occurrence,
@@ -64,6 +183,8 @@ export function TaskDetailScreen({
   onReorderSubtasks,
 }: TaskDetailScreenProps) {
   const { colors, spacing, radii, typography, shadows, isDark } = useTheme();
+  const insetsContext = useContext(SafeAreaInsetsContext);
+  const insets = insetsContext ?? initialWindowMetrics?.insets ?? { bottom: 0, top: 0, left: 0, right: 0 };
 
   // Checklist state
   const [completedSubtaskIds, setCompletedSubtaskIds] = useState<string[]>(
@@ -251,7 +372,7 @@ export function TaskDetailScreen({
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top', 'left', 'right', 'bottom']}
+      edges={['top', 'left', 'right']}
       testID="task-detail-screen"
     >
       {/* ── 1. Top Navigation Bar ── */}
@@ -289,16 +410,18 @@ export function TaskDetailScreen({
           ]}
         >
           <View style={styles.heroHeaderRow}>
-            <View
-              style={[
-                styles.heroIconBadge,
-                {
-                  backgroundColor: hasCustomTaskIcon(iconId) ? 'transparent' : colors.primaryLight,
-                  borderRadius: 20,
-                },
-              ]}
-            >
-              <TaskCategoryIcon iconId={iconId} size={42} />
+            <View style={styles.leadingIconBox}>
+              <View
+                style={[
+                  styles.heroIconBadge,
+                  {
+                    backgroundColor: hasCustomTaskIcon(iconId) ? 'transparent' : colors.primaryLight,
+                    borderRadius: 14,
+                  },
+                ]}
+              >
+                <TaskCategoryIcon iconId={iconId} size={38} />
+              </View>
             </View>
 
             <View style={styles.heroTitleContainer}>
@@ -513,11 +636,13 @@ export function TaskDetailScreen({
           >
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionHeaderLeft}>
-                <Image
-                  source={TASK_DETAIL_ICONS.subtasks}
-                  style={{ width: 36, height: 36, marginRight: 10 }}
-                  resizeMode="contain"
-                />
+                <View style={styles.leadingIconBox}>
+                  <Image
+                    source={TASK_DETAIL_ICONS.subtasks}
+                    style={{ width: 34, height: 34 }}
+                    resizeMode="contain"
+                  />
+                </View>
                 <Text style={[typography.headlineMedium, styles.sectionTitle, { color: colors.textPrimary }]}>
                   Checklist
                 </Text>
@@ -566,25 +691,32 @@ export function TaskDetailScreen({
                 const isEditing = editingSubtaskId === item.id;
 
                 return (
-                  <View
+                  <DraggableDetailSubtaskRow
                     key={item.id}
+                    index={index}
+                    count={subtasksList.length}
+                    onReorder={handleMoveSubtask}
+                    isEditing={isEditing}
                     style={[
                       styles.subtaskRow,
                       {
                         borderBottomColor: colors.border,
                       },
                     ]}
+                    testID={`detail-subtask-row-${item.id}`}
                   >
                     <Pressable
                       onPress={() => handleToggleSubtask(item.id)}
                       accessibilityRole="checkbox"
                       accessibilityState={{ checked: isChecked }}
-                      accessibilityLabel={item.title}
+                      accessibilityLabel={`Toggle checklist item: ${item.title}`}
+                      testID={`detail-checkbox-${item.id}`}
                       style={[
                         styles.checkboxBox,
                         {
-                          borderColor: isChecked ? colors.primary : colors.border,
+                          borderColor: isChecked ? colors.primary : colors.checkboxUnchecked,
                           backgroundColor: isChecked ? colors.primary : 'transparent',
+                          borderWidth: 2,
                           borderRadius: 7,
                           width: 26,
                           height: 26,
@@ -601,6 +733,8 @@ export function TaskDetailScreen({
                           onChangeText={setEditingSubtaskTitle}
                           onSubmitEditing={() => handleSaveEditSubtask(item.id)}
                           autoFocus
+                          accessibilityLabel="Edit checklist item"
+                          testID={`edit-input-${item.id}`}
                           style={[
                             styles.inlineEditInput,
                             typography.bodyMedium,
@@ -618,6 +752,7 @@ export function TaskDetailScreen({
                           accessibilityLabel="Save edit"
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                           style={styles.iconBtn}
+                          testID={`save-edit-${item.id}`}
                         >
                           <Icon name="check" size={16} color={colors.primary} decorative />
                         </Pressable>
@@ -627,64 +762,35 @@ export function TaskDetailScreen({
                           accessibilityLabel="Cancel edit"
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                           style={styles.iconBtn}
+                          testID={`cancel-edit-${item.id}`}
                         >
                           <Icon name="close" size={16} color={colors.textTertiary} decorative />
                         </Pressable>
                       </View>
                     ) : (
-                      <>
-                        <Pressable
-                          onPress={() => handleToggleSubtask(item.id)}
-                          style={{ flex: 1 }}
+                      <Pressable
+                        onPress={() => handleStartEditSubtask(item)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Edit: ${item.title}`}
+                        accessibilityHint="Tap to edit, long press to reorder"
+                        style={styles.subtaskTextContainer}
+                        testID={`detail-subtask-title-${item.id}`}
+                      >
+                        <Text
+                          style={[
+                            typography.bodyLarge,
+                            styles.subtaskText,
+                            {
+                              color: isChecked ? colors.textMuted : colors.textPrimary,
+                              textDecorationLine: isChecked ? 'line-through' : 'none',
+                            },
+                          ]}
                         >
-                          <Text
-                            style={[
-                              typography.bodyLarge,
-                              styles.subtaskText,
-                              {
-                                color: isChecked ? colors.textMuted : colors.textPrimary,
-                                textDecorationLine: isChecked ? 'line-through' : 'none',
-                              },
-                            ]}
-                          >
-                            {item.title}
-                          </Text>
-                        </Pressable>
-
-                        <View style={styles.itemActionButtons}>
-                          <Pressable
-                            onPress={() => handleStartEditSubtask(item)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Edit: ${item.title}`}
-                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                            style={styles.iconBtn}
-                          >
-                            <Icon name="pencil" size={14} color={colors.textSecondary} decorative />
-                          </Pressable>
-                          <Pressable
-                            onPress={() => handleMoveSubtask(index, index - 1)}
-                            disabled={index === 0}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Move up: ${item.title}`}
-                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                            style={[styles.iconBtn, { opacity: index === 0 ? 0.25 : 1 }]}
-                          >
-                            <Icon name="chevron-up" size={15} color={colors.textSecondary} decorative />
-                          </Pressable>
-                          <Pressable
-                            onPress={() => handleMoveSubtask(index, index + 1)}
-                            disabled={index === subtasksList.length - 1}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Move down: ${item.title}`}
-                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                            style={[styles.iconBtn, { opacity: index === subtasksList.length - 1 ? 0.25 : 1 }]}
-                          >
-                            <Icon name="chevron-down" size={15} color={colors.textSecondary} decorative />
-                          </Pressable>
-                        </View>
-                      </>
+                          {item.title}
+                        </Text>
+                      </Pressable>
                     )}
-                  </View>
+                  </DraggableDetailSubtaskRow>
                 );
               })}
             </View>
@@ -744,6 +850,7 @@ export function TaskDetailScreen({
           {
             backgroundColor: colors.surface,
             borderTopColor: colors.border,
+            paddingBottom: Math.max(insets?.bottom ?? 0, 14),
           },
         ]}
       >
@@ -804,13 +911,23 @@ const styles = StyleSheet.create({
   heroHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
   },
-  heroIconBadge: {
-    width: 60,
-    height: 60,
+  leadingIconBox: {
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
+    marginEnd: 12,
+  },
+  heroIconBadge: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subtaskTextContainer: {
+    flex: 1,
+    paddingVertical: 6,
   },
   heroTitleContainer: {
     flex: 1,

@@ -580,7 +580,7 @@ export function TaskCard({
               shadowColor: isUnlocked ? colors.primary : colors.shadowColor,
               shadowOpacity: isUnlocked ? 0.35 : 0.04,
               shadowRadius: isUnlocked ? 10 : 3,
-              elevation: isUnlocked ? 10 : 2,
+              elevation: isUnlocked ? 10 : (shadows.card.elevation ?? 0),
               opacity: isCompleted ? 0.72 : 1,
             },
           ]}
@@ -612,7 +612,7 @@ export function TaskCard({
               styles.taskIconBadge,
               {
                 backgroundColor: hasCustomTaskIcon(task.icon) ? 'transparent' : category.bg,
-                borderRadius: 12,
+                borderRadius: 14,
                 marginEnd: spacing.sm,
                 opacity: isCompleted ? 0.6 : 1,
               },
@@ -621,7 +621,7 @@ export function TaskCard({
           >
             <TaskCategoryIcon
               iconId={task.icon}
-              size={hasCustomTaskIcon(task.icon) ? 36 : 20}
+              size={hasCustomTaskIcon(task.icon) ? 48 : 26}
               color={category.color}
             />
           </View>
@@ -893,8 +893,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   taskIconBadge: {
-    width: 40,
-    height: 40,
+    width: 52,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -903,7 +903,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     marginStart: 8,
-    minHeight: 44,
+    minHeight: 52,
   },
   titleText: {
     lineHeight: 20,

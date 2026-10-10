@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, AppState, type AppStateStatus } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Slot, Stack, useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme, type ThemeMode, setActiveFontFamily, setActiveTextScale } from '@/theme';
 import { Button } from '@/components/common/Button';
@@ -108,7 +108,17 @@ export function RootGate() {
     return <BootstrapLoadingView />;
   }
 
-  return <Slot />;
+  if (!Stack || !(Stack as any).Screen) {
+    return <Slot />;
+  }
+
+  return (
+    <Stack screenOptions={{ headerShown: false, animation: 'default' }}>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="task/[id]" options={{ headerShown: false, presentation: 'card' }} />
+      <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+    </Stack>
+  );
 }
 
 export default function RootLayout() {

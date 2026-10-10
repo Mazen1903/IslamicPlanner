@@ -173,4 +173,79 @@ describe('ReschedulePrayerModal Component', () => {
     });
     expect(onCancel).toHaveBeenCalledTimes(2);
   });
+
+  it('supports BEFORE direction and custom stepper offset', async () => {
+    const onConfirm = jest.fn();
+
+    await render(
+      <ThemeProvider>
+        <ReschedulePrayerModal
+          visible={true}
+          task={mockTask}
+          targetPrayer="DHUHR"
+          targetPrayerTime="1:15 PM"
+          onConfirm={onConfirm}
+          onCancel={jest.fn()}
+        />
+      </ThemeProvider>
+    );
+
+    // Switch direction to BEFORE
+    const beforeBtn = screen.getByTestId('reschedule-direction-before');
+    await act(async () => {
+      fireEvent.press(beforeBtn);
+    });
+
+    // Enter custom offset 25 min
+    const customInput = screen.getByTestId('reschedule-custom-offset-input');
+    await act(async () => {
+      fireEvent.changeText(customInput, '25');
+    });
+
+    const confirmButton = screen.getByTestId('reschedule-confirm-button');
+    await act(async () => {
+      fireEvent.press(confirmButton);
+    });
+
+    expect(onConfirm).toHaveBeenCalledWith({
+      scheduleType: 'PRAYER_RELATIVE',
+      scheduleData: {
+        anchorPrayer: 'DHUHR',
+        direction: 'BEFORE',
+        offsetMinutes: 25,
+      },
+    });
+  });
+
+  it('supports ANYTIME_TODAY mode', async () => {
+    const onConfirm = jest.fn();
+
+    await render(
+      <ThemeProvider>
+        <ReschedulePrayerModal
+          visible={true}
+          task={mockTask}
+          targetPrayer="ASR"
+          onConfirm={onConfirm}
+          onCancel={jest.fn()}
+        />
+      </ThemeProvider>
+    );
+
+    const anytimeChip = screen.getByTestId('option-anytime-today');
+    await act(async () => {
+      fireEvent.press(anytimeChip);
+    });
+
+    const confirmButton = screen.getByTestId('reschedule-confirm-button');
+    await act(async () => {
+      fireEvent.press(confirmButton);
+    });
+
+    expect(onConfirm).toHaveBeenCalledWith({
+      scheduleType: 'ANYTIME_TODAY',
+      scheduleData: {},
+    });
+  });
 });
+

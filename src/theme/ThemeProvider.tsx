@@ -3,7 +3,7 @@ import { useColorScheme } from 'react-native';
 import { darkTheme } from './darkTheme';
 import { lightTheme } from './lightTheme';
 import { ISLAMIC_THEMES, ISLAMIC_THEMES_MAP, type IslamicThemeDefinition } from './islamicThemes';
-import { iconSizes, radii, shadows, spacing, touchTargets, type Theme, type ThemeMode } from './tokens';
+import { iconSizes, radii, shadows, spacing, touchTargets, hasTransparency, type Theme, type ThemeMode } from './tokens';
 import { typography } from './typography';
 import { subscribeFontSettings } from './installFontDefaults';
 
@@ -90,22 +90,45 @@ export function ThemeProvider({
 
   const resolvedTheme = useMemo<Theme>(() => {
     if (activeIslamicTheme) {
+      const isTranslucent = hasTransparency(activeIslamicTheme.colors.surface);
       return {
         isDark: activeIslamicTheme.isDark,
         colors: activeIslamicTheme.colors,
         spacing,
         radii,
-        shadows,
+        shadows: isTranslucent
+          ? {
+              card: { ...shadows.card, elevation: 0 },
+              elevated: { ...shadows.elevated, elevation: 0 },
+              bottomBar: shadows.bottomBar,
+            }
+          : shadows,
         typography,
         touchTargets,
         iconSizes,
       };
     }
 
-    if (activeMode === 'SYSTEM') {
-      return systemColorScheme === 'dark' ? darkTheme : lightTheme;
-    }
-    return activeMode === 'DARK' ? darkTheme : lightTheme;
+    const baseTheme =
+      activeMode === 'SYSTEM'
+        ? systemColorScheme === 'dark'
+          ? darkTheme
+          : lightTheme
+        : activeMode === 'DARK'
+        ? darkTheme
+        : lightTheme;
+
+    const isTranslucent = hasTransparency(baseTheme.colors.surface);
+    return {
+      ...baseTheme,
+      shadows: isTranslucent
+        ? {
+            card: { ...shadows.card, elevation: 0 },
+            elevated: { ...shadows.elevated, elevation: 0 },
+            bottomBar: shadows.bottomBar,
+          }
+        : shadows,
+    };
   }, [activeIslamicTheme, activeMode, systemColorScheme]);
 
   const contextValue = useMemo<ThemeContextValue>(() => {

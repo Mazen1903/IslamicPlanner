@@ -85,6 +85,7 @@ export function ExpandingAddTaskModal({
       presentationStyle="fullScreen"
       onRequestClose={handleClose}
       statusBarTranslucent={true}
+      navigationBarTranslucent={true}
     >
       <StatusBar
         barStyle={isDark ? 'light-content' : 'dark-content'}

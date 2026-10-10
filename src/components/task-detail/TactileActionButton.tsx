@@ -35,17 +35,14 @@ export function TactileActionButton({
   const { typography, isDark } = useTheme();
   const pressAnim = useRef(new Animated.Value(0)).current;
 
-  // Tactile 3D button palette with bottom shadow bevel lips
   const colorsConfig = variant === 'danger'
     ? {
-        face: isDark ? '#EF4444' : '#EF4444',
-        lip: isDark ? '#991B1B' : '#B91C1C',
+        face: '#EF4444',
         text: '#FFFFFF',
         icon: '#FFFFFF',
       }
     : {
-        face: isDark ? '#16A34A' : '#16A34A',
-        lip: isDark ? '#14532D' : '#15803D',
+        face: '#16A34A',
         text: '#FFFFFF',
         icon: '#FFFFFF',
       };
@@ -93,8 +90,6 @@ export function TactileActionButton({
           styles.buttonSurface,
           {
             backgroundColor: colorsConfig.face,
-            borderBottomColor: colorsConfig.lip,
-            borderBottomWidth: 4,
             opacity: disabled ? 0.6 : 1,
             transform: [{ translateY }],
           },
@@ -124,21 +119,16 @@ export function TactileActionButton({
 const styles = StyleSheet.create({
   pressableContainer: {
     flex: 1,
-    height: 52,
+    height: 48,
     justifyContent: 'center',
   },
   buttonSurface: {
-    height: 48,
-    borderRadius: 16,
+    height: 46,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 14,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 3,
   },
   buttonLabel: {
     fontSize: 15,

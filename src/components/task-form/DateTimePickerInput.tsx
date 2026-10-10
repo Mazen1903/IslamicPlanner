@@ -291,24 +291,38 @@ function WheelColumn<T extends string | number>({
 }: WheelColumnProps<T>) {
   const { colors, typography, radii } = useTheme();
   const listRef = React.useRef<FlatList<T>>(null);
+  const [activeHighlightIndex, setActiveHighlightIndex] = React.useState<number>(() => {
+    const idx = data.indexOf(selectedValue);
+    return idx >= 0 ? idx : 0;
+  });
 
   React.useEffect(() => {
     const idx = data.indexOf(selectedValue);
     if (idx >= 0) {
+      setActiveHighlightIndex(idx);
       listRef.current?.scrollToOffset({
         offset: idx * ITEM_HEIGHT,
         animated: false,
       });
     }
-  }, []);
+  }, [selectedValue, data]);
 
-  const handleMomentumScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const y = e.nativeEvent.contentOffset.y;
+  const commitSelection = (y: number) => {
     const index = Math.round(y / ITEM_HEIGHT);
     const clampedIndex = Math.max(0, Math.min(data.length - 1, index));
+    setActiveHighlightIndex(clampedIndex);
     const item = data[clampedIndex];
     if (item !== undefined && item !== selectedValue) {
       onSelect(item);
+    }
+  };
+
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = e.nativeEvent.contentOffset.y;
+    const index = Math.round(y / ITEM_HEIGHT);
+    const clampedIndex = Math.max(0, Math.min(data.length - 1, index));
+    if (clampedIndex !== activeHighlightIndex) {
+      setActiveHighlightIndex(clampedIndex);
     }
   };
 
@@ -317,7 +331,24 @@ function WheelColumn<T extends string | number>({
       <Text style={[typography.caption, { color: colors.textSecondary, textAlign: 'center', marginBottom: 6 }]}>
         {label}
       </Text>
-      <View style={{ height: WHEEL_HEIGHT, width: '100%', overflow: 'hidden' }}>
+      <View style={{ height: WHEEL_HEIGHT, width: '100%', overflow: 'hidden', position: 'relative' }}>
+        {/* Fixed Center Highlight Rectangle */}
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: PADDING_VERTICAL,
+            left: 0,
+            right: 0,
+            height: ITEM_HEIGHT,
+            backgroundColor: colors.primaryLight,
+            borderRadius: radii.md,
+            borderWidth: 1,
+            borderColor: colors.primary,
+            opacity: 0.85,
+            zIndex: 0,
+          }}
+        />
         <FlatList
           ref={listRef}
           testID={`${testIdPrefix}-list`}
@@ -327,6 +358,8 @@ function WheelColumn<T extends string | number>({
           decelerationRate="fast"
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled
+          scrollEventThrottle={16}
+          onScroll={handleScroll}
           initialNumToRender={data.length}
           maxToRenderPerBatch={data.length}
           contentContainerStyle={{ paddingVertical: PADDING_VERTICAL }}
@@ -335,9 +368,10 @@ function WheelColumn<T extends string | number>({
             offset: ITEM_HEIGHT * index,
             index,
           })}
-          onMomentumScrollEnd={handleMomentumScrollEnd}
+          onMomentumScrollEnd={(e) => commitSelection(e.nativeEvent.contentOffset.y)}
+          onScrollEndDrag={(e) => commitSelection(e.nativeEvent.contentOffset.y)}
           renderItem={({ item, index }) => {
-            const isSelected = item === selectedValue;
+            const isSelected = item === selectedValue || index === activeHighlightIndex;
             return (
               <Pressable
                 onPress={() => {
@@ -356,7 +390,7 @@ function WheelColumn<T extends string | number>({
                   {
                     height: ITEM_HEIGHT,
                     borderRadius: radii.md,
-                    backgroundColor: isSelected ? colors.primaryLight : 'transparent',
+                    backgroundColor: 'transparent',
                   },
                 ]}
               >
@@ -367,7 +401,7 @@ function WheelColumn<T extends string | number>({
                       color: isSelected ? colors.primaryDark : colors.textSecondary,
                       fontWeight: isSelected ? '700' : '500',
                       textAlign: 'center',
-                      opacity: isSelected ? 1 : 0.5,
+                      opacity: isSelected ? 1 : 0.45,
                     },
                   ]}
                 >

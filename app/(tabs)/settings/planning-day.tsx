@@ -163,7 +163,7 @@ export default function PlanningDayScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right', 'bottom']}>
       <SettingsPastelHeader
         title="Planner Settings"
         subtitle="Customize how your day and tasks work."

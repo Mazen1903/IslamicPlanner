@@ -120,7 +120,7 @@ describe('TaskDetailScreen', () => {
 
   it('toggles subtask completion on press', async () => {
     const onToggle = jest.fn().mockResolvedValue(undefined);
-    const { getByLabelText } = await render(
+    const { getByTestId } = await render(
       <ThemeProvider>
         <TaskDetailScreen
           definition={mockDefinition}
@@ -133,13 +133,12 @@ describe('TaskDetailScreen', () => {
       </ThemeProvider>
     );
 
-    await fireEvent.press(getByLabelText('Last 10 ayat'));
+    await fireEvent.press(getByTestId('detail-checkbox-st-2'));
     expect(onToggle).toHaveBeenCalledWith('occ-1', 'st-2');
   });
 
-  it('allows inline editing and reordering of checklist items', async () => {
+  it('allows inline editing of checklist items', async () => {
     const onUpdateSubtask = jest.fn().mockResolvedValue(undefined);
-    const onReorderSubtasks = jest.fn().mockResolvedValue(undefined);
 
     const { getByLabelText } = await render(
       <ThemeProvider>
@@ -150,7 +149,6 @@ describe('TaskDetailScreen', () => {
           onDelete={jest.fn()}
           onBack={jest.fn()}
           onUpdateSubtask={onUpdateSubtask}
-          onReorderSubtasks={onReorderSubtasks}
         />
       </ThemeProvider>
     );
@@ -159,13 +157,6 @@ describe('TaskDetailScreen', () => {
     await fireEvent.press(getByLabelText('Edit: First 10 ayat'));
     await fireEvent.press(getByLabelText('Save edit'));
     expect(onUpdateSubtask).toHaveBeenCalledWith('st-1', 'First 10 ayat');
-
-    // Move item down
-    await fireEvent.press(getByLabelText('Move down: First 10 ayat'));
-    expect(onReorderSubtasks).toHaveBeenCalledWith([
-      { id: 'st-2', title: 'Last 10 ayat' },
-      { id: 'st-1', title: 'First 10 ayat' },
-    ]);
   });
 
   it('triggers edit full task from bottom green action button', async () => {

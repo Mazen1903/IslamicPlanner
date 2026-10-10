@@ -406,7 +406,7 @@ export default function NotificationSettingsScreen({
   const activeBackground = getBackgroundById(defaultBackgroundId);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right', 'bottom']}>
       <SettingsPastelHeader
         title="Notifications"
         subtitle="Set reminders and alerts."

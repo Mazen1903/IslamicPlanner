@@ -65,15 +65,20 @@ describe('SubtasksSection', () => {
     expect(getByText('1/2 (50%)')).toBeTruthy();
   });
 
-  it('allows inline editing of an item', async () => {
+  it('allows inline editing by tapping the item title and ensures pencil/up/down/drag icons are removed', async () => {
     const dispatch = jest.fn();
-    const { getByTestId } = await render(
+    const { getByTestId, queryByTestId } = await render(
       <ThemeProvider>
         <SubtasksSection subtasks={initialSubtasks} dispatch={dispatch} />
       </ThemeProvider>
     );
 
-    // Tap edit button on step-1
+    // Verify removed icons do not exist
+    expect(queryByTestId('drag-subtask-step-1')).toBeNull();
+    expect(queryByTestId('move-up-step-2')).toBeNull();
+    expect(queryByTestId('move-down-step-1')).toBeNull();
+
+    // Tap title (edit-subtask-step-1) to edit
     await fireEvent.press(getByTestId('edit-subtask-step-1'));
     const input = getByTestId('edit-input-step-1');
     expect(input).toBeTruthy();
@@ -85,45 +90,6 @@ describe('SubtasksSection', () => {
       type: 'UPDATE_SUBTASK',
       payload: { id: 'step-1', title: 'Buy organic groceries' },
     });
-  });
-
-  it('allows reordering items up and down', async () => {
-    const dispatch = jest.fn();
-    const { getByTestId } = await render(
-      <ThemeProvider>
-        <SubtasksSection subtasks={initialSubtasks} dispatch={dispatch} />
-      </ThemeProvider>
-    );
-
-    // Move step-2 up (index 1 -> index 0)
-    await fireEvent.press(getByTestId('move-up-step-2'));
-    expect(dispatch).toHaveBeenCalledWith({
-      type: 'REORDER_SUBTASKS',
-      payload: { fromIndex: 1, toIndex: 0 },
-    });
-
-    // Move step-1 down (index 0 -> index 1)
-    await fireEvent.press(getByTestId('move-down-step-1'));
-    expect(dispatch).toHaveBeenCalledWith({
-      type: 'REORDER_SUBTASKS',
-      payload: { fromIndex: 0, toIndex: 1 },
-    });
-  });
-
-  it('renders an accessible drag handle per row and hides it while editing', async () => {
-    const dispatch = jest.fn();
-    const { getByTestId, queryByTestId, getByLabelText } = await render(
-      <ThemeProvider>
-        <SubtasksSection subtasks={initialSubtasks} dispatch={dispatch} />
-      </ThemeProvider>
-    );
-
-    expect(getByTestId('drag-subtask-step-1')).toBeTruthy();
-    expect(getByTestId('drag-subtask-step-2')).toBeTruthy();
-    expect(getByLabelText('Drag to reorder: Buy groceries')).toBeTruthy();
-
-    await fireEvent.press(getByTestId('edit-subtask-step-1'));
-    expect(queryByTestId('drag-subtask-step-1')).toBeNull();
   });
 });
 

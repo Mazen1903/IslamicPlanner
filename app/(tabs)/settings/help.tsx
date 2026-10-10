@@ -80,7 +80,7 @@ export default function HelpScreen() {
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.background }]}
-      edges={['top', 'left', 'right']}
+      edges={['top', 'left', 'right', 'bottom']}
     >
       <SettingsPastelHeader
         title="Help Center"

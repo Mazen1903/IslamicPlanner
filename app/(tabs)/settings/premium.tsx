@@ -120,7 +120,7 @@ export default function PremiumScreen() {
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.background }]}
-      edges={['top', 'left', 'right']}
+      edges={['top', 'left', 'right', 'bottom']}
     >
       <SettingsPastelHeader
         title="Premium"

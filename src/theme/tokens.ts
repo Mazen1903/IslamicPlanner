@@ -76,6 +76,48 @@ export const shadows = {
   } satisfies ViewStyle,
 } as const;
 
+export type ShadowKey = keyof typeof shadows;
+
+/**
+ * Checks whether a color string has non-1.0 alpha/transparency.
+ */
+export function hasTransparency(color?: string): boolean {
+  if (!color) return false;
+  const trimmed = color.trim().toLowerCase();
+  if (trimmed.startsWith('rgba')) {
+    const match = trimmed.match(/rgba\s*\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([0-9.]+)\s*\)/);
+    if (match && parseFloat(match[1]) < 1) {
+      return true;
+    }
+  }
+  if (trimmed.startsWith('#') && trimmed.length === 9) {
+    const alphaHex = trimmed.slice(7);
+    if (parseInt(alphaHex, 16) < 255) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Returns safe cross-platform shadow styles.
+ * When rendered over a translucent surface (common on Islamic themes), elevation is clamped to 0
+ * to prevent Android native elevation shadows from shining through the translucent card.
+ */
+export function getShadow(
+  kind: 'card' | 'elevated' | 'bottomBar',
+  surfaceColor?: string
+): ViewStyle {
+  const base = shadows[kind];
+  if (hasTransparency(surfaceColor)) {
+    return {
+      ...base,
+      elevation: 0,
+    };
+  }
+  return base;
+}
+
 /**
  * Semantic theme color tokens per UI_SYSTEM.md §2 and product rules
  */

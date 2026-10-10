@@ -187,14 +187,14 @@ const styles = StyleSheet.create({
   },
   mosqueArtWrapper: {
     position: 'absolute',
-    right: -4,
-    bottom: -6,
+    right: -48,
+    top: -6,
     zIndex: 0,
     pointerEvents: 'none',
   },
   mosqueArtImage: {
-    width: 145,
-    height: 78,
+    width: 210,
+    height: 130,
   },
   topRow: {
     flexDirection: 'row',
