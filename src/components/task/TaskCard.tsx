@@ -35,6 +35,8 @@ export interface TaskCardProps {
   onDragEnd?: (task: TaskCardViewModel, gestureState: PanResponderGestureState) => void;
   onDelete?: (task: TaskCardViewModel, scope?: 'THIS_OCCURRENCE' | 'THIS_AND_FUTURE' | 'ALL_OCCURRENCES') => void | boolean | Promise<void | boolean>;
   isHighlighted?: boolean;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -127,6 +129,8 @@ export function TaskCard({
   onDragEnd,
   onDelete,
   isHighlighted = false,
+  isExpanded: controlledIsExpanded,
+  onToggleExpand,
 }: TaskCardProps) {
   const { colors, spacing, radii, typography, shadows, isDark } = useTheme();
   const router = useRouter();
@@ -135,8 +139,9 @@ export function TaskCard({
   const isMissed = task.status === 'MISSED';
   const isPending = task.status === 'PENDING';
 
-  // Inline expansion state
-  const [isExpanded, setIsExpanded] = useState(false);
+  // Inline expansion state (controlled or uncontrolled fallback)
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const isExpanded = controlledIsExpanded !== undefined ? controlledIsExpanded : internalExpanded;
   const [showRecurringDelete, setShowRecurringDelete] = useState(false);
 
   // Highlight pulse animation (1.2s total)
@@ -165,7 +170,7 @@ export function TaskCard({
   useEffect(() => {
     if (prevOccurrenceIdRef.current !== task.occurrenceId) {
       prevOccurrenceIdRef.current = task.occurrenceId;
-      setIsExpanded(false);
+      setInternalExpanded(false);
       setShowRecurringDelete(false);
     }
   }, [task.occurrenceId]);
@@ -312,7 +317,11 @@ export function TaskCard({
     try {
       Vibration.vibrate(10);
     } catch {}
-    setIsExpanded(prev => !prev);
+    if (onToggleExpand) {
+      onToggleExpand();
+    } else {
+      setInternalExpanded(prev => !prev);
+    }
     setShowRecurringDelete(false);
   };
 
@@ -649,11 +658,21 @@ export function TaskCard({
                 />
               )}
 
-              <View style={styles.chevronWrapper} testID={`task-card-chevron-${task.occurrenceId}`}>
+              <View
+                style={[
+                  styles.chevronWrapper,
+                  {
+                    backgroundColor: isExpanded
+                      ? (isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)')
+                      : 'transparent',
+                  },
+                ]}
+                testID={`task-card-chevron-${task.occurrenceId}`}
+              >
                 <Icon
                   name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                  size={16}
-                  color={isExpanded ? colors.primary : colors.textTertiary}
+                  size={15}
+                  color={isExpanded ? (isDark ? '#34D399' : colors.primary) : colors.textTertiary}
                   decorative
                 />
               </View>
@@ -677,7 +696,8 @@ export function TaskCard({
                   style={[
                     styles.notesContainer,
                     {
-                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : colors.surfaceSecondary,
+                      backgroundColor: isDark ? 'rgba(16, 185, 129, 0.08)' : 'rgba(16, 185, 129, 0.05)',
+                      borderStartColor: isDark ? '#10B981' : colors.primary,
                       borderRadius: radii.sm ?? 8,
                     },
                   ]}
@@ -685,12 +705,12 @@ export function TaskCard({
                 >
                   <Icon
                     name="document"
-                    size={13}
-                    color={colors.textSecondary}
+                    size={14}
+                    color={isDark ? '#34D399' : colors.primaryDark}
                     decorative
-                    style={{ marginTop: 2, marginEnd: 6 }}
+                    style={{ marginTop: 2, marginEnd: 8 }}
                   />
-                  <Text style={[typography.bodySmall, styles.notesText, { color: colors.textSecondary }]}>
+                  <Text style={[typography.bodySmall, styles.notesText, { color: isDark ? '#E5E7EB' : colors.textPrimary }]}>
                     {task.notes}
                   </Text>
                 </View>
@@ -721,14 +741,16 @@ export function TaskCard({
                         style={[
                           styles.subtaskCheckbox,
                           {
-                            borderColor: subtask.isCompleted ? colors.primary : colors.border,
-                            backgroundColor: subtask.isCompleted ? colors.primary : 'transparent',
-                            borderRadius: 4,
+                            borderColor: subtask.isCompleted
+                              ? (isDark ? '#10B981' : colors.primary)
+                              : (isDark ? 'rgba(255, 255, 255, 0.25)' : colors.border),
+                            backgroundColor: subtask.isCompleted ? (isDark ? '#10B981' : colors.primary) : 'transparent',
+                            borderRadius: 5,
                           },
                         ]}
                       >
                         {subtask.isCompleted && (
-                          <Icon name="check" size={10} color={colors.textOnPrimary} decorative />
+                          <Icon name="check" size={11} color={colors.textOnPrimary} decorative />
                         )}
                       </View>
                       <Text
@@ -982,8 +1004,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   chevronWrapper: {
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -999,12 +1022,15 @@ const styles = StyleSheet.create({
   notesContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
     marginBottom: 10,
+    borderStartWidth: 3,
   },
   notesText: {
+    flex: 1,
     lineHeight: 18,
+    fontSize: 13,
   },
   subtasksContainer: {
     marginBottom: 10,
@@ -1015,20 +1041,21 @@ const styles = StyleSheet.create({
   subtaskRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: 5,
     paddingHorizontal: 2,
   },
   subtaskCheckbox: {
-    width: 16,
-    height: 16,
-    borderWidth: 1.2,
+    width: 18,
+    height: 18,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    marginEnd: 8,
+    marginEnd: 10,
   },
   subtaskTitle: {
     flex: 1,
-    lineHeight: 18,
+    lineHeight: 19,
+    fontSize: 13.5,
   },
   actionsRow: {
     flexDirection: 'row',
@@ -1038,10 +1065,10 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
+    height: 38,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,

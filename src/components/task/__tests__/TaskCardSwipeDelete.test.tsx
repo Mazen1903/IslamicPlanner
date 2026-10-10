@@ -170,4 +170,25 @@ describe('TaskCard Inline Fluid Expansion', () => {
     expect(getByTestId('task-card-edit-btn-occ-recurring-1')).toBeTruthy();
     expect(getByTestId('task-card-delete-btn-occ-recurring-1')).toBeTruthy();
   });
+
+  it('supports controlled expansion via isExpanded and onToggleExpand', async () => {
+    const onToggleExpand = jest.fn();
+    const { getByTestId, rerender } = await render(
+      <ThemeProvider>
+        <TaskCard task={mockTask} isExpanded={false} onToggleExpand={onToggleExpand} />
+      </ThemeProvider>
+    );
+
+    // Tapping calls onToggleExpand
+    await fireEvent.press(getByTestId('task-card-occ-expand-1'));
+    expect(onToggleExpand).toHaveBeenCalledTimes(1);
+
+    // Re-rendering with isExpanded={true} displays expanded content
+    await rerender(
+      <ThemeProvider>
+        <TaskCard task={mockTask} isExpanded={true} onToggleExpand={onToggleExpand} />
+      </ThemeProvider>
+    );
+    expect(getByTestId('task-card-edit-btn-occ-expand-1')).toBeTruthy();
+  });
 });

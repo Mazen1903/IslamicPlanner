@@ -1,9 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
-  Platform,
-  UIManager,
-  LayoutAnimation,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -17,14 +14,6 @@ import Animated, {
   FadeIn,
   FadeOut,
 } from 'react-native-reanimated';
-
-if (
-  Platform.OS === 'android' &&
-  UIManager.setLayoutAnimationEnabledExperimental &&
-  typeof UIManager.setLayoutAnimationEnabledExperimental === 'function'
-) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 export interface CollapsibleProps {
   expanded: boolean;
@@ -54,12 +43,6 @@ export function Collapsible({
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
-    }
-
-    try {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    } catch {
-      // Graceful fallback if LayoutAnimation unavailable
     }
 
     if (expanded) {
@@ -92,7 +75,7 @@ export function Collapsible({
           ? undefined
           : contentHeight > 0
           ? contentHeight * progress.value
-          : undefined,
+          : 0,
       overflow: 'hidden',
     };
   });

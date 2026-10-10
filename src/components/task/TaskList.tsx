@@ -115,6 +115,12 @@ export function TaskList({
 
   const highlightedOccurrenceId = usePlannerUiStore(s => s.highlightedOccurrenceId);
   const [hiddenDeletedIds, setHiddenDeletedIds] = useState<Set<string>>(new Set());
+  const [expandedOccurrenceId, setExpandedOccurrenceId] = useState<string | null>(null);
+
+  // Collapse any open task card when switching between prayers
+  useEffect(() => {
+    setExpandedOccurrenceId(null);
+  }, [selectedPrayer]);
 
   const isSectionHidden = useCallback(
     (sectionKey: 'PREVIOUS' | 'TODAY' | 'UPCOMING' | 'COMPLETED') => {
@@ -127,6 +133,7 @@ export function TaskList({
 
   const handleDeleteTask = useCallback(
     async (task: TaskCardViewModel, scope: 'THIS_OCCURRENCE' | 'THIS_AND_FUTURE' | 'ALL_OCCURRENCES' = 'THIS_OCCURRENCE') => {
+      setExpandedOccurrenceId(prev => (prev === task.occurrenceId ? null : prev));
       if (task.isRecurring) {
         try {
           await onDeleteTask?.(task, scope);
@@ -564,6 +571,10 @@ export function TaskList({
                   onDragMove={handleDragMove}
                   onDragEnd={handleDragEnd}
                   isHighlighted={task.occurrenceId === highlightedOccurrenceId || task.taskDefinitionId === highlightedOccurrenceId}
+                  isExpanded={expandedOccurrenceId === task.occurrenceId}
+                  onToggleExpand={() =>
+                    setExpandedOccurrenceId(prev => (prev === task.occurrenceId ? null : task.occurrenceId))
+                  }
                 />
               ))}
             </View>
@@ -599,6 +610,10 @@ export function TaskList({
                     onDragMove={handleDragMove}
                     onDragEnd={handleDragEnd}
                     isHighlighted={task.occurrenceId === highlightedOccurrenceId || task.taskDefinitionId === highlightedOccurrenceId}
+                    isExpanded={expandedOccurrenceId === task.occurrenceId}
+                    onToggleExpand={() =>
+                      setExpandedOccurrenceId(prev => (prev === task.occurrenceId ? null : task.occurrenceId))
+                    }
                   />
                 ))
               )}
@@ -635,6 +650,10 @@ export function TaskList({
                     onDragMove={handleDragMove}
                     onDragEnd={handleDragEnd}
                     isHighlighted={task.occurrenceId === highlightedOccurrenceId || task.taskDefinitionId === highlightedOccurrenceId}
+                    isExpanded={expandedOccurrenceId === task.occurrenceId}
+                    onToggleExpand={() =>
+                      setExpandedOccurrenceId(prev => (prev === task.occurrenceId ? null : task.occurrenceId))
+                    }
                   />
                 ))
               )}
@@ -668,6 +687,10 @@ export function TaskList({
                     onDelete={handleDeleteTask}
                     isDraggable={false}
                     isHighlighted={task.occurrenceId === highlightedOccurrenceId || task.taskDefinitionId === highlightedOccurrenceId}
+                    isExpanded={expandedOccurrenceId === task.occurrenceId}
+                    onToggleExpand={() =>
+                      setExpandedOccurrenceId(prev => (prev === task.occurrenceId ? null : task.occurrenceId))
+                    }
                   />
                 ))
               )}
